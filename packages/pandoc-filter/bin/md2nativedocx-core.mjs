@@ -21,8 +21,8 @@ const input = inputPath ? readFileSync(inputPath, 'utf8') : readFileSync(0, 'utf
 
 try {
   const { ast } = parseMermaid(input);
-  const boxes = layout(ast);
-  process.stdout.write(translateToOoxml(ast, boxes));
+  const result = layout(ast);
+  process.stdout.write(translateToOoxml(ast, result));
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`md2nativedocx: ${message}\n`);

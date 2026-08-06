@@ -57,9 +57,33 @@ test('ignores comments', () => {
 });
 
 test('warns on unsupported constructs but keeps going', () => {
-  const { ast, warnings } = parseMermaid('graph TD\n  A --> B\n  classDef X fill:#fff');
+  const { ast, warnings } = parseMermaid('graph TD\n  A --> B\n  style X fill:#fff');
   assert.equal(ast.nodes.length, 2);
   assert.ok(warnings.some((w) => w.includes('Unsupported')));
+});
+
+test('parses classDef fill and applies it inline (spec §6.3)', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  classDef crit fill:#FF0000\n  A[Start]:::crit --> B[End]',
+  );
+  assert.equal(warnings.length, 0);
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.fill, 'FF0000');
+  const b = ast.nodes.find((n) => n.id === 'B')!;
+  assert.equal(b.fill, undefined);
+});
+
+test('parses classDef fill and applies it via class statement', () => {
+  const { ast } = parseMermaid(
+    'graph TD\n  classDef crit fill:#00FF00\n  A[Start] --> B[End]\n  class A crit',
+  );
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.fill, '00FF00');
+});
+
+test('warns when a class references an undefined classDef', () => {
+  const { warnings } = parseMermaid('graph TD\n  A[Start]:::missing --> B[End]');
+  assert.ok(warnings.some((w) => w.includes('not defined')));
 });
 
 test('warns on unclosed subgraph', () => {

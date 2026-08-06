@@ -23,6 +23,8 @@ export interface FlowNode {
   id: string;
   label: string;
   shape: NodeShape;
+  /** Fill color (hex, no `#`) from `classDef fill:#XXXXXX` (spec §6.3). */
+  fill?: string;
 }
 
 /** A single directed edge between two nodes. */
@@ -61,3 +63,19 @@ export interface LayoutBox {
 
 /** Layout output: coordinates for every node. */
 export type Layout = Record<string, LayoutBox>;
+
+/** Layout box for a subgraph container (spec §6.1). */
+export interface SubgraphBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Full layout output: node coordinates + subgraph container boxes. */
+export interface LayoutResult {
+  /** Node coordinates, keyed by node id. */
+  nodes: Layout;
+  /** Subgraph container boxes, keyed by subgraph id. */
+  subgraphs: Record<string, SubgraphBox>;
+}

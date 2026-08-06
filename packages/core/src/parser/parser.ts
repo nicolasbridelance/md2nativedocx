@@ -79,6 +79,10 @@ export function parseMermaid(text: string): ParseResult {
   const edges: FlowEdge[] = [];
   const subgraphs: Subgraph[] = [];
   const subgraphStack: Subgraph[] = [];
+  // class name -> fill color (hex, no `#`), from `classDef` (spec §6.3).
+  const classDefs = new Map<string, string>();
+  // node id -> fill color, for nodes assigned a class before they are defined.
+  const pendingFills = new Map<string, string>();
 
   let direction: 'TD' | 'LR' = 'TD';
 
@@ -99,6 +103,35 @@ export function parseMermaid(text: string): ParseResult {
 
     // Comments
     if (line.startsWith('%%')) continue;
+
+    // classDef Name fill:#XXXXXX (spec §6.3) — simplified mapping to fill only.
+    const classDef = line.match(/^classDef\s+([A-Za-z0-9_-]+)\s+fill:#([0-9A-Fa-f]{6})\b/i);
+    if (classDef) {
+      classDefs.set(classDef[1]!, classDef[2]!.toUpperCase());
+      continue;
+    }
+    // class A,B,C className — apply a defined class to nodes.
+    const classAssign = line.match(/^class\s+([A-Za-z0-9_,\s-]+)\s+([A-Za-z0-9_-]+)\s*$/i);
+    if (classAssign) {
+      const className = classAssign[2]!;
+      const fill = classDefs.get(className);
+      if (fill) {
+        for (const id of classAssign[1]!.split(',')) {
+          const trimmed = id.trim();
+          if (trimmed.length === 0) continue;
+          const existing = nodes.get(trimmed);
+          if (existing) {
+            existing.fill = fill;
+          } else {
+            // Node may be defined later; remember the pending assignment.
+            pendingFills.set(trimmed, fill);
+          }
+        }
+      } else {
+        warnings.push(`classDef "${className}" referenced but not defined.`);
+      }
+      continue;
+    }
 
     // subgraph ... end
     if (/^subgraph\b/i.test(line)) {
@@ -128,6 +161,9 @@ export function parseMermaid(text: string): ParseResult {
       if (!registerNode(nodes, edge.to, edge.toLabel, edge.toShape)) {
         warnings.push(`Node id "${edge.to}" is reserved and was ignored.`);
       }
+      // Apply inline class fills (`A:::crit`) to the edge endpoints.
+      applyClassFill(nodes, pendingFills, classDefs, edge.from, edge.fromClass, warnings);
+      applyClassFill(nodes, pendingFills, classDefs, edge.to, edge.toClass, warnings);
       attachToCurrentSubgraph(subgraphStack, edge.from);
       attachToCurrentSubgraph(subgraphStack, edge.to);
       continue;
@@ -145,6 +181,12 @@ export function parseMermaid(text: string): ParseResult {
 
     // Unsupported construct — warn but keep going (V1 tolerance).
     warnings.push(`Unsupported line ignored: ${line}`);
+  }
+
+  // Apply any pending class fills to nodes that were defined after their class.
+  for (const [id, fill] of pendingFills) {
+    const existing = nodes.get(id);
+    if (existing) existing.fill = fill;
   }
 
   if (subgraphStack.length > 0) {
@@ -210,6 +252,32 @@ function registerNode(
   return true;
 }
 
+/**
+ * Apply a class's fill color to a node (from `:::class` inline or `class`).
+ * If the node is not yet defined, the fill is remembered in `pendingFills`.
+ */
+function applyClassFill(
+  nodes: Map<string, FlowNode>,
+  pendingFills: Map<string, string>,
+  classDefs: Map<string, string>,
+  nodeId: string,
+  className: string | null,
+  warnings: string[],
+): void {
+  if (!className) return;
+  const fill = classDefs.get(className);
+  if (!fill) {
+    warnings.push(`classDef "${className}" referenced but not defined.`);
+    return;
+  }
+  const existing = nodes.get(nodeId);
+  if (existing) {
+    existing.fill = fill;
+  } else {
+    pendingFills.set(nodeId, fill);
+  }
+}
+
 /** Parse a node statement like `A[Text]`, `B{Decision}`, or bare `C`. */
 function parseNodeStatement(line: string): FlowNode | null {
   const idMatch = line.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);
@@ -232,19 +300,29 @@ function parseNodeStatement(line: string): FlowNode | null {
   return null;
 }
 
-/** Parse an edge statement like `A --> B`, `A -->|label| B`, `A -.-> B`. */
 /** Parse a node reference at an edge endpoint: bare id or id with shape. */
-function parseNodeRef(ref: string): { id: string; label: string; shape: NodeShape } | null {
+function parseNodeRef(
+  ref: string,
+): { id: string; label: string; shape: NodeShape; className: string | null } | null {
   const trimmed = ref.trim();
   const idMatch = trimmed.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);
   if (!idMatch) return null;
   const id = idMatch[1]!;
-  const rest = idMatch[2]!.trim();
-  if (rest.length === 0) return { id, label: id, shape: 'rect' };
+  let rest = idMatch[2]!.trim();
+
+  // Optional inline class: `A[Text]:::crit` or `A:::crit`.
+  let className: string | null = null;
+  const classMatch = rest.match(/^(.+?):::\s*([A-Za-z0-9_-]+)\s*$/);
+  if (classMatch) {
+    className = classMatch[2]!;
+    rest = classMatch[1]!.trim();
+  }
+
+  if (rest.length === 0) return { id, label: id, shape: 'rect', className };
   for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: inner, shape };
+      return { id, label: inner, shape, className };
     }
   }
   return null;
@@ -252,7 +330,7 @@ function parseNodeRef(ref: string): { id: string; label: string; shape: NodeShap
 
 function parseEdgeStatement(
   line: string,
-): { from: string; to: string; fromLabel: string; toLabel: string; fromShape: NodeShape; toShape: NodeShape; type: EdgeType; label: string | null } | null {
+): { from: string; to: string; fromLabel: string; toLabel: string; fromShape: NodeShape; toShape: NodeShape; fromClass: string | null; toClass: string | null; type: EdgeType; label: string | null } | null {
   for (const { pattern, type } of EDGE_SYNTAX) {
     // Edge with label: A -->|label| B
     const withLabel = new RegExp(
@@ -263,7 +341,7 @@ function parseEdgeStatement(
       const from = parseNodeRef(mLabel[1]!);
       const to = parseNodeRef(mLabel[3]!);
       if (from && to) {
-        return { from: from.id, to: to.id, fromLabel: from.label, toLabel: to.label, fromShape: from.shape, toShape: to.shape, type, label: mLabel[2]! };
+        return { from: from.id, to: to.id, fromLabel: from.label, toLabel: to.label, fromShape: from.shape, toShape: to.shape, fromClass: from.className, toClass: to.className, type, label: mLabel[2]! };
       }
     }
     // Edge without label: A --> B
@@ -275,7 +353,7 @@ function parseEdgeStatement(
       const from = parseNodeRef(mPlain[1]!);
       const to = parseNodeRef(mPlain[2]!);
       if (from && to) {
-        return { from: from.id, to: to.id, fromLabel: from.label, toLabel: to.label, fromShape: from.shape, toShape: to.shape, type, label: null };
+        return { from: from.id, to: to.id, fromLabel: from.label, toLabel: to.label, fromShape: from.shape, toShape: to.shape, fromClass: from.className, toClass: to.className, type, label: null };
       }
     }
   }

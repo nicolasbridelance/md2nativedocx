@@ -96,11 +96,11 @@ test('property: every node id in the AST has a layout box', () => {
         const lines = ['graph TD'];
         for (const n of nodes) lines.push(`${n.id}["${n.label}"]`);
         const { ast } = parseMermaid(lines.join('\n'));
-        const boxes = layout(ast);
+        const result = layout(ast);
         for (const n of ast.nodes) {
-          assert.ok(boxes[n.id], `missing layout box for node ${n.id}`);
-          assert.ok(boxes[n.id]!.width > 0);
-          assert.ok(boxes[n.id]!.height > 0);
+          assert.ok(result.nodes[n.id], `missing layout box for node ${n.id}`);
+          assert.ok(result.nodes[n.id]!.width > 0);
+          assert.ok(result.nodes[n.id]!.height > 0);
         }
       },
     ),

@@ -12,7 +12,7 @@
  */
 
 import dagre from 'dagre';
-import type { Flowchart, Layout, LayoutBox } from '../types.js';
+import type { Flowchart, Layout, LayoutBox, LayoutResult, SubgraphBox } from '../types.js';
 
 /** Default node dimensions in logical pixels. */
 export const NODE_WIDTH = 120;
@@ -30,10 +30,10 @@ export interface LayoutOptions {
 }
 
 /**
- * Compute pixel coordinates for every node in the flowchart.
- * Returns a map keyed by node id.
+ * Compute pixel coordinates for every node and subgraph in the flowchart.
+ * Returns a {@link LayoutResult} with node boxes and subgraph container boxes.
  */
-export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layout {
+export function layout(flowchart: Flowchart, options: LayoutOptions = {}): LayoutResult {
   const nodeWidth = options.nodeWidth ?? NODE_WIDTH;
   const nodeHeight = options.nodeHeight ?? NODE_HEIGHT;
   const engine = options.engine ?? 'dagre';
@@ -43,7 +43,7 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     throw new Error('Layout engine "graphviz" is not implemented yet (see ADR 0001).');
   }
 
-  const g = new dagre.graphlib.Graph();
+  const g = new dagre.graphlib.Graph({ compound: true });
   g.setGraph({
     rankdir: flowchart.direction === 'LR' ? 'LR' : 'TD',
     nodesep: RANK_GAP,
@@ -62,16 +62,27 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     }
   }
 
+  // Register subgraphs as Dagre clusters and assign their nodes to them.
+  for (const sg of flowchart.subgraphs) {
+    g.setNode(sg.id, { width: 0, height: 0, cluster: true });
+    for (const nodeId of sg.nodeIds) {
+      if (g.hasNode(nodeId)) g.setParent(nodeId, sg.id);
+    }
+    for (const childId of sg.subgraphIds) {
+      if (g.hasNode(childId)) g.setParent(childId, sg.id);
+    }
+  }
+
   dagre.layout(g);
 
   // Use a null-prototype object so hostile node ids like `__proto__` or
   // `constructor` cannot collide with Object.prototype members (prototype
   // pollution). This is a security boundary: node ids come from untrusted text.
-  const layout: Layout = Object.create(null) as Layout;
+  const nodes: Layout = Object.create(null) as Layout;
   for (const node of flowchart.nodes) {
     const n = g.node(node.id);
     // Dagre positions by center; convert to top-left origin.
-    layout[node.id] = {
+    nodes[node.id] = {
       x: n.x - n.width / 2,
       y: n.y - n.height / 2,
       width: n.width,
@@ -79,8 +90,42 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     };
   }
 
+  // Subgraph container boxes from Dagre cluster geometry.
+  const subgraphs: Record<string, SubgraphBox> = Object.create(null) as Record<string, SubgraphBox>;
+  for (const sg of flowchart.subgraphs) {
+    const c = g.node(sg.id);
+    if (c) {
+      subgraphs[sg.id] = {
+        x: c.x - c.width / 2,
+        y: c.y - c.height / 2,
+        width: c.width,
+        height: c.height,
+      };
+    }
+  }
+
   // Normalize so the top-left of the diagram is at (0,0).
-  return normalize(layout);
+  const normalizedNodes = normalize(nodes);
+  const normalizedSubgraphs = normalizeSubgraphs(subgraphs, normalizedNodes);
+  return { nodes: normalizedNodes, subgraphs: normalizedSubgraphs };
+}
+
+function normalizeSubgraphs(
+  subgraphs: Record<string, SubgraphBox>,
+  nodes: Layout,
+): Record<string, SubgraphBox> {
+  let minX = Infinity;
+  let minY = Infinity;
+  for (const box of Object.values(nodes)) {
+    minX = Math.min(minX, box.x);
+    minY = Math.min(minY, box.y);
+  }
+  if (minX === Infinity) return subgraphs;
+  const out: Record<string, SubgraphBox> = Object.create(null) as Record<string, SubgraphBox>;
+  for (const [id, box] of Object.entries(subgraphs)) {
+    out[id] = { ...box, x: box.x - minX, y: box.y - minY };
+  }
+  return out;
 }
 
 function normalize(layout: Layout): Layout {

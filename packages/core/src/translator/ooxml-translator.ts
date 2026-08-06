@@ -12,7 +12,7 @@
  *   fully self-contained, with all namespaces declared inline.
  */
 
-import type { Flowchart, Layout, NodeShape } from '../types.js';
+import type { Flowchart, Layout, LayoutResult, NodeShape, Subgraph } from '../types.js';
 import { escapeXml } from './xml-escape.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -52,13 +52,13 @@ export interface TranslateOptions {
  * Translate a flowchart + its layout into a self-contained `wpg:wgp` XML string.
  *
  * @param flowchart - The parsed flowchart AST.
- * @param layout - Pixel coordinates for every node (from `layout/layout.ts`).
+ * @param layout - Layout result (node + subgraph coordinates) from `layout/layout.ts`.
  * @param options - Optional color overrides.
  * @returns A single XML string, ready to inject into a Pandoc `RawBlock('openxml', ...)`.
  */
 export function translateToOoxml(
   flowchart: Flowchart,
-  layout: Layout,
+  layout: LayoutResult,
   options: TranslateOptions = {},
 ): string {
   const fill = options.fill ?? DEFAULT_FILL;
@@ -67,15 +67,23 @@ export function translateToOoxml(
   const parts: string[] = [];
   parts.push(openGroup(flowchart, layout));
 
+  // Render subgraphs as nested wpg:wgp groups (spec §6.1), then nodes and edges.
+  const renderedSubgraphs = new Set<string>();
+  for (const sg of flowchart.subgraphs) {
+    parts.push(renderSubgraph(sg, flowchart, layout, fill, line, renderedSubgraphs));
+  }
+
   for (const node of flowchart.nodes) {
-    const box = layout[node.id];
+    const box = layout.nodes[node.id];
     if (!box) continue;
-    parts.push(renderNode(node.id, node.label, node.shape, box, fill, line));
+    // Per-node fill from classDef takes priority over the global default.
+    const nodeFill = node.fill ?? fill;
+    parts.push(renderNode(node.id, node.label, node.shape, box, nodeFill, line));
   }
 
   for (const edge of flowchart.edges) {
-    const from = layout[edge.from];
-    const to = layout[edge.to];
+    const from = layout.nodes[edge.from];
+    const to = layout.nodes[edge.to];
     if (!from || !to) continue;
     parts.push(renderEdge(edge.from, edge.to, edge.type, from, to, line));
   }
@@ -84,9 +92,77 @@ export function translateToOoxml(
   return parts.join('\n');
 }
 
+/**
+ * Render a subgraph as a nested `wpg:wgp` group with its title in a `wps:txbx`
+ * (spec §6.1). Nested subgraphs are rendered recursively.
+ */
+function renderSubgraph(
+  sg: Subgraph,
+  flowchart: Flowchart,
+  layout: LayoutResult,
+  fill: string,
+  line: string,
+  rendered: Set<string>,
+): string {
+  if (rendered.has(sg.id)) return '';
+  rendered.add(sg.id);
+
+  const box = layout.subgraphs[sg.id];
+  if (!box) return '';
+  const x = Math.round(box.x * EMU_PER_PX);
+  const y = Math.round(box.y * EMU_PER_PX);
+  const w = Math.max(1, Math.round(box.width * EMU_PER_PX));
+  const h = Math.max(1, Math.round(box.height * EMU_PER_PX));
+  const safeTitle = escapeXml(sg.title);
+
+  const parts: string[] = [];
+  parts.push('  <wpg:wgp>');
+  parts.push('    <wpg:cNvGrpSpPr/>');
+  parts.push('    <wpg:grpSpPr>');
+  parts.push('      <a:xfrm>');
+  parts.push(`        <a:off x="${x}" y="${y}"/>`);
+  parts.push(`        <a:ext cx="${w}" cy="${h}"/>`);
+  parts.push('        <a:chOff x="0" y="0"/>');
+  parts.push(`        <a:chExt cx="${w}" cy="${h}"/>`);
+  parts.push('      </a:xfrm>');
+  parts.push('    </wpg:grpSpPr>');
+
+  // Subgraph title as a text box (wps:txbx) at the top of the group.
+  parts.push('    <wpg:wsp>');
+  parts.push('      <wps:cNvSpPr/>');
+  parts.push('      <wps:spPr>');
+  parts.push('        <a:xfrm>');
+  parts.push('          <a:off x="0" y="0"/>');
+  parts.push(`          <a:ext cx="${w}" cy="228600"/>`);
+  parts.push('        </a:xfrm>');
+  parts.push('        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
+  parts.push('        <a:noFill/>');
+  parts.push('        <a:ln w="0"><a:noFill/></a:ln>');
+  parts.push('      </wps:spPr>');
+  parts.push('      <wps:txbx>');
+  parts.push('        <w:txbxContent>');
+  parts.push('          <w:p>');
+  parts.push('            <w:pPr><w:jc w:val="center"/></w:pPr>');
+  parts.push(`            <w:r><w:t>${safeTitle}</w:t></w:r>`);
+  parts.push('          </w:p>');
+  parts.push('        </w:txbxContent>');
+  parts.push('      </wps:txbx>');
+  parts.push('      <wps:bodyPr/>');
+  parts.push('    </wpg:wsp>');
+
+  // Nested subgraphs.
+  for (const childId of sg.subgraphIds) {
+    const child = flowchart.subgraphs.find((s) => s.id === childId);
+    if (child) parts.push(renderSubgraph(child, flowchart, layout, fill, line, rendered));
+  }
+
+  parts.push('  </wpg:wgp>');
+  return parts.join('\n');
+}
+
 /** Open the `wpg:wgp` group with all namespaces declared inline (self-contained). */
-function openGroup(flowchart: Flowchart, layout: Layout): string {
-  const bb = computeBoundingBox(layout);
+function openGroup(flowchart: Flowchart, layout: LayoutResult): string {
+  const bb = computeBoundingBox(layout.nodes);
   const cx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
   const cy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
   return [

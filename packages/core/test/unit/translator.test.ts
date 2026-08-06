@@ -68,12 +68,26 @@ test('never emits an external OOXML relationship (rule #3)', () => {
   assert.ok(!xml.includes('r:id='));
 });
 
-test('escapes subgraph titles', () => {
+test('escapes subgraph titles (rule #2)', () => {
   const xml = translate('graph TD\n  subgraph S1["Group <&>"]\n    A --> B\n  end');
-  // Subgraph titles are not rendered as shapes in V1, but any label path must
-  // be safe; here we just assert the output is well-formed and contains no raw
-  // angle brackets from the title.
+  // The subgraph title is rendered in a wps:txbx and must be escaped.
+  assert.ok(xml.includes('Group &lt;&amp;&gt;'));
   assert.ok(!xml.includes('Group <'));
+});
+
+test('applies classDef fill to a node (spec §6.3)', () => {
+  const xml = translate('graph TD\n  classDef crit fill:#FF0000\n  A[Start]:::crit --> B[End]');
+  assert.ok(xml.includes('val="FF0000"'));
+  // The default fill must still be present for the un-classed node.
+  assert.ok(xml.includes('val="D9E2F3"'));
+});
+
+test('renders a subgraph as a nested wpg:wgp with title (spec §6.1)', () => {
+  const xml = translate('graph TD\n  subgraph S1[Groupe A]\n    A --> B\n  end\n  B --> C');
+  // Root group + nested subgraph group.
+  assert.equal((xml.match(/<wpg:wgp>/g) ?? []).length, 1);
+  assert.equal((xml.match(/<\/wpg:wgp>/g) ?? []).length, 2);
+  assert.ok(xml.includes('Groupe A'));
 });
 
 test('escapeXml escapes all five characters', () => {
