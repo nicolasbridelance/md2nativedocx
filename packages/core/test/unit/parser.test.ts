@@ -90,3 +90,18 @@ test('warns on unclosed subgraph', () => {
   const { warnings } = parseMermaid('graph TD\n  subgraph S1\n    A --> B');
   assert.ok(warnings.some((w) => w.includes('Unclosed')));
 });
+
+test('does not duplicate a subgraph id as a node (Dagre crash fix)', () => {
+  // Mermaid allows edges between subgraphs (`U1 --> Y2`). The subgraph id must
+  // not also be registered as a plain node, or Dagre crashes (an id cannot be
+  // both a node and a cluster).
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  subgraph U1\n    A --> B\n  end\n  subgraph Y2\n    C --> D\n  end\n  U1 --> Y2',
+  );
+  const nodeIds = ast.nodes.map((n) => n.id);
+  assert.ok(!nodeIds.includes('U1'), 'U1 must not be a node');
+  assert.ok(!nodeIds.includes('Y2'), 'Y2 must not be a node');
+  // The inter-subgraph edge is dropped with a warning (V1 limitation).
+  assert.ok(!ast.edges.some((e) => e.from === 'U1' || e.to === 'Y2'));
+  assert.ok(warnings.some((w) => w.includes('references a subgraph')));
+});

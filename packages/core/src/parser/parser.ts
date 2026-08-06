@@ -189,6 +189,26 @@ export function parseMermaid(text: string): ParseResult {
     if (existing) existing.fill = fill;
   }
 
+  // A subgraph id must not also be a node: Mermaid allows edges between
+  // subgraphs (e.g. `U1 --> Y2`), and our parser would otherwise register the
+  // subgraph id as a plain node, which breaks Dagre (an id cannot be both a
+  // node and a cluster). Drop such nodes and warn. Edges referencing subgraphs
+  // as endpoints are dropped too (V1 does not support inter-subgraph edges).
+  const subgraphIdSet = new Set(subgraphs.map((s) => s.id));
+  for (const id of subgraphIdSet) {
+    if (nodes.has(id)) {
+      nodes.delete(id);
+      warnings.push(`Subgraph "${id}" was also used as a node; node ignored.`);
+    }
+  }
+  const edgesWithoutSubgraphs = edges.filter((e) => {
+    if (subgraphIdSet.has(e.from) || subgraphIdSet.has(e.to)) {
+      warnings.push(`Edge ${e.from} -> ${e.to} references a subgraph; ignored (V1).`);
+      return false;
+    }
+    return true;
+  });
+
   if (subgraphStack.length > 0) {
     warnings.push('Unclosed `subgraph` block.');
   }
@@ -197,7 +217,7 @@ export function parseMermaid(text: string): ParseResult {
     ast: {
       direction,
       nodes: [...nodes.values()],
-      edges,
+      edges: edgesWithoutSubgraphs,
       subgraphs,
     },
     warnings,
