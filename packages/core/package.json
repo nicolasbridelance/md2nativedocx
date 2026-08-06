@@ -1,0 +1,33 @@
+{
+  "name": "@md2nativedocx/core",
+  "version": "0.1.0",
+  "description": "Pure TypeScript engine: Mermaid flowchart text -> intermediate AST -> layout coordinates -> OOXML/DrawingML XML string. No Pandoc, VS Code, or Office.js knowledge.",
+  "license": "CC0-1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-test-coverage dist-test/test/**/*.test.js",
+    "test:fuzz": "node --test dist-test/test/fuzz/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@types/dagre": "^0.7.54",
+    "dagre": "^0.8.5",
+    "fast-check": "^4.9.0"
+  }
+}
