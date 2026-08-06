@@ -32,8 +32,24 @@ function runPandoc(markdown) {
 test('pandoc filter converts a mermaid block into native wpg:wgp', () => {
   const xml = runPandoc('```mermaid\ngraph TD\n  A[Start] --> B[End]\n```\n');
   assert.ok(xml.includes('<wpg:wgp'));
-  assert.ok(xml.includes('<wpg:wsp>'));
-  assert.ok(xml.includes('<wpg:cxnSp>'));
+  assert.ok(xml.includes('<wps:wsp>'));
+  assert.ok(xml.includes('<wps:cNvCnPr>'));
+});
+
+test('pandoc filter emits the schema-required w:p/w:drawing wrapper', () => {
+  const xml = runPandoc('```mermaid\ngraph TD\n  A[Start] --> B[End]\n```\n');
+  // The fragment must be a complete w:p paragraph wrapping the drawing in the
+  // schema-required hierarchy, so Word accepts the .docx (spec §5.3).
+  assert.ok(xml.includes('<w:p '));
+  assert.ok(xml.includes('<w:drawing>'));
+  assert.ok(xml.includes('<wp:inline '));
+  assert.ok(xml.includes('<a:graphic '));
+  assert.ok(xml.includes('<a:graphicData '));
+  assert.ok(xml.includes('</w:p>'));
+  // The wpg:wgp must be nested inside the graphicData, not a bare child of body.
+  const wgp = xml.indexOf('<wpg:wgp');
+  const graphicData = xml.indexOf('<a:graphicData ');
+  assert.ok(wgp > graphicData, 'wpg:wgp must be nested inside a:graphicData');
 });
 
 test('pandoc filter escapes hostile labels (rule #2)', () => {

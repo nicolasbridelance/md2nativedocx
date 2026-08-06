@@ -30,11 +30,19 @@ test('cli converts a markdown file to a valid docx', () => {
     const { code, out } = runCli([md, '-o', docx]);
     assert.equal(code, 0, out);
     assert.ok(existsSync(docx));
-    // The docx must be a valid ZIP containing the wpg:wgp fragment.
+    // The docx must be a valid ZIP containing the wpg:wgp fragment wrapped in
+    // the schema-required w:p/w:drawing hierarchy (spec §5.3).
     const xml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], {
       encoding: 'utf8',
     });
     assert.ok(xml.includes('<wpg:wgp'));
+    assert.ok(xml.includes('<w:drawing>'));
+    assert.ok(xml.includes('<wp:inline '));
+    assert.ok(xml.includes('<a:graphicData '));
+    // The wpg:wgp must be nested inside a:graphicData, not a bare child of body.
+    const wgp = xml.indexOf('<wpg:wgp');
+    const graphicData = xml.indexOf('<a:graphicData ');
+    assert.ok(wgp > graphicData, 'wpg:wgp must be nested inside a:graphicData');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

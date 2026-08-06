@@ -1,3 +1,11 @@
+<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:r>
+    <w:drawing>
+      <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+        <wp:extent cx="1143000" cy="1905000"/>
+        <wp:docPr id="1" name="Diagram"/>
+        <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+          <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
 <wpg:wgp
   xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"
   xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
@@ -6,6 +14,7 @@
   xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
   xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
   xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <wpg:cNvPr id="1" name="Diagram"/>
   <wpg:cNvGrpSpPr/>
   <wpg:grpSpPr>
     <a:xfrm>
@@ -15,7 +24,8 @@
       <a:chExt cx="1143000" cy="1905000"/>
     </a:xfrm>
   </wpg:grpSpPr>
-  <wpg:wsp>
+  <wps:wsp>
+    <wps:cNvPr id="2" name="Start"/>
     <wps:cNvSpPr/>
     <wps:spPr>
       <a:xfrm>
@@ -37,8 +47,9 @@
       </w:txbxContent>
     </wps:txbx>
     <wps:bodyPr/>
-  </wpg:wsp>
-  <wpg:wsp>
+  </wps:wsp>
+  <wps:wsp>
+    <wps:cNvPr id="3" name="End"/>
     <wps:cNvSpPr/>
     <wps:spPr>
       <a:xfrm>
@@ -60,11 +71,12 @@
       </w:txbxContent>
     </wps:txbx>
     <wps:bodyPr/>
-  </wpg:wsp>
-  <wpg:cxnSp>
+  </wps:wsp>
+  <wps:wsp>
+    <wps:cNvPr id="4" name="Connector"/>
     <wps:cNvCnPr>
-      <a:stCxn id="A" idx="0"/>
-      <a:endCxn id="B" idx="0"/>
+      <a:stCxn id="2" idx="0"/>
+      <a:endCxn id="3" idx="0"/>
     </wps:cNvCnPr>
     <wps:spPr>
       <a:xfrm>
@@ -78,5 +90,11 @@
     </wps:spPr>
     <wps:style/>
     <wps:bodyPr/>
-  </wpg:cxnSp>
+  </wps:wsp>
 </wpg:wgp>
+          </a:graphicData>
+        </a:graphic>
+      </wp:inline>
+    </w:drawing>
+  </w:r>
+</w:p>

@@ -19,15 +19,48 @@ test('emits a self-contained wpg:wgp group', () => {
   assert.ok(xml.includes('xmlns:a='));
 });
 
-test('emits one wpg:wsp per node', () => {
-  const xml = translate('graph TD\n  A --> B\n  B --> C');
-  const count = (xml.match(/<wpg:wsp>/g) ?? []).length;
-  assert.equal(count, 3);
+test('wraps the wpg:wgp in the schema-required paragraph hierarchy (spec §5.3)', () => {
+  const xml = translate('graph TD\n  A[Start] --> B[End]');
+  // The fragment must be a complete w:p paragraph so Word accepts it as a
+  // block-level drawing (a bare wpg:wgp cannot be a direct child of w:body).
+  assert.ok(xml.startsWith('<w:p '));
+  assert.ok(xml.trimEnd().endsWith('</w:p>'));
+  // Schema-required nesting: w:p -> w:r -> w:drawing -> wp:inline ->
+  // a:graphic -> a:graphicData -> wpg:wgp.
+  const order = [
+    '<w:p ',
+    '<w:r>',
+    '<w:drawing>',
+    '<wp:inline ',
+    '<a:graphic ',
+    '<a:graphicData ',
+    '<wpg:wgp',
+    '</wpg:wgp>',
+    '</a:graphicData>',
+    '</a:graphic>',
+    '</wp:inline>',
+    '</w:drawing>',
+    '</w:r>',
+    '</w:p>',
+  ];
+  let idx = -1;
+  for (const token of order) {
+    const found = xml.indexOf(token, idx + 1);
+    assert.ok(found > idx, `expected "${token}" after position ${idx}`);
+    idx = found;
+  }
 });
 
-test('emits one wpg:cxnSp per edge', () => {
+test('emits one wps:wsp per node', () => {
   const xml = translate('graph TD\n  A --> B\n  B --> C');
-  const count = (xml.match(/<wpg:cxnSp>/g) ?? []).length;
+  // Nodes are wps:wsp with wps:cNvSpPr; connectors are wps:wsp with wps:cNvCnPr.
+  const nodeCount = (xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length;
+  assert.equal(nodeCount, 3);
+});
+
+test('emits one connector (wps:cNvCnPr) per edge', () => {
+  const xml = translate('graph TD\n  A --> B\n  B --> C');
+  const count = (xml.match(/<wps:cNvCnPr>/g) ?? []).length;
   assert.equal(count, 2);
 });
 
@@ -82,11 +115,13 @@ test('applies classDef fill to a node (spec §6.3)', () => {
   assert.ok(xml.includes('val="D9E2F3"'));
 });
 
-test('renders a subgraph as a nested wpg:wgp with title (spec §6.1)', () => {
+test('renders a subgraph as a nested wpg:grpSp with title (spec §6.1)', () => {
   const xml = translate('graph TD\n  subgraph S1[Groupe A]\n    A --> B\n  end\n  B --> C');
-  // Root group + nested subgraph group.
-  assert.equal((xml.match(/<wpg:wgp>/g) ?? []).length, 1);
-  assert.equal((xml.match(/<\/wpg:wgp>/g) ?? []).length, 2);
+  // Root group (wpg:wgp) + nested subgraph group (wpg:grpSp).
+  assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 1);
+  assert.equal((xml.match(/<\/wpg:wgp>/g) ?? []).length, 1);
+  assert.equal((xml.match(/<wpg:grpSp>/g) ?? []).length, 1);
+  assert.equal((xml.match(/<\/wpg:grpSp>/g) ?? []).length, 1);
   assert.ok(xml.includes('Groupe A'));
 });
 

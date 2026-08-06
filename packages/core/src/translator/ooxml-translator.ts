@@ -1,10 +1,27 @@
 /**
  * OOXML/DrawingML translator: AST + layout coordinates -> a self-contained
- * `wpg:wgp` (grouped drawing) XML string.
+ * WordprocessingML paragraph containing a `wpg:wgp` (grouped drawing) XML
+ * string.
  *
  * This is the heart of the project (spec §5.3). It is a pure function from
  * (Flowchart, Layout) to a single XML string that can be injected verbatim into
  * a Pandoc `RawBlock('openxml', ...)` (ADR 0002).
+ *
+ * The emitted fragment is a complete `w:p` paragraph wrapping the drawing in
+ * the schema-required hierarchy `w:p -> w:r -> w:drawing -> wp:inline ->
+ * a:graphic -> a:graphicData -> wpg:wgp`. A bare `wpg:wgp` cannot be a direct
+ * child of `w:body`; emitting the full paragraph is what makes the `.docx`
+ * open cleanly in Word (spec §5.3 "Encapsulation en `<wpg:wgp>` ... inséré
+ * dans `<w:drawing><wp:inline>...`").
+ *
+ * The element structure follows the official Microsoft schemas
+ * (ECMA-376 + MS-OE376, as published in the Open XML SDK):
+ *   - `wpg:wgp` / `wpg:grpSp` require `wpg:cNvPr` (with `id` + `name`),
+ *     `wpg:cNvGrpSpPr`, `wpg:grpSpPr`, then a choice of `wps:wsp` / `wpg:grpSp`.
+ *   - `wps:wsp` requires `wps:cNvPr`, then either `wps:cNvSpPr` (shape) or
+ *     `wps:cNvCnPr` (connector), then `wps:spPr`, optional `wps:style`,
+ *     optional `wps:txbx`, and `wps:bodyPr`.
+ *   - `wp:inline` requires `wp:extent` and `wp:docPr` before `a:graphic`.
  *
  * Security invariants (AGENTS.md):
  * - Every user-controlled string is XML-escaped (rule #2) via {@link escapeXml}.
@@ -41,6 +58,17 @@ const LINE_STYLE_BY_EDGE: Readonly<Record<string, { dash?: string; width: number
   thick: { width: 25400 },
 };
 
+/** Namespaces declared inline on the root `wpg:wgp` (self-contained, rule #3). */
+const NS = {
+  wpg: 'xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"',
+  wps: 'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"',
+  wp: 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"',
+  a: 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"',
+  pic: 'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"',
+  r: 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"',
+  w: 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"',
+};
+
 export interface TranslateOptions {
   /** Fill color (hex, no `#`) for node shapes. */
   fill?: string;
@@ -49,12 +77,14 @@ export interface TranslateOptions {
 }
 
 /**
- * Translate a flowchart + its layout into a self-contained `wpg:wgp` XML string.
+ * Translate a flowchart + its layout into a self-contained WordprocessingML
+ * paragraph (`w:p`) wrapping the drawing in the schema-required hierarchy.
  *
  * @param flowchart - The parsed flowchart AST.
  * @param layout - Layout result (node + subgraph coordinates) from `layout/layout.ts`.
  * @param options - Optional color overrides.
- * @returns A single XML string, ready to inject into a Pandoc `RawBlock('openxml', ...)`.
+ * @returns A single XML string (a complete `w:p` paragraph), ready to inject
+ *   into a Pandoc `RawBlock('openxml', ...)` (ADR 0002).
  */
 export function translateToOoxml(
   flowchart: Flowchart,
@@ -64,10 +94,34 @@ export function translateToOoxml(
   const fill = options.fill ?? DEFAULT_FILL;
   const line = options.line ?? DEFAULT_LINE;
 
-  const parts: string[] = [];
-  parts.push(openGroup(flowchart, layout));
+  const bb = computeBoundingBox(layout.nodes);
+  const group = renderGroup(flowchart, layout, fill, line);
+  return wrapInParagraph(group, bb);
+}
 
-  // Render subgraphs as nested wpg:wgp groups (spec §6.1), then nodes and edges.
+/**
+ * Render the root `wpg:wgp` group (subgraphs + nodes + edges) with all
+ * namespaces declared inline (self-contained).
+ */
+function renderGroup(
+  flowchart: Flowchart,
+  layout: LayoutResult,
+  fill: string,
+  line: string,
+): string {
+  const bb = computeBoundingBox(layout.nodes);
+  const parts: string[] = [];
+  parts.push(openGroup(bb));
+
+  // Pre-assign a unique numeric id to every node so connectors (stCxn/endCxn)
+  // can reference the shape ids (the `wps:cNvPr id` attribute). Mermaid node
+  // ids are arbitrary strings; the OOXML shape id must be a unique number.
+  const nodeIds = new Map<string, number>();
+  for (const node of flowchart.nodes) {
+    nodeIds.set(node.id, nextId());
+  }
+
+  // Render subgraphs as nested wpg:grpSp groups (spec §6.1), then nodes and edges.
   const renderedSubgraphs = new Set<string>();
   for (const sg of flowchart.subgraphs) {
     parts.push(renderSubgraph(sg, flowchart, layout, fill, line, renderedSubgraphs));
@@ -78,14 +132,17 @@ export function translateToOoxml(
     if (!box) continue;
     // Per-node fill from classDef takes priority over the global default.
     const nodeFill = node.fill ?? fill;
-    parts.push(renderNode(node.id, node.label, node.shape, box, nodeFill, line));
+    parts.push(renderNode(nodeIds.get(node.id)!, node.label, node.shape, box, nodeFill, line));
   }
 
   for (const edge of flowchart.edges) {
     const from = layout.nodes[edge.from];
     const to = layout.nodes[edge.to];
     if (!from || !to) continue;
-    parts.push(renderEdge(edge.from, edge.to, edge.type, from, to, line));
+    const fromId = nodeIds.get(edge.from);
+    const toId = nodeIds.get(edge.to);
+    if (fromId === undefined || toId === undefined) continue;
+    parts.push(renderEdge(fromId, toId, edge.type, from, to, line));
   }
 
   parts.push('</wpg:wgp>');
@@ -93,8 +150,43 @@ export function translateToOoxml(
 }
 
 /**
- * Render a subgraph as a nested `wpg:wgp` group with its title in a `wps:txbx`
- * (spec §6.1). Nested subgraphs are rendered recursively.
+ * Wrap a `wpg:wgp` group in the schema-required paragraph hierarchy so Word
+ * accepts the fragment as a block-level drawing:
+ * `w:p -> w:r -> w:drawing -> wp:inline -> a:graphic -> a:graphicData -> wpg:wgp`.
+ *
+ * `wp:inline` requires `wp:extent` and `wp:docPr` (in that order) before
+ * `a:graphic` (ECMA-376 §17.3.1.1). The `wpg:wgp` group is self-contained
+ * (all namespaces declared inline), so the wrapper only needs the `w`
+ * namespace for `w:p`/`w:r`/`w:drawing`.
+ */
+function wrapInParagraph(
+  group: string,
+  bb: { width: number; height: number },
+): string {
+  const cx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
+  const cy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
+  return [
+    `<w:p ${NS.w}>`,
+    '  <w:r>',
+    '    <w:drawing>',
+    `      <wp:inline ${NS.wp}>`,
+    `        <wp:extent cx="${cx}" cy="${cy}"/>`,
+    '        <wp:docPr id="1" name="Diagram"/>',
+    `        <a:graphic ${NS.a}>`,
+    '          <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">',
+    group,
+    '          </a:graphicData>',
+    '        </a:graphic>',
+    '      </wp:inline>',
+    '    </w:drawing>',
+    '  </w:r>',
+    '</w:p>',
+  ].join('\n');
+}
+
+/**
+ * Render a subgraph as a nested `wpg:grpSp` group with its title in a
+ * `wps:wsp` text box (spec §6.1). Nested subgraphs are rendered recursively.
  */
 function renderSubgraph(
   sg: Subgraph,
@@ -116,7 +208,8 @@ function renderSubgraph(
   const safeTitle = escapeXml(sg.title);
 
   const parts: string[] = [];
-  parts.push('  <wpg:wgp>');
+  parts.push('  <wpg:grpSp>');
+  parts.push(`    <wpg:cNvPr id="${nextId()}" name="${safeTitle}"/>`);
   parts.push('    <wpg:cNvGrpSpPr/>');
   parts.push('    <wpg:grpSpPr>');
   parts.push('      <a:xfrm>');
@@ -127,8 +220,9 @@ function renderSubgraph(
   parts.push('      </a:xfrm>');
   parts.push('    </wpg:grpSpPr>');
 
-  // Subgraph title as a text box (wps:txbx) at the top of the group.
-  parts.push('    <wpg:wsp>');
+  // Subgraph title as a text box (wps:wsp with wps:txbx) at the top.
+  parts.push('    <wps:wsp>');
+  parts.push(`      <wps:cNvPr id="${nextId()}" name="SubgraphTitle"/>`);
   parts.push('      <wps:cNvSpPr/>');
   parts.push('      <wps:spPr>');
   parts.push('        <a:xfrm>');
@@ -148,7 +242,7 @@ function renderSubgraph(
   parts.push('        </w:txbxContent>');
   parts.push('      </wps:txbx>');
   parts.push('      <wps:bodyPr/>');
-  parts.push('    </wpg:wsp>');
+  parts.push('    </wps:wsp>');
 
   // Nested subgraphs.
   for (const childId of sg.subgraphIds) {
@@ -156,24 +250,24 @@ function renderSubgraph(
     if (child) parts.push(renderSubgraph(child, flowchart, layout, fill, line, rendered));
   }
 
-  parts.push('  </wpg:wgp>');
+  parts.push('  </wpg:grpSp>');
   return parts.join('\n');
 }
 
-/** Open the `wpg:wgp` group with all namespaces declared inline (self-contained). */
-function openGroup(flowchart: Flowchart, layout: LayoutResult): string {
-  const bb = computeBoundingBox(layout.nodes);
+/** Open the root `wpg:wgp` group with all namespaces declared inline. */
+function openGroup(bb: { width: number; height: number }): string {
   const cx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
   const cy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
   return [
     '<wpg:wgp',
-    '  xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"',
-    '  xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"',
-    '  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"',
-    '  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"',
-    '  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"',
-    '  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"',
-    '  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
+    `  ${NS.wpg}`,
+    `  ${NS.wps}`,
+    `  ${NS.wp}`,
+    `  ${NS.a}`,
+    `  ${NS.pic}`,
+    `  ${NS.r}`,
+    `  ${NS.w}>`,
+    '  <wpg:cNvPr id="1" name="Diagram"/>',
     '  <wpg:cNvGrpSpPr/>',
     '  <wpg:grpSpPr>',
     '    <a:xfrm>',
@@ -186,9 +280,9 @@ function openGroup(flowchart: Flowchart, layout: LayoutResult): string {
   ].join('\n');
 }
 
-/** Render a single node as a `wpg:wsp` (wordprocessing shape). */
+/** Render a single node as a `wps:wsp` (wordprocessing shape). */
 function renderNode(
-  id: string,
+  id: number,
   label: string,
   shape: NodeShape,
   box: { x: number; y: number; width: number; height: number },
@@ -203,7 +297,8 @@ function renderNode(
   const safeLabel = escapeXml(label);
 
   return [
-    '  <wpg:wsp>',
+    '  <wps:wsp>',
+    `    <wps:cNvPr id="${id}" name="${safeLabel}"/>`,
     '    <wps:cNvSpPr/>',
     '    <wps:spPr>',
     '      <a:xfrm>',
@@ -225,14 +320,14 @@ function renderNode(
     '      </w:txbxContent>',
     '    </wps:txbx>',
     '    <wps:bodyPr/>',
-    '  </wpg:wsp>',
+    '  </wps:wsp>',
   ].join('\n');
 }
 
-/** Render an edge as a `wpg:cxnSp` (connector) between two node boxes. */
+/** Render an edge as a `wps:wsp` connector (with `wps:cNvCnPr`). */
 function renderEdge(
-  fromId: string,
-  toId: string,
+  fromId: number,
+  toId: number,
   type: string,
   from: { x: number; y: number; width: number; height: number },
   to: { x: number; y: number; width: number; height: number },
@@ -250,7 +345,8 @@ function renderEdge(
   const toCy = Math.round((to.y + to.height / 2) * EMU_PER_PX);
 
   return [
-    '  <wpg:cxnSp>',
+    '  <wps:wsp>',
+    `    <wps:cNvPr id="${nextId()}" name="Connector"/>`,
     '    <wps:cNvCnPr>',
     `      <a:stCxn id="${fromId}" idx="0"/>`,
     `      <a:endCxn id="${toId}" idx="0"/>`,
@@ -267,8 +363,16 @@ function renderEdge(
     '    </wps:spPr>',
     '    <wps:style/>',
     '    <wps:bodyPr/>',
-    '  </wpg:cxnSp>',
+    '  </wps:wsp>',
   ].join('\n');
+}
+
+/** Monotonic counter for unique shape ids (required by `wps:cNvPr`/`wpg:cNvPr`). */
+let idCounter = 2;
+
+/** Return the next unique shape id. */
+function nextId(): number {
+  return idCounter++;
 }
 
 /** Compute the total bounding box of a layout, in pixels. */

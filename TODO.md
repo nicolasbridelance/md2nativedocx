@@ -41,7 +41,13 @@ est levé.
 - ✅ Tests : unitaires + golden + fuzz (29 tests, 0 échec) — le fuzz a trouvé/corrigé un bug de
   prototype pollution (`__proto__`)
 - ✅ `packages/pandoc-filter/` : filtre Lua + binaire bridge (4 tests)
-- ✅ `packages/cli/` : `npx md2nativedocx` (4 tests)
+- ✅ `packages/cli/` : `npx md2nativedocx` (5 tests — dont un test de corpus qui régénère chaque
+      `.docx` du corpus dans `test-corpus/output/` via le CLI réel et vérifie sa conformité OOXML,
+      spec §5.3/§9)
+- ✅ Traducteur conforme aux schémas officiels (ECMA-376 + MS-OE376) : `wpg:wgp` → `wpg:cNvPr` →
+      `wpg:cNvGrpSpPr` → `wpg:grpSpPr` → `wps:wsp` (avec `wps:cNvPr`/`wps:cNvSpPr`/`wps:cNvCnPr`),
+      sous-graphes en `wpg:grpSp`, `wp:inline` avec `wp:extent`/`wp:docPr`. Corrige l'erreur Word
+      "a rencontré une erreur lors de l'ouverture du fichier".
 - ✅ CI/CD : `.github/workflows/ci.yml` + `codeql.yml`
 - ✅ `LICENSE` (CC0 verbatim), `README.md` complet
 - ✅ Validation `npm install` / `build` / `typecheck` / `lint` / `test` — tout passe
@@ -73,7 +79,10 @@ est levé.
       selon la matrice §6.1 (rect, roundRect, stadium, diamond, cylinder, ellipse).
 - [x] Connecteurs magnétiques `<a:cxnSp>` ancrés via `<a:stCxn>`/`<a:endCxn>` (comportement
       dynamique Word si l'utilisateur déplace une boîte).
-- [ ] Encapsulation `<wpg:wgp>` (groupe de dessin) dans `<w:drawing><wp:inline>...`.
+- [x] Encapsulation `<wpg:wgp>` (groupe de dessin) dans `<w:drawing><wp:inline>...` — le
+      traducteur émet désormais un paragraphe complet `w:p -> w:r -> w:drawing -> wp:inline ->
+      a:graphic -> a:graphicData -> wpg:wgp` (corrige l'erreur Word "a rencontré une erreur lors
+      de l'ouverture du fichier" sur les `.docx` générés).
 - [ ] **Échappement XML strict** (`& < > " '`) de TOUT texte utilisateur (labels nœuds/arêtes,
       titres subgraph) avant insertion dans `<a:t>` — règle non négociable n°2.
 - [x] **Aucune relation OOXML externe** (`TargetMode="External"` interdit) — règle n°3.
