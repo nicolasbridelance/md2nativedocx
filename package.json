@@ -1,0 +1,30 @@
+{
+  "name": "md2nativedocx",
+  "version": "0.1.0",
+  "description": "Convert Markdown with Mermaid diagrams into a complete .docx with native, editable OOXML vector shapes — not flattened PNGs.",
+  "license": "CC0-1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "eslint .",
+    "test": "npm run test --workspaces",
+    "test:fuzz": "npm run test:fuzz -w packages/core",
+    "test:visual": "echo \"test:visual requires LibreOffice headless; run in CI\" && exit 0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-security": "^3.0.1",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-test/
+*.tsbuildinfo
+*.log
+.DS_Store
+coverage/
+.env
+# Compiled JS/maps emitted into src/ by tsc (should not be committed)
+packages/**/src/**/*.js
+packages/**/src/**/*.js.map
