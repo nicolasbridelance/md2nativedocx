@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>md2nativedocx — maquette UX extension VS Code</title>
+<style>
+  :root{
+    --bg-editor:#1e1e1e; --bg-sidebar:#252526; --bg-activitybar:#333333;
+    --bg-titlebar:#3c3c3c; --bg-statusbar:#007acc; --bg-tab-active:#1e1e1e;
+    --bg-tab-inactive:#2d2d2d; --border:#1b1b1b; --text-main:#d4d4d4;
+    --text-dim:#858585; --text-codelens:#999999; --accent-blue:#3794ff;
+    --btn-bg:#0e639c; --btn-bg-hover:#1177bb; --mermaid-kw:#569cd6;
+    --md-heading:#4ec9b0; --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "SF Mono", Consolas, "Courier New", monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:32px 16px; background:#0d0d0d; font-family:var(--font-ui);
+    display:flex; flex-direction:column; align-items:center; gap:20px;
+  }
+  .controls{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+  }
+  .controls button{
+    font-family:var(--font-ui); font-size:13px; padding:7px 14px; border-radius:20px;
+    border:1px solid #3c3c3c; background:#1e1e1e; color:#ccc; cursor:pointer;
+    transition:all .15s;
+  }
+  .controls button:hover{ background:#2a2d2e; }
+  .controls button.active{ background:var(--accent-blue); color:#fff; border-color:var(--accent-blue); }
+  .controls .label{ color:#888; font-size:12px; align-self:center; margin-right:4px; }
+
+  .window{
+    width:min(980px, 94vw); height:600px; background:var(--bg-editor);
+    border-radius:8px; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; border:1px solid #000;
+  }
+  .titlebar{
+    height:30px; background:var(--bg-titlebar); display:flex; align-items:center;
+    padding:0 12px; gap:8px; flex-shrink:0;
+  }
+  .dot{ width:11px; height:11px; border-radius:50%; }
+  .dot.r{ background:#ff5f56;} .dot.y{ background:#ffbd2e;} .dot.g{ background:#27c93f;}
+  .titlebar .title{ flex:1; text-align:center; font-size:12px; color:#bbb; margin-right:36px;}
+
+  .body{ flex:1; display:flex; min-height:0; }
+  .activitybar{
+    width:48px; background:var(--bg-activitybar); flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; padding-top:12px; gap:22px;
+  }
+  .activitybar .icon{ width:24px; height:24px; opacity:.55; }
+  .activitybar .icon.active{ opacity:1; border-left:2px solid #fff; margin-left:2px; }
+
+  .sidebar{ width:220px; background:var(--bg-sidebar); flex-shrink:0; padding-top:10px; }
+  .sidebar .section{ font-size:11px; color:#bbb; text-transform:uppercase; padding:4px 16px; letter-spacing:.5px; }
+  .filetree{ font-size:13px; color:#ccc; }
+  .filetree div{ padding:3px 16px 3px 28px; white-space:nowrap; cursor:default; }
+  .filetree div.active{ background:#37373d; }
+  .filetree div .ic{ margin-right:6px; opacity:.7; }
+
+  .editorarea{ flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
+  .tabs{ height:35px; background:#252526; display:flex; align-items:stretch; flex-shrink:0; }
+  .tab{ display:flex; align-items:center; padding:0 14px; font-size:13px; color:#8c8c8c; gap:8px; border-right:1px solid #1e1e1e;}
+  .tab.active{ background:var(--bg-editor); color:#fff; border-top:1px solid var(--accent-blue); }
+
+  .code{ flex:1; padding:16px 0 16px 0; overflow:auto; font-family:var(--font-mono); font-size:13.5px; line-height:1.65; }
+  .line{ display:flex; }
+  .ln{ width:40px; text-align:right; color:var(--text-dim); padding-right:14px; user-select:none; flex-shrink:0; }
+  .lc{ color:var(--text-main); white-space:pre; }
+  .lc .h{ color:var(--md-heading); font-weight:600; }
+  .lc .kw{ color:var(--mermaid-kw); }
+  .lc .fence{ color:#6a9955; }
+  .lc .lbl{ color:#ce9178; }
+
+  .codelens{ display:flex; }
+  .codelens .ln{ width:40px; }
+  .codelens .lc{ color:var(--text-codelens); font-size:11.5px; }
+  .codelens .lc span{ cursor:pointer; }
+  .codelens .lc span:hover{ color:#fff; text-decoration:underline; }
+  .codelens .sep{ color:#5a5a5a; margin:0 6px; }
+
+  .statusbar{
+    height:22px; background:var(--bg-statusbar); flex-shrink:0;
+    display:flex; align-items:center; padding:0 10px; gap:16px;
+    font-size:12px; color:#fff; justify-content:space-between;
+  }
+  .statusbar .left{ display:flex; gap:16px; align-items:center; }
+  .statusbar .badge{ background:rgba(255,255,255,.18); padding:1px 8px; border-radius:3px; cursor:pointer; }
+  .statusbar .badge:hover{ background:rgba(255,255,255,.28); }
+
+  .toastwrap{ position:absolute; bottom:30px; right:12px; width:340px; z-index:10; }
+  .toast{
+    background:#252526; border:1px solid #454545; border-radius:4px; padding:12px 14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); font-size:13px; color:#ddd;
+    display:flex; flex-direction:column; gap:10px; animation:slidein .25s ease-out;
+  }
+  @keyframes slidein{ from{ transform:translateY(8px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+  .toast .row{ display:flex; align-items:flex-start; gap:10px; }
+  .toast .ico{ flex-shrink:0; width:16px; height:16px; margin-top:1px; }
+  .toast .actions{ display:flex; gap:8px; margin-left:26px; }
+  .toast button.act{
+    font-family:var(--font-ui); font-size:12.5px; background:var(--btn-bg); color:#fff;
+    border:none; padding:5px 10px; border-radius:2px; cursor:pointer;
+  }
+  .toast button.act:hover{ background:var(--btn-bg-hover); }
+  .toast button.link{ background:transparent; color:#8ec3ff; border:none; font-size:12.5px; cursor:pointer; padding:5px 4px;}
+  .spinner{
+    width:14px; height:14px; border:2px solid #555; border-top-color:#3794ff; border-radius:50%;
+    animation:spin .8s linear infinite; flex-shrink:0; margin-top:1px;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .progressbar{ height:2px; background:#1e1e1e; overflow:hidden; }
+  .progressbar .fill{ height:100%; width:40%; background:var(--accent-blue); animation:slide 1.1s ease-in-out infinite; }
+  @keyframes slide{ 0%{ margin-left:-40%; } 100%{ margin-left:100%; } }
+
+  .caption{ color:#888; font-size:13px; max-width:640px; text-align:center; line-height:1.5; }
+  .caption b{ color:#ccc; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <span class="label">État affiché :</span>
+  <button data-state="idle" class="active">Repos — CodeLens visible</button>
+  <button data-state="exporting">Export en cours</button>
+  <button data-state="success">Succès</button>
+  <button data-state="error">Erreur — Pandoc manquant</button>
+</div>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    <div class="title">report.md — md2nativedocx-demo</div>
+  </div>
+  <div class="body">
+    <div class="activitybar">
+      <svg class="icon active" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 3h16v18H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M6 3v18M6 3c4 0 4 4 8 4M6 11c4 0 4 4 8 4"/></svg>
+    </div>
+    <div class="sidebar">
+      <div class="section">md2nativedocx-demo</div>
+      <div class="filetree">
+        <div><span class="ic">📁</span>.devcontainer</div>
+        <div><span class="ic">📁</span>packages</div>
+        <div><span class="ic">📄</span>README.md</div>
+        <div class="active"><span class="ic">📝</span>report.md</div>
+        <div><span class="ic">📄</span>package.json</div>
+      </div>
+    </div>
+    <div class="editorarea">
+      <div class="tabs">
+        <div class="tab active"><span>📝</span> report.md</div>
+      </div>
+      <div class="code">
+        <div class="line"><div class="ln">1</div><div class="lc"><span class="h"># Architecture du pipeline</span></div></div>
+        <div class="line"><div class="ln">2</div><div class="lc"></div></div>
+        <div class="line"><div class="ln">3</div><div class="lc">Le flux de données suit trois étapes principales :</div></div>
+        <div class="line"><div class="ln">4</div><div class="lc"></div></div>
+
+        <div class="codelens">
+          <div class="ln"></div>
+          <div class="lc">
+            <span>⚙️ Exporter en Word</span><span class="sep">|</span><span>Exporter le bloc seul</span>
+          </div>
+        </div>
+        <div class="line"><div class="ln">5</div><div class="lc"><span class="fence">```mermaid</span></div></div>
+        <div class="line"><div class="ln">6</div><div class="lc"><span class="kw">flowchart TD</span></div></div>
+        <div class="line"><div class="ln">7</div><div class="lc">    A<span class="lbl">[Requête]</span> --> B<span class="lbl">{Valide ?}</span></div></div>
+        <div class="line"><div class="ln">8</div><div class="lc">    B -->|oui| C<span class="lbl">[Traitement]</span></div></div>
+        <div class="line"><div class="ln">9</div><div class="lc">    B -->|non| D<span class="lbl">[Rejet]</span></div></div>
+        <div class="line"><div class="ln">10</div><div class="lc"><span class="fence">```</span></div></div>
+        <div class="line"><div class="ln">11</div><div class="lc"></div></div>
+        <div class="line"><div class="ln">12</div><div class="lc">Le module de traitement délègue ensuite...</div></div>
+      </div>
+      <div class="progressbar" id="pbar" style="display:none;"><div class="fill"></div></div>
+      <div class="toastwrap" id="toastwrap"></div>
+    </div>
+  </div>
+  <div class="statusbar">
+    <div class="left">
+      <span>⎇ main</span>
+      <span class="badge" id="statusbadge">⧉ 1 diagramme détecté</span>
+    </div>
+    <div class="left"><span>Markdown</span><span>UTF-8</span></div>
+  </div>
+</div>
+
+<div class="caption" id="caption">
+  <b>Repos.</b> Le CodeLens apparaît automatiquement au-dessus de chaque bloc mermaid — aucune commande à connaître, aucun raccourci à mémoriser. La pastille dans la barre de statut donne un second point d'entrée, permanent celui-là, pour qui préfère cliquer une fois en bas plutôt que de viser une ligne précise dans le code.
+</div>
+
+<script>
+const toastwrap = document.getElementById('toastwrap');
+const pbar = document.getElementById('pbar');
+const caption = document.getElementById('caption');
+const badge = document.getElementById('statusbadge');
+
+const captions = {
+  idle: "<b>Repos.</b> Le CodeLens apparaît automatiquement au-dessus de chaque bloc mermaid — aucune commande à connaître, aucun raccourci à mémoriser. La pastille dans la barre de statut donne un second point d'entrée, permanent celui-là, pour qui préfère cliquer une fois en bas plutôt que de viser une ligne précise dans le code.",
+  exporting: "<b>Export en cours.</b> Barre de progression fine sous l'éditeur + toast avec spinner : l'utilisateur sait que quelque chose se passe pendant l'appel à Pandoc, qui n'est pas instantané. Pas de gel silencieux de l'interface.",
+  success: "<b>Succès.</b> Le toast propose deux actions immédiates au lieu de forcer l'utilisateur à aller chercher le fichier dans l'explorateur. Le verbe reste le même du bouton jusqu'à la confirmation — 'Exporter' partout, jamais 'Générer' puis 'Export terminé'.",
+  error: "<b>Erreur.</b> Jamais de stack trace brute. Le message dit ce qui a manqué et propose une action de réparation directe, pas juste un lien vers une doc à parcourir soi-même."
+};
+
+function render(state){
+  document.querySelectorAll('.controls button').forEach(b=>b.classList.toggle('active', b.dataset.state===state));
+  caption.innerHTML = captions[state];
+  toastwrap.innerHTML = '';
+  pbar.style.display = 'none';
+  badge.textContent = '⧉ 1 diagramme détecté';
+
+  if(state==='exporting'){
+    pbar.style.display='block';
+    toastwrap.innerHTML = `
+      <div class="toast">
+        <div class="row"><div class="spinner"></div><div>Conversion en .docx via Pandoc…</div></div>
+      </div>`;
+  }
+  if(state==='success'){
+    toastwrap.innerHTML = `
+      <div class="toast">
+        <div class="row"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="#89d185" stroke-width="1.5"><circle cx="8" cy="8" r="7"/><path d="M5 8l2 2 4-4"/></svg>
+        <div>Exporté vers <b>report.docx</b></div></div>
+        <div class="actions">
+          <button class="act">Ouvrir dans Word</button>
+          <button class="link">Révéler dans l'explorateur</button>
+        </div>
+      </div>`;
+  }
+  if(state==='error'){
+    toastwrap.innerHTML = `
+      <div class="toast">
+        <div class="row"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="#f14c4c" stroke-width="1.5"><circle cx="8" cy="8" r="7"/><path d="M8 5v4M8 11h.01"/></svg>
+        <div>Pandoc est introuvable sur cette machine</div></div>
+        <div class="actions">
+          <button class="act">Installer Pandoc</button>
+          <button class="link">Ignorer</button>
+        </div>
+      </div>`;
+  }
+}
+
+document.querySelectorAll('.controls button').forEach(b=>{
+  b.addEventListener('click', ()=>render(b.dataset.state));
+});
+render('idle');
+</script>
+</body>
+</html>
