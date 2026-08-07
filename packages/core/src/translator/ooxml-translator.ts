@@ -38,7 +38,8 @@
  *   fully self-contained, with all namespaces declared inline.
  */
 
-import type { Flowchart, Layout, LayoutResult, NodeShape, Subgraph } from '../types.js';
+import { SUBGRAPH_TITLE_HEIGHT } from '../layout/layout.js';
+import type { Flowchart, Layout, LayoutPoint, LayoutResult, NodeShape, Subgraph } from '../types.js';
 import { escapeXml } from './xml-escape.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -55,9 +56,38 @@ const DEFAULT_LINE = '2F5496';
  * uniformly rather than being clipped by Word: `wp:extent` and the group's
  * `a:ext` shrink while `a:chOff`/`a:chExt` stay in native coordinates, so Word
  * applies the homothety to every child shape for us.
+ *
+ * Height IS capped, on purpose, even though the drawing is `wp:inline` (flows
+ * with the text) and one might expect Word to paginate an over-height inline
+ * object the way it does an oversized picture. It does not, for this element
+ * — see {@link MIN_SAFE_ASPECT_RATIO} for what's actually going on and why a
+ * height cap alone was never the whole story. Not verified against real
+ * Word; treat the multi-page case as genuinely unresolved (see TODO.md).
  */
 const MAX_DRAWING_CX = 5943600;
 const MAX_DRAWING_CY = 8229600;
+
+/**
+ * Above this native (unscaled) height, a `wpc:wpc`/`wpg:wgp` group renders in
+ * LibreOffice ONLY IF its width:height ratio is at least
+ * {@link MIN_SAFE_ASPECT_RATIO} — narrower than that, and headless
+ * `soffice --convert-to png/pdf` produces nothing at all for it: no shapes,
+ * no error, no partial output, just the surrounding document text. Below this
+ * height, any ratio renders fine, however narrow (verified down to 0.09).
+ *
+ * Found empirically with ~25 controlled renders (fixed content, only height
+ * and/or width varied): e.g. at a fixed native height of 13.75in, width
+ * 10.62in (ratio 0.77) rendered nothing while width 12.5in (ratio 0.91)
+ * rendered correctly — same height, only the ratio changed. Bracketed the
+ * height cliff itself (at ratio-safe / unscaled shapes) between 7.92in
+ * (renders) and 9.38in (does not). Neither boundary was pinned to exact
+ * precision, so both constants below carry a safety margin: 7.5in is below
+ * the lowest observed safe height, 1.0 is above the highest observed unsafe
+ * ratio. Not explained by LibreOffice's source (no access to it), and not
+ * verified in real Word.
+ */
+const TALL_RATIO_RISK_HEIGHT = 6858000; // 7.5in
+const MIN_SAFE_ASPECT_RATIO = 1.0;
 
 /** Map a node shape to its DrawingML preset geometry (spec §6.1). */
 const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
@@ -240,21 +270,44 @@ function renderGroup(
     if (!box) continue;
     // Per-node fill from classDef takes priority over the global default.
     const nodeFill = hexColor(node.fill, fill);
-    parts.push(renderNode(nodeIds.get(node.id)!, node.label, node.shape, box, nodeFill, line));
+    parts.push(
+      renderNode(nodeIds.get(node.id)!, node.id, node.label, node.shape, box, nodeFill, line),
+    );
   }
 
-  for (const edge of flowchart.edges) {
+  flowchart.edges.forEach((edge, i) => {
     const from = layout.nodes[edge.from];
     const to = layout.nodes[edge.to];
-    if (!from || !to) continue;
+    if (!from || !to) return;
     const fromId = nodeIds.get(edge.from);
     const toId = nodeIds.get(edge.to);
-    if (fromId === undefined || toId === undefined) continue;
-    parts.push(renderEdge(fromId, toId, edge.type, from, to, line, nextId));
+    if (fromId === undefined || toId === undefined) return;
+    const dagrePoints = layout.edges[i] ?? [];
+    // Every other node's box, i.e. what this connector must NOT be drawn
+    // through — see connectorGeometry's doc comment for why this is checked
+    // geometrically rather than trusted from Dagre's point count.
+    const otherBoxes = Object.entries(layout.nodes)
+      .filter(([id]) => id !== edge.from && id !== edge.to)
+      .map(([, box]) => box);
+    parts.push(
+      renderEdge(
+        fromId,
+        toId,
+        edge.from,
+        edge.to,
+        edge.type,
+        from,
+        to,
+        dagrePoints,
+        otherBoxes,
+        line,
+        nextId,
+      ),
+    );
     if (edge.label) {
-      parts.push(renderEdgeLabel(edge.label, from, to, nextId()));
+      parts.push(renderEdgeLabel(edge.label, from, to, dagrePoints, otherBoxes, nextId()));
     }
-  }
+  });
 
   parts.push('</wpg:wgp>');
   return parts.join('\n');
@@ -303,6 +356,26 @@ function wrapInParagraph(
 }
 
 /**
+ * The native (unscaled) EMU size of the drawing frame, widened past the
+ * content's actual width when needed to stay clear of the LibreOffice
+ * narrow-tall rendering failure (see {@link MIN_SAFE_ASPECT_RATIO}). The
+ * padding is inert canvas margin to the right of the content — it does not
+ * move or resize any node, subgraph, or edge, it only makes the group's own
+ * declared bounding box wide enough to render at all. Both `wp:extent`/`a:ext`
+ * (via {@link scaledExtent}) and the group's own `a:chExt` (`openGroup`) must
+ * derive from this same padded value, or the two would disagree on what the
+ * "native" size even is.
+ */
+function nativeExtent(bb: { width: number; height: number }): { cx: number; cy: number } {
+  const nativeCx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
+  const nativeCy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
+  if (nativeCy > TALL_RATIO_RISK_HEIGHT && nativeCx / nativeCy < MIN_SAFE_ASPECT_RATIO) {
+    return { cx: Math.round(nativeCy * MIN_SAFE_ASPECT_RATIO), cy: nativeCy };
+  }
+  return { cx: nativeCx, cy: nativeCy };
+}
+
+/**
  * Convert a pixel bounding box to the EMU extent of the drawing frame, scaled
  * down uniformly if it would not fit the usable page area. Returns the scale
  * factor so the group's `a:ext` can shrink in step with `wp:extent` while its
@@ -313,8 +386,7 @@ function scaledExtent(bb: { width: number; height: number }): {
   cy: number;
   scale: number;
 } {
-  const nativeCx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
-  const nativeCy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
+  const { cx: nativeCx, cy: nativeCy } = nativeExtent(bb);
   const scale = Math.min(1, MAX_DRAWING_CX / nativeCx, MAX_DRAWING_CY / nativeCy);
   return {
     cx: Math.max(1, Math.round(nativeCx * scale)),
@@ -365,7 +437,7 @@ function renderSubgraph(
   parts.push('      <wps:spPr>');
   parts.push('        <a:xfrm>');
   parts.push('          <a:off x="0" y="0"/>');
-  parts.push(`          <a:ext cx="${w}" cy="228600"/>`);
+  parts.push(`          <a:ext cx="${w}" cy="${SUBGRAPH_TITLE_HEIGHT * EMU_PER_PX}"/>`);
   parts.push('        </a:xfrm>');
   parts.push('        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
   parts.push('        <a:noFill/>');
@@ -404,8 +476,7 @@ function renderSubgraph(
  */
 function openGroup(bb: { width: number; height: number }, groupId: number): string {
   const { cx, cy } = scaledExtent(bb);
-  const childCx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
-  const childCy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
+  const { cx: childCx, cy: childCy } = nativeExtent(bb);
   return [
     '<wpg:wgp',
     `  ${NS.wpg}`,
@@ -428,9 +499,20 @@ function openGroup(bb: { width: number; height: number }, groupId: number): stri
   ].join('\n');
 }
 
-/** Render a single node as a `wps:wsp` (wordprocessing shape). */
+/**
+ * Render a single node as a `wps:wsp` (wordprocessing shape).
+ *
+ * `mermaidId` is stored in `cNvPr/descr` (not `name`): `name` stays the human
+ * label, which is what Word shows in its Selection Pane (a friendlier UX than
+ * a raw Mermaid id like "A" or "decision1"), while `descr` — a standard OOXML
+ * accessibility field, invisible in Word — carries the original id so a
+ * future docx2mermaid reader can recover it (`FUTURE_docx2mermaid_SPEC.md`
+ * §4). Cheap to add now, while the translator is still actively worked on;
+ * expensive to retrofit once the output format and golden tests are frozen.
+ */
 function renderNode(
   id: number,
+  mermaidId: string,
   label: string,
   shape: NodeShape,
   box: Box,
@@ -443,11 +525,12 @@ function renderNode(
   const h = Math.max(1, Math.round(box.height * EMU_PER_PX));
   const prst = PRST_BY_SHAPE[shape] ?? 'rect';
   const safeLabel = escapeXml(label);
+  const safeMermaidId = escapeXml(mermaidId);
   const textColor = textColorFor(fill);
 
   return [
     '  <wps:wsp>',
-    `    <wps:cNvPr id="${id}" name="${safeLabel}"/>`,
+    `    <wps:cNvPr id="${id}" name="${safeLabel}" descr="${safeMermaidId}"/>`,
     '    <wps:cNvSpPr/>',
     '    <wps:spPr>',
     '      <a:xfrm>',
@@ -535,12 +618,49 @@ function chooseSides(from: Box, to: Box): { stSide: number; endSide: number } {
   return dx > 0 ? { stSide: SITE.right, endSide: SITE.left } : { stSide: SITE.left, endSide: SITE.right };
 }
 
-/** The two endpoints of a connector, in pixel space. */
+/** A connector's full route, in pixel space. */
 interface ConnectorGeometry {
   stSide: number;
   endSide: number;
-  start: { x: number; y: number };
-  end: { x: number; y: number };
+  /** Every point the connector passes through, start to end, in order. */
+  points: { x: number; y: number }[];
+}
+
+/** Whether point (x,y) falls within (or on the boundary of) a box. */
+function pointInBox(x: number, y: number, box: Box): boolean {
+  return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
+}
+
+/** Whether segments (a1,a2) and (b1,b2) cross (standard orientation test). */
+function segmentsIntersect(
+  a1: { x: number; y: number },
+  a2: { x: number; y: number },
+  b1: { x: number; y: number },
+  b2: { x: number; y: number },
+): boolean {
+  const ccw = (p: { x: number; y: number }, q: { x: number; y: number }, r: { x: number; y: number }) =>
+    (r.y - p.y) * (q.x - p.x) > (q.y - p.y) * (r.x - p.x);
+  return ccw(a1, b1, b2) !== ccw(a2, b1, b2) && ccw(a1, a2, b1) !== ccw(a1, a2, b2);
+}
+
+/** Whether the segment (x1,y1)-(x2,y2) passes through the given box at all. */
+function segmentIntersectsBox(x1: number, y1: number, x2: number, y2: number, box: Box): boolean {
+  if (pointInBox(x1, y1, box) || pointInBox(x2, y2, box)) return true;
+  const p1 = { x: x1, y: y1 };
+  const p2 = { x: x2, y: y2 };
+  const { x: left, y: top } = box;
+  const right = box.x + box.width;
+  const bottom = box.y + box.height;
+  const corners = [
+    { x: left, y: top },
+    { x: right, y: top },
+    { x: right, y: bottom },
+    { x: left, y: bottom },
+  ];
+  for (let i = 0; i < 4; i++) {
+    if (segmentsIntersect(p1, p2, corners[i]!, corners[(i + 1) % 4]!)) return true;
+  }
+  return false;
 }
 
 /**
@@ -548,44 +668,82 @@ interface ConnectorGeometry {
  * on the boxes' perimeter (the connection site), not their centers — the
  * `a:xfrm` off/ext must match what the connector visually is, or Word draws a
  * line straight through the shape interiors instead of stopping at their edges.
+ *
+ * `dagrePoints` is the route Dagre computed for this edge (`LayoutResult.edges`)
+ * and `otherBoxes` is every OTHER node's box (not this edge's own source/
+ * target). The straight line between the two connection sites is used as-is
+ * UNLESS it actually passes through one of `otherBoxes` — only then does the
+ * connector bend, reusing Dagre's own interior waypoints as the detour.
+ *
+ * This is deliberately a real geometric test rather than trusting Dagre's
+ * point count as a proxy for "needs routing": Dagre hands back more than the
+ * usual 3 points (a start, one stylistic mid-rank point, and an end — even
+ * for two directly-adjacent, unobstructed nodes) for an edge that crosses a
+ * *subgraph cluster* boundary too, not only for one that skips a rank. Empty
+ * `otherBoxes`, or a straight line that clears everything, means the simple
+ * two-point path — matching what this translator always emitted before edge
+ * routing existed, with no dependency on Dagre's point count at all.
  */
-function connectorGeometry(from: Box, to: Box): ConnectorGeometry {
-  const { stSide, endSide } = chooseSides(from, to);
-  return { stSide, endSide, start: sitePoint(from, stSide), end: sitePoint(to, endSide) };
-}
-
-/** Render an edge as a `wps:wsp` connector (with `wps:cNvCnPr`). */
-function renderEdge(
-  fromId: number,
-  toId: number,
-  type: string,
+function connectorGeometry(
   from: Box,
   to: Box,
-  line: string,
-  nextId: () => number,
-): string {
-  const lineStyle = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
-  const { stSide, endSide, start, end } = connectorGeometry(from, to);
+  dagrePoints: LayoutPoint[],
+  otherBoxes: Box[],
+): ConnectorGeometry {
+  const { stSide, endSide } = chooseSides(from, to);
+  const start = sitePoint(from, stSide);
+  const end = sitePoint(to, endSide);
+  const rawWaypoints = dagrePoints.length > 2 ? dagrePoints.slice(1, -1) : [];
+  const needsRouting =
+    rawWaypoints.length > 0 &&
+    otherBoxes.some((box) => segmentIntersectsBox(start.x, start.y, end.x, end.y, box));
+  const waypoints = needsRouting ? rawWaypoints : [];
+  return { stSide, endSide, points: [start, ...waypoints, end] };
+}
 
-  const startX = Math.round(start.x * EMU_PER_PX);
-  const startY = Math.round(start.y * EMU_PER_PX);
-  const endX = Math.round(end.x * EMU_PER_PX);
-  const endY = Math.round(end.y * EMU_PER_PX);
+/**
+ * The point at a given fraction (0..1) of the way along a polyline's total
+ * length — used to place an edge label on a bent connector's actual path
+ * instead of the straight-line midpoint between its two ends, which could
+ * land on whatever the connector is routed around.
+ */
+function pointAlongPath(points: { x: number; y: number }[], fraction: number): { x: number; y: number } {
+  const segments: number[] = [];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i]!.x - points[i - 1]!.x;
+    const dy = points[i]!.y - points[i - 1]!.y;
+    const length = Math.hypot(dx, dy);
+    segments.push(length);
+    total += length;
+  }
+  if (total === 0) return points[0]!;
 
+  let target = total * fraction;
+  for (let i = 0; i < segments.length; i++) {
+    const length = segments[i]!;
+    if (target <= length || i === segments.length - 1) {
+      const t = length === 0 ? 0 : target / length;
+      const a = points[i]!;
+      const b = points[i + 1]!;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    target -= length;
+  }
+  return points[points.length - 1]!;
+}
+
+/**
+ * The `a:prstGeom`/`a:xfrm` for a straight two-point connector — the common
+ * case, byte-identical to what this translator emitted before edge routing
+ * existed.
+ */
+function straightConnectorGeometry(startX: number, startY: number, endX: number, endY: number): string {
   // `a:xfrm` is a top-left box, so a connector running right-to-left or
   // bottom-to-top has to be flipped for the arrow head to land on the target.
   const flipH = endX < startX ? ' flipH="1"' : '';
   const flipV = endY < startY ? ' flipV="1"' : '';
-  const tailEnd = lineStyle.tailEnd ? '        <a:tailEnd type="triangle" w="med" len="med"/>' : '';
-
   return [
-    '  <wps:wsp>',
-    `    <wps:cNvPr id="${nextId()}" name="Connector"/>`,
-    '    <wps:cNvCnPr>',
-    `      <a:stCxn id="${fromId}" idx="${stSide}"/>`,
-    `      <a:endCxn id="${toId}" idx="${endSide}"/>`,
-    '    </wps:cNvCnPr>',
-    '    <wps:spPr>',
     `      <a:xfrm${flipH}${flipV}>`,
     `        <a:off x="${Math.min(startX, endX)}" y="${Math.min(startY, endY)}"/>`,
     `        <a:ext cx="${Math.abs(endX - startX)}" cy="${Math.abs(endY - startY)}"/>`,
@@ -593,6 +751,104 @@ function renderEdge(
     '      <a:prstGeom prst="line">',
     '        <a:avLst/>',
     '      </a:prstGeom>',
+  ].join('\n');
+}
+
+/**
+ * The `a:custGeom`/`a:xfrm` for a connector Dagre routed around an
+ * intermediate rank's nodes (spec §9 "0 croisement de flèches") — an explicit
+ * `moveTo`/`lnTo*` path through every waypoint, rather than one of Word's
+ * built-in `bentConnectorN`/`curvedConnectorN` presets: those are parametrized
+ * by a handful of `adj` guide values with no documented public formula for
+ * "here are N arbitrary points, produce the adj values that trace them", so
+ * reproducing Dagre's routing through them would mean reverse-engineering
+ * Word's own connector-routing heuristic. A custom path draws exactly the
+ * route Dagre already computed, no guessing involved. `wps:cNvCnPr` still
+ * carries `stCxn`/`endCxn` for the magnetic-attachment behaviour (spec §6.2)
+ * — that comes from being declared a connection shape, not from the geometry.
+ *
+ * The path's own coordinate space is set to exactly the shape's EMU extent
+ * (`w`/`h` on `a:path` equal to `a:ext`'s `cx`/`cy`), so every path point can
+ * be a plain EMU offset from the bounding box's top-left with no extra scale
+ * factor to track.
+ */
+function bentConnectorGeometry(points: { x: number; y: number }[]): string {
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const w = Math.max(1, Math.max(...xs) - minX);
+  const h = Math.max(1, Math.max(...ys) - minY);
+  const [first, ...rest] = points;
+
+  return [
+    `      <a:xfrm>`,
+    `        <a:off x="${minX}" y="${minY}"/>`,
+    `        <a:ext cx="${w}" cy="${h}"/>`,
+    '      </a:xfrm>',
+    '      <a:custGeom>',
+    '        <a:avLst/>',
+    '        <a:gdLst/>',
+    '        <a:ahLst/>',
+    '        <a:cxnLst/>',
+    '        <a:rect l="0" t="0" r="0" b="0"/>',
+    '        <a:pathLst>',
+    `          <a:path w="${w}" h="${h}">`,
+    `            <a:moveTo><a:pt x="${first!.x - minX}" y="${first!.y - minY}"/></a:moveTo>`,
+    ...rest.map((p) => `            <a:lnTo><a:pt x="${p.x - minX}" y="${p.y - minY}"/></a:lnTo>`),
+    '          </a:path>',
+    '        </a:pathLst>',
+    '      </a:custGeom>',
+  ].join('\n');
+}
+
+/**
+ * Render an edge as a `wps:wsp` connector (with `wps:cNvCnPr`), following the
+ * route Dagre computed (`dagrePoints`, from `LayoutResult.edges`) when the
+ * straight line between the two connection sites would actually cross
+ * another node — see {@link connectorGeometry}.
+ *
+ * `cNvPr/name` is set to `"{mermaidFromId}--{mermaidToId}"` rather than a
+ * generic label (spec follow-up, `FUTURE_docx2mermaid_SPEC.md` §4) — no
+ * downside here, unlike node `name`: connectors don't currently carry a
+ * friendlier alternative Word would otherwise show in its Selection Pane.
+ */
+function renderEdge(
+  fromId: number,
+  toId: number,
+  mermaidFromId: string,
+  mermaidToId: string,
+  type: string,
+  from: Box,
+  to: Box,
+  dagrePoints: LayoutPoint[],
+  otherBoxes: Box[],
+  line: string,
+  nextId: () => number,
+): string {
+  const lineStyle = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
+  const { stSide, endSide, points } = connectorGeometry(from, to, dagrePoints, otherBoxes);
+  const emuPoints = points.map((p) => ({
+    x: Math.round(p.x * EMU_PER_PX),
+    y: Math.round(p.y * EMU_PER_PX),
+  }));
+
+  const geometry =
+    emuPoints.length === 2
+      ? straightConnectorGeometry(emuPoints[0]!.x, emuPoints[0]!.y, emuPoints[1]!.x, emuPoints[1]!.y)
+      : bentConnectorGeometry(emuPoints);
+  const tailEnd = lineStyle.tailEnd ? '        <a:tailEnd type="triangle" w="med" len="med"/>' : '';
+  const safeName = escapeXml(`${mermaidFromId}--${mermaidToId}`);
+
+  return [
+    '  <wps:wsp>',
+    `    <wps:cNvPr id="${nextId()}" name="${safeName}"/>`,
+    '    <wps:cNvCnPr>',
+    `      <a:stCxn id="${fromId}" idx="${stSide}"/>`,
+    `      <a:endCxn id="${toId}" idx="${endSide}"/>`,
+    '    </wps:cNvCnPr>',
+    '    <wps:spPr>',
+    geometry,
     `      <a:ln w="${lineStyle.width}" cap="flat" cmpd="sng" algn="ctr">`,
     `        <a:solidFill><a:srgbClr val="${line}"/></a:solidFill>`,
     `        <a:prstDash val="${lineStyle.dash}"/>`,
@@ -618,10 +874,21 @@ const EDGE_LABEL_CY = 228600; // 0.25in
  * shape rather than text on the connector itself: Word renders connector-owned
  * text along the line, which is unreadable for a diagram caption.
  */
-function renderEdgeLabel(label: string, from: Box, to: Box, id: number): string {
-  const { start, end } = connectorGeometry(from, to);
-  const x = Math.round(((start.x + end.x) / 2) * EMU_PER_PX - EDGE_LABEL_CX / 2);
-  const y = Math.round(((start.y + end.y) / 2) * EMU_PER_PX - EDGE_LABEL_CY / 2);
+function renderEdgeLabel(
+  label: string,
+  from: Box,
+  to: Box,
+  dagrePoints: LayoutPoint[],
+  otherBoxes: Box[],
+  id: number,
+): string {
+  const { points } = connectorGeometry(from, to, dagrePoints, otherBoxes);
+  // The midpoint by arc length along the real (possibly bent) path, not the
+  // straight line between the two ends — for a routed edge, that straight
+  // line is exactly the segment the routing was drawn to avoid.
+  const mid = pointAlongPath(points, 0.5);
+  const x = Math.round(mid.x * EMU_PER_PX - EDGE_LABEL_CX / 2);
+  const y = Math.round(mid.y * EMU_PER_PX - EDGE_LABEL_CY / 2);
   const safeLabel = escapeXml(label);
 
   return [

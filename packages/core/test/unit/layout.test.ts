@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMermaid } from '../../src/parser/index.js';
-import { layout, boundingBox } from '../../src/layout/layout.js';
+import { layout, boundingBox, SUBGRAPH_TITLE_HEIGHT } from '../../src/layout/layout.js';
 
 test('produces a box for every node', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B\n  B --> C');
@@ -66,4 +66,73 @@ test('computes subgraph container boxes', () => {
 test('throws for the reserved graphviz engine', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B');
   assert.throws(() => layout(ast, { engine: 'graphviz' }), /not implemented/);
+});
+
+test('reserves title-bar space so a subgraph does not overlap its first node', () => {
+  const { ast } = parseMermaid('graph TD\n  subgraph S1[Group]\n    A --> B\n  end');
+  const result = layout(ast);
+  // The subgraph box starts where its title renders; the first contained node
+  // must start at least one title-height below that, or the title (drawn by
+  // the translator at the box's own top) overlaps the node.
+  assert.ok(
+    result.nodes['A']!.y >= result.subgraphs['S1']!.y + SUBGRAPH_TITLE_HEIGHT,
+    `node A (y=${result.nodes['A']!.y}) overlaps S1's title (box y=${result.subgraphs['S1']!.y})`,
+  );
+});
+
+test('nested subgraphs each reserve their own title space, cumulatively', () => {
+  const { ast } = parseMermaid(
+    'graph TD\n  subgraph Outer[Out]\n    A --> B\n    subgraph Inner[In]\n      C --> D\n    end\n    B --> C\n  end',
+  );
+  const result = layout(ast);
+  assert.deepEqual(ast.subgraphs.find((s) => s.id === 'Outer')!.subgraphIds, ['Inner']);
+  assert.deepEqual(ast.subgraphs.find((s) => s.id === 'Outer')!.nodeIds, ['A', 'B']);
+  // A is only under Outer's title (1 reservation).
+  assert.ok(result.nodes['A']!.y >= result.subgraphs['Outer']!.y + SUBGRAPH_TITLE_HEIGHT);
+  // C is under both Outer's and Inner's titles (2 reservations) — Inner's own
+  // box must itself have been pushed down by Outer's title too.
+  assert.ok(result.subgraphs['Inner']!.y >= result.subgraphs['Outer']!.y + SUBGRAPH_TITLE_HEIGHT);
+  assert.ok(result.nodes['C']!.y >= result.subgraphs['Inner']!.y + SUBGRAPH_TITLE_HEIGHT);
+});
+
+test('exposes a route per edge, parallel to flowchart.edges', () => {
+  const { ast } = parseMermaid('graph TD\n  A --> B\n  B --> C');
+  const result = layout(ast);
+  assert.equal(result.edges.length, ast.edges.length);
+  for (const points of result.edges) {
+    assert.ok(points.length >= 2, 'every edge route has at least a start and an end point');
+  }
+});
+
+test('an edge skipping a rank gets extra route points; an adjacent-rank edge does not', () => {
+  // B has two outgoing edges: one to the next rank (C), one skipping over
+  // C's rank to D — mirrors the classic decision-diamond `oui`/`non` shape.
+  const { ast } = parseMermaid('graph TD\n  A --> B\n  B --> C\n  B --> D\n  C --> D');
+  const result = layout(ast);
+  const byEndpoints = new Map(
+    ast.edges.map((e, i) => [`${e.from}->${e.to}`, result.edges[i]!]),
+  );
+  assert.ok(byEndpoints.get('B->C')!.length <= 3, 'adjacent-rank edge should not need routing');
+  assert.ok(byEndpoints.get('B->D')!.length > 3, 'rank-skipping edge should carry routing waypoints');
+});
+
+test('subgraph boxes never go negative even when the cluster margin extends past its nodes', () => {
+  // Regression: computing the normalization offset from node boxes alone
+  // (matching the layout module's pre-refactor behaviour) leaves a subgraph
+  // at a negative x/y whenever Dagre's cluster margin makes its box extend
+  // further left/up than any contained node — which breaks rendering
+  // entirely (verified empirically: LibreOffice renders nothing at all for a
+  // drawing with a negative-origin child).
+  const { ast } = parseMermaid(
+    'graph TD\n  subgraph Outer[Out]\n    A --> B\n    subgraph Inner[In]\n      C --> D\n    end\n    B --> C\n  end\n  D --> E',
+  );
+  const result = layout(ast);
+  for (const [id, box] of Object.entries(result.subgraphs)) {
+    assert.ok(box.x >= 0, `subgraph ${id} has negative x=${box.x}`);
+    assert.ok(box.y >= 0, `subgraph ${id} has negative y=${box.y}`);
+  }
+  for (const [id, box] of Object.entries(result.nodes)) {
+    assert.ok(box.x >= 0, `node ${id} has negative x=${box.x}`);
+    assert.ok(box.y >= 0, `node ${id} has negative y=${box.y}`);
+  }
 });

@@ -208,7 +208,11 @@ test('label text gets an explicit colour readable against its fill', () => {
 
 test('an oversized diagram is scaled down to the usable page area', () => {
   // A wide graph would otherwise emit an extent many times the page width and
-  // be clipped by Word.
+  // be clipped by Word. Height is capped too, on purpose: verified
+  // empirically that LibreOffice fails to render a wpc:wpc/wpg:wgp group at
+  // all past roughly one page's height (not degraded — entirely absent, no
+  // error), so letting a tall diagram flow across pages the way an oversized
+  // picture would is not safe here (see the MAX_DRAWING_CY comment).
   const wide = ['graph LR', ...Array.from({ length: 40 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
   const xml = translate(wide);
   const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
@@ -217,6 +221,41 @@ test('an oversized diagram is scaled down to the usable page area', () => {
   assert.ok(Number(extent[2]) <= 8229600, `extent cy ${extent[2]} exceeds the usable page height`);
   // The children keep native coordinates; Word applies the homothety.
   assert.ok(/<a:chExt cx="(\d+)"/.exec(xml));
+});
+
+test('a tall, narrow diagram gets its native chExt widened to a safe aspect ratio', () => {
+  // Regression: verified empirically (soffice --headless render) that a
+  // wpc:wpc/wpg:wgp group taller than ~7.5in renders NOTHING AT ALL in
+  // LibreOffice once its native width:height ratio drops much below 1:1 —
+  // not degraded, completely absent. A single-column chain long enough to
+  // exceed the risk height is exactly that shape.
+  const tall = ['graph TD', ...Array.from({ length: 10 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
+  const xml = translate(tall);
+  const chExt = /<a:chExt cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
+  assert.ok(chExt);
+  const cx = Number(chExt![1]);
+  const cy = Number(chExt![2]);
+  assert.ok(cy > 6858000, `test fixture should exceed the 7.5in risk height (cy=${cy})`);
+  assert.ok(cx / cy >= 1, `native aspect ratio ${cx}/${cy} is below the safe 1:1 floor`);
+  // The padding must not move any node — only the group's own declared bbox
+  // grows; the content stays exactly where the layout put it.
+  const firstNode = /<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="\d+" cy="\d+"\/>\s*<\/a:xfrm>\s*<a:prstGeom prst="rect"/.exec(
+    xml,
+  );
+  assert.ok(firstNode);
+  assert.equal(Number(firstNode![1]), 0, 'the first node should still start at native x=0');
+});
+
+test('a short diagram is not widened, even if narrow', () => {
+  const short = translate('graph TD\n  A[A] --> B[B]');
+  const chExt = /<a:chExt cx="(\d+)" cy="(\d+)"\/>/.exec(short);
+  assert.ok(chExt);
+  const cx = Number(chExt![1]);
+  const cy = Number(chExt![2]);
+  assert.ok(cy <= 6858000, 'test fixture should be under the risk height');
+  // Native width matches the actual content width (120px node), not padded
+  // out to match height — the whole point is this case needs no help.
+  assert.equal(cx, 120 * 9525);
 });
 
 test('colours reaching a:srgbClr are validated as hex, not merely escaped', () => {
@@ -275,4 +314,107 @@ test('an edge label sits on the connector segment midpoint, not the node-center 
   // have been y=115px (center of A at 30 to center of B at 200 → 115).
   const midpointEmu = 100 * 9525;
   assert.ok(Math.abs(y + 228600 / 2 - midpointEmu) < 9525, `label y=${y} not on the connector midpoint`);
+});
+
+// --- Future-proofing (FUTURE_docx2mermaid_SPEC.md §4): retain the original
+// Mermaid id on every emitted shape/connector, cheap now while the output
+// format is still actively changing, expensive to retrofit once it's frozen.
+// `descr` carries the id (not `name`, which stays the human label Word shows
+// in its Selection Pane — a decision, not an oversight).
+
+test('every node cNvPr carries its original Mermaid id in descr', () => {
+  const xml = translate('graph TD\n  start[Start] --> decision1{Decision?}\n  decision1 --> theEnd[End]');
+  for (const id of ['start', 'decision1', 'theEnd']) {
+    assert.ok(
+      xml.includes(`descr="${id}"`),
+      `expected a cNvPr descr="${id}" for Mermaid node "${id}"`,
+    );
+  }
+});
+
+test('every connector cNvPr name is "{source}--{target}" in Mermaid ids', () => {
+  const xml = translate('graph TD\n  start[Start] --> decision1{Decision?}\n  decision1 --> theEnd[End]');
+  assert.ok(xml.includes('name="start--decision1"'));
+  assert.ok(xml.includes('name="decision1--theEnd"'));
+});
+
+test('the Mermaid id in descr is XML-escaped (rule #2)', () => {
+  // Mermaid ids are normally simple identifiers, but nothing stops a hostile
+  // source file from trying to break out via the id itself.
+  const { ast } = parseMermaid('graph TD\n  A["a"] --> B["b"]');
+  ast.nodes[0]!.id = 'x"><evil a="';
+  ast.edges[0]!.from = ast.nodes[0]!.id;
+  const xml = translateToOoxml(ast, layout(ast));
+  assert.ok(!xml.includes('<evil'));
+});
+
+// --- Edge routing (spec §9 "0 croisement de flèches"): a connector spanning
+// more than one rank now follows Dagre's own routing around the intervening
+// node instead of a straight line straight through it. ---
+
+test('an adjacent-rank edge still renders as a plain straight line (no regression)', () => {
+  const xml = translate('graph TD\n  A[A] --> B[B]');
+  assert.ok(xml.includes('<a:prstGeom prst="line">'));
+  assert.ok(!xml.includes('<a:custGeom>'));
+});
+
+test('a rank-skipping edge is routed around the intermediate node, not through it', () => {
+  const xml = translate(
+    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action]\n  B -->|non| D[Fin]\n  C --> D',
+  );
+  // The B->D connector ("non") must use a custom path, not a straight line.
+  assert.ok(xml.includes('<a:custGeom>'), 'expected the skip-rank edge to use a:custGeom');
+
+  // None of that path's points should fall inside Action's (C's) box.
+  const actionBox = /<wps:cNvPr id="(\d+)" name="Action" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
+    xml,
+  );
+  assert.ok(actionBox, 'expected to find Action\'s own box');
+  const [, , ax, ay, aw, ah] = actionBox!.map(Number);
+
+  const custGeom = /<a:xfrm>\s*<a:off x="(\d+)" y="(\d+)"\/>[\s\S]*?<a:custGeom>[\s\S]*?<a:pathLst>([\s\S]*?)<\/a:pathLst>/.exec(
+    xml,
+  );
+  assert.ok(custGeom, 'expected to find the custGeom connector');
+  const [, offXStr, offYStr, pathBody] = custGeom!;
+  const offX = Number(offXStr);
+  const offY = Number(offYStr);
+  const points = [...pathBody!.matchAll(/<a:pt x="(-?\d+)" y="(-?\d+)"\/>/g)].map((m) => ({
+    x: Number(m[1]) + offX,
+    y: Number(m[2]) + offY,
+  }));
+  assert.ok(points.length > 2, 'expected intermediate waypoints beyond just start/end');
+  for (const p of points) {
+    const inside = p.x > ax! && p.x < ax! + aw! && p.y > ay! && p.y < ay! + ah!;
+    assert.ok(!inside, `connector point (${p.x},${p.y}) falls inside Action's box`);
+  }
+});
+
+test('a label on a routed edge sits on the real path, not inside the node it routes around', () => {
+  const xml = translate(
+    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action]\n  B -->|non| D[Fin]\n  C --> D',
+  );
+  const actionBox = /<wps:cNvPr id="(\d+)" name="Action" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
+    xml,
+  );
+  assert.ok(actionBox);
+  const [, , ax, ay, aw, ah] = actionBox!.map(Number);
+  // "non" is B->D's label.
+  const label = /<wps:cNvPr id="\d+" name="EdgeLabel"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>[\s\S]*?>non</.exec(
+    xml,
+  );
+  assert.ok(label, 'expected to find the "non" edge label');
+  const [, lx, ly] = label!.map(Number);
+  const inside = lx! > ax! && lx! < ax! + aw! && ly! > ay! && ly! < ay! + ah!;
+  assert.ok(!inside, `"non" label at (${lx},${ly}) overlaps Action's box`);
+});
+
+test('a routed connector still declares stCxn/endCxn for magnetic attachment', () => {
+  const xml = translate(
+    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action]\n  B -->|non| D[Fin]\n  C --> D',
+  );
+  const custGeomBlock = /<wps:cNvCnPr>[\s\S]*?<\/wps:cNvCnPr>[\s\S]*?<a:custGeom>/.exec(xml);
+  assert.ok(custGeomBlock, 'expected a custGeom connector to still declare wps:cNvCnPr first');
+  assert.ok(/<a:stCxn id="\d+" idx="\d"\/>/.test(custGeomBlock![0]));
+  assert.ok(/<a:endCxn id="\d+" idx="\d"\/>/.test(custGeomBlock![0]));
 });

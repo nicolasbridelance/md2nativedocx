@@ -72,10 +72,27 @@ export interface SubgraphBox {
   height: number;
 }
 
+/** A single point in logical pixels. */
+export interface LayoutPoint {
+  x: number;
+  y: number;
+}
+
 /** Full layout output: node coordinates + subgraph container boxes. */
 export interface LayoutResult {
   /** Node coordinates, keyed by node id. */
   nodes: Layout;
   /** Subgraph container boxes, keyed by subgraph id. */
   subgraphs: Record<string, SubgraphBox>;
+  /**
+   * The route Dagre computed for each edge, indexed like `Flowchart.edges`
+   * (parallel array, not keyed by id — a `Flowchart` has none for edges).
+   * Always at least 2 points (source, target); more when Dagre routed the
+   * edge around intermediate nodes (an edge spanning more than one rank).
+   * Only the translator's need for those intermediate waypoints justifies
+   * exposing this — the start/end points here are Dagre's own approximate
+   * attachment points, not the node-perimeter sites the translator actually
+   * renders from.
+   */
+  edges: LayoutPoint[][];
 }

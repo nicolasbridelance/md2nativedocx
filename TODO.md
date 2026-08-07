@@ -95,21 +95,24 @@ est levé.
 - ⚠️ `test:visual` (rendu LibreOffice headless + pixel-diff, spec §9) **câblé mais partiel** :
       `scripts/test-visual.mjs` + décodeur/diff PNG maison en JS pur (`scripts/lib/png.mjs`, zéro
       nouvelle dépendance — règle n°6 — puisque `node:zlib` suffit pour l'inflate). Le mécanisme
-      est complet et fonctionnel, mais seulement **3 fixtures** ont une baseline
-      (`test-corpus/visual/{fixtures,baseline}/` : `shapes`, `edge-types`, `colors`, couvrant les
-      6 formes, les 4 types de trait + label, et le contraste de texte clair/sombre) — la spec §9
-      demande un **corpus de 20 à 30 diagrammes représentatifs** (3 à 50 nœuds, avec
-      sous-graphes). Le corpus existant à 8 diagrammes (`test-corpus/source/`, 24 à 318 nœuds,
-      voir "Lisibilité des gros diagrammes" ci-dessous) n'y est délibérément pas inclus tant que
-      le routage des arêtes qui sautent un rang n'est pas corrigé. **Reste à faire** : étoffer
-      `test-corpus/visual/fixtures/` jusqu'à la taille demandée par la spec une fois les deux
-      limitations de layout ci-dessous réglées (sinon les baselines figeraient des rendus
-      buggés). Seuil 1 % de pixels différents (tolérance 24/255 par canal pour absorber
+      est complet et fonctionnel ; **12 fixtures** ont une baseline acceptée
+      (`test-corpus/visual/{fixtures,baseline}/` : `shapes`, `edge-types`, `colors`, `decision`
+      (diamant oui/non — le cas de routage d'arête), `lr-direction`, `nested-3-levels`,
+      `fan-out`, `cycle`, `mixed` (formes + couleurs + sous-graphe combinés), `order-flow`
+      (~11 nœuds, dans la fourchette du critère MVP), `long-labels` (débordement de texte, garde
+      visuelle du compromis déjà accepté), `subgraph`) — la spec §9 demande un **corpus de 20 à
+      30 diagrammes représentatifs** (3 à 50 nœuds, avec sous-graphes), donc encore un écart
+      (12 sur 20-30) mais substantiellement réduit. Le corpus existant à 8 diagrammes
+      (`test-corpus/source/`, 24 à 318 nœuds) n'y est toujours pas inclus : au-delà de la question
+      de lisibilité (voir plus bas), chaque fixture demande une revue visuelle manuelle avant
+      d'accepter sa baseline, ce qui rend risqué d'y intégrer des diagrammes énormes sans
+      passe dédiée. Seuil 1 % de pixels différents (tolérance 24/255 par canal pour absorber
       l'anti-aliasing). Une baseline n'est **jamais** générée automatiquement au premier run
-      (aurait canonisé silencieusement un
-      bug, comme les deux exemples ci-dessous le montrent) — `--update-baseline` explicite après
-      revue visuelle. `npm run test:visual` (skip proprement si LibreOffice absent du PATH) ;
-      `npm run test:visual:update-baseline` pour régénérer après revue.
+      (aurait canonisé silencieusement un bug — deux fixtures de ce lot, `nested-3-levels.mmd` et
+      `order-flow.mmd`, ont justement révélé en aveugle le défaut LibreOffice hauteur/ratio
+      documenté plus bas, découvert *grâce à* cette revue systématique) — `--update-baseline`
+      explicite après revue visuelle. `npm run test:visual` (skip proprement si LibreOffice absent
+      du PATH) ; `npm run test:visual:update-baseline` pour régénérer après revue.
 - ❌ **Tests manuels dans Word réel** (critère d'acceptation MVP, spec §9) — les corrections de
       conformité ci-dessus sont validées structurellement (XML bien formé, ZIP valide, ids
       uniques, hiérarchie comparée à un document Word réel) et maintenant aussi visuellement
@@ -132,35 +135,122 @@ est levé.
     dans Word (spec §6.2) — c'est justement le comportement que ces indices pilotent.
   - Label d'arête repositionné sur le milieu du **segment réel** du connecteur (bord à bord)
     plutôt que le milieu centre-à-centre des deux nœuds.
-- ⚠️ **Limitation de routage restante, distincte de ce qui précède** : une arête qui « saute »
-      un rang (ex. `B -->|non| D` alors que `B -->|oui| C` et `C --> D` existent aussi) est
-      tracée en ligne droite entre B et D sans tenir compte des nœuds intermédiaires. Dagre sait
-      router ce cas (nœuds virtuels de contournement) mais `layout.ts`/`LayoutResult` n'exposent
-      que des boîtes de nœuds, pas les tracés d'arêtes calculés par Dagre — le traducteur ne les
-      consulte donc jamais. Résultat : la ligne traverse littéralement l'intérieur de `Action`
-      dans l'exemple `oui`/`non` ci-dessus (vérifié : `Choix` et `Fin` centrés à x=60, `Action`
-      occupe x=[50,170], la ligne droite B→D tombe dedans), et son label hérite du même
-      chevauchement. Touche directement le critère d'acceptation MVP (spec §9 : « 0 croisement
-      de flèches nécessitant un réarrangement manuel dans >90 % des cas »). Corriger proprement
-      demanderait de exposer les points de route de Dagre et d'émettre un connecteur coudé
-      (`prstGeom` bent/curved plutôt que `line`) — portée plus large qu'une correction ponctuelle,
-      à trancher séparément.
-- ⚠️ **Titre de sous-graphe superposé au premier nœud**, trouvé en générant les baselines
-      `test:visual` : Dagre calcule la boîte d'un cluster au plus juste autour de ses nœuds
-      enfants, sans réserver d'espace pour la barre de titre que `renderSubgraph`
-      (`ooxml-translator.ts`) dessine en haut de cette même boîte — le titre (ex. « Groupe
-      externe ») s'affiche par-dessus le premier nœud contenu. Corriger proprement demande de
-      faire grandir la boîte de chaque sous-graphe de la hauteur du titre dans `layout.ts` et de
-      décaler récursivement tout son contenu (répété à chaque niveau d'imbrication) — chirurgie
-      de l'arbre de layout, pas une correction locale au traducteur. Fixture et détail dans
-      `test-corpus/visual/known-issues/subgraph.mmd` + son `README.md`, volontairement exclue de
-      `test-corpus/visual/fixtures/` pour ne pas canoniser ce rendu comme référence.
-- ⚠️ **Lisibilité des gros diagrammes** : le corpus va de 24 à 318 nœuds, alors que le critère
-      d'acceptation MVP porte sur ≤ 15 nœuds. La mise à l'échelle automatique empêche Word de
-      rogner, mais un diagramme de 318 nœuds ramené à 6,5 pouces de large fait 1 mm de haut et
-      reste illisible. C'est une limite du couple layout/page, pas un défaut de format : à
-      trancher (pagination ? découpage ? orientation paysage ? refus explicite au-delà d'un
-      seuil ?) avant de considérer le corpus comme un cas d'usage supporté.
+- ✅ **Routage des arêtes qui sautent un rang — corrigé (2026-08-07)** : une arête comme
+      `B -->|non| D` (alors que `B -->|oui| C` et `C --> D` existent aussi) traçait une ligne
+      droite entre B et D sans tenir compte des nœuds intermédiaires, traversant littéralement
+      `Action`. Touchait directement le critère d'acceptation MVP (spec §9 : « 0 croisement de
+      flèches »).
+  - `LayoutResult` porte désormais un champ `edges` (un point de route par arête, indexé comme
+    `Flowchart.edges`) — extrait de `g.edge({v,w}).points` après `dagre.layout()`, Dagre routant
+    déjà les arêtes multi-rangs autour des nœuds virtuels intermédiaires. **Extension de la
+    surface exportée de `packages/core`** (`layout()` est exporté par le barrel ; `LayoutResult`
+    ne l'est pas nommément mais sa forme fait partie de ce qu'un consommateur observe) — signalée
+    et approuvée explicitement avant implémentation (`AGENTS.md` → escalade humaine), changement
+    strictement additif.
+  - `ooxml-translator.ts` émet un `a:custGeom` (chemin `moveTo`/`lnTo*` explicite) plutôt qu'une
+    des géométries `bentConnectorN`/`curvedConnectorN` prédéfinies de Word/PowerPoint : celles-ci
+    sont paramétrées par des valeurs `adj` sans formule publique documentée pour "voici N points,
+    calcule les adj correspondants" — un `custGeom` trace exactement le chemin que Dagre a déjà
+    calculé, sans deviner. `wps:cNvCnPr`/`stCxn`/`endCxn` restent posés dessus (comportement
+    magnétique, spec §6.2) : la "connector-ness" vient de `cNvCnPr`, pas de la géométrie.
+  - **Décision de conception retravaillée en cours de route** : la première version déclenchait
+    le chemin coudé sur un simple seuil ("plus de 3 points renvoyés par Dagre"). Ça s'est avéré
+    faux dès qu'un sous-graphe est impliqué — Dagre ajoute des points de routage pour toute arête
+    qui traverse une frontière de cluster, même sans obstacle réel (vérifié sur la fixture
+    `subgraph.mmd` : `B --> C`, une arête simple entre rangs adjacents, recevait 5 points juste
+    parce qu'elle passe de `Externe` à `Interne`). Remplacé par un **vrai test géométrique** : la
+    ligne droite entre les deux sites de connexion croise-t-elle la boîte d'un *autre* nœud ? Si
+    non (le cas courant), ligne droite inchangée, indépendamment de ce que Dagre renvoie.
+  - **Deux bugs plus profonds trouvés en vérifiant sur la fixture `subgraph.mmd`**, tous deux
+    dans `layout.ts`, aucun des deux limité au routage d'arêtes :
+    1. Un chemin coudé dont les points intermédiaires ne sont pas décalés par la réservation
+       d'espace de titre (§ ci-dessus) produisait un chemin en zigzag non monotone (un point
+       revenant en arrière) — LibreOffice ne rendait **plus rien du tout** (même mode d'échec
+       total et silencieux que la tentative multi-page). Résolu par le remplacement de
+       l'heuristique par le test géométrique ci-dessus : les arêtes de cette fixture n'ont plus
+       besoin d'être coudées, donc plus de désalignement.
+    2. La boîte d'un cluster Dagre déborde légitimement au-delà de ses nœuds enfants (marge de
+       cluster interne à Dagre) — calculer l'offset de normalisation à partir des nœuds seuls
+       (comme le faisait le code d'origine) laissait certains sous-graphes à des coordonnées
+       **négatives**, ce qui casse le rendu entièrement (même mode d'échec silencieux et total,
+       vérifié empiriquement). Corrigé : l'offset partagé (`boundsOrigin`) est maintenant calculé
+       sur nœuds *et* sous-graphes combinés. A aussi corrigé au passage un bug latent préexistant
+       distinct : `normalizeSubgraphs` recalculait son minX/minY à partir des nœuds *déjà
+       normalisés* (donc toujours 0), ce qui revenait à ne jamais décaler les sous-graphes —
+       resté invisible tant que les coordonnées brutes de Dagre démarraient déjà près de (0,0).
+  - Tests : `layout.test.ts` (points de route exposés, arête simple vs. arête qui saute un rang,
+    coordonnées jamais négatives) + `translator.test.ts` (pas de régression sur le cas simple,
+    chemin routé autour du nœud intermédiaire, label positionné sur le vrai chemin, `stCxn`/
+    `endCxn` toujours présents sur un connecteur coudé).
+- ✅ **Titre de sous-graphe superposé au premier nœud — corrigé (2026-08-07)** : Dagre calculait
+      la boîte d'un cluster au plus juste autour de ses nœuds enfants, sans réserver d'espace
+      pour la barre de titre que `renderSubgraph` (`ooxml-translator.ts`) dessine en haut de
+      cette même boîte. `layout.ts` réserve maintenant `SUBGRAPH_TITLE_HEIGHT` (24px, constante
+      partagée avec le traducteur pour que les deux valeurs ne puissent pas diverger) en
+      post-traitement : chaque sous-graphe fait grandir sa propre boîte de cette hauteur et
+      décale tous ses descendants (nœuds + sous-graphes imbriqués, transitivement) d'autant —
+      un nœud imbriqué à 2 niveaux hérite de 2 décalages cumulés, un par barre de titre
+      au-dessus de lui. La passe s'exécute **après** la normalisation finale (`normalize()`), pas
+      avant : sinon elle re-ancre tout le diagramme à y=0 et annule le décalage du sous-graphe le
+      plus externe (piège trouvé en testant le cas imbriqué).
+  - **Bug parseur trouvé au passage, plus profond que prévu** : `subgraphIds` (la relation
+    d'imbriction entre sous-graphes) n'était **jamais peuplé** — aucun sous-graphe ne savait
+    qu'un autre était niché dedans, ce qui cassait aussi le clustering Dagre lui-même (pas
+    seulement l'espacement du titre), pas seulement son rendu. Et `attachToCurrentSubgraph`
+    rattachait un nœud au sous-graphe courant à **chaque ligne qui le mentionne**, pas seulement
+    à sa première déclaration — un nœud défini dans un sous-graphe imbriqué se retrouvait aussi
+    listé dans le parent dès qu'une arête le référençait après la fermeture du bloc interne
+    (`B --> C` après le `end` du sous-graphe de `C`). Corrigé dans `parser.ts` : `end` rattache
+    maintenant le sous-graphe fermé à `subgraphIds` du parent, et un `Set` de nœuds déjà
+    rattachés empêche le rattachement multiple (sémantique Mermaid : la première mention décide).
+  - Fixture sortie de `test-corpus/visual/known-issues/` vers `test-corpus/visual/fixtures/`,
+    baseline acceptée après revue visuelle.
+- ✅ **Défaut de rendu LibreOffice caractérisé et corrigé (2026-08-07)** : un groupe
+      `wpc:wpc`/`wpg:wgp` **ne se rend pas du tout** (absence totale et silencieuse, pas de
+      dégradation progressive, pas d'erreur) dès que sa hauteur native dépasse ~7,5-9,4 pouces
+      **ET** que son ratio largeur/hauteur natif descend sous ~0,85-0,91. En dehors de cette
+      zone — court, OU large par rapport à sa hauteur — ça fonctionne toujours, y compris à des
+      tailles bien plus grandes (vérifié jusqu'à 80 pouces de large sans problème, ex.
+      `mermaid-official-code-flow.docx` du corpus).
+  - **Historique de l'investigation** : partie d'une hypothèse "flux multi-page" (un `wp:inline`
+    plus haut qu'une page se paginerait naturellement dans Word, comme une image ou un tableau
+    surdimensionné) — invalidée empiriquement via `soffice --headless --convert-to pdf/png`.
+    Deux fixtures `test:visual` nouvellement créées (`nested-3-levels.mmd`, `order-flow.mmd` — ce
+    dernier à seulement 11 nœuds, dans la fourchette du critère MVP ≤ 15 nœuds) sont tombées dans
+    ce défaut par accident pendant l'étoffement du corpus visuel, révélant que ce n'était pas
+    (seulement) une question de très gros diagrammes.
+  - **Preuve décisive** (~25 rendus contrôlés, contenu identique, seule la largeur variait à
+    hauteur native fixe 13,75 pouces) : largeur 10,62" (ratio 0,77) → vide ; largeur 12,5"
+    (ratio 0,91) → rendu correct. Confirmé aussi à `scale=1.0` pur (aucune mise à l'échelle) :
+    une forme étroite bascule dans le vide entre 7,9" et 9,4" de haut, indépendamment de tout
+    facteur d'échelle — donc l'ancien plafond `MAX_DRAWING_CY` (9,0" pile) était déjà quasiment
+    sur la falaise. Mécanisme interne exact côté LibreOffice non déterminé (pas d'accès à son
+    code source) ; comportement dans Word réel non vérifié.
+  - **Correction** (`ooxml-translator.ts`) : nouvelle fonction `nativeExtent()`, appelée par
+    `scaledExtent()` (calcul du `wp:extent`/`a:ext` affiché) et `openGroup()` (calcul du
+    `a:chExt` natif) — les deux doivent dériver de la même valeur, potentiellement élargie. Si la
+    hauteur native dépasse `TALL_RATIO_RISK_HEIGHT` (7,5", marge de sécurité sous le seuil observé
+    de 7,9") et que le ratio natif tombe sous `MIN_SAFE_ASPECT_RATIO` (1.0, marge au-dessus du
+    seuil observé de 0,91), la largeur native est élargie à `hauteur × 1.0` — une marge de canevas
+    invisible ajoutée à droite du contenu, qui ne déplace ni ne redimensionne aucune forme.
+    Compromis assumé : le canevas affiche un espace vide à droite pour les diagrammes très hauts
+    et étroits plutôt que de risquer un rendu totalement absent ; pas de centrage du contenu dans
+    l'espace élargi (aurait demandé de décaler toutes les coordonnées de rendu, portée plus large
+    pour un gain cosmétique).
+  - Tests : `translator.test.ts` (un diagramme haut-étroit voit son `chExt` élargi à un ratio ≥
+    1, le contenu ne bouge pas ; un diagramme sous le seuil de risque n'est jamais élargi même
+    s'il est étroit).
+  - **Lisibilité des gros diagrammes — reste ouvert, distinct de ce qui précède** : le corpus va
+    de 24 à 318 nœuds, alors que le critère d'acceptation MVP porte sur ≤ 15 nœuds. Le correctif
+    ci-dessus empêche le rendu de disparaître totalement, mais un diagramme de 318 nœuds ramené à
+    la largeur d'une page (le ratio de sécurité peut aussi forcer une mise à l'échelle plus
+    agressive que l'ancien plafond hauteur-seule) reste dense et difficile à lire. Pistes non
+    tranchées : page de taille custom intercalée via saut de section Word (`w:sectPr`/`w:pgSz` —
+    techniquement possible, mais sort du périmètre de `packages/core` et touche potentiellement
+    le territoire de Pandoc, règle n°1 ; plafonnée à ~22×22 pouces max Word, un diagramme à 318
+    nœuds pourrait quand même la dépasser), refus explicite au-delà d'un seuil de nœuds,
+    découpage/pagination du graphe lui-même (le plus gros chantier des trois). À trancher avec le
+    mainteneur avant de considérer le corpus à 318 nœuds comme un cas d'usage supporté.
 
 ---
 
@@ -193,11 +283,13 @@ est levé.
 - [x] **Aucune relation OOXML externe** (`TargetMode="External"` interdit) — règle n°3.
 - [x] Sortie : une chaîne XML unique, autonome, injectable telle quelle.
 - [x] `src/index.ts` : barrel d'export public avec TSDoc sur chaque fonction/type exporté.
-- [ ] 🔮 **Futur-proofing** (voir `FUTURE_docx2mermaid_SPEC.md` §4) : chaque forme émise porte
-      son ID Mermaid d'origine dans `<wps:cNvPr name="...">` ; chaque connecteur porte
-      `"{id_source}--{id_cible}"` dans le `name` de son `<wpg:cxnSp>`. Coût quasi nul maintenant
-      (le traducteur connaît déjà ces IDs), coûteux à ajouter une fois le format de sortie
-      stabilisé et les golden tests figés dessus.
+- [x] 🔮 **Futur-proofing** (voir `FUTURE_docx2mermaid_SPEC.md` §4) — implémenté avec un écart
+      assumé par rapport à la spec, tranché avec le mainteneur : `name` reste le label humain sur
+      les nœuds (meilleure UX dans le volet Sélection de Word, ce que la spec n'avait pas
+      anticipé puisqu'on utilisait déjà `name` ainsi), et l'ID Mermaid d'origine va dans `descr`
+      (`cNvPr descr="{id_mermaid}"`), un champ d'accessibilité OOXML déjà standard, invisible
+      dans Word. Pour les connecteurs, aucun compromis nécessaire : `name="{id_source}--{id_cible}"`
+      comme demandé (le générique `"Connector"` précédent n'avait pas de valeur UX à préserver).
 
 #### Tests (`packages/core/test/`)
 - [x] `unit/` : tests unitaires parser + layout + traducteur.
@@ -208,8 +300,9 @@ est levé.
 - [x] Tests d'injection XML sur chaque fonction de `packages/core` qui touche du texte utilisateur
       (labels avec `& < > " '`), pas seulement le chemin nominal.
 - [x] Tout parseur XML utilisé (y compris en test) : **DTD et entités externes désactivés** (règle n°5).
-- [ ] Test golden dédié : pour chaque forme et connecteur des fixtures existantes, vérifier que
-      `cNvPr/name` contient l'ID Mermaid attendu (futur-proofing §4).
+- [x] Test golden dédié (adapté à la décision `descr` plutôt que `name`, voir ci-dessus) :
+      vérifie que `cNvPr/descr` (nœuds) et `cNvPr/name` (connecteurs) portent l'ID Mermaid
+      attendu, plus l'échappement XML de cet ID (`translator.test.ts`).
 
 ### `packages/pandoc-filter/`
 - [x] Filtre Lua `md2nativedocx.lua` : `CodeBlock` → `pandoc.RawBlock('openxml', ...)`.
@@ -238,8 +331,11 @@ est levé.
 
 ## Phase 3 — Couleurs + sous-graphes
 
-- [ ] Mapping `classDef fill:#XXXXXX` → `<a:solidFill><a:srgbClr val="XXXXXX"/></a:solidFill>` (§6.3).
-- [ ] `subgraph` → groupes imbriqués `<wpg:wgp>` avec libellé en `<wps:txbx>` (§6.1).
+- [x] Mapping `classDef fill:#XXXXXX` → `<a:solidFill><a:srgbClr val="XXXXXX"/></a:solidFill>` (§6.3) —
+      déjà livré en Phase 1, case cochée tardivement ici (bookkeeping, aucun code changé).
+- [x] `subgraph` → groupes imbriqués `<wpg:grpSp>` avec libellé en `<wps:txbx>` (§6.1), y compris
+      l'imbrication à plusieurs niveaux (`subgraphIds` correctement peuplé, réservation d'espace
+      de titre récursive — voir entrées 2026-08-07 ci-dessus) — case cochée tardivement ici.
 
 ## Phase 4 — Add-in Word (Office.js)
 
@@ -267,7 +363,21 @@ est levé.
 - [ ] **Tâche de suivi — pinning LibreOffice** : décider si on épingle la version de LibreOffice
       dans `setup.sh` (via un repo/pinning apt dédié) ou si on garde la version du repo apt.
       Actuellement non pinné (limitation documentée dans `setup.sh`). À trancher avant de
-      fiabiliser `test:visual` en CI.
+      fiabiliser `test:visual` en CI. **Recommandation (2026-08-07, pas d'exécution — modifier
+      `.devcontainer/setup.sh` est en zone d'escalade obligatoire, voir `AGENTS.md`)** : garder
+      la version du repo apt pour l'instant plutôt qu'un pinning dédié, MAIS avec une réserve
+      importante à vérifier avant de trancher définitivement — l'environnement où `test:visual` a
+      été développé cette session tourne en réalité sous **Ubuntu 24.04** (LibreOffice 24.2.7.2
+      installé), alors que `.devcontainer/devcontainer.json` déclare une image **Debian bookworm**
+      (`typescript-node:1-22-bookworm`) et que le job CI `visual` tourne sur `ubuntu-latest`. Si
+      le Codespace réellement construit depuis `devcontainer.json` résout une version LibreOffice
+      différente de celle d'Ubuntu (dépôts apt Debian vs Ubuntu, pas garantis alignés), les
+      baselines `test-corpus/visual/baseline/*.png` générées dans un environnement pourraient ne
+      pas correspondre pixel-pour-pixel à un rendu dans l'autre — le seuil de tolérance actuel
+      (1 %, `scripts/test-visual.mjs`) absorbe le bruit d'anti-aliasing mais pas forcément un
+      changement de version de moteur de rendu. À vérifier empiriquement (comparer la version
+      LibreOffice résolue dans un vrai Codespace lancé depuis `devcontainer.json` face à celle de
+      `ubuntu-latest` en CI) avant de considérer `test:visual` fiable d'un environnement à l'autre.
 - [ ] `test:visual` : rendu LibreOffice headless → export image → pixel-diff avec seuil, corpus
       20–30 diagrammes (du 3-nœuds au 50-nœuds avec sous-graphes).
 

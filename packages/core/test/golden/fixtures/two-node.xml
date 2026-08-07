@@ -30,7 +30,7 @@
     </a:xfrm>
   </wpg:grpSpPr>
   <wps:wsp>
-    <wps:cNvPr id="3" name="Start"/>
+    <wps:cNvPr id="3" name="Start" descr="A"/>
     <wps:cNvSpPr/>
     <wps:spPr>
       <a:xfrm>
@@ -72,7 +72,7 @@
 </wps:bodyPr>
   </wps:wsp>
   <wps:wsp>
-    <wps:cNvPr id="4" name="End"/>
+    <wps:cNvPr id="4" name="End" descr="B"/>
     <wps:cNvSpPr/>
     <wps:spPr>
       <a:xfrm>
@@ -114,7 +114,7 @@
 </wps:bodyPr>
   </wps:wsp>
   <wps:wsp>
-    <wps:cNvPr id="5" name="Connector"/>
+    <wps:cNvPr id="5" name="A--B"/>
     <wps:cNvCnPr>
       <a:stCxn id="3" idx="2"/>
       <a:endCxn id="4" idx="0"/>
