@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "test": "npm run test --workspaces",
     "test:fuzz": "npm run test:fuzz -w packages/core",
-    "test:visual": "echo \"test:visual requires LibreOffice headless; run in CI\" && exit 0"
+    "test:visual": "node scripts/test-visual.mjs",
+    "test:visual:update-baseline": "node scripts/test-visual.mjs --update-baseline"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

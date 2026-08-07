@@ -85,8 +85,82 @@ est levé.
 - ❌ `CODE_OF_CONDUCT.md` — **fourni par le mainteneur humain, l'agent ne doit pas en rédiger un**
 - ❌ Phase 2 (extension VS Code), Phase 3 (couleurs + sous-graphes), Phase 4 (add-in Word),
       Phase 5+ (autres diagrammes)
-- ❌ `test:visual` (rendu LibreOffice headless + pixel-diff) — nécessite un environnement réel
-- ❌ Tests manuels dans Word réel (critère d'acceptation MVP, spec §9)
+- ✅ **LibreOffice headless installé (2026-08-07)** dans le Codespace (`libreoffice-writer` +
+      `libreoffice-impress`, comme documenté dans `.devcontainer/setup.sh` — installation directe,
+      aucune modification du devcontainer lui-même). `soffice --headless --convert-to png` permet
+      de vraiment ouvrir/rendre un `.docx` généré, ce que la validation XML structurelle ne peut
+      pas faire. A immédiatement mis au jour 3 défauts de rendu invisibles aux 75 tests
+      structurels existants (voir entrées ci-dessous) — confirme que le rendu réel est un axe de
+      détection à part entière, distinct de la conformité XML.
+- ⚠️ `test:visual` (rendu LibreOffice headless + pixel-diff, spec §9) **câblé mais partiel** :
+      `scripts/test-visual.mjs` + décodeur/diff PNG maison en JS pur (`scripts/lib/png.mjs`, zéro
+      nouvelle dépendance — règle n°6 — puisque `node:zlib` suffit pour l'inflate). Le mécanisme
+      est complet et fonctionnel, mais seulement **3 fixtures** ont une baseline
+      (`test-corpus/visual/{fixtures,baseline}/` : `shapes`, `edge-types`, `colors`, couvrant les
+      6 formes, les 4 types de trait + label, et le contraste de texte clair/sombre) — la spec §9
+      demande un **corpus de 20 à 30 diagrammes représentatifs** (3 à 50 nœuds, avec
+      sous-graphes). Le corpus existant à 8 diagrammes (`test-corpus/source/`, 24 à 318 nœuds,
+      voir "Lisibilité des gros diagrammes" ci-dessous) n'y est délibérément pas inclus tant que
+      le routage des arêtes qui sautent un rang n'est pas corrigé. **Reste à faire** : étoffer
+      `test-corpus/visual/fixtures/` jusqu'à la taille demandée par la spec une fois les deux
+      limitations de layout ci-dessous réglées (sinon les baselines figeraient des rendus
+      buggés). Seuil 1 % de pixels différents (tolérance 24/255 par canal pour absorber
+      l'anti-aliasing). Une baseline n'est **jamais** générée automatiquement au premier run
+      (aurait canonisé silencieusement un
+      bug, comme les deux exemples ci-dessous le montrent) — `--update-baseline` explicite après
+      revue visuelle. `npm run test:visual` (skip proprement si LibreOffice absent du PATH) ;
+      `npm run test:visual:update-baseline` pour régénérer après revue.
+- ❌ **Tests manuels dans Word réel** (critère d'acceptation MVP, spec §9) — les corrections de
+      conformité ci-dessus sont validées structurellement (XML bien formé, ZIP valide, ids
+      uniques, hiérarchie comparée à un document Word réel) et maintenant aussi visuellement
+      (LibreOffice), **pas** par une ouverture dans Word lui-même — le rendu OOXML de LibreOffice
+      diverge de Word sur des détails (ex. les têtes de flèche `a:tailEnd` : présentes et
+      correctement positionnées dans le XML, mais leur rendu par Word reste à vérifier).
+- ✅ **Corrections de géométrie des connecteurs, trouvées via LibreOffice headless (2026-08-07)**,
+      invisibles aux tests structurels — repérées en convertissant un `.docx` généré en PNG
+      (`soffice --headless --convert-to png`) et en inspectant le rendu :
+  - `a:xfrm off/ext` des connecteurs calculé sur les **centres** des boîtes au lieu du point de
+    connexion réel sur leur périmètre → les lignes traversaient l'intérieur des formes et les
+    têtes de flèche (`a:tailEnd`), terminant au centre de la forme cible, étaient cachées sous
+    son remplissage (invisibles, pas un défaut du triangle lui-même). Corrigé : `connectorGeometry`
+    calcule maintenant le point réel sur le bord (`sitePoint`).
+  - Indices de site de connexion **décalés d'un cran** : le code utilisait 1=haut, 2=droite,
+    3=bas, 4=gauche ; Word utilise en réalité 0=haut, 1=droite, 2=bas, 3=gauche (vérifié sur
+    `tools/word-reference/` : un connecteur vertical réel utilise `idx="2"` en source et
+    `idx="0"` en cible). Sans effet visuel sur un rendu statique (l'`a:xfrm` explicite prime),
+    mais déterminant pour le rattachement magnétique quand l'utilisateur déplace une boîte
+    dans Word (spec §6.2) — c'est justement le comportement que ces indices pilotent.
+  - Label d'arête repositionné sur le milieu du **segment réel** du connecteur (bord à bord)
+    plutôt que le milieu centre-à-centre des deux nœuds.
+- ⚠️ **Limitation de routage restante, distincte de ce qui précède** : une arête qui « saute »
+      un rang (ex. `B -->|non| D` alors que `B -->|oui| C` et `C --> D` existent aussi) est
+      tracée en ligne droite entre B et D sans tenir compte des nœuds intermédiaires. Dagre sait
+      router ce cas (nœuds virtuels de contournement) mais `layout.ts`/`LayoutResult` n'exposent
+      que des boîtes de nœuds, pas les tracés d'arêtes calculés par Dagre — le traducteur ne les
+      consulte donc jamais. Résultat : la ligne traverse littéralement l'intérieur de `Action`
+      dans l'exemple `oui`/`non` ci-dessus (vérifié : `Choix` et `Fin` centrés à x=60, `Action`
+      occupe x=[50,170], la ligne droite B→D tombe dedans), et son label hérite du même
+      chevauchement. Touche directement le critère d'acceptation MVP (spec §9 : « 0 croisement
+      de flèches nécessitant un réarrangement manuel dans >90 % des cas »). Corriger proprement
+      demanderait de exposer les points de route de Dagre et d'émettre un connecteur coudé
+      (`prstGeom` bent/curved plutôt que `line`) — portée plus large qu'une correction ponctuelle,
+      à trancher séparément.
+- ⚠️ **Titre de sous-graphe superposé au premier nœud**, trouvé en générant les baselines
+      `test:visual` : Dagre calcule la boîte d'un cluster au plus juste autour de ses nœuds
+      enfants, sans réserver d'espace pour la barre de titre que `renderSubgraph`
+      (`ooxml-translator.ts`) dessine en haut de cette même boîte — le titre (ex. « Groupe
+      externe ») s'affiche par-dessus le premier nœud contenu. Corriger proprement demande de
+      faire grandir la boîte de chaque sous-graphe de la hauteur du titre dans `layout.ts` et de
+      décaler récursivement tout son contenu (répété à chaque niveau d'imbrication) — chirurgie
+      de l'arbre de layout, pas une correction locale au traducteur. Fixture et détail dans
+      `test-corpus/visual/known-issues/subgraph.mmd` + son `README.md`, volontairement exclue de
+      `test-corpus/visual/fixtures/` pour ne pas canoniser ce rendu comme référence.
+- ⚠️ **Lisibilité des gros diagrammes** : le corpus va de 24 à 318 nœuds, alors que le critère
+      d'acceptation MVP porte sur ≤ 15 nœuds. La mise à l'échelle automatique empêche Word de
+      rogner, mais un diagramme de 318 nœuds ramené à 6,5 pouces de large fait 1 mm de haut et
+      reste illisible. C'est une limite du couple layout/page, pas un défaut de format : à
+      trancher (pagination ? découpage ? orientation paysage ? refus explicite au-delà d'un
+      seuil ?) avant de considérer le corpus comme un cas d'usage supporté.
 
 ---
 

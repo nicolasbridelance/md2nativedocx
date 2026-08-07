@@ -1,0 +1,9 @@
+flowchart TD
+    subgraph Externe[Groupe externe]
+        A[Un] --> B[Deux]
+        subgraph Interne[Groupe interne]
+            C[Trois] --> D[Quatre]
+        end
+        B --> C
+    end
+    D --> E[Cinq]
