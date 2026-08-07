@@ -1,0 +1,10 @@
+flowchart TD
+    classDef warn fill:#F4B183
+    classDef ok fill:#A9D18E
+    subgraph Validation[Validation]
+        A[Requete] --> B{OK?}
+        B -->|oui| C[Traiter]:::ok
+        B -->|non| D[Rejeter]:::warn
+    end
+    C --> E([Reponse])
+    D --> E
