@@ -15,10 +15,10 @@ est levé.
 
 - [x] **Trancher Dagre vs Graphviz** — le package npm `dagre` est installé et utilisé comme moteur
       de layout par défaut (ADR 0001). `layout/layout.ts` a été **réécrit** comme wrapper Dagre
-      (l'ancienne réimplémentation maison est jetée). Spike : `scripts/spike-layout.mjs`.
+      (l'ancienne réimplémentation maison est jetée). Spike : `docs/adr/spikes/spike-layout.mjs`.
 - [x] **Valider `RawBlock('openxml', ...)`** sur un fragment `wpg:wgp` complexe — validé
       bout-en-bout (Pandoc 3.1.3 → `.docx` → ZIP valide, XML bien formé, 0 relation externe).
-      Spike : `scripts/spike-pandoc/`. ADR 0002.
+      Spike : `docs/adr/spikes/spike-pandoc/`. ADR 0002.
 - [x] Documenter les deux décisions dans `docs/adr/0001-layout-engine.md` et
       `docs/adr/0002-pandoc-integration.md`.
 - [x] Écrire `.devcontainer/devcontainer.json` + `setup.sh` (Pandoc 3.1.3, Lua 5.4, LibreOffice).
@@ -29,6 +29,34 @@ est levé.
 ---
 
 ## État actuel (2026-08-06)
+
+- ✅ **Restructuration du répertoire de tests (2026-08-07)** : signalé par l'utilisateur comme
+      confus et construit par accumulation plutôt que conception. `test-corpus/output/simple/`
+      créait un sous-répertoire horodaté à **chaque** `npm test`, jamais nettoyé — 100+ fichiers
+      accumulés, dont une partie committée par erreur par un processus externe. Plus deux
+      fichiers orphelins (`ab (5).docx`, `word-group.docx` — ce dernier explicitement listé
+      comme "à ne pas commiter" dans `tools/word-reference/README.md`) et un
+      `known-issues/README.md` orphelin (suppression perdue dans l'incident `git stash`
+      documenté plus bas).
+  - Nouveau document racine `TESTING.md` : stratégie de test en 6 chapitres (unitaires,
+    intégration pipeline, corpus réel, régression visuelle, comparaison Word natif, spikes
+    historiques), écrit **avant** la réorganisation des répertoires plutôt qu'après — approche
+    demandée explicitement par l'utilisateur ("point de vue global" plutôt que continuer à
+    construire par addition).
+  - `test-corpus/{source,output/corpus}` → `test-corpus/corpus/{source,generated}` (un seul
+    chapitre "corpus réel" au lieu de deux emplacements séparés). `test-corpus/output/simple/`
+    supprimé entièrement ; racine du problème corrigée, pas juste le symptôme : les deux tests
+    "simple" de `corpus.test.mjs` (qui n'ont besoin d'aucune trace persistée — ce sont de
+    simples assertions sur le XML généré) utilisent maintenant `mkdtempSync`/`rmSync`, le même
+    pattern déjà en place dans `cli.test.mjs`, au lieu d'écrire dans un répertoire horodaté.
+  - `scripts/spike-{layout.mjs,pandoc/}` → `docs/adr/spikes/` (à côté des ADR qu'ils étayent,
+    étiquetés comme archive historique, pas comme tests à maintenir) — `scripts/` ne contient
+    plus que l'outillage activement invoqué par `npm test`/`npm run test:visual`.
+  - `tools/word-reference/` (comparaison manuelle Windows) volontairement **pas déplacé** —
+    référencé depuis `TESTING.md` plutôt que consolidé, sur décision explicite de l'utilisateur.
+  - Vérifié : 3 exécutions successives de `npm test` ne recréent aucun fichier accumulé
+    (42 fichiers stables dans `test-corpus/`), `npm run test:visual` toujours 12/12,
+    `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
 - ✅ Scaffold monorepo npm (racine `package.json`, `tsconfig.base.json`, `.eslintrc.cjs`, `.gitignore`)

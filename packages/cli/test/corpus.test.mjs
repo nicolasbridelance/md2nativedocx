@@ -1,29 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..');
-const sourceDir = join(root, 'test-corpus', 'source');
-const outputDir = join(root, 'test-corpus', 'output');
-const corpusDir = join(outputDir, 'corpus');
-const simpleDir = join(outputDir, 'simple');
+const sourceDir = join(root, 'test-corpus', 'corpus', 'source');
+const corpusDir = join(root, 'test-corpus', 'corpus', 'generated');
 const cli = join(root, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
-
-/**
- * Create a timestamped output directory for the simple tests, so every run is
- * auditable and repeatable (no throwaway /tmp files). Returns the directory.
- */
-function createSimpleOutputDir() {
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const dir = join(simpleDir, stamp);
-  mkdirSync(dir, { recursive: true });
-  return dir;
-}
 
 /** Extract the Mermaid diagram text from a source file (strip YAML frontmatter). */
 function extractDiagram(filePath) {
@@ -38,8 +25,9 @@ function wrapMarkdown(diagram) {
 }
 
 /** Convert a markdown string to a .docx via the real CLI, writing both the
- * .md envelope and the .docx into dir (used by the simple tests, where keeping
- * the input alongside the output is useful for auditing). */
+ * .md envelope and the .docx into dir (an ephemeral temp dir for the simple
+ * tests — the assertions below are on the generated XML, not something a
+ * human needs to revisit later, so nothing here is meant to persist). */
 function convertTo(markdown, dir, name) {
   const mdPath = join(dir, `${name}.md`);
   const docxPath = join(dir, `${name}.docx`);
@@ -132,7 +120,7 @@ function assertConformantDocx(docxPath, name) {
   assert.ok(!xml.includes('TargetMode="External"'), `${ctx}: external relationship`);
 }
 
-test('corpus: every source diagram regenerates a conformant .docx in output/corpus/', () => {
+test('corpus: every source diagram regenerates a conformant .docx in corpus/generated/', () => {
   const files = readdirSync(sourceDir).filter((f) => f.endsWith('.mmd') || f.endsWith('.md'));
   assert.ok(files.length > 0, 'no corpus sources found');
   mkdirSync(corpusDir, { recursive: true });
@@ -145,34 +133,42 @@ test('corpus: every source diagram regenerates a conformant .docx in output/corp
 });
 
 test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', () => {
-  const dir = createSimpleOutputDir();
-  const docx = convertTo('# Titre\n\nUn paragraphe simple.\n\n- item 1\n- item 2\n', dir, 'plain');
-  // Valid ZIP.
-  execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
-  const xml = readDocumentXml(docx);
-  // No mermaid block -> no wpg:wgp.
-  assert.ok(!xml.includes('<wpg:wgp'), 'plain markdown must not contain wpg:wgp');
-  // The heading and paragraph text must be present.
-  assert.ok(xml.includes('Titre'), 'heading text missing');
-  assert.ok(xml.includes('Un paragraphe simple'), 'paragraph text missing');
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
+  try {
+    const docx = convertTo('# Titre\n\nUn paragraphe simple.\n\n- item 1\n- item 2\n', dir, 'plain');
+    // Valid ZIP.
+    execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
+    const xml = readDocumentXml(docx);
+    // No mermaid block -> no wpg:wgp.
+    assert.ok(!xml.includes('<wpg:wgp'), 'plain markdown must not contain wpg:wgp');
+    // The heading and paragraph text must be present.
+    assert.ok(xml.includes('Titre'), 'heading text missing');
+    assert.ok(xml.includes('Un paragraphe simple'), 'paragraph text missing');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('simple: markdown with a mermaid A --> B produces a conformant docx', () => {
-  const dir = createSimpleOutputDir();
-  const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab');
-  assertConformantDocx(docx, 'ab');
-  const xml = readDocumentXml(docx);
-  // Exactly one wpg:wgp group.
-  assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 1, 'expected exactly one wpg:wgp');
-  // Two node shapes (A, B) + one connector.
-  assert.equal((xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length, 2, 'expected 2 node shapes');
-  assert.equal((xml.match(/<wps:cNvCnPr>/g) ?? []).length, 1, 'expected 1 connector');
-  // The diagram must fit on a page: wp:extent within a reasonable size
-  // (A4 usable width ~ 6.5in = 5943600 EMU; height ~ 9in = 8229600 EMU).
-  const extent = xml.match(/<wp:extent cx="(\d+)" cy="(\d+)"/);
-  assert.ok(extent, 'missing wp:extent');
-  const cx = Number(extent[1]);
-  const cy = Number(extent[2]);
-  assert.ok(cx > 0 && cx < 5943600, `diagram width ${cx} EMU exceeds page width`);
-  assert.ok(cy > 0 && cy < 8229600, `diagram height ${cy} EMU exceeds page height`);
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
+  try {
+    const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab');
+    assertConformantDocx(docx, 'ab');
+    const xml = readDocumentXml(docx);
+    // Exactly one wpg:wgp group.
+    assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 1, 'expected exactly one wpg:wgp');
+    // Two node shapes (A, B) + one connector.
+    assert.equal((xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length, 2, 'expected 2 node shapes');
+    assert.equal((xml.match(/<wps:cNvCnPr>/g) ?? []).length, 1, 'expected 1 connector');
+    // The diagram must fit on a page: wp:extent within a reasonable size
+    // (A4 usable width ~ 6.5in = 5943600 EMU; height ~ 9in = 8229600 EMU).
+    const extent = xml.match(/<wp:extent cx="(\d+)" cy="(\d+)"/);
+    assert.ok(extent, 'missing wp:extent');
+    const cx = Number(extent[1]);
+    const cy = Number(extent[2]);
+    assert.ok(cx > 0 && cx < 5943600, `diagram width ${cx} EMU exceeds page width`);
+    assert.ok(cy > 0 && cy < 8229600, `diagram height ${cy} EMU exceeds page height`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

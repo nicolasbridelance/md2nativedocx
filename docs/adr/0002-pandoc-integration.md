@@ -16,7 +16,7 @@ fragment XML tel quel dans `word/document.xml` sans le modifier ni le casser.
 
 ## Spike réalisé
 
-`scripts/spike-pandoc/` contient un test bout-en-bout :
+`docs/adr/spikes/spike-pandoc/` contient un test bout-en-bout :
 
 - `spike-filter.lua` : filtre Lua qui remplace chaque bloc ` ```mermaid ` par un
   `RawBlock('openxml', ...)` contenant un fragment **`wpg:wgp` complexe** : 2 formes

@@ -2,9 +2,9 @@
 /**
  * Corpus generator: source Mermaid diagrams -> .docx files.
  *
- * Reads every diagram source under `test-corpus/source/`, wraps it in a minimal
- * Markdown document with a ```mermaid block, and converts it to a .docx in
- * `test-corpus/output/` using the md2nativedocx CLI.
+ * Reads every diagram source under `test-corpus/corpus/source/`, wraps it in a
+ * minimal Markdown document with a ```mermaid block, and converts it to a
+ * .docx in `test-corpus/corpus/generated/` using the md2nativedocx CLI.
  *
  * This is the corpus for human validation in Word (spec §9) and for the future
  * test:visual pipeline (LibreOffice-headless render + pixel-diff).
@@ -24,8 +24,8 @@ import { execFileSync } from 'node:child_process';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
-const sourceDir = join(root, 'test-corpus', 'source');
-const outputDir = join(root, 'test-corpus', 'output', 'corpus');
+const sourceDir = join(root, 'test-corpus', 'corpus', 'source');
+const outputDir = join(root, 'test-corpus', 'corpus', 'generated');
 const cli = join(root, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 
 const only = process.argv.indexOf('--only') >= 0 ? process.argv[process.argv.indexOf('--only') + 1] : null;
@@ -47,7 +47,7 @@ function wrapMarkdown(diagram) {
 
 function convert(name, markdown) {
   // The .md envelope is a transient input to the CLI, derived from the .mmd
-  // source. Write it to a temp dir (not persisted) so output/corpus/ only
+  // source. Write it to a temp dir (not persisted) so corpus/generated/ only
   // contains the .docx artifacts.
   const mdPath = join(tmpdir(), `${name}.md`);
   const docxPath = join(outputDir, `${name}.docx`);

@@ -19,7 +19,7 @@ pour les diagrammes denses (>25 nœuds).
 
 ## Spike réalisé
 
-`scripts/spike-layout.mjs` compare les deux moteurs sur un flowchart à 10 nœuds avec
+`docs/adr/spikes/spike-layout.mjs` compare les deux moteurs sur un flowchart à 10 nœuds avec
 arêtes croisées volontaires (le cas qui différencie le crossing minimization).
 
 Résultat Dagre (baseline documentée) :

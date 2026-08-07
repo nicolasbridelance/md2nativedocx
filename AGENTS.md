@@ -132,6 +132,10 @@ already-working commands to assume:
 | `npm run test:fuzz -w packages/core` | property-based tests on the parser/translator boundary |
 | `npm run test:visual` | LibreOffice-headless render + pixel-diff regression (spec §9) |
 
+See `TESTING.md` for the full picture: why testing is split into six chapters, what each one
+actually catches that the others can't, and where each one lives on disk — this table is just
+the commands.
+
 A PR that doesn't pass all of the above (except `test:visual`, which needs a real environment and
 may run only in CI) should not be described as done.
 

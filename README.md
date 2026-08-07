@@ -67,6 +67,7 @@ npm run test:visual  # rendu LibreOffice headless + pixel-diff (CI)
 - `cahier_des_charges.md` — le **quoi** et le **pourquoi** (spec, phases, scope).
 - `AGENTS.md` — le **comment** (conventions, règles de sécurité non négociables).
 - `docs/adr/` — décisions d'architecture (moteur de layout, intégration Pandoc).
+- `TESTING.md` — les six chapitres de test, ce que chacun garantit, où il vit.
 - `CONTRIBUTING.md` — comment contribuer.
 
 ## Licence
