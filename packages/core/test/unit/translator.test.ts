@@ -22,23 +22,25 @@ test('emits a self-contained wpg:wgp group', () => {
 test('wraps the wpg:wgp in the schema-required paragraph hierarchy (spec §5.3)', () => {
   const xml = translate('graph TD\n  A[Start] --> B[End]');
   // The fragment must be a complete w:p paragraph so Word accepts it as a
-  // block-level drawing (a bare wpg:wgp cannot be a direct child of w:body).
+  // drawing (a bare wpg:wgp cannot be a direct child of w:body).
   assert.ok(xml.startsWith('<w:p '));
   assert.ok(xml.trimEnd().endsWith('</w:p>'));
-  // Schema-required nesting: w:p -> w:r -> w:drawing -> wp:inline ->
-  // a:graphic -> a:graphicData -> wpg:wgp.
+  // Schema-required nesting: w:p -> w:r -> w:drawing -> wp:anchor ->
+  // a:graphic -> a:graphicData -> wpc:wpc -> wpg:wgp.
   const order = [
     '<w:p ',
     '<w:r>',
     '<w:drawing>',
-    '<wp:inline ',
+    '<wp:anchor ',
     '<a:graphic ',
     '<a:graphicData ',
+    '<wpc:wpc ',
     '<wpg:wgp',
     '</wpg:wgp>',
+    '</wpc:wpc>',
     '</a:graphicData>',
     '</a:graphic>',
-    '</wp:inline>',
+    '</wp:anchor>',
     '</w:drawing>',
     '</w:r>',
     '</w:p>',

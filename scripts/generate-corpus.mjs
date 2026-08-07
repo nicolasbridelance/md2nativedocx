@@ -16,7 +16,8 @@
  * Usage: node scripts/generate-corpus.mjs [--only name.mmd]
  */
 
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -24,7 +25,7 @@ import { execFileSync } from 'node:child_process';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const sourceDir = join(root, 'test-corpus', 'source');
-const outputDir = join(root, 'test-corpus', 'output');
+const outputDir = join(root, 'test-corpus', 'output', 'corpus');
 const cli = join(root, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 
 const only = process.argv.indexOf('--only') >= 0 ? process.argv[process.argv.indexOf('--only') + 1] : null;
@@ -45,7 +46,10 @@ function wrapMarkdown(diagram) {
 }
 
 function convert(name, markdown) {
-  const mdPath = join(outputDir, `${name}.md`);
+  // The .md envelope is a transient input to the CLI, derived from the .mmd
+  // source. Write it to a temp dir (not persisted) so output/corpus/ only
+  // contains the .docx artifacts.
+  const mdPath = join(tmpdir(), `${name}.md`);
   const docxPath = join(outputDir, `${name}.docx`);
   writeFileSync(mdPath, markdown);
   try {

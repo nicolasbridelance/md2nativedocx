@@ -33,35 +33,50 @@ test('output is a complete w:p paragraph (block-level drawing)', () => {
 
 test('wpg:wgp is nested in the schema-required hierarchy', () => {
   const xml = translate('graph TD\n  A --> B');
-  // w:p -> w:r -> w:drawing -> wp:inline -> a:graphic -> a:graphicData -> wpg:wgp
+  // w:p -> w:r -> w:drawing -> wp:anchor -> a:graphic -> a:graphicData ->
+  // wpc:wpc -> wpg:wgp (Word renders a shape group inside a drawing canvas).
   let idx = assertAfter(xml, '<w:p ', -1);
   idx = assertAfter(xml, '<w:r>', idx);
   idx = assertAfter(xml, '<w:drawing>', idx);
-  idx = assertAfter(xml, '<wp:inline ', idx);
+  idx = assertAfter(xml, '<wp:anchor ', idx);
   idx = assertAfter(xml, '<wp:extent ', idx);
   idx = assertAfter(xml, '<wp:docPr ', idx);
   idx = assertAfter(xml, '<a:graphic ', idx);
   idx = assertAfter(xml, '<a:graphicData ', idx);
+  idx = assertAfter(xml, '<wpc:wpc ', idx);
   idx = assertAfter(xml, '<wpg:wgp', idx);
   // And the closing tags in reverse order.
   idx = assertAfter(xml, '</wpg:wgp>', idx);
+  idx = assertAfter(xml, '</wpc:wpc>', idx);
   idx = assertAfter(xml, '</a:graphicData>', idx);
   idx = assertAfter(xml, '</a:graphic>', idx);
-  idx = assertAfter(xml, '</wp:inline>', idx);
+  idx = assertAfter(xml, '</wp:anchor>', idx);
   idx = assertAfter(xml, '</w:drawing>', idx);
   idx = assertAfter(xml, '</w:r>', idx);
   assertAfter(xml, '</w:p>', idx);
 });
 
-test('wp:inline requires wp:extent and wp:docPr (ECMA-376 §17.3.1.1)', () => {
+test('wp:anchor requires wp:extent and wp:docPr', () => {
   const xml = translate('graph TD\n  A --> B');
-  assert.ok(xml.includes('<wp:extent '), 'wp:inline must contain wp:extent');
-  assert.ok(xml.includes('<wp:docPr '), 'wp:inline must contain wp:docPr');
+  assert.ok(xml.includes('<wp:extent '), 'wp:anchor must contain wp:extent');
+  assert.ok(xml.includes('<wp:docPr '), 'wp:anchor must contain wp:docPr');
   // wp:extent must come before wp:docPr before a:graphic.
   const extent = xml.indexOf('<wp:extent ');
   const docPr = xml.indexOf('<wp:docPr ');
   const graphic = xml.indexOf('<a:graphic ');
   assert.ok(extent > -1 && docPr > extent && graphic > docPr);
+});
+
+test('graphicData uses the wordprocessingCanvas URI', () => {
+  const xml = translate('graph TD\n  A --> B');
+  assert.ok(
+    xml.includes('uri="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"'),
+    'graphicData must reference the wordprocessingCanvas URI for wpc:wpc',
+  );
+  // The group is inside a wpc:wpc canvas.
+  assert.ok(xml.includes('<wpc:wpc '), 'missing wpc:wpc canvas');
+  assert.ok(xml.includes('<wpc:bg>'), 'missing wpc:bg');
+  assert.ok(xml.includes('<wpc:whole/>'), 'missing wpc:whole');
 });
 
 test('every wps:wsp has a wps:cNvPr with id and name (MS-OE376)', () => {
@@ -90,14 +105,6 @@ test('connectors use wps:cNvCnPr with stCxn/endCxn referencing node ids', () => 
   const endCxn = xml.match(/<a:endCxn id="(\d+)"/)?.[1];
   assert.ok(stCxn && ids.has(stCxn), `stCxn id ${stCxn} must reference a node`);
   assert.ok(endCxn && ids.has(endCxn), `endCxn id ${endCxn} must reference a node`);
-});
-
-test('graphicData uses the wordprocessingShape URI', () => {
-  const xml = translate('graph TD\n  A --> B');
-  assert.ok(
-    xml.includes('uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"'),
-    'graphicData must reference the wordprocessingShape URI for wpg:wgp',
-  );
 });
 
 test('no external OOXML relationship is emitted (rule #3)', () => {

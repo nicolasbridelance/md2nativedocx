@@ -46,6 +46,10 @@ Le principe directeur : **chaque ligne de code écrite doit concerner la traduct
 
 **Export ODF/ODT.** Techniquement peu coûteux à ajouter vu l'architecture (§5.3 isole déjà le traducteur du parseur et du layout — un second traducteur ciblant `<draw:custom-shape>`/`<draw:frame>` en plus du traducteur OOXML suffirait, sans toucher au reste du pipeline). **L'équipe cœur ne le développera pas elle-même** : le cas d'usage principal (§3) est spécifiquement centré sur Microsoft Word, et le support ODF de Word reste connu pour ses pertes de fidélité à l'import — packager du natif via ODT réintroduirait justement le risque que ce projet existe pour éliminer côté OOXML. Ceci dit, la demande (secteur public européen, organisations LibreOffice-first) est réelle et légitime pour qui cible cet écosystème directement plutôt que Word. Documenté ici comme point d'extension propre pour quiconque veut s'en emparer — licence CC0 (§13), aucune permission à demander.
 
+### 2.2 Piste future — lecture inverse (docx2mermaid)
+
+Direction symétrique : relire un `.docx` édité à la main dans Word pour en extraire du Mermaid stable, permettant une boucle IA-génère → humain-édite-dans-Word → IA-continue. Contrairement à l'ODF (§2.1), le statut n'est pas « l'équipe cœur ne le fera pas » — juste « pas avant que la V1 soit stable ». Spec complète : `FUTURE_docx2mermaid_SPEC.md`. Seule action déjà actionnée dans la V1 actuelle : les formes et connecteurs portent leur ID Mermaid d'origine dans `cNvPr/name` (§5.3 de ce document), pour que cette relecture soit possible sans réécrire le traducteur plus tard.
+
 ---
 
 ## 3. Personas cibles

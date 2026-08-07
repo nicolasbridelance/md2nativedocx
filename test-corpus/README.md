@@ -34,7 +34,7 @@ Les constructions suivantes sont **ignorées avec un warning** (tolérance, pas 
 ## Usage
 
 ```bash
-# Régénérer tous les .docx du corpus (dans test-corpus/output/)
+# Régénérer tous les .docx du corpus (dans test-corpus/output/corpus/)
 node scripts/generate-corpus.mjs
 
 # Un seul fichier
@@ -43,3 +43,22 @@ node scripts/generate-corpus.mjs --only large2
 
 Chaque source est convertie via le CLI réel (`packages/cli`), donc ce corpus teste
 aussi le pipeline complet : Markdown → Pandoc → filtre Lua → core → `.docx`.
+
+## Organisation de `test-corpus/output/`
+
+```
+output/
+├── corpus/            # .docx du corpus (un par source, écrasés à chaque run)
+└── simple/            # tests simples (markdown sans mermaid, A --> B)
+    └── <timestamp>/   # un sous-répertoire horodaté par exécution des tests
+        ├── plain.md / plain.docx
+        └── ab.md / ab.docx
+```
+
+- `corpus/` contient les diagrammes de validation humaine (spec §9) — un `.docx` par
+  source, régénéré à chaque `npm test` ou `node scripts/generate-corpus.mjs`. Les
+  enveloppes `.md` (titre + bloc mermaid) sont des entrées transitoires dérivées des
+  `.mmd` sources : elles sont écrites dans un répertoire temporaire, pas persistées.
+- `simple/` contient les sorties des tests simples, horodatées pour rester auditable
+  et reproductible (chaque run crée un nouveau sous-répertoire, avec le `.md` source
+  et le `.docx` généré).

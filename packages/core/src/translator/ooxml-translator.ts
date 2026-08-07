@@ -77,6 +77,40 @@ export interface TranslateOptions {
 }
 
 /**
+ * The full `wps:bodyPr` element Word emits for a text-bearing shape, with all
+ * the attributes needed for the fill to render (a bare `<wps:bodyPr/>` makes
+ * Word render the group as an empty gray rectangle).
+ */
+function bodyPr(): string {
+  return [
+    '<wps:bodyPr rot="0" spcFirstLastPara="0" vertOverflow="overflow" horzOverflow="overflow"',
+    '  vert="horz" wrap="square" lIns="91440" tIns="45720" rIns="91440" bIns="45720"',
+    '  numCol="1" spcCol="0" rtlCol="0" fromWordArt="0" anchor="ctr" anchorCtr="0"',
+    '  forceAA="0" compatLnSpc="1">',
+    '  <a:prstTxWarp prst="textNoShape"><a:avLst/></a:prstTxWarp>',
+    '  <a:noAutofit/>',
+    '</wps:bodyPr>',
+  ].join('\n');
+}
+
+/**
+ * The `wps:style` element Word emits for a shape, referencing the document
+ * theme. Required for the shape fill/line to render (the `a:solidFill`/`a:ln`
+ * in `wps:spPr` alone are not enough — Word resolves the visual style from
+ * these theme references).
+ */
+function style(): string {
+  return [
+    '<wps:style>',
+    '  <a:lnRef idx="2"><a:schemeClr val="accent1"><a:shade val="15000"/></a:schemeClr></a:lnRef>',
+    '  <a:fillRef idx="1"><a:schemeClr val="accent1"/></a:fillRef>',
+    '  <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>',
+    '  <a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef>',
+    '</wps:style>',
+  ].join('\n');
+}
+
+/**
  * Translate a flowchart + its layout into a self-contained WordprocessingML
  * paragraph (`w:p`) wrapping the drawing in the schema-required hierarchy.
  *
@@ -151,13 +185,13 @@ function renderGroup(
 
 /**
  * Wrap a `wpg:wgp` group in the schema-required paragraph hierarchy so Word
- * accepts the fragment as a block-level drawing:
- * `w:p -> w:r -> w:drawing -> wp:inline -> a:graphic -> a:graphicData -> wpg:wgp`.
+ * accepts the fragment as a drawing:
+ * `w:p -> w:r -> w:drawing -> wp:anchor -> a:graphic -> a:graphicData ->
+ * wpc:wpc -> wpg:wgp`.
  *
- * `wp:inline` requires `wp:extent` and `wp:docPr` (in that order) before
- * `a:graphic` (ECMA-376 §17.3.1.1). The `wpg:wgp` group is self-contained
- * (all namespaces declared inline), so the wrapper only needs the `w`
- * namespace for `w:p`/`w:r`/`w:drawing`.
+ * Word renders a shape group inside a drawing canvas (`wpc:wpc`), anchored as
+ * a floating object (`wp:anchor`), not as an inline object (`wp:inline`). The
+ * `a:graphicData` URI is `wordprocessingCanvas` (not `wordprocessingShape`).
  */
 function wrapInParagraph(
   group: string,
@@ -169,15 +203,25 @@ function wrapInParagraph(
     `<w:p ${NS.w}>`,
     '  <w:r>',
     '    <w:drawing>',
-    `      <wp:inline ${NS.wp}>`,
+    `      <wp:anchor ${NS.wp} distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251659264" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">`,
+    '        <wp:simplePos x="0" y="0"/>',
+    '        <wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH>',
+    '        <wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>',
     `        <wp:extent cx="${cx}" cy="${cy}"/>`,
+    '        <wp:effectExtent l="0" t="0" r="0" b="0"/>',
+    '        <wp:wrapNone/>',
     '        <wp:docPr id="1" name="Diagram"/>',
+    '        <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>',
     `        <a:graphic ${NS.a}>`,
-    '          <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">',
+    '          <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">',
+    '            <wpc:wpc xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">',
+    '              <wpc:bg><a:solidFill><a:prstClr val="white"/></a:solidFill></wpc:bg>',
+    '              <wpc:whole/>',
     group,
+    '            </wpc:wpc>',
     '          </a:graphicData>',
     '        </a:graphic>',
-    '      </wp:inline>',
+    '      </wp:anchor>',
     '    </w:drawing>',
     '  </w:r>',
     '</w:p>',
@@ -241,7 +285,7 @@ function renderSubgraph(
   parts.push('          </w:p>');
   parts.push('        </w:txbxContent>');
   parts.push('      </wps:txbx>');
-  parts.push('      <wps:bodyPr/>');
+  parts.push('      <wps:bodyPr anchor="ctr" anchorCtr="0"/>');
   parts.push('    </wps:wsp>');
 
   // Nested subgraphs.
@@ -309,8 +353,8 @@ function renderNode(
     '        <a:avLst/>',
     '      </a:prstGeom>',
     `      <a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`,
-    `      <a:ln w="12700"><a:solidFill><a:srgbClr val="${line}"/></a:solidFill></a:ln>`,
     '    </wps:spPr>',
+    style(),
     '    <wps:txbx>',
     '      <w:txbxContent>',
     '        <w:p>',
@@ -319,7 +363,7 @@ function renderNode(
     '        </w:p>',
     '      </w:txbxContent>',
     '    </wps:txbx>',
-    '    <wps:bodyPr/>',
+    bodyPr(),
     '  </wps:wsp>',
   ].join('\n');
 }
@@ -333,8 +377,8 @@ function renderEdge(
   to: { x: number; y: number; width: number; height: number },
   line: string,
 ): string {
-  const style = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
-  const dash = style.dash ? `\n        <a:prstDash val="${style.dash}"/>` : '';
+  const lineStyle = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
+  const dash = lineStyle.dash ? `\n        <a:prstDash val="${lineStyle.dash}"/>` : '';
 
   // Anchor the connector to the centers of the two node boxes. Word's
   // magnetic connectors (stCxn/endCxn) will keep them attached when a box
@@ -359,10 +403,10 @@ function renderEdge(
     '      <a:prstGeom prst="line">',
     '        <a:avLst/>',
     '      </a:prstGeom>',
-    `      <a:ln w="${style.width}"><a:solidFill><a:srgbClr val="${line}"/></a:solidFill>${dash}</a:ln>`,
+    `      <a:ln w="${lineStyle.width}"><a:solidFill><a:srgbClr val="${line}"/></a:solidFill>${dash}</a:ln>`,
     '    </wps:spPr>',
-    '    <wps:style/>',
-    '    <wps:bodyPr/>',
+    style(),
+    '    <wps:bodyPr anchor="ctr" anchorCtr="0"/>',
     '  </wps:wsp>',
   ].join('\n');
 }

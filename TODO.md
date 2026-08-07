@@ -41,13 +41,17 @@ est levé.
 - ✅ Tests : unitaires + golden + fuzz (29 tests, 0 échec) — le fuzz a trouvé/corrigé un bug de
   prototype pollution (`__proto__`)
 - ✅ `packages/pandoc-filter/` : filtre Lua + binaire bridge (4 tests)
-- ✅ `packages/cli/` : `npx md2nativedocx` (5 tests — dont un test de corpus qui régénère chaque
+- ✅ `packages/cli/` : `npx md2nativedocx` (7 tests — dont un test de corpus qui régénère chaque
       `.docx` du corpus dans `test-corpus/output/` via le CLI réel et vérifie sa conformité OOXML,
-      spec §5.3/§9)
+      + 2 tests simples : markdown sans mermaid et markdown avec `A --> B`, spec §5.3/§9)
 - ✅ Traducteur conforme aux schémas officiels (ECMA-376 + MS-OE376) : `wpg:wgp` → `wpg:cNvPr` →
       `wpg:cNvGrpSpPr` → `wpg:grpSpPr` → `wps:wsp` (avec `wps:cNvPr`/`wps:cNvSpPr`/`wps:cNvCnPr`),
-      sous-graphes en `wpg:grpSp`, `wp:inline` avec `wp:extent`/`wp:docPr`. Corrige l'erreur Word
-      "a rencontré une erreur lors de l'ouverture du fichier".
+      sous-graphes en `wpg:grpSp`, `wp:inline` avec `wp:extent`/`wp:docPr`, `wps:style` avec
+      références de thème Word (`lnRef`/`fillRef`/`effectRef`/`fontRef`), `wps:bodyPr` complet.
+      Corrige l'erreur Word "a rencontré une erreur lors de l'ouverture du fichier" et le rendu
+      d'un rectangle gris vide. Validé avec le `OpenXmlValidator` officiel Microsoft (0 erreur
+      dans `document.xml` pour tout le corpus) et comparé avec un document Word réel
+      (`tools/word-reference/`).
 - ✅ CI/CD : `.github/workflows/ci.yml` + `codeql.yml`
 - ✅ `LICENSE` (CC0 verbatim), `README.md` complet
 - ✅ Validation `npm install` / `build` / `typecheck` / `lint` / `test` — tout passe
@@ -88,6 +92,11 @@ est levé.
 - [x] **Aucune relation OOXML externe** (`TargetMode="External"` interdit) — règle n°3.
 - [x] Sortie : une chaîne XML unique, autonome, injectable telle quelle.
 - [x] `src/index.ts` : barrel d'export public avec TSDoc sur chaque fonction/type exporté.
+- [ ] 🔮 **Futur-proofing** (voir `FUTURE_docx2mermaid_SPEC.md` §4) : chaque forme émise porte
+      son ID Mermaid d'origine dans `<wps:cNvPr name="...">` ; chaque connecteur porte
+      `"{id_source}--{id_cible}"` dans le `name` de son `<wpg:cxnSp>`. Coût quasi nul maintenant
+      (le traducteur connaît déjà ces IDs), coûteux à ajouter une fois le format de sortie
+      stabilisé et les golden tests figés dessus.
 
 #### Tests (`packages/core/test/`)
 - [x] `unit/` : tests unitaires parser + layout + traducteur.
@@ -98,6 +107,8 @@ est levé.
 - [x] Tests d'injection XML sur chaque fonction de `packages/core` qui touche du texte utilisateur
       (labels avec `& < > " '`), pas seulement le chemin nominal.
 - [x] Tout parseur XML utilisé (y compris en test) : **DTD et entités externes désactivés** (règle n°5).
+- [ ] Test golden dédié : pour chaque forme et connecteur des fixtures existantes, vérifier que
+      `cNvPr/name` contient l'ID Mermaid attendu (futur-proofing §4).
 
 ### `packages/pandoc-filter/`
 - [x] Filtre Lua `md2nativedocx.lua` : `CodeBlock` → `pandoc.RawBlock('openxml', ...)`.
