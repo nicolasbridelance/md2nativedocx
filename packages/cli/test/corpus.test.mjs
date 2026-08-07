@@ -24,6 +24,14 @@ function wrapMarkdown(diagram) {
   return `# ${'Diagramme de test'}\n\n\`\`\`mermaid\n${diagram}\n\`\`\`\n`;
 }
 
+/** Build the Markdown document to convert for a given source file. `.mmd`
+ * sources are bare diagrams, wrapped in a minimal envelope; `.md` sources are
+ * already complete documents (rich text + embedded mermaid blocks) and are
+ * used as-is. */
+function toMarkdown(file, diagram) {
+  return file.endsWith('.md') ? diagram : wrapMarkdown(diagram);
+}
+
 /** Convert a markdown string to a .docx via the real CLI, writing both the
  * .md envelope and the .docx into dir (an ephemeral temp dir for the simple
  * tests — the assertions below are on the generated XML, not something a
@@ -127,9 +135,59 @@ test('corpus: every source diagram regenerates a conformant .docx in corpus/gene
   for (const file of files) {
     const diagram = extractDiagram(join(sourceDir, file));
     const name = basename(file, '.mmd').replace(/\.md$/, '');
-    const docx = convert(name, wrapMarkdown(diagram));
+    const docx = convert(name, toMarkdown(file, diagram));
     assertConformantDocx(docx, name);
   }
+});
+
+test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
+  + 'footnote, link, bold/italic) survives alongside two mermaid diagrams', () => {
+  mkdirSync(corpusDir, { recursive: true });
+  const source = readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8');
+  const docx = convert('mixed-content', source);
+  assertConformantDocx(docx, 'mixed-content');
+  const xml = readDocumentXml(docx);
+
+  // Headings (H1/H2/H3) came through as heading paragraph styles, not as
+  // literal text with no structure.
+  assert.ok(xml.includes('w:val="Heading1"'), 'missing Heading1 style');
+  assert.ok(xml.includes('w:val="Heading2"'), 'missing Heading2 style');
+  assert.ok(xml.includes('w:val="Heading3"'), 'missing Heading3 style');
+
+  // Bold / italic runs.
+  assert.ok(/<w:rPr>[^<]*<w:bCs\s*\/>[^<]*<w:b\s*\/>/.test(xml) || xml.includes('<w:b/>') || xml.includes('<w:b '),
+    'missing bold run');
+  assert.ok(xml.includes('<w:i/>') || xml.includes('<w:i '), 'missing italic run');
+
+  // Ordered list numbering (numPr), table, and blockquote.
+  assert.ok(xml.includes('<w:numPr>'), 'missing ordered list numbering');
+  assert.ok(xml.includes('<w:tbl>'), 'missing table');
+  assert.ok(xml.includes('Dead-letter queue'), 'table cell text missing');
+  assert.ok(xml.includes('BlockText') || xml.includes('Quote'), 'missing blockquote style');
+
+  // Footnote and external link survive as real OOXML constructs, not flattened text.
+  assert.ok(xml.includes('<w:footnoteReference'), 'missing footnote reference');
+  assert.ok(xml.includes('doc interne'), 'link text missing');
+
+  // Fenced code block: Pandoc's built-in skylighting highlighter tags each
+  // token with a character style (KeywordTok, CommentTok, ...); the actual
+  // colours/font live in styles.xml (checked separately below), so here we
+  // only assert the tokenisation happened, not flattened to a single run.
+  assert.ok(xml.includes('w:val="SourceCode"'), 'missing SourceCode paragraph style');
+  assert.ok(xml.includes('w:val="KeywordTok"'), 'missing KeywordTok run (Python keyword)');
+  assert.ok(xml.includes('w:val="CommentTok"'), 'missing CommentTok run (Python comment)');
+  // styles.xml must actually define these styles with real formatting —
+  // referencing a styleId Word doesn't know renders as plain, uncoloured text.
+  const styles = execFileSync('unzip', ['-p', docx, 'word/styles.xml'], { encoding: 'utf8' });
+  assert.ok(/w:styleId="KeywordTok"[\s\S]{0,200}?<w:color /.test(styles), 'KeywordTok has no colour defined');
+  assert.ok(/w:styleId="VerbatimChar"[\s\S]{0,200}?<w:rFonts /.test(styles), 'VerbatimChar has no monospace font defined');
+
+  // Both diagrams converted: two independent wpg:wgp groups, no id collisions
+  // across the whole document (the corpus loop's assertConformantDocx already
+  // checks this per-file, but re-asserted here since this file specifically
+  // exercises two diagrams interleaved with text, the scenario most likely to
+  // produce id reuse).
+  assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 2, 'expected exactly two wpg:wgp groups');
 });
 
 test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', () => {
@@ -168,6 +226,40 @@ test('simple: markdown with a mermaid A --> B produces a conformant docx', () =>
     const cy = Number(extent[2]);
     assert.ok(cx > 0 && cx < 5943600, `diagram width ${cx} EMU exceeds page width`);
     assert.ok(cy > 0 && cy < 8229600, `diagram height ${cy} EMU exceeds page height`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('known limitation: raw HTML (img/br/strong/div) is silently dropped, not translated', () => {
+  // Pandoc's docx writer has no OOXML representation for arbitrary raw HTML
+  // (unlike its html/pdf writers): a RawBlock/RawInline tagged Format "html"
+  // is simply omitted from document.xml, with no warning on stderr. This is a
+  // Pandoc docx-writer limitation, not a choice made by this project (cahier
+  // des charges §2) — documented in test-corpus/corpus/README.md. This test
+  // pins today's behaviour so a Pandoc upgrade that starts emitting a
+  // fallback (or a warning) is caught deliberately instead of silently.
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-html-'));
+  try {
+    const md = [
+      '# Titre',
+      '',
+      'Avant.',
+      '',
+      '<div align="center">',
+      '<img src="https://example.com/logo.png" width="120" alt="logo" />',
+      '</div>',
+      '',
+      'Après avec un <br/> saut et du <strong>gras via HTML</strong>.',
+      '',
+    ].join('\n');
+    const docx = convertTo(md, dir, 'html-drop');
+    const xml = readDocumentXml(docx);
+    assert.ok(!xml.includes('logo.png'), 'the <img> src leaked into the docx (translation exists now — update the docs/limitation)');
+    assert.ok(!xml.includes('<w:br'), 'the HTML <br/> produced a real line break (translation exists now — update the docs/limitation)');
+    // The surrounding text nodes still make it through as plain, unformatted text.
+    assert.ok(xml.includes('Avant.'), 'plain paragraph text around the HTML must survive');
+    assert.ok(xml.includes('gras via HTML'), 'text inside an HTML tag must survive as plain text');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

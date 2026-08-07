@@ -45,6 +45,14 @@ function wrapMarkdown(diagram) {
   return `# ${'Diagramme de test'}\n\n\`\`\`mermaid\n${diagram}\n\`\`\`\n`;
 }
 
+/** Build the Markdown document to convert for a given source file. `.mmd`
+ * sources are bare diagrams, wrapped in a minimal envelope; `.md` sources are
+ * already complete documents (rich text + embedded mermaid blocks) and are
+ * used as-is. */
+function toMarkdown(file, diagram) {
+  return file.endsWith('.md') ? diagram : wrapMarkdown(diagram);
+}
+
 function convert(name, markdown) {
   // The .md envelope is a transient input to the CLI, derived from the .mmd
   // source. Write it to a temp dir (not persisted) so corpus/generated/ only
@@ -67,7 +75,7 @@ for (const file of files) {
   if (only && !file.includes(only)) continue;
   const diagram = extractDiagram(join(sourceDir, file));
   const name = basename(file, '.mmd').replace(/\.md$/, '');
-  const res = convert(name, wrapMarkdown(diagram));
+  const res = convert(name, toMarkdown(file, diagram));
   if (res.ok) {
     results.ok.push(name);
     console.log(`✅ ${name}.docx (${diagram.length} chars)`);

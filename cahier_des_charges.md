@@ -39,6 +39,7 @@ Cette décision réduit le périmètre réel de développement d'environ 50 %, �
 | Couleurs et styles Mermaid (`classDef`, `style`) | Cohérence visuelle > fidélité pixel en V1 | Mapping simplifié vers le thème Word (voir §6.3) |
 | Édition WYSIWYG des diagrammes hors de Word | Hors périmètre — l'édition se fait dans Word une fois inséré | — |
 | Manipulation bas niveau de l'archive .docx (ZIP) | Déjà géré de façon robuste par le writer Pandoc | Pandoc |
+| HTML brut inline/bloc dans le Markdown (`<img>`, `<br/>`, `<div>`, etc.) | Le writer docx de Pandoc n'a pas d'équivalent OOXML pour du HTML arbitraire — limitation héritée du délégué, pas un choix de scope. Silencieusement supprimé (pas d'erreur) — voir `test-corpus/corpus/README.md` § Limites connues | Pandoc (comportement actuel : suppression silencieuse) |
 
 Le principe directeur : **chaque ligne de code écrite doit concerner la traduction diagramme → OOXML, rien d'autre.** Toute tentation de "juste aussi gérer les tableaux nous-mêmes" est un signal d'alerte de dérive de scope.
 
