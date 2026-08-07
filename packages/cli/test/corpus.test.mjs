@@ -63,11 +63,14 @@ function convert(name, markdown) {
 function readDocumentXml(docxPath) {
   return execFileSync('unzip', ['-p', docxPath, 'word/document.xml'], {
     encoding: 'utf8',
+    // The large corpus diagrams produce a document.xml well past execFileSync's
+    // 1 MB default, which fails with ENOBUFS rather than a useful assertion.
+    maxBuffer: 64 * 1024 * 1024,
   });
 }
 
 /** Assert the .docx is a valid ZIP whose document.xml has the schema-required
- * OOXML hierarchy (spec §5.3): w:p -> w:r -> w:drawing -> wp:anchor ->
+ * OOXML hierarchy (spec §5.3): w:p -> w:r -> w:drawing -> wp:inline ->
  * a:graphic -> a:graphicData -> wpc:wpc -> wpg:wgp, with wps:wsp shapes. */
 function assertConformantDocx(docxPath, name) {
   // Valid ZIP.
@@ -76,7 +79,9 @@ function assertConformantDocx(docxPath, name) {
   const ctx = `corpus file ${name}.docx`;
   assert.ok(xml.includes('<wpg:wgp'), `${ctx}: missing wpg:wgp`);
   assert.ok(xml.includes('<w:drawing>'), `${ctx}: missing w:drawing`);
-  assert.ok(xml.includes('<wp:anchor '), `${ctx}: missing wp:anchor`);
+  // Inline, not anchored: the diagram flows with the text (spec §5.3).
+  assert.ok(xml.includes('<wp:inline '), `${ctx}: missing wp:inline`);
+  assert.ok(!xml.includes('<wp:anchor '), `${ctx}: drawing must not be anchored`);
   assert.ok(xml.includes('<wp:extent '), `${ctx}: missing wp:extent`);
   assert.ok(xml.includes('<wp:docPr '), `${ctx}: missing wp:docPr`);
   assert.ok(xml.includes('<a:graphicData '), `${ctx}: missing a:graphicData`);
@@ -93,6 +98,36 @@ function assertConformantDocx(docxPath, name) {
     assert.ok(/ id="\d+"/.test(c), `${ctx}: cNvPr missing id: ${c}`);
     assert.ok(/ name="/.test(c), `${ctx}: cNvPr missing name: ${c}`);
   }
+
+  // The extended namespaces must be declared on the document ROOT, the way Word
+  // itself emits them — the post-processing that adds them was a silent no-op
+  // for a while because it searched the whole document instead of the root tag.
+  const root = xml.slice(xml.indexOf('<w:document'), xml.indexOf('>', xml.indexOf('<w:document')) + 1);
+  for (const prefix of ['wpc', 'wpg', 'wps']) {
+    assert.ok(root.includes(`xmlns:${prefix}=`), `${ctx}: root missing xmlns:${prefix}`);
+  }
+
+  // Word treats every drawing id as one id space per document and reports the
+  // file as corrupt on a collision.
+  const ids = [...xml.matchAll(/<(?:wp:docPr|wpg:cNvPr|wps:cNvPr|pic:cNvPr)\s+id="(\d+)"/g)].map(
+    (m) => m[1],
+  );
+  assert.equal(new Set(ids).size, ids.length, `${ctx}: duplicate drawing ids`);
+
+  // Connectors must stay attached to shapes declared in their own drawing.
+  for (const block of xml.match(/<w:drawing>[\s\S]*?<\/w:drawing>/g) ?? []) {
+    const defined = new Set([...block.matchAll(/<wps:cNvPr\s+id="(\d+)"/g)].map((m) => m[1]));
+    for (const [, ref] of block.matchAll(/<a:(?:stCxn|endCxn)\s+id="(\d+)"/g)) {
+      assert.ok(defined.has(ref), `${ctx}: connector references undeclared shape id ${ref}`);
+    }
+  }
+
+  // A drawing wider or taller than the usable page area is clipped by Word.
+  for (const [, cx, cy] of xml.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"\/>/g)) {
+    assert.ok(Number(cx) <= 5943600, `${ctx}: extent cx ${cx} exceeds the usable page width`);
+    assert.ok(Number(cy) <= 8229600, `${ctx}: extent cy ${cy} exceeds the usable page height`);
+  }
+
   // No external OOXML relationship (rule #3).
   assert.ok(!xml.includes('TargetMode="External"'), `${ctx}: external relationship`);
 }

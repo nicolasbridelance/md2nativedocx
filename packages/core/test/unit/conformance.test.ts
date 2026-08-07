@@ -33,12 +33,12 @@ test('output is a complete w:p paragraph (block-level drawing)', () => {
 
 test('wpg:wgp is nested in the schema-required hierarchy', () => {
   const xml = translate('graph TD\n  A --> B');
-  // w:p -> w:r -> w:drawing -> wp:anchor -> a:graphic -> a:graphicData ->
+  // w:p -> w:r -> w:drawing -> wp:inline -> a:graphic -> a:graphicData ->
   // wpc:wpc -> wpg:wgp (Word renders a shape group inside a drawing canvas).
   let idx = assertAfter(xml, '<w:p ', -1);
   idx = assertAfter(xml, '<w:r>', idx);
   idx = assertAfter(xml, '<w:drawing>', idx);
-  idx = assertAfter(xml, '<wp:anchor ', idx);
+  idx = assertAfter(xml, '<wp:inline ', idx);
   idx = assertAfter(xml, '<wp:extent ', idx);
   idx = assertAfter(xml, '<wp:docPr ', idx);
   idx = assertAfter(xml, '<a:graphic ', idx);
@@ -50,16 +50,16 @@ test('wpg:wgp is nested in the schema-required hierarchy', () => {
   idx = assertAfter(xml, '</wpc:wpc>', idx);
   idx = assertAfter(xml, '</a:graphicData>', idx);
   idx = assertAfter(xml, '</a:graphic>', idx);
-  idx = assertAfter(xml, '</wp:anchor>', idx);
+  idx = assertAfter(xml, '</wp:inline>', idx);
   idx = assertAfter(xml, '</w:drawing>', idx);
   idx = assertAfter(xml, '</w:r>', idx);
   assertAfter(xml, '</w:p>', idx);
 });
 
-test('wp:anchor requires wp:extent and wp:docPr', () => {
+test('wp:inline requires wp:extent and wp:docPr', () => {
   const xml = translate('graph TD\n  A --> B');
-  assert.ok(xml.includes('<wp:extent '), 'wp:anchor must contain wp:extent');
-  assert.ok(xml.includes('<wp:docPr '), 'wp:anchor must contain wp:docPr');
+  assert.ok(xml.includes('<wp:extent '), 'wp:inline must contain wp:extent');
+  assert.ok(xml.includes('<wp:docPr '), 'wp:inline must contain wp:docPr');
   // wp:extent must come before wp:docPr before a:graphic.
   const extent = xml.indexOf('<wp:extent ');
   const docPr = xml.indexOf('<wp:docPr ');

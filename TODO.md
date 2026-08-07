@@ -46,13 +46,37 @@ est levé.
       + 2 tests simples : markdown sans mermaid et markdown avec `A --> B`, spec §5.3/§9)
 - ✅ Traducteur conforme aux schémas officiels (ECMA-376 + MS-OE376) : `wpg:wgp` → `wpg:cNvPr` →
       `wpg:cNvGrpSpPr` → `wpg:grpSpPr` → `wps:wsp` (avec `wps:cNvPr`/`wps:cNvSpPr`/`wps:cNvCnPr`),
-      sous-graphes en `wpg:grpSp`, `wp:anchor` avec `wp:extent`/`wp:docPr`, `wpc:wpc` canvas
-      (URI `wordprocessingCanvas`), `wps:style` avec références de thème Word, `wps:bodyPr` complet.
-      Connecteurs utilisant les sites de connexion sur les bords des formes (pas le centre).
-      Corrige l'erreur Word "a rencontré une erreur lors de l'ouverture du fichier" et le rendu
-      d'un rectangle gris vide. Validé avec le `OpenXmlValidator` officiel Microsoft (0 erreur
-      dans `document.xml` pour tout le corpus) et comparé avec un document Word réel
-      (`tools/word-reference/`).
+      sous-graphes en `wpg:grpSp`, canvas `wpc:wpc`, `wp:inline` avec `wp:extent`/`wp:docPr`,
+      `wps:style` avec références de thème Word (`lnRef`/`fillRef`/`effectRef`/`fontRef`),
+      `wps:bodyPr` complet. Structure comparée à un document Word réel (`tools/word-reference/`).
+- ✅ **Conformité Word — série de corrections (2026-08-07)**, chacune couverte par un test de
+      non-régression (les 34 tests précédents passaient tous pendant que le `.docx` était
+      inutilisable dans Word) :
+  - Les namespaces étendus (`wpc`/`wpg`/`wps`/`wp14`) sont désormais réellement déclarés sur la
+    racine `w:document`. Le post-traitement était un **no-op silencieux** : il cherchait
+    `xmlns:wpg=` dans tout le document et tombait sur les déclarations *inline* du traducteur.
+  - Ids de dessin uniques à l'échelle du document. `wp:docPr` et `wpg:cNvPr` valaient tous deux
+    `id="1"` (Word signale le fichier comme corrompu) ; le traducteur numérote maintenant chaque
+    fragment depuis 1 et `postprocess.mjs` renumérote globalement, en réécrivant les
+    `a:stCxn`/`a:endCxn` pour que chaque connecteur reste attaché à ses formes.
+  - Traducteur redevenu une **fonction pure** : le compteur d'ids était global au module et
+    fuitait entre les appels (deux appels identiques donnaient deux sorties différentes).
+  - `wp:anchor` → `wp:inline` : conforme à la spec §5.3, le diagramme suit le fil du texte au
+    lieu de flotter par-dessus.
+  - Têtes de flèches, pointillés et épaisseurs de trait (§6.2) : aucun `<a:ln>` n'était émis,
+    `LINE_STYLE_BY_EDGE` était calculé puis jeté (variables mortes signalées par le lint).
+  - Labels d'arêtes (`-->|Texte|`, §6.2) : ils étaient purement et simplement perdus.
+  - Couleur de texte explicite selon la luminance du fond : le thème Word résout le texte des
+    formes en blanc (`fontRef` → `lt1`), invisible sur le fill clair par défaut.
+  - Mise à l'échelle automatique des diagrammes trop grands (le corpus émettait des `wp:extent`
+    de 80 × 18 pouces, rognés par Word).
+  - Couleurs validées comme hexadécimal avant d'atteindre `a:srgbClr/@val` (`TranslateOptions`
+    est public et n'était pas contrôlé).
+  - `packages/cli/bin/docx-patch.mjs` supprimé : implémentation concurrente, morte (importée
+    nulle part) et cassée (`require()` dans un module ESM, `zip -j` écrivant `document.xml` à
+    la racine de l'archive).
+  - `pretest` ajouté à `packages/core` : `dist-test/` n'était compilé par rien, donc `npm test`
+    et la CI exécutaient un instantané figé au lieu des tests du dépôt.
 - ✅ CI/CD : `.github/workflows/ci.yml` + `codeql.yml`
 - ✅ `LICENSE` (CC0 verbatim), `README.md` complet
 - ✅ Validation `npm install` / `build` / `typecheck` / `lint` / `test` — tout passe
@@ -88,8 +112,10 @@ est levé.
       traducteur émet désormais un paragraphe complet `w:p -> w:r -> w:drawing -> wp:inline ->
       a:graphic -> a:graphicData -> wpg:wgp` (corrige l'erreur Word "a rencontré une erreur lors
       de l'ouverture du fichier" sur les `.docx` générés).
-- [ ] **Échappement XML strict** (`& < > " '`) de TOUT texte utilisateur (labels nœuds/arêtes,
-      titres subgraph) avant insertion dans `<a:t>` — règle non négociable n°2.
+- [x] **Échappement XML strict** (`& < > " '`) de TOUT texte utilisateur (labels nœuds/arêtes,
+      titres subgraph) avant insertion dans `<a:t>` — règle non négociable n°2. Les couleurs
+      (`classDef fill`, `TranslateOptions`) sont en plus **validées** comme hexadécimal 6 chiffres,
+      l'échappement seul laissant passer une valeur arbitraire dans `a:srgbClr/@val`.
 - [x] **Aucune relation OOXML externe** (`TargetMode="External"` interdit) — règle n°3.
 - [x] Sortie : une chaîne XML unique, autonome, injectable telle quelle.
 - [x] `src/index.ts` : barrel d'export public avec TSDoc sur chaque fonction/type exporté.

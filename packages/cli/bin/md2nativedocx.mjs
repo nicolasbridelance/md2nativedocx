@@ -18,6 +18,7 @@ import { execFile } from 'node:child_process';
 import { resolve, isAbsolute, dirname, basename } from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { postProcessDocx } from '../src/postprocess.mjs';
 
 // The pandoc-filter package may be hoisted to the repo root node_modules (npm
 // workspaces) or nested under packages/cli/node_modules. Resolve whichever
@@ -125,6 +126,15 @@ async function main() {
     if (err) {
       process.stderr.write(`md2nativedocx: Pandoc failed (exit ${err.code ?? '?'})\n`);
       if (stderr) process.stderr.write(stderr);
+      process.exit(1);
+    }
+    // Post-process the .docx to declare the extended OOXML namespaces on the
+    // document root (wpc/wpg/wps/wp14/mc). Without this, Word does not
+    // recognize the drawing and drops it (compatibility mode).
+    try {
+      postProcessDocx(output);
+    } catch (postErr) {
+      process.stderr.write(`md2nativedocx: post-processing failed: ${postErr instanceof Error ? postErr.message : String(postErr)}\n`);
       process.exit(1);
     }
     process.stdout.write(`Wrote ${basename(output)}\n`);

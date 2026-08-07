@@ -37,7 +37,9 @@ test('cli converts a markdown file to a valid docx', () => {
     });
     assert.ok(xml.includes('<wpg:wgp'));
     assert.ok(xml.includes('<w:drawing>'));
-    assert.ok(xml.includes('<wp:anchor '));
+    // Inline, not anchored: the diagram flows with the text (spec §5.3).
+    assert.ok(xml.includes('<wp:inline '));
+    assert.ok(!xml.includes('<wp:anchor '));
     assert.ok(xml.includes('<a:graphicData '));
     assert.ok(xml.includes('<wpc:wpc '));
     // The wpg:wgp must be nested inside wpc:wpc, not a bare child of body.

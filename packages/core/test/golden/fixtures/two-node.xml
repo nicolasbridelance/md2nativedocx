@@ -1,14 +1,10 @@
 <w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:r>
     <w:drawing>
-      <wp:anchor xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251659264" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
-        <wp:simplePos x="0" y="0"/>
-        <wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH>
-        <wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>
+      <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
         <wp:extent cx="1143000" cy="1905000"/>
         <wp:effectExtent l="0" t="0" r="0" b="0"/>
-        <wp:wrapNone/>
-        <wp:docPr id="1" name="Diagram"/>
+        <wp:docPr id="1" name="Diagram 1"/>
         <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>
         <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
           <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
@@ -23,7 +19,7 @@
   xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
   xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
   xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <wpg:cNvPr id="1" name="Diagram"/>
+  <wpg:cNvPr id="2" name="Diagram group 2"/>
   <wpg:cNvGrpSpPr/>
   <wpg:grpSpPr>
     <a:xfrm>
@@ -34,7 +30,7 @@
     </a:xfrm>
   </wpg:grpSpPr>
   <wps:wsp>
-    <wps:cNvPr id="2" name="Start"/>
+    <wps:cNvPr id="3" name="Start"/>
     <wps:cNvSpPr/>
     <wps:spPr>
       <a:xfrm>
@@ -45,6 +41,10 @@
         <a:avLst/>
       </a:prstGeom>
       <a:solidFill><a:srgbClr val="D9E2F3"/></a:solidFill>
+      <a:ln w="12700" cap="flat" cmpd="sng" algn="ctr">
+        <a:solidFill><a:srgbClr val="2F5496"/></a:solidFill>
+        <a:prstDash val="solid"/>
+      </a:ln>
     </wps:spPr>
 <wps:style>
   <a:lnRef idx="2"><a:schemeClr val="accent1"><a:shade val="15000"/></a:schemeClr></a:lnRef>
@@ -56,7 +56,10 @@
       <w:txbxContent>
         <w:p>
           <w:pPr><w:jc w:val="center"/></w:pPr>
-          <w:r><w:t>Start</w:t></w:r>
+          <w:r>
+            <w:rPr><w:color w:val="000000"/></w:rPr>
+            <w:t xml:space="preserve">Start</w:t>
+          </w:r>
         </w:p>
       </w:txbxContent>
     </wps:txbx>
@@ -69,7 +72,7 @@
 </wps:bodyPr>
   </wps:wsp>
   <wps:wsp>
-    <wps:cNvPr id="3" name="End"/>
+    <wps:cNvPr id="4" name="End"/>
     <wps:cNvSpPr/>
     <wps:spPr>
       <a:xfrm>
@@ -80,6 +83,10 @@
         <a:avLst/>
       </a:prstGeom>
       <a:solidFill><a:srgbClr val="D9E2F3"/></a:solidFill>
+      <a:ln w="12700" cap="flat" cmpd="sng" algn="ctr">
+        <a:solidFill><a:srgbClr val="2F5496"/></a:solidFill>
+        <a:prstDash val="solid"/>
+      </a:ln>
     </wps:spPr>
 <wps:style>
   <a:lnRef idx="2"><a:schemeClr val="accent1"><a:shade val="15000"/></a:schemeClr></a:lnRef>
@@ -91,7 +98,10 @@
       <w:txbxContent>
         <w:p>
           <w:pPr><w:jc w:val="center"/></w:pPr>
-          <w:r><w:t>End</w:t></w:r>
+          <w:r>
+            <w:rPr><w:color w:val="000000"/></w:rPr>
+            <w:t xml:space="preserve">End</w:t>
+          </w:r>
         </w:p>
       </w:txbxContent>
     </wps:txbx>
@@ -104,19 +114,24 @@
 </wps:bodyPr>
   </wps:wsp>
   <wps:wsp>
-    <wps:cNvPr id="4" name="Connector"/>
+    <wps:cNvPr id="5" name="Connector"/>
     <wps:cNvCnPr>
-      <a:stCxn id="2" idx="3"/>
-      <a:endCxn id="3" idx="1"/>
+      <a:stCxn id="3" idx="2"/>
+      <a:endCxn id="4" idx="0"/>
     </wps:cNvCnPr>
     <wps:spPr>
       <a:xfrm>
-        <a:off x="571500" y="285750"/>
-        <a:ext cx="0" cy="1333500"/>
+        <a:off x="571500" y="571500"/>
+        <a:ext cx="0" cy="762000"/>
       </a:xfrm>
       <a:prstGeom prst="line">
         <a:avLst/>
       </a:prstGeom>
+      <a:ln w="12700" cap="flat" cmpd="sng" algn="ctr">
+        <a:solidFill><a:srgbClr val="2F5496"/></a:solidFill>
+        <a:prstDash val="solid"/>
+        <a:tailEnd type="triangle" w="med" len="med"/>
+      </a:ln>
     </wps:spPr>
 <wps:style>
   <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>
@@ -130,7 +145,7 @@
             </wpc:wpc>
           </a:graphicData>
         </a:graphic>
-      </wp:anchor>
+      </wp:inline>
     </w:drawing>
   </w:r>
 </w:p>

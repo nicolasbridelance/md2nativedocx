@@ -42,7 +42,9 @@ test('pandoc filter emits the schema-required w:p/w:drawing wrapper', () => {
   // schema-required hierarchy, so Word accepts the .docx (spec §5.3).
   assert.ok(xml.includes('<w:p '));
   assert.ok(xml.includes('<w:drawing>'));
-  assert.ok(xml.includes('<wp:anchor '));
+  // Inline, not anchored: the diagram flows with the text (spec §5.3).
+  assert.ok(xml.includes('<wp:inline '));
+  assert.ok(!xml.includes('<wp:anchor '));
   assert.ok(xml.includes('<a:graphic '));
   assert.ok(xml.includes('<a:graphicData '));
   assert.ok(xml.includes('<wpc:wpc '));
