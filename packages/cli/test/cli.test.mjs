@@ -37,12 +37,13 @@ test('cli converts a markdown file to a valid docx', () => {
     });
     assert.ok(xml.includes('<wpg:wgp'));
     assert.ok(xml.includes('<w:drawing>'));
-    assert.ok(xml.includes('<wp:inline '));
+    assert.ok(xml.includes('<wp:anchor '));
     assert.ok(xml.includes('<a:graphicData '));
-    // The wpg:wgp must be nested inside a:graphicData, not a bare child of body.
+    assert.ok(xml.includes('<wpc:wpc '));
+    // The wpg:wgp must be nested inside wpc:wpc, not a bare child of body.
     const wgp = xml.indexOf('<wpg:wgp');
-    const graphicData = xml.indexOf('<a:graphicData ');
-    assert.ok(wgp > graphicData, 'wpg:wgp must be nested inside a:graphicData');
+    const wpc = xml.indexOf('<wpc:wpc ');
+    assert.ok(wgp > wpc, 'wpg:wgp must be nested inside wpc:wpc');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

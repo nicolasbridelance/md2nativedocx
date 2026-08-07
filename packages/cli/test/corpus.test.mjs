@@ -67,8 +67,8 @@ function readDocumentXml(docxPath) {
 }
 
 /** Assert the .docx is a valid ZIP whose document.xml has the schema-required
- * OOXML hierarchy (spec §5.3): w:p -> w:r -> w:drawing -> wp:inline ->
- * a:graphic -> a:graphicData -> wpg:wgp, with wps:wsp shapes. */
+ * OOXML hierarchy (spec §5.3): w:p -> w:r -> w:drawing -> wp:anchor ->
+ * a:graphic -> a:graphicData -> wpc:wpc -> wpg:wgp, with wps:wsp shapes. */
 function assertConformantDocx(docxPath, name) {
   // Valid ZIP.
   execFileSync('unzip', ['-t', docxPath], { stdio: 'pipe' });
@@ -76,15 +76,16 @@ function assertConformantDocx(docxPath, name) {
   const ctx = `corpus file ${name}.docx`;
   assert.ok(xml.includes('<wpg:wgp'), `${ctx}: missing wpg:wgp`);
   assert.ok(xml.includes('<w:drawing>'), `${ctx}: missing w:drawing`);
-  assert.ok(xml.includes('<wp:inline '), `${ctx}: missing wp:inline`);
+  assert.ok(xml.includes('<wp:anchor '), `${ctx}: missing wp:anchor`);
   assert.ok(xml.includes('<wp:extent '), `${ctx}: missing wp:extent`);
   assert.ok(xml.includes('<wp:docPr '), `${ctx}: missing wp:docPr`);
   assert.ok(xml.includes('<a:graphicData '), `${ctx}: missing a:graphicData`);
+  assert.ok(xml.includes('<wpc:wpc '), `${ctx}: missing wpc:wpc canvas`);
   assert.ok(xml.includes('<wps:wsp>'), `${ctx}: missing wps:wsp shapes`);
-  // The wpg:wgp must be nested inside a:graphicData, not a bare child of body.
+  // The wpg:wgp must be nested inside wpc:wpc, not a bare child of body.
   const wgp = xml.indexOf('<wpg:wgp');
-  const graphicData = xml.indexOf('<a:graphicData ');
-  assert.ok(wgp > graphicData, `${ctx}: wpg:wgp must be nested inside a:graphicData`);
+  const wpc = xml.indexOf('<wpc:wpc ');
+  assert.ok(wgp > wpc, `${ctx}: wpg:wgp must be nested inside wpc:wpc`);
   // Every wps:wsp must have a wps:cNvPr with id and name (MS-OE376).
   const cNvPrs = xml.match(/<wps:cNvPr [^>]*>/g) ?? [];
   assert.ok(cNvPrs.length > 0, `${ctx}: no wps:cNvPr found`);

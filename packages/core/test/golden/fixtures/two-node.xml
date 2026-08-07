@@ -106,8 +106,8 @@
   <wps:wsp>
     <wps:cNvPr id="4" name="Connector"/>
     <wps:cNvCnPr>
-      <a:stCxn id="2" idx="0"/>
-      <a:endCxn id="3" idx="0"/>
+      <a:stCxn id="2" idx="3"/>
+      <a:endCxn id="3" idx="1"/>
     </wps:cNvCnPr>
     <wps:spPr>
       <a:xfrm>
@@ -117,15 +117,14 @@
       <a:prstGeom prst="line">
         <a:avLst/>
       </a:prstGeom>
-      <a:ln w="12700"><a:solidFill><a:srgbClr val="2F5496"/></a:solidFill></a:ln>
     </wps:spPr>
 <wps:style>
-  <a:lnRef idx="2"><a:schemeClr val="accent1"><a:shade val="15000"/></a:schemeClr></a:lnRef>
-  <a:fillRef idx="1"><a:schemeClr val="accent1"/></a:fillRef>
-  <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
-  <a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef>
+  <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>
+  <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+  <a:effectRef idx="1"><a:schemeClr val="accent1"/></a:effectRef>
+  <a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>
 </wps:style>
-    <wps:bodyPr anchor="ctr" anchorCtr="0"/>
+    <wps:bodyPr/>
   </wps:wsp>
 </wpg:wgp>
             </wpc:wpc>

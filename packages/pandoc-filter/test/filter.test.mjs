@@ -42,14 +42,15 @@ test('pandoc filter emits the schema-required w:p/w:drawing wrapper', () => {
   // schema-required hierarchy, so Word accepts the .docx (spec §5.3).
   assert.ok(xml.includes('<w:p '));
   assert.ok(xml.includes('<w:drawing>'));
-  assert.ok(xml.includes('<wp:inline '));
+  assert.ok(xml.includes('<wp:anchor '));
   assert.ok(xml.includes('<a:graphic '));
   assert.ok(xml.includes('<a:graphicData '));
+  assert.ok(xml.includes('<wpc:wpc '));
   assert.ok(xml.includes('</w:p>'));
-  // The wpg:wgp must be nested inside the graphicData, not a bare child of body.
+  // The wpg:wgp must be nested inside the wpc:wpc canvas, not a bare child of body.
   const wgp = xml.indexOf('<wpg:wgp');
-  const graphicData = xml.indexOf('<a:graphicData ');
-  assert.ok(wgp > graphicData, 'wpg:wgp must be nested inside a:graphicData');
+  const wpc = xml.indexOf('<wpc:wpc ');
+  assert.ok(wgp > wpc, 'wpg:wgp must be nested inside wpc:wpc');
 });
 
 test('pandoc filter escapes hostile labels (rule #2)', () => {

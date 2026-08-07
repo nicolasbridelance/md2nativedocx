@@ -46,8 +46,9 @@ est levé.
       + 2 tests simples : markdown sans mermaid et markdown avec `A --> B`, spec §5.3/§9)
 - ✅ Traducteur conforme aux schémas officiels (ECMA-376 + MS-OE376) : `wpg:wgp` → `wpg:cNvPr` →
       `wpg:cNvGrpSpPr` → `wpg:grpSpPr` → `wps:wsp` (avec `wps:cNvPr`/`wps:cNvSpPr`/`wps:cNvCnPr`),
-      sous-graphes en `wpg:grpSp`, `wp:inline` avec `wp:extent`/`wp:docPr`, `wps:style` avec
-      références de thème Word (`lnRef`/`fillRef`/`effectRef`/`fontRef`), `wps:bodyPr` complet.
+      sous-graphes en `wpg:grpSp`, `wp:anchor` avec `wp:extent`/`wp:docPr`, `wpc:wpc` canvas
+      (URI `wordprocessingCanvas`), `wps:style` avec références de thème Word, `wps:bodyPr` complet.
+      Connecteurs utilisant les sites de connexion sur les bords des formes (pas le centre).
       Corrige l'erreur Word "a rencontré une erreur lors de l'ouverture du fichier" et le rendu
       d'un rectangle gris vide. Validé avec le `OpenXmlValidator` officiel Microsoft (0 erreur
       dans `document.xml` pour tout le corpus) et comparé avec un document Word réel

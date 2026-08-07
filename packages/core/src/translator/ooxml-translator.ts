@@ -368,6 +368,22 @@ function renderNode(
   ].join('\n');
 }
 
+/**
+ * The `wps:style` element Word emits for a connector, referencing the document
+ * theme. Unlike a shape, a connector has no fill (`fillRef idx="0"`) and uses
+ * the text-1 font (`fontRef val="tx1"`).
+ */
+function connectorStyle(): string {
+  return [
+    '<wps:style>',
+    '  <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>',
+    '  <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>',
+    '  <a:effectRef idx="1"><a:schemeClr val="accent1"/></a:effectRef>',
+    '  <a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>',
+    '</wps:style>',
+  ].join('\n');
+}
+
 /** Render an edge as a `wps:wsp` connector (with `wps:cNvCnPr`). */
 function renderEdge(
   fromId: number,
@@ -380,20 +396,38 @@ function renderEdge(
   const lineStyle = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
   const dash = lineStyle.dash ? `\n        <a:prstDash val="${lineStyle.dash}"/>` : '';
 
-  // Anchor the connector to the centers of the two node boxes. Word's
-  // magnetic connectors (stCxn/endCxn) will keep them attached when a box
-  // moves (spec §6.2).
+  // Anchor the connector to the edges of the two node boxes, not their centers.
+  // Word's magnetic connectors (stCxn/endCxn) attach to connection sites on the
+  // shape border (idx 1=top, 2=right, 3=bottom, 4=left), which keeps them
+  // attached to the right edge when a box moves (spec §6.2).
   const fromCx = Math.round((from.x + from.width / 2) * EMU_PER_PX);
   const fromCy = Math.round((from.y + from.height / 2) * EMU_PER_PX);
   const toCx = Math.round((to.x + to.width / 2) * EMU_PER_PX);
   const toCy = Math.round((to.y + to.height / 2) * EMU_PER_PX);
 
+  // Choose connection sites based on the relative direction of the two boxes.
+  // For a vertical edge (from above, to below): from bottom (3) to top (1).
+  // For a horizontal edge (from left, to right): from right (2) to left (4).
+  const dx = toCx - fromCx;
+  const dy = toCy - fromCy;
+  let stIdx = 0; // default: center
+  let endIdx = 0;
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    // Vertical edge: from bottom of the source to top of the target (or reverse).
+    stIdx = dy > 0 ? 3 : 1;
+    endIdx = dy > 0 ? 1 : 3;
+  } else {
+    // Horizontal edge: from right of the source to left of the target (or reverse).
+    stIdx = dx > 0 ? 2 : 4;
+    endIdx = dx > 0 ? 4 : 2;
+  }
+
   return [
     '  <wps:wsp>',
     `    <wps:cNvPr id="${nextId()}" name="Connector"/>`,
     '    <wps:cNvCnPr>',
-    `      <a:stCxn id="${fromId}" idx="0"/>`,
-    `      <a:endCxn id="${toId}" idx="0"/>`,
+    `      <a:stCxn id="${fromId}" idx="${stIdx}"/>`,
+    `      <a:endCxn id="${toId}" idx="${endIdx}"/>`,
     '    </wps:cNvCnPr>',
     '    <wps:spPr>',
     '      <a:xfrm>',
@@ -403,10 +437,9 @@ function renderEdge(
     '      <a:prstGeom prst="line">',
     '        <a:avLst/>',
     '      </a:prstGeom>',
-    `      <a:ln w="${lineStyle.width}"><a:solidFill><a:srgbClr val="${line}"/></a:solidFill>${dash}</a:ln>`,
     '    </wps:spPr>',
-    style(),
-    '    <wps:bodyPr anchor="ctr" anchorCtr="0"/>',
+    connectorStyle(),
+    '    <wps:bodyPr/>',
     '  </wps:wsp>',
   ].join('\n');
 }
