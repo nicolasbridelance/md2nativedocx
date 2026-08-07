@@ -105,3 +105,26 @@ test('does not duplicate a subgraph id as a node (Dagre crash fix)', () => {
   assert.ok(!ast.edges.some((e) => e.from === 'U1' || e.to === 'Y2'));
   assert.ok(warnings.some((w) => w.includes('references a subgraph')));
 });
+
+test('records nested subgraph relationships in subgraphIds', () => {
+  const { ast } = parseMermaid(
+    'graph TD\n  subgraph Outer[Out]\n    A --> B\n    subgraph Inner[In]\n      C --> D\n    end\n    B --> C\n  end',
+  );
+  const outer = ast.subgraphs.find((s) => s.id === 'Outer')!;
+  const inner = ast.subgraphs.find((s) => s.id === 'Inner')!;
+  assert.deepEqual(outer.subgraphIds, ['Inner']);
+  assert.deepEqual(inner.subgraphIds, []);
+});
+
+test('a node stays attached to the subgraph where it was first declared, not a later enclosing one', () => {
+  // Regression: `B --> C` here runs AFTER Inner's `end`, back inside Outer.
+  // C was already declared inside Inner and must not be re-attached to
+  // Outer just because a later line mentions it from an outer scope.
+  const { ast } = parseMermaid(
+    'graph TD\n  subgraph Outer[Out]\n    A --> B\n    subgraph Inner[In]\n      C --> D\n    end\n    B --> C\n  end',
+  );
+  const outer = ast.subgraphs.find((s) => s.id === 'Outer')!;
+  const inner = ast.subgraphs.find((s) => s.id === 'Inner')!;
+  assert.deepEqual(outer.nodeIds, ['A', 'B']);
+  assert.deepEqual(inner.nodeIds, ['C', 'D']);
+});

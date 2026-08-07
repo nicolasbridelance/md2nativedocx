@@ -79,6 +79,9 @@ export function parseMermaid(text: string): ParseResult {
   const edges: FlowEdge[] = [];
   const subgraphs: Subgraph[] = [];
   const subgraphStack: Subgraph[] = [];
+  // Node ids whose subgraph membership (or lack of one) has already been
+  // decided, by the first line that mentions them — see attachToCurrentSubgraph.
+  const subgraphAttached = new Set<string>();
   // class name -> fill color (hex, no `#`), from `classDef` (spec §6.3).
   const classDefs = new Map<string, string>();
   // node id -> fill color, for nodes assigned a class before they are defined.
@@ -141,8 +144,15 @@ export function parseMermaid(text: string): ParseResult {
       continue;
     }
     if (/^end\s*$/i.test(line)) {
-      if (subgraphStack.length > 0) subgraphStack.pop();
-      else warnings.push('Unexpected `end` without matching `subgraph`.');
+      if (subgraphStack.length > 0) {
+        const closed = subgraphStack.pop()!;
+        const parent = subgraphStack[subgraphStack.length - 1];
+        if (parent && !parent.subgraphIds.includes(closed.id)) {
+          parent.subgraphIds.push(closed.id);
+        }
+      } else {
+        warnings.push('Unexpected `end` without matching `subgraph`.');
+      }
       continue;
     }
 
@@ -164,8 +174,8 @@ export function parseMermaid(text: string): ParseResult {
       // Apply inline class fills (`A:::crit`) to the edge endpoints.
       applyClassFill(nodes, pendingFills, classDefs, edge.from, edge.fromClass, warnings);
       applyClassFill(nodes, pendingFills, classDefs, edge.to, edge.toClass, warnings);
-      attachToCurrentSubgraph(subgraphStack, edge.from);
-      attachToCurrentSubgraph(subgraphStack, edge.to);
+      attachToCurrentSubgraph(subgraphStack, edge.from, subgraphAttached);
+      attachToCurrentSubgraph(subgraphStack, edge.to, subgraphAttached);
       continue;
     }
 
@@ -175,7 +185,7 @@ export function parseMermaid(text: string): ParseResult {
       if (!registerNode(nodes, node.id, node.label, node.shape)) {
         warnings.push(`Node id "${node.id}" is reserved and was ignored.`);
       }
-      attachToCurrentSubgraph(subgraphStack, node.id);
+      attachToCurrentSubgraph(subgraphStack, node.id, subgraphAttached);
       continue;
     }
 
@@ -248,11 +258,20 @@ function parseSubgraphHeader(line: string): Subgraph {
   return { id: rest, title: rest, nodeIds: [], subgraphIds: [] };
 }
 
-function attachToCurrentSubgraph(stack: Subgraph[], nodeId: string): void {
+/**
+ * Attach a node to the innermost currently-open subgraph, but only the FIRST
+ * time that node id is seen — matching Mermaid's own semantics, where a
+ * node's subgraph membership is decided by where it's first declared, not by
+ * every later line that happens to mention it. Without this, a node declared
+ * inside a nested subgraph gets re-attached to an ENCLOSING subgraph the next
+ * time an edge outside the nested block references it (e.g. `B --> C` after
+ * `C`'s subgraph already closed), leaking it into the wrong cluster.
+ */
+function attachToCurrentSubgraph(stack: Subgraph[], nodeId: string, attached: Set<string>): void {
+  if (attached.has(nodeId)) return;
+  attached.add(nodeId);
   const top = stack[stack.length - 1];
-  if (top && !top.nodeIds.includes(nodeId)) {
-    top.nodeIds.push(nodeId);
-  }
+  if (top) top.nodeIds.push(nodeId);
 }
 
 function registerNode(
