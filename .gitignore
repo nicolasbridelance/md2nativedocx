@@ -6,6 +6,8 @@ dist-test/
 .DS_Store
 coverage/
 .env
+.vscode-test/
+*.vsix
 # Compiled JS/maps emitted into src/ by tsc (should not be committed)
 packages/**/src/**/*.js
 packages/**/src/**/*.js.map

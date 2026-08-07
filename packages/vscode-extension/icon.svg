@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Mermaid decision node {texte} shape (cahier des charges §6.1), diamond, not an
+       arbitrary icon. Four corner handles are the universal "selected, editable vector
+       object" vocabulary shared by Word/PowerPoint/Figma/Illustrator, legible without a
+       legend. Colour (violet) sits away from VS Code blue and Word blue on purpose. -->
+  <path d="M8 1.2 L14.8 8 L8 14.8 L1.2 8 Z" fill="#7C5CFC" stroke="#5A3FE0" stroke-width="0.6" />
+  <g fill="#ffffff" stroke="#5A3FE0" stroke-width="0.5">
+    <rect x="6.9" y="0.1" width="2.2" height="2.2" />
+    <rect x="13.7" y="6.9" width="2.2" height="2.2" />
+    <rect x="6.9" y="13.7" width="2.2" height="2.2" />
+    <rect x="0.1" y="6.9" width="2.2" height="2.2" />
+  </g>
+</svg>

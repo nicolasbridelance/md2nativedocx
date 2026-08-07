@@ -111,8 +111,10 @@ est levé.
 
 **Manquant (le gros du travail restant) :**
 - ❌ `CODE_OF_CONDUCT.md` — **fourni par le mainteneur humain, l'agent ne doit pas en rédiger un**
-- ❌ Phase 2 (extension VS Code), Phase 3 (couleurs + sous-graphes), Phase 4 (add-in Word),
-      Phase 5+ (autres diagrammes)
+- ✅ Phase 3 (couleurs + sous-graphes) faite (voir plus bas).
+- ⚠️ **Phase 2 (extension VS Code) — cœur fait (2026-08-07)**, packaging Marketplace et Phase 2.5
+      (aperçu) restants. Détail complet dans la section "Phase 2" plus bas.
+- ❌ Phase 4 (add-in Word), Phase 5+ (autres diagrammes) — pas commencées.
 - ✅ **LibreOffice headless installé (2026-08-07)** dans le Codespace (`libreoffice-writer` +
       `libreoffice-impress`, comme documenté dans `.devcontainer/setup.sh` — installation directe,
       aucune modification du devcontainer lui-même). `soffice --headless --convert-to png` permet
@@ -352,10 +354,67 @@ est levé.
 
 ## Phase 2 — Extension VS Code voir aussi UX_SPEC.md
 
-- [ ] Détection automatique des blocs ```` ```mermaid ```` dans les `.md`.
-- [ ] CodeLens "⚙️ Exporter en Word" au-dessus de chaque bloc.
-- [ ] Deux modes : export du bloc seul / export du document entier (via pipeline 5.4.a).
-- [ ] Packaging Marketplace + README avec démo animée.
+- [x] **`packages/vscode-extension/` scaffoldé et fonctionnel (2026-08-07)**, Partie 1 d'UX_SPEC.md
+      au complet : détection automatique des blocs ```` ```mermaid ```` (`src/mermaidBlocks.ts`,
+      pur — pas d'API vscode, testable en `node:test` sans Extension Development Host), CodeLens
+      "⚙️ Exporter en Word" + "Exporter le bloc seul" au-dessus de chaque bloc
+      (`src/codeLensProvider.ts`), pastille de barre de statut redondante avec le CodeLens
+      (`src/statusBar.ts`), Palette de Commandes en filet de sécurité, walkthrough d'accueil
+      (`contributes.walkthroughs`, 3 étapes), icône `icon.svg` (losange + poignées, rationale dans
+      UX_SPEC.md). Les 4 états de l'export (repos/en cours/succès/erreur) implémentés dans
+      `src/extension.ts` : `vscode.window.withProgress` (jamais de gel silencieux), toast succès
+      avec "Ouvrir dans Word"/"Révéler dans l'explorateur", toast erreur avec action de réparation
+      contextuelle — jamais de stack trace brute (va dans l'Output Channel).
+  - **Aucune logique dupliquée** : l'extension ne fait qu'invoquer `@md2nativedocx/cli` (résolu via
+    `require.resolve('@md2nativedocx/cli/package.json')`, dépendance de workspace interne, pas une
+    nouvelle dépendance externe) — le bloc-seul enveloppe le diagramme dans le même format minimal
+    que `scripts/generate-corpus.mjs` (`wrapBlockAsDocument`), donc aucun chemin de conversion que
+    les tests du corpus ne couvrent déjà.
+  - Erreur "Pandoc introuvable" détectée en grattant `ENOENT` dans le stderr du CLI (le message que
+    `packages/cli/bin/md2nativedocx.mjs` écrit déjà) plutôt que de dupliquer la détection dans le
+    binaire CLI — testé manuellement en retirant `/usr/bin` du `PATH` du process avant d'appeler
+    `exportDocument()` directement sur le module compilé.
+  - Réglage exposé volontairement réduit à un seul (`md2nativedocx.outputDirectory`, vide par
+    défaut = même dossier que la source, "zéro config avant le premier usage") : les deux autres
+    réglages mentionnés dans `cahier_des_charges.md`/`UX_SPEC.md` (choix Dagre/Graphviz,
+    `reference.docx` personnalisé) n'existent pas encore côté CLI — les exposer aurait été un
+    réglage sans effet, pas une vraie option.
+  - **Nouvelles dépendances (escaladées et approuvées par l'utilisateur avant ajout, voir
+    AGENTS.md → "Escalate to a human")** : `@types/vscode` (types seuls), `@vscode/test-cli` +
+    `@vscode/test-electron` (tests réels en Extension Development Host), `@vscode/vsce`
+    (packaging `.vsix`, script `npm run package`). `@md2nativedocx/cli` est une dépendance de
+    workspace interne, pas externe.
+  - `npm audit --audit-level=high` (gate CI) cassé par une vulnérabilité transitive haute
+    (`serialize-javascript` via `mocha` via `@vscode/test-cli`) introduite par ces nouvelles
+    dépendances — corrigé par un `overrides` racine (`serialize-javascript` forcé à `^7.0.7`,
+    au-delà du `^6.0.2` que `mocha` demande) plutôt qu'un downgrade de `@vscode/test-cli`. Repasse
+    à 0 high/critical (3 low restants, sous le seuil du gate).
+  - Tests : 14 tests unitaires purs (`test/unit/`, parseur de blocs + résolution de sortie/curseur)
+    + 2 tests en véritable Extension Development Host (`test/suite/extension.test.ts`, activation +
+    enregistrement des commandes + CodeLens réel via `vscode.executeCodeLensProvider`) — ces
+    derniers nécessitent un display, absent par défaut dans ce Codespace : **Xvfb installé ad hoc
+    dans la session (2026-08-07)**, comme LibreOffice l'a été précédemment (voir plus bas dans ce
+    fichier), pas dans `.devcontainer/` (revue humaine requise). `scripts/run-extension-host-tests.mjs`
+    saute proprement (exit 0) si aucun display et `xvfb-run` absent, même convention que
+    `scripts/test-visual.mjs` pour LibreOffice.
+- [ ] **Suivi — pinning Xvfb** : même question que LibreOffice ci-dessous (§ CI/CD), pas encore
+      tranchée : ajouter Xvfb à `.devcontainer/setup.sh` (revue humaine requise) et au job CI qui
+      exécuterait `test:extension-host`, ou laisser ce chapitre de test manuel/opt-in comme
+      `test:visual` l'est pour LibreOffice.
+- [ ] **Packaging Marketplace réel + README avec démo animée** — `npm run package` (`vsce package`)
+      est câblé mais jamais exécuté ; la Marketplace exige un `icon` PNG 128×128 dans `package.json`,
+      alors que `icon.svg` (design source, rationale dans UX_SPEC.md) n'a pas encore été rastérisé
+      faute d'outil de rendu SVG disponible dans ce Codespace (`rsvg-convert`/`imagemagick`/`sharp`
+      absents) — pas bloquant pour le développement/test local (Extension Development Host), mais
+      bloquant pour une publication réelle. Éditeur Marketplace (`publisher: "md2nativedocx"` dans
+      `package.json`) à créer/vérifier avant tout `vsce publish`.
+- [ ] **Aperçu (Phase 2.5, UX_SPEC.md)** — pas commencé, prérequis explicitement posé comme
+      postérieur au cœur ci-dessus. Rappel de la limite qui ne doit pas être assouplie sans
+      décision humaine explicite : lecture seule stricte, aucune interaction d'édition.
+- [ ] **Tests manuels dans un vrai VS Code** (pas seulement l'Extension Development Host
+      automatisé) — non faits. En particulier : le rendu réel du CodeLens/pastille/walkthrough à
+      l'œil, et `vscode.env.openExternal`/`revealFileInOS` depuis un Codespace (censé transiter par
+      la machine locale de l'utilisateur via le forwarding VS Code — jamais vérifié en pratique).
 
 ## Phase 3 — Couleurs + sous-graphes
 

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist-test",
+    "rootDir": ".",
+    "noEmit": false,
+    "types": ["node", "vscode", "mocha"]
+  },
+  "include": ["test/unit/**/*", "test/suite/**/*", "src/**/*"]
+}

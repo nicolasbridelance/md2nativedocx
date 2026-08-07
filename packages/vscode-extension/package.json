@@ -1,0 +1,89 @@
+{
+  "name": "md2nativedocx",
+  "displayName": "md2nativedocx",
+  "description": "Export Markdown with Mermaid diagrams to a .docx with native, editable OOXML shapes — not flattened PNGs.",
+  "version": "0.1.0",
+  "publisher": "md2nativedocx",
+  "private": true,
+  "license": "CC0-1.0",
+  "type": "commonjs",
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": ["Other"],
+  "keywords": ["markdown", "mermaid", "word", "docx", "diagram", "export", "ooxml"],
+  "activationEvents": ["onLanguage:markdown"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "md2nativedocx.exportDocument",
+        "title": "md2nativedocx: Exporter le document en Word",
+        "shortTitle": "Exporter en Word"
+      },
+      {
+        "command": "md2nativedocx.exportBlock",
+        "title": "md2nativedocx: Exporter le diagramme sous le curseur",
+        "shortTitle": "Exporter le bloc seul"
+      }
+    ],
+    "configuration": {
+      "title": "md2nativedocx",
+      "properties": {
+        "md2nativedocx.outputDirectory": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Dossier de sortie des `.docx` générés. Vide (par défaut) = même dossier que le fichier `.md` source, aucune configuration requise avant le premier usage."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "md2nativedocx.gettingStarted",
+        "title": "md2nativedocx — Diagrammes Mermaid vers Word",
+        "description": "Exportez vos diagrammes Mermaid en formes Word natives, éditables — pas des images PNG figées.",
+        "steps": [
+          {
+            "id": "openMarkdown",
+            "title": "Ouvrez un document Markdown",
+            "description": "Ouvrez ou créez un fichier `.md` contenant un bloc ` ```mermaid `.",
+            "media": { "markdown": "walkthrough/01-open-markdown.md" }
+          },
+          {
+            "id": "clickCodeLens",
+            "title": "Cliquez sur \"⚙️ Exporter en Word\"",
+            "description": "Un lien apparaît automatiquement au-dessus de chaque bloc mermaid détecté — pas besoin de connaître une commande.",
+            "media": { "markdown": "walkthrough/02-codelens.md" }
+          },
+          {
+            "id": "openResult",
+            "title": "Récupérez votre `.docx`",
+            "description": "Une notification propose d'ouvrir le fichier dans Word ou de le révéler dans l'explorateur — les formes sont sélectionnables et modifiables individuellement.",
+            "media": { "markdown": "walkthrough/03-result.md" }
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "tsc -p tsconfig.test.json",
+    "test": "node --test dist-test/test/unit/*.test.js",
+    "pretest:extension-host": "tsc -p tsconfig.test.json",
+    "test:extension-host": "node scripts/run-extension-host-tests.mjs",
+    "package": "vsce package --no-dependencies -o md2nativedocx.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@md2nativedocx/cli": "0.1.0"
+  }
+}
