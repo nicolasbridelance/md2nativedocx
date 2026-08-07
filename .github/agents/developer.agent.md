@@ -1,7 +1,7 @@
 ---
 name: "md2nativedocx Developer Agent"
 description: This custom agent is the primary developer agent for the md2nativedocx project
-argument-hint: "You are the primary developer agent for the md2nativedocx project. You are responsible for implementing the features and fixes described in the CAHIER_DES_CHARGES.md file see also UX_SPEC.md. You should follow the instructions in the developer agent instructions file and adhere to the non-negotiable rules, repo structure, build/test/lint commands, coding conventions, security requirements, CI/CD, licensing, and contribution workflow outlined in the developer agent instructions file. You should escalate to a human for any changes to the public API, new dependencies, exceptions to security rules, or licensing questions."
+argument-hint: "You are the primary developer agent for the md2nativedocx project. You are responsible for implementing the features and fixes described in the cahier_des_charges.md file see also UX_SPEC.md. You should follow the instructions in the developer agent instructions file and adhere to the non-negotiable rules, repo structure, build/test/lint commands, coding conventions, security requirements, CI/CD, licensing, and contribution workflow outlined in the developer agent instructions file. You should escalate to a human for any changes to the public API, new dependencies, exceptions to security rules, or licensing questions."
 target: vscode
 tools: [vscode, execute, read, agent, vscodeGeneral/rename, vscodeGeneral/usages, vscodeNotebooks/createJupyterNotebook, vscodeNotebooks/editNotebook, GitHub.vscode-pull-request-github/issue_fetch, GitHub.vscode-pull-request-github/labels_fetch, GitHub.vscode-pull-request-github/notification_fetch, GitHub.vscode-pull-request-github/doSearch, GitHub.vscode-pull-request-github/activePullRequest, GitHub.vscode-pull-request-github/pullRequestStatusChecks, GitHub.vscode-pull-request-github/openPullRequest, GitHub.vscode-pull-request-github/create_pull_request, GitHub.vscode-pull-request-github/resolveReviewThread, edit, search, web, todo]  
 ---
@@ -10,9 +10,9 @@ tools: [vscode, execute, read, agent, vscodeGeneral/rename, vscodeGeneral/usages
 Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or similar) working on
 [`md2nativedocx`](https://github.com/nicolasbridelance/md2nativedocx).
 
-> Written in English deliberately, even though `CAHIER_DES_CHARGES.md` is in French: this file is read by
+> Written in English deliberately, even though `cahier_des_charges.md` is in French: this file is read by
 > both the agent and any external contributor, and this project targets an international audience
-> (see positioning strategy in the spec, §12). `CAHIER_DES_CHARGES.md` is the source of truth for
+> (see positioning strategy in the spec, §12). `cahier_des_charges.md` is the source of truth for
 > **what** and **why**. This file is the source of truth for **how to work in this repo**. If they
 > ever conflict, stop and ask the maintainer — don't silently pick one.
 
@@ -52,7 +52,7 @@ Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or s
 ```
 md2nativedocx/
 ├── AGENTS.md
-├── CAHIER_DES_CHARGES.md
+├── cahier_des_charges.md
 ├── LICENSE                     # CC0 1.0 Universal, verbatim legal text — see Licensing section
 ├── README.md
 ├── CONTRIBUTING.md
@@ -187,7 +187,7 @@ before there's anyone to govern is wasted effort.
 - SemVer once `1.0.0` ships. Before that, breaking changes don't require a major bump — that's
   standard SemVer practice for pre-1.0 software, and this project will break its public API more
   than once before the architecture settles (see the naming/scope history already visible in
-  `CAHIER_DES_CHARGES.md` §14 as a preview of how much this project's own decisions have moved).
+  `cahier_des_charges.md` §14 as a preview of how much this project's own decisions have moved).
 - Conventional Commits (already required above) exist specifically so a changelog can eventually be
   generated automatically (e.g. via `changesets` or `release-please`) instead of hand-written. Pick
   a tool before the first tagged release, not before — no need to wire this up while there's
@@ -199,7 +199,7 @@ before there's anyone to govern is wasted effort.
 
 ## Tracking roadmap progress
 
-`CAHIER_DES_CHARGES.md` §11 defines phases (Phase 0 spike, Phase 1 MVP, etc.) but doesn't say how
+`cahier_des_charges.md` §11 defines phases (Phase 0 spike, Phase 1 MVP, etc.) but doesn't say how
 that turns into day-to-day work. Use a GitHub Project (board) with one column per phase, and link
 every issue to the phase it belongs to. This makes "what's actually left in Phase 1" answerable by
 looking at the board instead of re-reading the whole spec each time — useful for the maintainer, and

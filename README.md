@@ -30,7 +30,7 @@ Markdown + ```mermaid  ──►  Pandoc (parsing MD, tables, style, ZIP)
 
 L'architecture délègue à Pandoc tout ce qui n'est pas diagramme (parsing Markdown, tableaux,
 style, manipulation ZIP) et ne construit que le module manquant : layout + traduction OOXML d'un
-diagramme. Voir `CAHIER_DES_CHARGES.md` pour le détail.
+diagramme. Voir `cahier_des_charges.md` pour le détail.
 
 ## Installation
 
@@ -64,7 +64,7 @@ npm run test:visual  # rendu LibreOffice headless + pixel-diff (CI)
 
 ## Documentation
 
-- `CAHIER_DES_CHARGES.md` — le **quoi** et le **pourquoi** (spec, phases, scope).
+- `cahier_des_charges.md` — le **quoi** et le **pourquoi** (spec, phases, scope).
 - `AGENTS.md` — le **comment** (conventions, règles de sécurité non négociables).
 - `docs/adr/` — décisions d'architecture (moteur de layout, intégration Pandoc).
 - `CONTRIBUTING.md` — comment contribuer.
