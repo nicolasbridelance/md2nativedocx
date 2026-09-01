@@ -1,0 +1,16 @@
+{
+  "extension.description": "将 Markdown 文档中的 Mermaid 图表导出为 .docx，图表以原生可编辑的 OOXML 图形呈现 —— 而非扁平化的 PNG 图片。",
+  "command.exportDocument.title": "md2nativedocx: 将文档导出为 Word",
+  "command.exportDocument.shortTitle": "导出为 Word",
+  "command.exportBlock.title": "md2nativedocx: 导出光标所在的图表",
+  "command.exportBlock.shortTitle": "仅导出此代码块",
+  "configuration.outputDirectory.markdownDescription": "生成的 `.docx` 文件的输出文件夹。留空（默认）= 与源 `.md` 文件相同的文件夹 —— 首次使用前无需任何配置。",
+  "walkthrough.title": "md2nativedocx —— 将 Mermaid 图表转换为 Word",
+  "walkthrough.description": "将 Mermaid 图表导出为原生可编辑的 Word 图形 —— 而非扁平化的 PNG 图片。",
+  "walkthrough.step1.title": "打开一个 Markdown 文档",
+  "walkthrough.step1.description": "打开或创建一个包含 ` ```mermaid ` 代码块的 `.md` 文件。",
+  "walkthrough.step2.title": "点击“⚙️ 导出为 Word”",
+  "walkthrough.step2.description": "每个检测到的 mermaid 代码块上方都会自动出现一个链接 —— 无需记住任何命令。",
+  "walkthrough.step3.title": "获取你的 `.docx`",
+  "walkthrough.step3.description": "通知会提示在 Word 中打开该文件，或在文件资源管理器中显示它 —— 图形可以单独选中和编辑。"
+}

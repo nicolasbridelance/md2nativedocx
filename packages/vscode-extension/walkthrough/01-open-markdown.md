@@ -1,11 +1,11 @@
-Ouvrez un fichier `.md` qui contient un bloc de code marqué `mermaid`, par exemple :
+Open a `.md` file containing a code block marked `mermaid`, for example:
 
-    # Rapport d'architecture
+    # Architecture report
 
     ```mermaid
     graph TD
       A[Client] --> B[API]
-      B --> C[Base de données]
+      B --> C[Database]
     ```
 
-Dès qu'un tel bloc est détecté, l'extension s'active automatiquement — aucun réglage requis.
+As soon as such a block is detected, the extension activates automatically — no setup required.

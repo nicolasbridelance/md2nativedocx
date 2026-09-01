@@ -20,14 +20,20 @@ export class MermaidCodeLensProvider implements vscode.CodeLensProvider {
       const range = new vscode.Range(block.fenceLine, 0, block.fenceLine, 0);
       lenses.push(
         new vscode.CodeLens(range, {
-          title: '⚙️ Exporter en Word',
+          title: `⚙️ ${vscode.l10n.t('Export to Word')}`,
           command: 'md2nativedocx.exportDocument',
           arguments: [document.uri],
+          tooltip: vscode.l10n.t(
+            'Converts the whole document (text, tables, formatting, all diagrams) to .docx — each diagram becomes native, editable Word shapes, not an image.',
+          ),
         }),
         new vscode.CodeLens(range, {
-          title: 'Exporter le bloc seul',
+          title: vscode.l10n.t('Export this block only'),
           command: 'md2nativedocx.exportBlock',
           arguments: [document.uri, block.index],
+          tooltip: vscode.l10n.t(
+            'Converts only this diagram into its own .docx — handy for pasting it elsewhere without the rest of the document.',
+          ),
         }),
       );
     }

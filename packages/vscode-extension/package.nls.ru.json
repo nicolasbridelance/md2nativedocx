@@ -1,0 +1,16 @@
+{
+  "extension.description": "Экспортирует диаграммы Mermaid из Markdown-документа в .docx с нативными, редактируемыми фигурами OOXML — а не в виде плоских PNG.",
+  "command.exportDocument.title": "md2nativedocx: Экспортировать документ в Word",
+  "command.exportDocument.shortTitle": "Экспортировать в Word",
+  "command.exportBlock.title": "md2nativedocx: Экспортировать диаграмму под курсором",
+  "command.exportBlock.shortTitle": "Экспортировать только этот блок",
+  "configuration.outputDirectory.markdownDescription": "Папка для сохранения созданных файлов `.docx`. Пусто (по умолчанию) = та же папка, что и исходный файл `.md` — настройка перед первым использованием не требуется.",
+  "walkthrough.title": "md2nativedocx — диаграммы Mermaid в Word",
+  "walkthrough.description": "Экспортируйте диаграммы Mermaid как нативные, редактируемые фигуры Word — а не как растровые изображения PNG.",
+  "walkthrough.step1.title": "Откройте документ Markdown",
+  "walkthrough.step1.description": "Откройте или создайте файл `.md`, содержащий блок ` ```mermaid `.",
+  "walkthrough.step2.title": "Нажмите «⚙️ Экспортировать в Word»",
+  "walkthrough.step2.description": "Над каждым обнаруженным блоком mermaid автоматически появляется ссылка — не нужно запоминать команду.",
+  "walkthrough.step3.title": "Получите свой `.docx`",
+  "walkthrough.step3.description": "Уведомление предлагает открыть файл в Word или показать его в проводнике — фигуры можно выбирать и редактировать по отдельности."
+}

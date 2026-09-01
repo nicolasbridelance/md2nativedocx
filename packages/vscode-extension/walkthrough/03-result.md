@@ -1,7 +1,7 @@
-Une fois l'export terminé, une notification propose deux actions immédiates :
+Once the export finishes, a notification offers two immediate actions:
 
-- **Ouvrir dans Word** — lance le `.docx` avec l'application par défaut.
-- **Révéler dans l'explorateur** — montre le fichier dans l'explorateur système.
+- **Open in Word** — launches the `.docx` in the default application.
+- **Reveal in Explorer** — shows the file in the system file explorer.
 
-Dans Word, chaque forme et chaque connecteur reste sélectionnable et modifiable
-individuellement — ce ne sont pas des pixels.
+In Word, every shape and every connector stays individually selectable and editable —
+they are not pixels.

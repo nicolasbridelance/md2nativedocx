@@ -1,0 +1,22 @@
+{
+  "Open a Markdown (.md) file first.": "Сначала откройте файл Markdown (.md).",
+  "No mermaid diagram found in this document.": "В этом документе не найдено ни одной диаграммы mermaid.",
+  "Diagram {0}": "Диаграмма {0}",
+  "line {0}": "строка {0}",
+  "Which diagram to export?": "Какую диаграмму экспортировать?",
+  "Export in progress": "Идёт экспорт",
+  "Open in Word": "Открыть в Word",
+  "Reveal in Explorer": "Показать в проводнике",
+  "Exported: {0}": "Экспортировано: {0}",
+  "Install Pandoc": "Установить Pandoc",
+  "Pandoc could not be found on this machine.": "Не удалось найти Pandoc на этом компьютере.",
+  "This mermaid block could not be found — the document may have changed.": "Этот блок mermaid не найден — возможно, документ изменился.",
+  "View logs": "Просмотреть журналы",
+  "Export failed: {0}": "Ошибка экспорта: {0}",
+  "Export to Word": "Экспортировать в Word",
+  "1 mermaid diagram detected — export the document as a native .docx": "Обнаружена 1 диаграмма mermaid — экспортировать документ в нативный .docx",
+  "{0} mermaid diagrams detected — export the document as a native .docx": "Обнаружено диаграмм mermaid: {0} — экспортировать документ в нативный .docx",
+  "Converts the whole document (text, tables, formatting, all diagrams) to .docx — each diagram becomes native, editable Word shapes, not an image.": "Преобразует весь документ (текст, таблицы, форматирование, все диаграммы) в .docx — каждая диаграмма становится нативной, редактируемой фигурой Word, а не изображением.",
+  "Export this block only": "Экспортировать только этот блок",
+  "Converts only this diagram into its own .docx — handy for pasting it elsewhere without the rest of the document.": "Преобразует только эту диаграмму в отдельный .docx — удобно, чтобы вставить её в другое место без остального документа."
+}

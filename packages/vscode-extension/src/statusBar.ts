@@ -21,8 +21,11 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
       item.hide();
       return;
     }
-    item.text = `$(file-symlink-file) Exporter en Word`;
-    item.tooltip = `${blockCount} diagramme${blockCount > 1 ? 's' : ''} mermaid détecté${blockCount > 1 ? 's' : ''} — exporter le document en .docx natif`;
+    item.text = `$(file-symlink-file) ${vscode.l10n.t('Export to Word')}`;
+    item.tooltip =
+      blockCount === 1
+        ? vscode.l10n.t('1 mermaid diagram detected — export the document as a native .docx')
+        : vscode.l10n.t('{0} mermaid diagrams detected — export the document as a native .docx', blockCount);
     item.show();
   };
 

@@ -8,13 +8,9 @@ import {
   exportBlock,
   resolveBlockForCursor,
   PandocMissingError,
+  BlockNotFoundError,
   ExportFailedError,
 } from './exportService';
-
-const OPEN_IN_WORD = 'Ouvrir dans Word';
-const REVEAL_IN_EXPLORER = "Révéler dans l'explorateur";
-const INSTALL_PANDOC = 'Installer Pandoc';
-const VIEW_LOGS = 'Voir les journaux';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -47,7 +43,7 @@ async function resolveMarkdownUri(uri: vscode.Uri | undefined): Promise<vscode.U
   if (uri) return uri;
   const active = vscode.window.activeTextEditor;
   if (active && active.document.languageId === 'markdown') return active.document.uri;
-  void vscode.window.showErrorMessage("Ouvrez d'abord un fichier Markdown (.md).");
+  void vscode.window.showErrorMessage(vscode.l10n.t('Open a Markdown (.md) file first.'));
   return null;
 }
 
@@ -76,16 +72,16 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     } else {
       const blocks = parseMermaidBlocks(text);
       if (blocks.length === 0) {
-        void vscode.window.showErrorMessage('Aucun diagramme mermaid trouvé dans ce document.');
+        void vscode.window.showErrorMessage(vscode.l10n.t('No mermaid diagram found in this document.'));
         return;
       }
       const pick = await vscode.window.showQuickPick(
         blocks.map((b) => ({
-          label: b.precedingHeading ?? `Diagramme ${b.index + 1}`,
-          description: `ligne ${b.fenceLine + 1}`,
+          label: b.precedingHeading ?? vscode.l10n.t('Diagram {0}', b.index + 1),
+          description: vscode.l10n.t('line {0}', b.fenceLine + 1),
           block: b,
         })),
-        { placeHolder: 'Quel diagramme exporter ?' },
+        { placeHolder: vscode.l10n.t('Which diagram to export?') },
       );
       if (!pick) return;
       blockIndex = pick.block.index;
@@ -101,18 +97,20 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
  * message + a repair action, never a raw stack trace in the toast). */
 async function runExportFlow(run: () => Promise<{ outputPath: string }>): Promise<void> {
   await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: 'Export en cours', cancellable: false },
+    { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
     async () => {
       try {
         const { outputPath } = await run();
+        const openInWord = vscode.l10n.t('Open in Word');
+        const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
         const choice = await vscode.window.showInformationMessage(
-          `Exporté : ${basename(outputPath)}`,
-          OPEN_IN_WORD,
-          REVEAL_IN_EXPLORER,
+          vscode.l10n.t('Exported: {0}', basename(outputPath)),
+          openInWord,
+          revealInExplorer,
         );
-        if (choice === OPEN_IN_WORD) {
+        if (choice === openInWord) {
           await vscode.env.openExternal(vscode.Uri.file(outputPath));
-        } else if (choice === REVEAL_IN_EXPLORER) {
+        } else if (choice === revealInExplorer) {
           await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(outputPath));
         }
       } catch (err) {
@@ -124,20 +122,32 @@ async function runExportFlow(run: () => Promise<{ outputPath: string }>): Promis
 
 async function handleExportError(err: unknown): Promise<void> {
   if (err instanceof PandocMissingError) {
-    const choice = await vscode.window.showErrorMessage(err.message, INSTALL_PANDOC);
-    if (choice === INSTALL_PANDOC) {
+    const installPandoc = vscode.l10n.t('Install Pandoc');
+    const choice = await vscode.window.showErrorMessage(
+      vscode.l10n.t('Pandoc could not be found on this machine.'),
+      installPandoc,
+    );
+    if (choice === installPandoc) {
       await vscode.env.openExternal(vscode.Uri.parse('https://pandoc.org/installing.html'));
     }
     return;
   }
+  if (err instanceof BlockNotFoundError) {
+    void vscode.window.showErrorMessage(
+      vscode.l10n.t('This mermaid block could not be found — the document may have changed.'),
+    );
+    return;
+  }
   if (err instanceof ExportFailedError) {
     outputChannel.appendLine(err.details || err.message);
-    const choice = await vscode.window.showErrorMessage(err.message, VIEW_LOGS);
-    if (choice === VIEW_LOGS) outputChannel.show();
+    const viewLogs = vscode.l10n.t('View logs');
+    const choice = await vscode.window.showErrorMessage(vscode.l10n.t('Export failed: {0}', err.message), viewLogs);
+    if (choice === viewLogs) outputChannel.show();
     return;
   }
   const message = err instanceof Error ? err.message : String(err);
   outputChannel.appendLine(message);
-  const choice = await vscode.window.showErrorMessage(`Échec de l'export : ${message}`, VIEW_LOGS);
-  if (choice === VIEW_LOGS) outputChannel.show();
+  const viewLogs = vscode.l10n.t('View logs');
+  const choice = await vscode.window.showErrorMessage(vscode.l10n.t('Export failed: {0}', message), viewLogs);
+  if (choice === viewLogs) outputChannel.show();
 }

@@ -1,10 +1,9 @@
-Deux liens apparaissent au-dessus de chaque bloc mermaid :
+Two links appear above every mermaid block:
 
-- **⚙️ Exporter en Word** — convertit le document entier (texte, tableaux, tous les diagrammes).
-- **Exporter le bloc seul** — convertit uniquement ce diagramme dans son propre `.docx`.
+- **⚙️ Export to Word** — converts the whole document (text, tables, every diagram).
+- **Export this block only** — converts just this diagram into its own `.docx`.
 
-Une pastille dans la barre de statut, en bas, fait la même chose si vous préférez ne pas
-faire défiler jusqu'au bloc.
+A status bar item, at the bottom, does the same thing if you'd rather not scroll to the block.
 
-La Palette de Commandes (`Ctrl+Shift+P` → "md2nativedocx") reste disponible mais n'est pas le
-point d'entrée principal.
+The Command Palette (`Ctrl+Shift+P` → "md2nativedocx") is still available but isn't the primary
+entry point.

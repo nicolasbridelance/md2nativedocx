@@ -1,0 +1,22 @@
+{
+  "Open a Markdown (.md) file first.": "Ouvrez d'abord un fichier Markdown (.md).",
+  "No mermaid diagram found in this document.": "Aucun diagramme mermaid trouvé dans ce document.",
+  "Diagram {0}": "Diagramme {0}",
+  "line {0}": "ligne {0}",
+  "Which diagram to export?": "Quel diagramme exporter ?",
+  "Export in progress": "Export en cours",
+  "Open in Word": "Ouvrir dans Word",
+  "Reveal in Explorer": "Révéler dans l'explorateur",
+  "Exported: {0}": "Exporté : {0}",
+  "Install Pandoc": "Installer Pandoc",
+  "Pandoc could not be found on this machine.": "Pandoc est introuvable sur cette machine.",
+  "This mermaid block could not be found — the document may have changed.": "Ce bloc mermaid est introuvable — le document a peut-être changé.",
+  "View logs": "Voir les journaux",
+  "Export failed: {0}": "Échec de l'export : {0}",
+  "Export to Word": "Exporter en Word",
+  "1 mermaid diagram detected — export the document as a native .docx": "1 diagramme mermaid détecté — exporter le document en .docx natif",
+  "{0} mermaid diagrams detected — export the document as a native .docx": "{0} diagrammes mermaid détectés — exporter le document en .docx natif",
+  "Converts the whole document (text, tables, formatting, all diagrams) to .docx — each diagram becomes native, editable Word shapes, not an image.": "Convertit tout le document (texte, tableaux, mise en forme, tous les diagrammes) en .docx — chaque diagramme devient des formes Word natives et éditables, pas une image.",
+  "Export this block only": "Exporter le bloc seul",
+  "Converts only this diagram into its own .docx — handy for pasting it elsewhere without the rest of the document.": "Convertit uniquement ce diagramme dans son propre .docx — pratique pour le coller ailleurs sans le reste du document."
+}
