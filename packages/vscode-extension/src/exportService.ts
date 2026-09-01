@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { blockAtLine, parseMermaidBlocks, wrapBlockAsDocument, type MermaidBlock } from './mermaidBlocks';
@@ -17,13 +17,29 @@ export class ExportFailedError extends Error {
     super(message);
   }
 }
+/** Thrown when a palette-invoked block export no longer matches any block in
+ * the document (it changed between CodeLens render and click). Distinguished
+ * from the generic ExportFailedError so the caller (extension.ts, which has
+ * vscode.l10n) can show a fully localized, fixed message instead of the raw
+ * English fallback below — this module stays free of the `vscode` import on
+ * purpose (see resolveCliBin), so it cannot call vscode.l10n.t() itself. */
+export class BlockNotFoundError extends ExportFailedError {}
 
-/** Resolve the real CLI's bin script by locating the workspace package on
- * disk (rule #4, AGENTS.md: fixed subprocess argument array, no shell
- * interpolation) — the extension bundles no logic of its own, it packages
- * the same `@md2nativedocx/cli` invocation used by the tests and the corpus
- * generator. */
+/** Resolve the real CLI's bin script (rule #4, AGENTS.md: fixed subprocess
+ * argument array, no shell interpolation) — the extension bundles no logic
+ * of its own, it packages the same `@md2nativedocx/cli` invocation used by
+ * the tests and the corpus generator.
+ *
+ * A packaged .vsix ships a self-contained copy under dist/vendor/ (see
+ * scripts/bundle-cli.mjs) — installed from the Marketplace, the extension
+ * has no npm workspace around it, so `@md2nativedocx/cli` isn't on the
+ * require path. The monorepo dev/test setup has no dist/vendor/, so it falls
+ * back to resolving the workspace package directly. */
 function resolveCliBin(): string {
+  const vendored = join(__dirname, 'vendor', 'bin', 'md2nativedocx.mjs');
+  if (existsSync(vendored)) {
+    return vendored;
+  }
   const pkgJsonPath = require.resolve('@md2nativedocx/cli/package.json');
   return join(dirname(pkgJsonPath), 'bin', 'md2nativedocx.mjs');
 }
@@ -38,11 +54,16 @@ function runCli(input: string, output: string, cwd: string): Promise<void> {
       }
       const stderr = String(stderrRaw ?? '');
       if (stderr.includes('ENOENT')) {
-        reject(new PandocMissingError('Pandoc est introuvable sur cette machine.'));
+        // English fallback text — extension.ts shows its own localized string
+        // for this specific, fixed-meaning error instead of err.message.
+        reject(new PandocMissingError('Pandoc could not be found on this machine.'));
         return;
       }
+      // The reason (raw Pandoc/CLI stderr) can't be translated — it's
+      // external tool output. extension.ts prepends a localized "Export
+      // failed: " prefix when displaying it.
       const firstLine = stderr.trim().split('\n')[0] || err.message;
-      reject(new ExportFailedError(`Échec de l'export : ${firstLine}`, stderr || err.message));
+      reject(new ExportFailedError(firstLine, stderr || err.message));
     });
   });
 }
@@ -73,7 +94,9 @@ export async function exportBlock(
   const blocks = parseMermaidBlocks(sourceText);
   const block = blocks.find((b) => b.index === blockIndex);
   if (!block) {
-    throw new ExportFailedError('Ce bloc mermaid est introuvable — le document a peut-être changé.', '');
+    // English fallback text — extension.ts shows its own localized string
+    // for this specific, fixed-meaning error instead of err.message.
+    throw new BlockNotFoundError('This mermaid block could not be found — the document may have changed.', '');
   }
 
   const tmpDir = mkdtempSync(join(tmpdir(), 'md2nativedocx-block-'));
