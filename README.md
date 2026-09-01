@@ -15,6 +15,11 @@ Convertir du Markdown avec des diagrammes **Mermaid** en un `.docx` complet avec
 | Connecteurs dynamiques | ❌ | ✅ Connecteurs magnétiques (`stCxn`/`endCxn`) |
 | Fidélité à l'aperçu Mermaid | ~ | ✅ Même moteur de layout (Dagre) |
 | Dépendance à un rendu externe | Oui (image) | Non (vectoriel) |
+| Formules LaTeX en équations Word natives | Variable selon l'outil | ✅ via Pandoc, gratuit (voir §2) |
+
+Comparaison nominative avec les extensions VS Code concurrentes (installs, méthode de rendu
+vérifiée dans leur propre doc) : voir `cahier_des_charges.md` §12.1, ou directement le
+[README de l'extension](packages/vscode-extension/README.md).
 
 ## Comment ça marche
 

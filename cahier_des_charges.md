@@ -34,6 +34,7 @@ Cette décision réduit le périmètre réel de développement d'environ 50 %, �
 |---|---|---|
 | Parsing Markdown générique (titres, listes, gras, liens) | Marché saturé, déjà résolu | Pandoc |
 | Rendu des tableaux, notes de bas de page, TOC | Idem | Pandoc + `reference.docx` |
+| Formules mathématiques (LaTeX `$...$`/`$$...$$`) | Idem — Pandoc les traduit déjà en équations OOXML natives (`m:oMath`, bibliothèque texmath), **éditables dans Word au même titre que nos formes de diagramme**. Vérifié empiriquement 2026-09-01 (intégrale, fraction, matrice — rendu LibreOffice correct) et verrouillé par un test de non-régression. Un argument de positionnement gratuit, pas juste une case cochée : voir §12.1 | Pandoc |
 | Thèmes / styles corporate | Idem | `reference.docx` de Pandoc |
 | Diagrammes de séquence, Gantt, classes, ER, C4 | Complexité disproportionnée pour la V1 | Roadmap V2+ (voir §11) |
 | Couleurs et styles Mermaid (`classDef`, `style`) | Cohérence visuelle > fidélité pixel en V1 | Mapping simplifié vers le thème Word (voir §6.3) |
@@ -272,6 +273,36 @@ Usage final (§8) : `npx md2nativedocx rapport.md -o rapport.docx` — le CLI em
 | `md2nativedocx` (ce projet) | ✅ **dans Word, en OOXML natif** |
 
 Cette ligne du tableau est le README en une image : une capture d'écran "avant/après" (diagramme collé en image plate vs formes individuellement sélectionnées avec poignées de redimensionnement visibles) vaut plus que n'importe quel texte.
+
+**Complément — extensions VS Code spécifiquement (vérifié 2026-09-01)**, plus précis que l'étude
+générale ci-dessus puisque c'est le canal de distribution de la Phase 2 :
+
+| Extension Marketplace | Installs | Rendu du diagramme Mermaid dans le `.docx` |
+|---|---|---|
+| docu.md | 6 672 | Image haute résolution |
+| Doculate | 5 585 | Image |
+| FusionSol Markdown Mermaid & DOCX | 892 | Non précisé (probablement image) |
+| CX Markdown to Word | 561 | PNG (Pandoc, architecture proche de la nôtre) |
+| Markdown Export Pro | 499 | Image SVG |
+
+Les 5 le disent dans leur propre documentation ("images", "SVG images", "high-resolution
+images") — aucune ne prétend produire des formes Word éditables individuellement. Signal
+convaincant : docu.md convertit déjà LaTeX en équations Word *éditables*, donc le marché a déjà
+validé que l'éditabilité native vaut la peine d'être vendue — personne ne l'a simplement encore
+appliquée aux diagrammes.
+
+**Idées UX à emprunter (pas le code, juste le principe) sans diluer le scope :**
+- Conversion par lot (dossier entier) — FusionSol, CX Markdown to Word, Doculate l'ont ; pas nous.
+  Candidat naturel pour une itération post-launch, hors scope Phase 2 actuelle.
+- `reference.docx` personnalisé — déjà mentionné dans ce document (§12.1 historique) mais pas
+  câblé côté CLI ; CX Markdown to Word et Doculate l'ont déjà.
+- "100 % local, zéro cloud" comme argument explicite (docu.md le met en avant) — nous l'avons déjà
+  gratuitement (Pandoc + traducteur tournent en local), juste jamais dit dans le README avant la
+  passe de polish de septembre 2026.
+
+**Signal de timing** : VS Code 1.121 (mai 2026) a ajouté le rendu Mermaid natif au preview
+Markdown intégré. Réduit l'urgence de construire notre propre "Aperçu" (Phase 2.5) — un preview
+gratuit existe déjà côté éditeur.
 
 ### 12.2 Éléments README à ne pas négliger
 

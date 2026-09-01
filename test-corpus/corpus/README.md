@@ -81,6 +81,17 @@ test `known limitation: raw HTML (img/br/strong/div) is silently dropped, not tr
 `packages/cli/test/corpus.test.mjs`, pour qu'une évolution future (upgrade Pandoc, ajout d'un
 fallback) soit une décision explicite plutôt qu'un changement de comportement muet.
 
+## Formules mathématiques (LaTeX) — trouvaille positive, pas juste une limite
+
+Contrairement au HTML brut ci-dessus, le writer docx de Pandoc a un équivalent OOXML natif pour
+les formules LaTeX (`$...$`/`$$...$$`) : `m:oMath`/`m:oMathPara` (bibliothèque `texmath`),
+éditables dans l'éditeur d'équations de Word — même logique que nos formes de diagramme, gratuite
+ici puisque déléguée à Pandoc (cahier des charges §2). Vérifié empiriquement 2026-09-01 (intégrale
+avec bornes, fraction, matrice — structure XML **et** rendu LibreOffice headless contrôlés, pas
+seulement la présence de la balise). Verrouillé par le test
+`bonus finding: LaTeX math converts to native OOXML equations (m:oMath), not an image` dans
+`packages/cli/test/corpus.test.mjs`.
+
 ## `generated/` — sortie régénérée, pas accumulée
 
 Un `.docx` par source, **écrasé** à chaque run (`npm test` ou `node scripts/generate-corpus.mjs`)

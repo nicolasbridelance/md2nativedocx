@@ -231,6 +231,31 @@ test('simple: markdown with a mermaid A --> B produces a conformant docx', () =>
   }
 });
 
+test('bonus finding: LaTeX math converts to native OOXML equations (m:oMath), not an image', () => {
+  // Not something this project wrote — Pandoc's own docx writer (texmath)
+  // already turns $...$/$$...$$ into m:oMath/m:oMathPara, editable in Word's
+  // equation editor, same "native object, not a flattened image" story we
+  // build by hand for diagrams (cahier des charges §2). Verified visually via
+  // LibreOffice headless (2026-09-01) before trusting the XML alone — the raw
+  // HTML test above is the cautionary tale for assuming Pandoc handles
+  // something just because it's plausible. Pinned so a Pandoc upgrade that
+  // changes this is a deliberate decision, not a silent regression.
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-math-'));
+  try {
+    const docx = convertTo(
+      '# Formules\n\nEn ligne : $E = mc^2$.\n\nAffichée :\n\n$$\\int_0^1 x^2\\,dx = \\frac{1}{3}$$\n',
+      dir,
+      'math',
+    );
+    const xml = readDocumentXml(docx);
+    assert.ok(xml.includes('<m:oMath'), 'missing m:oMath — LaTeX math was not converted to a native equation');
+    assert.ok(xml.includes('<m:f>') && xml.includes('<m:num>') && xml.includes('<m:den>'), 'fraction not structured as m:f/m:num/m:den');
+    assert.ok(xml.includes('<m:nary'), 'integral not structured as m:nary');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('known limitation: raw HTML (img/br/strong/div) is silently dropped, not translated', () => {
   // Pandoc's docx writer has no OOXML representation for arbitrary raw HTML
   // (unlike its html/pdf writers): a RawBlock/RawInline tagged Format "html"
