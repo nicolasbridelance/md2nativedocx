@@ -251,12 +251,11 @@ codebase — note it here as a reminder for the maintainer, not as a task to exe
 - **License: CC0 1.0 Universal.** `LICENSE` at repo root must contain the verbatim legal text from
   <https://creativecommons.org/publicdomain/zero/1.0/legalcode> — copied exactly, never paraphrased
   or summarized. Use SPDX identifier `CC0-1.0` in `package.json`'s `license` field.
-- **Pandoc is GPL-3.0** and is invoked as an external subprocess (installed separately by the user,
-  called via CLI), not linked into this codebase. Arm's-length process invocation is generally
-  understood not to impose GPL obligations on the calling program, unlike static/dynamic linking —
-  this is not legal advice, and it's worth re-checking specifically if distribution ever changes to
-  bundling a Pandoc binary directly inside a published package rather than requiring a separate
-  install, since that would change the analysis.
+- **Pandoc is GPL-2.0-or-later** (not GPL-3.0 — verified from `jgm/pandoc`'s `COPYRIGHT`/`COPYING.md`)
+  and is invoked as an external subprocess, not linked into this codebase. Arm's-length process
+  invocation is generally understood not to impose GPL obligations on the calling program, unlike
+  static/dynamic linking — this is not legal advice. See `AGENTS.md` → Licensing for the current
+  decision on how the VS Code extension auto-provisions Pandoc without bundling it in the `.vsix`.
 - **CLA/DCO:** not required to start. If the project later wants to preserve the option to relicense
   (spec §13 flags this explicitly), the low-friction path is requiring DCO sign-off
   (`Signed-off-by:` trailer via `git commit -s`) on PRs rather than a full CLA, which tends to

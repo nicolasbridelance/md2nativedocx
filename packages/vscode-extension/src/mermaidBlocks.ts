@@ -88,11 +88,37 @@ export function blockAtLine(blocks: MermaidBlock[], line: number): MermaidBlock 
   return blocks.find((b) => line >= b.fenceLine && line <= b.closingFenceLine) ?? null;
 }
 
+/** Wrap raw Mermaid source in a minimal, standalone Markdown document (title
+ * + one mermaid block) — the same envelope shape used by the corpus
+ * generator (scripts/generate-corpus.mjs). Pandoc/the Lua filter only ever
+ * see a ` ```mermaid ` fenced block inside Markdown, so this is also how a
+ * raw `.mmd` file (which has no fences of its own) becomes exportable. */
+export function wrapMermaidSource(source: string, title: string): string {
+  return `# ${title}\n\n\`\`\`mermaid\n${source}\n\`\`\`\n`;
+}
+
 /** Wrap a single diagram's source in a minimal, standalone Markdown document
- * (title + one mermaid block) — the same envelope shape used by the corpus
- * generator (scripts/generate-corpus.mjs), reused here for "export this
- * block only". */
+ * — reused here for "export this block only". */
 export function wrapBlockAsDocument(block: MermaidBlock): string {
-  const title = block.precedingHeading ?? 'Diagramme';
-  return `# ${title}\n\n\`\`\`mermaid\n${block.source}\n\`\`\`\n`;
+  return wrapMermaidSource(block.source, block.precedingHeading ?? 'Diagramme');
+}
+
+/** File extensions this extension can export, lowercase, with the leading
+ * dot — kept in one place so the command handlers, the status bar, and the
+ * CodeLens provider agree on what counts as "exportable" without depending
+ * on a document's `languageId` (a `.mmd` file has no guaranteed language
+ * association unless some other extension defines one). */
+export const EXPORTABLE_EXTENSIONS = ['.md', '.mmd'] as const;
+
+/** Whether `filePath`'s extension is one this extension can export
+ * (case-insensitive). */
+export function isExportablePath(filePath: string): boolean {
+  const lower = filePath.toLowerCase();
+  return EXPORTABLE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+/** Whether `filePath` is a raw Mermaid file (`.mmd`) — as opposed to a
+ * Markdown file that may contain zero or more ` ```mermaid ` fenced blocks. */
+export function isMermaidFilePath(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith('.mmd');
 }

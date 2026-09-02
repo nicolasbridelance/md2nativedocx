@@ -122,7 +122,12 @@ async function main() {
     FILTER_PATH,
   ];
 
-  execFile('pandoc', pandocArgs, { cwd }, (err, stdout, stderr) => {
+  // MD2NATIVEDOCX_PANDOC_BIN lets a caller (the VS Code extension's automatic
+  // Pandoc provisioning, see packages/vscode-extension/src/pandocProvisioner.ts)
+  // point at a specific Pandoc binary instead of relying on PATH. Unset for
+  // standalone `npx md2nativedocx` usage, which is unaffected.
+  const pandocBin = process.env.MD2NATIVEDOCX_PANDOC_BIN || 'pandoc';
+  execFile(pandocBin, pandocArgs, { cwd }, (err, stdout, stderr) => {
     if (err) {
       process.stderr.write(`md2nativedocx: Pandoc failed (exit ${err.code ?? '?'})\n`);
       if (stderr) process.stderr.write(stderr);

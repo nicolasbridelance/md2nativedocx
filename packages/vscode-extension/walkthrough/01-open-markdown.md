@@ -1,4 +1,6 @@
-Open a `.md` file containing a code block marked `mermaid`, for example:
+Open any `.md` file — text, tables and formatting export either way. This walkthrough uses one
+with a Mermaid diagram, since that's where `md2nativedocx` stands out: unlike a flattened image, it
+becomes a real, editable Word shape.
 
     # Architecture report
 
@@ -8,4 +10,4 @@ Open a `.md` file containing a code block marked `mermaid`, for example:
       B --> C[Database]
     ```
 
-As soon as such a block is detected, the extension activates automatically — no setup required.
+No setup required — the extension activates automatically on any `.md`/`.mmd` file.

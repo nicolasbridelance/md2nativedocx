@@ -44,14 +44,30 @@ rappelant où elle est la plus tentante à franchir.
 |---|---|---|
 | CodeLens "⚙️ Exporter en Word" | Au-dessus de chaque bloc ` ```mermaid ` | Automatique, dès qu'un bloc mermaid est détecté dans un `.md` ouvert |
 | CodeLens "Exporter le bloc seul" | Idem, à côté du précédent | Idem |
-| CodeLens "👁 Aperçu" (Phase 2.5) | Idem | Idem — seulement une fois le prérequis Phase 2.5 rempli (voir TODO.md) |
-| Pastille barre de statut | Barre de statut VS Code, en bas | Dès qu'un `.md` avec au moins un bloc mermaid est le fichier actif |
+| CodeLens "⚙️ Exporter en Word" (pleine largeur, ligne 0) | Haut du fichier | `.md` sans aucun bloc mermaid, ou `.mmd` — voir décision ci-dessous |
+| CodeLens "👁 Aperçu" (Phase 2.5) | Au-dessus de chaque bloc mermaid | Idem — seulement une fois le prérequis Phase 2.5 rempli (voir TODO.md) |
+| Pastille barre de statut | Barre de statut VS Code, en bas | Dès qu'un `.md` ou `.mmd` est le fichier actif (plus besoin d'un bloc mermaid — voir décision ci-dessous) |
+| Menu contextuel (clic droit) | Explorateur de fichiers, et clic droit dans l'éditeur | Sur tout `.md`/`.mmd` |
 | Palette de Commandes | `Ctrl+Shift+P` → "md2nativedocx: ..." | Toujours disponible — c'est le filet de sécurité pour qui préfère le clavier, jamais le point d'entrée principal |
 | Walkthrough d'accueil | Onglet Welcome de VS Code, à l'installation | Une fois, à l'installation, via l'API `Walkthroughs` de VS Code |
 
 Le CodeLens et la pastille de statut sont délibérément redondants : le CodeLens peut être filtré
 mentalement par des utilisateurs habitués à en voir beaucoup (GitLens, Copilot, etc.), la pastille
 de statut sert de second point d'entrée persistant pour ce cas.
+
+**Décision (Nicolas Bridelance, 2026-09-02) — les points d'entrée ne sont plus conditionnés à la
+présence d'un bloc mermaid.** La version précédente de cette section masquait le CodeLens et la
+pastille de statut tant qu'aucun bloc mermaid n'était détecté, en cohérence avec le positionnement
+"diagrammes Mermaid → Word". Mais le pipeline (Pandoc) exporte déjà **tout** le Markdown — texte,
+tableaux, mise en forme, formules LaTeX — que le document contienne un diagramme ou non ; masquer
+les points d'entrée pour ce cas contredisait donc la promesse réelle de l'outil plutôt que de la
+refléter. Corrigé : le CodeLens et la pastille de statut sont désormais toujours visibles sur tout
+`.md`/`.mmd` ouvert (un lens unique en haut de fichier remplace les lenses par-bloc quand il n'y en
+a aucun à ancrer), et un menu contextuel clic-droit (Explorateur + éditeur) est ajouté comme point
+d'entrée supplémentaire pour qui n'ouvre pas forcément le fichier avant d'exporter. Ceci inclut
+aussi le support d'un fichier `.mmd` brut (Mermaid seul, sans balisage Markdown) : il est enveloppé
+automatiquement dans un document minimal avant export — voir `src/mermaidBlocks.ts` (`wrapMermaidSource`)
+et `src/exportService.ts` (`exportMermaidFile`).
 
 Le walkthrough d'accueil est sous-exploité par la majorité des extensions alors qu'il répond
 exactement au moment où quelqu'un vient d'installer et ne sait pas par où commencer — à traiter

@@ -2,7 +2,7 @@
   "name": "md2nativedocx",
   "displayName": "md2nativedocx",
   "description": "%extension.description%",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "md2nativedocx",
   "private": true,
   "license": "CC0-1.0",
@@ -42,7 +42,8 @@
     "editable"
   ],
   "activationEvents": [
-    "onLanguage:markdown"
+    "onLanguage:markdown",
+    "onLanguage:mermaid"
   ],
   "contributes": {
     "commands": [
@@ -57,6 +58,22 @@
         "shortTitle": "%command.exportBlock.shortTitle%"
       }
     ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "md2nativedocx.exportDocument",
+          "when": "resourceExtname == .md || resourceExtname == .mmd",
+          "group": "7_modification"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "md2nativedocx.exportDocument",
+          "when": "resourceExtname == .md || resourceExtname == .mmd",
+          "group": "1_modification"
+        }
+      ]
+    },
     "configuration": {
       "title": "md2nativedocx",
       "properties": {
@@ -110,7 +127,7 @@
     "test:extension-host": "node scripts/run-extension-host-tests.mjs",
     "bundle": "node scripts/bundle-cli.mjs",
     "prepackage": "npm run build && npm run bundle",
-    "package": "vsce package --no-dependencies -o md2nativedocx.vsix"
+    "package": "vsce package --no-dependencies -o md2nativedocx.vsix --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,5 +1,5 @@
 {
-  "extension.description": "Экспортирует диаграммы Mermaid из Markdown-документа в .docx с нативными, редактируемыми фигурами OOXML — а не в виде плоских PNG.",
+  "extension.description": "Экспортирует Markdown в настоящий редактируемый .docx — диаграммы Mermaid становятся нативными фигурами Word, а не плоскими изображениями.",
   "command.exportDocument.title": "md2nativedocx: Экспортировать документ в Word",
   "command.exportDocument.shortTitle": "Экспортировать в Word",
   "command.exportBlock.title": "md2nativedocx: Экспортировать диаграмму под курсором",

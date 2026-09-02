@@ -1,5 +1,5 @@
 {
-  "extension.description": "Exporta los diagramas Mermaid de un documento Markdown a un .docx con formas OOXML nativas y editables — no imágenes PNG aplanadas.",
+  "extension.description": "Exporta Markdown a un .docx real y editable — los diagramas Mermaid se convierten en formas nativas de Word, no en imágenes aplanadas.",
   "command.exportDocument.title": "md2nativedocx: Exportar documento a Word",
   "command.exportDocument.shortTitle": "Exportar a Word",
   "command.exportBlock.title": "md2nativedocx: Exportar diagrama bajo el cursor",

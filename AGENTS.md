@@ -248,12 +248,21 @@ codebase — note it here as a reminder for the maintainer, not as a task to exe
 - **License: CC0 1.0 Universal.** `LICENSE` at repo root must contain the verbatim legal text from
   <https://creativecommons.org/publicdomain/zero/1.0/legalcode> — copied exactly, never paraphrased
   or summarized. Use SPDX identifier `CC0-1.0` in `package.json`'s `license` field.
-- **Pandoc is GPL-3.0** and is invoked as an external subprocess (installed separately by the user,
-  called via CLI), not linked into this codebase. Arm's-length process invocation is generally
+- **Pandoc is GPL-2.0-or-later** (verified directly from `jgm/pandoc`'s `COPYRIGHT`/`COPYING.md` —
+  earlier text in this file said GPL-3.0, which was incorrect) and is invoked as an external
+  subprocess, not linked into this codebase. Arm's-length process invocation is generally
   understood not to impose GPL obligations on the calling program, unlike static/dynamic linking —
-  this is not legal advice, and it's worth re-checking specifically if distribution ever changes to
-  bundling a Pandoc binary directly inside a published package rather than requiring a separate
-  install, since that would change the analysis.
+  this is not legal advice.
+  - **Decision (Nicolas Bridelance, 2026-09-02):** the VS Code extension (`packages/vscode-extension`)
+    auto-downloads Pandoc's official, unmodified release binary on first export when it isn't
+    already on `PATH` (see `src/pandocProvisioner.ts`), verifies it by pinned SHA-256, and caches
+    it outside the `.vsix` (`globalStorageUri`) — Pandoc is never bundled inside the `.vsix` itself
+    and is always run as a separate subprocess, same arm's-length model as before. This resolves
+    the "worth re-checking if distribution ever changes" flag that used to be here: bundling the
+    binary directly inside the `.vsix` was considered and rejected (would require 5-6 ~140MB
+    platform-specific packages and a build pipeline that doesn't exist yet, at odds with this
+    project being "small and auditable" — see rule 6 above); GPL notices for the downloaded binary
+    live in `packages/vscode-extension/THIRD_PARTY_NOTICES.md`.
 - **CLA/DCO:** not required to start. If the project later wants to preserve the option to relicense
   (spec §13 flags this explicitly), the low-friction path is requiring DCO sign-off
   (`Signed-off-by:` trailer via `git commit -s`) on PRs rather than a full CLA, which tends to

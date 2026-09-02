@@ -3,7 +3,30 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.1.0] — Unreleased
+## [0.2.0] — 2026-09-02
+
+### Added
+- Pandoc is no longer a manual prerequisite: the first export downloads Pandoc's official,
+  checksum-verified binary automatically if it isn't already installed, and caches it outside the
+  extension for every export after that. See README → Prerequisites and `THIRD_PARTY_NOTICES.md`.
+- Full Markdown export no longer requires a Mermaid diagram: the CodeLens and the status bar item
+  are now shown on any open `.md`/`.mmd` file, with or without a diagram (a document with no block
+  gets a single top-of-file lens instead of the per-block pair).
+- Right-click **Export to Word** in the Explorer and in the editor, on any `.md`/`.mmd` file — no
+  need to open it first.
+- Support for exporting a raw `.mmd` (Mermaid-only, no Markdown fencing) file directly.
+
+### Fixed
+- Marketplace README images (`demo-vscode.gif`, `demo-word.png`) resolving to broken links — the
+  packaging script now passes explicit `--baseContentUrl`/`--baseImagesUrl` so relative links
+  resolve into `packages/vscode-extension/` instead of the monorepo root.
+
+### Changed
+- README and Marketplace description rebalanced: led with full Markdown → `.docx` export (the
+  extension's actual name/scope), with native Mermaid shapes presented as the standout feature
+  rather than the whole premise.
+
+## [0.1.0] — 2026-09-02
 
 First functional version.
 

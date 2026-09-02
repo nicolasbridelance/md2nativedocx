@@ -1,5 +1,5 @@
 {
-  "extension.description": "将 Markdown 文档中的 Mermaid 图表导出为 .docx，图表以原生可编辑的 OOXML 图形呈现 —— 而非扁平化的 PNG 图片。",
+  "extension.description": "将 Markdown 导出为真正可编辑的 .docx —— Mermaid 图表会变成原生可编辑的 Word 图形，而非扁平化图片。",
   "command.exportDocument.title": "md2nativedocx: 将文档导出为 Word",
   "command.exportDocument.shortTitle": "导出为 Word",
   "command.exportBlock.title": "md2nativedocx: 导出光标所在的图表",

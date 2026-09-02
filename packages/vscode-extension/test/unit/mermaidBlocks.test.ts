@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMermaidBlocks, blockAtLine, wrapBlockAsDocument } from '../../src/mermaidBlocks';
+import {
+  parseMermaidBlocks,
+  blockAtLine,
+  wrapBlockAsDocument,
+  wrapMermaidSource,
+  isExportablePath,
+  isMermaidFilePath,
+} from '../../src/mermaidBlocks';
 
 test('parses a single mermaid block with no heading', () => {
   const blocks = parseMermaidBlocks('```mermaid\ngraph TD\n  A --> B\n```\n');
@@ -92,4 +99,23 @@ test('wrapBlockAsDocument falls back to a generic title when there is no heading
   const block = blocks[0];
   assert.ok(block);
   assert.ok(wrapBlockAsDocument(block).startsWith('# Diagramme\n'));
+});
+
+test('wrapMermaidSource wraps raw Mermaid text (e.g. a whole .mmd file) in a minimal document', () => {
+  const wrapped = wrapMermaidSource('graph TD\n  A --> B', 'diagram');
+  assert.equal(wrapped, '# diagram\n\n```mermaid\ngraph TD\n  A --> B\n```\n');
+});
+
+test('isExportablePath accepts .md and .mmd (case-insensitive), rejects everything else', () => {
+  assert.equal(isExportablePath('/a/b/notes.md'), true);
+  assert.equal(isExportablePath('/a/b/diagram.mmd'), true);
+  assert.equal(isExportablePath('/a/b/DIAGRAM.MMD'), true);
+  assert.equal(isExportablePath('/a/b/readme.txt'), false);
+  assert.equal(isExportablePath('/a/b/notes.md.bak'), false);
+});
+
+test('isMermaidFilePath is true only for .mmd', () => {
+  assert.equal(isMermaidFilePath('/a/b/diagram.mmd'), true);
+  assert.equal(isMermaidFilePath('/a/b/DIAGRAM.MMD'), true);
+  assert.equal(isMermaidFilePath('/a/b/notes.md'), false);
 });

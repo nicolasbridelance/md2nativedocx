@@ -79,5 +79,7 @@ npm run test:visual  # rendu LibreOffice headless + pixel-diff (CI)
 
 **CC0 1.0 Universal** — domaine public. Voir `LICENSE` pour le texte légal complet.
 
-> Note : Pandoc (GPL-3.0) est invoqué comme sous-processus externe, installé séparément par
-> l'utilisateur — il n'est pas lié à ce codebase. Voir `AGENTS.md` → Licensing.
+> Note : Pandoc (GPL-2.0-or-later) est invoqué comme sous-processus externe — jamais lié à ce
+> codebase. Dans l'extension VS Code, il est téléchargé automatiquement au premier export si absent
+> (binaire officiel non modifié, vérifié par empreinte SHA-256, jamais embarqué dans le `.vsix`).
+> Voir `AGENTS.md` → Licensing.

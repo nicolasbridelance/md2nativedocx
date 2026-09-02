@@ -2,24 +2,28 @@ import * as vscode from 'vscode';
 import { basename } from 'node:path';
 import { MermaidCodeLensProvider } from './codeLensProvider';
 import { registerStatusBar } from './statusBar';
-import { parseMermaidBlocks } from './mermaidBlocks';
+import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
 import {
   exportDocument,
   exportBlock,
+  exportMermaidFile,
   resolveBlockForCursor,
   PandocMissingError,
   BlockNotFoundError,
   ExportFailedError,
 } from './exportService';
+import { ensurePandoc } from './pandocProvisioner';
 
 let outputChannel: vscode.OutputChannel;
+let extensionContext: vscode.ExtensionContext;
 
 export function activate(context: vscode.ExtensionContext): void {
+  extensionContext = context;
   outputChannel = vscode.window.createOutputChannel('md2nativedocx');
   context.subscriptions.push(outputChannel);
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider({ language: 'markdown' }, new MermaidCodeLensProvider()),
+    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd}' }, new MermaidCodeLensProvider()),
     vscode.commands.registerCommand('md2nativedocx.exportDocument', (uri?: vscode.Uri) =>
       handleExportDocument(uri),
     ),
@@ -39,22 +43,27 @@ function outputDirectorySetting(): string {
   return vscode.workspace.getConfiguration('md2nativedocx').get<string>('outputDirectory', '');
 }
 
-async function resolveMarkdownUri(uri: vscode.Uri | undefined): Promise<vscode.Uri | null> {
+async function resolveExportableUri(uri: vscode.Uri | undefined): Promise<vscode.Uri | null> {
   if (uri) return uri;
   const active = vscode.window.activeTextEditor;
-  if (active && active.document.languageId === 'markdown') return active.document.uri;
-  void vscode.window.showErrorMessage(vscode.l10n.t('Open a Markdown (.md) file first.'));
+  if (active && isExportablePath(active.document.uri.fsPath)) return active.document.uri;
+  void vscode.window.showErrorMessage(vscode.l10n.t('Open a Markdown (.md) or Mermaid (.mmd) file first.'));
   return null;
 }
 
 async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
-  const uri = await resolveMarkdownUri(uriArg);
+  const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
-  await runExportFlow(() => exportDocument(uri.fsPath, outputDirectorySetting()));
+  await runExportFlow(async (progress) => {
+    const pandocBin = await resolvePandocBin(progress);
+    return isMermaidFilePath(uri.fsPath)
+      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), pandocBin)
+      : exportDocument(uri.fsPath, outputDirectorySetting(), pandocBin);
+  });
 }
 
 async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): Promise<void> {
-  const uri = await resolveMarkdownUri(uriArg);
+  const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
 
   const doc = await vscode.workspace.openTextDocument(uri);
@@ -88,7 +97,35 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     }
   }
 
-  await runExportFlow(() => exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting()));
+  await runExportFlow(async (progress) => {
+    const pandocBin = await resolvePandocBin(progress);
+    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), pandocBin);
+  });
+}
+
+/** Resolve a Pandoc binary via {@link ensurePandoc} (prefers `PATH`, else
+ * downloads-and-caches the official release for this platform once — see
+ * pandocProvisioner.ts), reporting progress into the export's own progress
+ * toast. On any failure, log the reason and return `undefined` so the caller
+ * falls back to today's behaviour (bare `pandoc` on `PATH`, surfacing the
+ * existing `PandocMissingError` UX if that's also unavailable) — automatic
+ * setup failing must never leave the user worse off than before it existed. */
+async function resolvePandocBin(progress: vscode.Progress<{ message?: string }>): Promise<string | undefined> {
+  try {
+    return await ensurePandoc(extensionContext.globalStorageUri.fsPath, (event) => {
+      if (event.phase === 'downloading') {
+        progress.report({
+          message: vscode.l10n.t('Setting up Pandoc (one-time download): {0}%', Math.round(event.fraction * 100)),
+        });
+      } else {
+        progress.report({ message: vscode.l10n.t('Setting up Pandoc (one-time download)…') });
+      }
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    outputChannel.appendLine(`Automatic Pandoc setup failed, falling back to PATH: ${detail}`);
+    return undefined;
+  }
 }
 
 type ExportOutcome = { ok: true; outputPath: string } | { ok: false; error: unknown };
@@ -104,12 +141,14 @@ type ExportOutcome = { ok: true; outputPath: string } | { ok: false; error: unkn
  * *inside* the withProgress callback, so the spinner stayed on screen until
  * the user clicked an action on the success toast, well after the export had
  * actually finished (visible as two stacked notifications in the recording). */
-async function runExportFlow(run: () => Promise<{ outputPath: string }>): Promise<void> {
+async function runExportFlow(
+  run: (progress: vscode.Progress<{ message?: string }>) => Promise<{ outputPath: string }>,
+): Promise<void> {
   const outcome = await vscode.window.withProgress<ExportOutcome>(
     { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
-    async () => {
+    async (progress) => {
       try {
-        const { outputPath } = await run();
+        const { outputPath } = await run(progress);
         return { ok: true, outputPath };
       } catch (error) {
         return { ok: false, error };

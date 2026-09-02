@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { blockAtLine, parseMermaidBlocks, wrapBlockAsDocument, type MermaidBlock } from './mermaidBlocks';
+import { blockAtLine, parseMermaidBlocks, wrapBlockAsDocument, wrapMermaidSource, type MermaidBlock } from './mermaidBlocks';
 
 export interface ExportResult {
   outputPath: string;
@@ -44,10 +44,11 @@ function resolveCliBin(): string {
   return join(dirname(pkgJsonPath), 'bin', 'md2nativedocx.mjs');
 }
 
-function runCli(input: string, output: string, cwd: string): Promise<void> {
+function runCli(input: string, output: string, cwd: string, pandocBin?: string): Promise<void> {
   const cliBin = resolveCliBin();
+  const env = pandocBin ? { ...process.env, MD2NATIVEDOCX_PANDOC_BIN: pandocBin } : process.env;
   return new Promise((resolve, reject) => {
-    execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8' }, (err, _stdout, stderrRaw) => {
+    execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {
         resolve();
         return;
@@ -75,9 +76,13 @@ export function resolveOutputPath(sourcePath: string, outputBaseName: string, ou
   return join(dir, `${outputBaseName}.docx`);
 }
 
-export async function exportDocument(sourcePath: string, outputDirectory: string): Promise<ExportResult> {
+export async function exportDocument(
+  sourcePath: string,
+  outputDirectory: string,
+  pandocBin?: string,
+): Promise<ExportResult> {
   const outputPath = resolveOutputPath(sourcePath, basename(sourcePath, '.md'), outputDirectory);
-  await runCli(sourcePath, outputPath, dirname(sourcePath));
+  await runCli(sourcePath, outputPath, dirname(sourcePath), pandocBin);
   return { outputPath };
 }
 
@@ -90,6 +95,7 @@ export async function exportBlock(
   sourceText: string,
   blockIndex: number,
   outputDirectory: string,
+  pandocBin?: string,
 ): Promise<ExportResult> {
   const blocks = parseMermaidBlocks(sourceText);
   const block = blocks.find((b) => b.index === blockIndex);
@@ -105,7 +111,30 @@ export async function exportBlock(
     writeFileSync(tmpMd, wrapBlockAsDocument(block));
     const outputBaseName = `${basename(sourcePath, '.md')}-diagram-${blockIndex + 1}`;
     const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory);
-    await runCli(tmpMd, outputPath, dirname(sourcePath));
+    await runCli(tmpMd, outputPath, dirname(sourcePath), pandocBin);
+    return { outputPath };
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+/** Export a raw `.mmd` file (no fences of its own — the whole file *is* one
+ * diagram) by wrapping it in the same minimal Markdown envelope
+ * `exportBlock` uses, then running it through the real CLI. Mirrors
+ * `exportBlock`'s temp-file approach. */
+export async function exportMermaidFile(
+  sourcePath: string,
+  outputDirectory: string,
+  pandocBin?: string,
+): Promise<ExportResult> {
+  const source = readFileSync(sourcePath, 'utf8');
+  const title = basename(sourcePath, '.mmd');
+  const tmpDir = mkdtempSync(join(tmpdir(), 'md2nativedocx-mmd-'));
+  try {
+    const tmpMd = join(tmpDir, 'diagram.md');
+    writeFileSync(tmpMd, wrapMermaidSource(source, title));
+    const outputPath = resolveOutputPath(sourcePath, title, outputDirectory);
+    await runCli(tmpMd, outputPath, dirname(sourcePath), pandocBin);
     return { outputPath };
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
