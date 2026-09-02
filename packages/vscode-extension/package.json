@@ -127,7 +127,8 @@
     "test:extension-host": "node scripts/run-extension-host-tests.mjs",
     "bundle": "node scripts/bundle-cli.mjs",
     "prepackage": "npm run build && npm run bundle",
-    "package": "vsce package --no-dependencies -o md2nativedocx.vsix --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/"
+    "package": "vsce package --no-dependencies -o md2nativedocx.vsix --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/",
+    "publish": "npm run build && npm run bundle && vsce publish --no-dependencies --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
