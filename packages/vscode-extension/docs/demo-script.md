@@ -1,77 +1,53 @@
-# Script d'enregistrement — démo GIF/vidéo
+# Script de démo — GIF + capture
 
-Objectif (cahier_des_charges.md §12.2) : un GIF de ~10 secondes qui tient tout seul, sans son ni
-légende, montrant le seul argument qui compte — le diagramme reste éditable dans Word. À
-enregistrer une fois le "coup de propre" (README, tooltips) terminé.
+Un GIF (côté VS Code) et une capture d'écran statique (côté Word) plutôt qu'un seul GIF combiné
+(cahier_des_charges.md §12.2) : la partie VS Code ne demande pas Word et a pu être enregistrée
+automatiquement dans ce Codespace (Xvfb + la vraie build VS Code déjà utilisée pour les tests
+d'extension-host, `xdotool` pour le clic, `ffmpeg` pour la capture) ; la partie Word demande une
+vraie installation de Word, hors de portée de ce Codespace Linux — et n'a pas besoin d'être animée,
+les poignées de sélection sont visibles à l'arrêt.
 
-## Matériel
+## ✅ GIF 1 — côté VS Code (`demo-vscode.gif`, fait)
 
-- **Fenêtre VS Code** : thème clair (Light+) recommandé — un GIF en thème sombre compresse moins
-  bien et lit moins bien en vignette Marketplace. Zoom éditeur à 130-150 % (`Ctrl` + `+`) pour que
-  le texte reste lisible une fois réduit en GIF.
-- **Résolution d'enregistrement** : 1280×720, fenêtre VS Code seule (pas tout l'écran) — recadrer
-  large gaspille des pixels sur une vignette qui sera affichée en ~600 px de large.
-- **Outil d'enregistrement** :
-  - Linux : [Peek](https://github.com/phw/peek) (GIF direct, léger) ou `SimpleScreenRecorder` +
-    conversion `ffmpeg` ensuite.
-  - macOS : QuickTime Player (enregistrement écran) → conversion GIF via `ffmpeg` ou
-    [Gifski](https://gif.ski/).
-  - Windows : `ShareX` (export GIF direct) ou Xbox Game Bar (`Win+G`) → conversion.
-- **Word** doit déjà être ouvert une fois en arrière-plan avant de commencer, pour que son
-  démarrage n'allonge pas l'enregistrement (cache app déjà chaud).
+`packages/vscode-extension/docs/demo-vscode.gif` — 800×450, ~240 Ko, 4.7 s. Généré automatiquement
+le 2026-09-01 : CodeLens visible → clic sur **⚙️ Export to Word** → notification "Exported:
+demo.docx" avec les actions Open in Word / Reveal in Explorer. Le fichier `demo.md` utilisé est
+[`docs/demo.md`](demo.md) (même contenu que ci-dessous). Déjà référencé dans le README de
+l'extension.
 
-## Fichier de départ
+**Détail trouvé au premier enregistrement, pas cosmétique, corrigé avant la version finale** : la
+barre "Export in progress" restait affichée tant que la notification de succès n'était pas
+cliquée/fermée — `runExportFlow` (`src/extension.ts`) attendait `showInformationMessage(...)`
+*à l'intérieur* du callback `withProgress`, donc le spinner ne se fermait qu'une fois l'utilisateur
+agi sur le toast de succès, pas dès que l'export était réellement terminé. Visible dans le tout
+premier essai (deux notifications empilées) ; corrigé (le `withProgress` ne wrappe plus que
+`run()`, la notification de succès/erreur vient après, hors du spinner) et re-vérifié par un
+second enregistrement — une seule notification, propre.
 
-Créer `demo.md` avec exactement ceci (un seul diagramme simple, lisible même petit) :
+## ⏳ Capture d'écran — côté Word (`demo-word.png`, reste à faire)
 
-    # Demande d'accès — workflow
+Nécessite Word réellement installé (Windows/Mac) — impossible à produire dans ce Codespace Linux
+(LibreOffice n'a ni le même rendu ni les mêmes poignées de sélection, donc pas fiable comme
+substitut pour ce qui doit vendre le produit). Une **capture statique** suffit ici — inutile
+d'animer le survol/clic pour montrer des poignées de sélection déjà visibles à l'arrêt.
 
-    ```mermaid
-    flowchart LR
-      A[Demande soumise] --> B{Validée ?}
-      B -->|Oui| C[Accès accordé]
-      B -->|Non| D[Demande rejetée]
-    ```
+### Fichier à utiliser
+[`docs/demo.docx`](demo.docx) — déjà généré (via le CLI réel à partir de
+[`docs/demo.md`](demo.md)), prêt à ouvrir directement dans Word.
 
-## Séquence à l'écran (~10 secondes, pas de pause)
+### Ce qu'il faut dans la capture
+1. Cliquer sur la boîte "Accès accordé" dans le diagramme.
+2. **Le plan qui vend le produit** : les poignées de sélection individuelles (coins + côtés)
+   visibles autour de la forme — la preuve visuelle de l'éditabilité native.
+3. Capturer la fenêtre Word (pas tout l'écran), zoom raisonnable pour que le texte des formes
+   reste lisible en vignette.
 
-1. **(0:00–0:02)** Fichier `demo.md` déjà ouvert, bloc mermaid visible, CodeLens
-   "⚙️ Exporter en Word" déjà visible au-dessus du bloc — pas besoin de le montrer apparaître,
-   commencer directement dessus.
-2. **(0:02–0:03)** Clic sur **⚙️ Exporter en Word**. La barre de progression VS Code doit être
-   visible au moins une frame (preuve que quelque chose se passe réellement, pas un montage).
-3. **(0:03–0:05)** Notification de succès apparaît → clic sur **Ouvrir dans Word**.
-4. **(0:05–0:08)** Word s'ouvre sur le `.docx` généré, diagramme visible.
-5. **(0:08–0:10)** **Le plan qui vend le produit** : clic sur la boîte "Accès accordé" dans Word →
-   les poignées de sélection individuelles apparaissent (coins + côtés), bien visibles. Rester
-   sur cette frame 1-2 secondes avant de couper — c'est la preuve visuelle de l'éditabilité native,
-   le seul frame qu'un lecteur qui scroll vite retiendra.
+### Export
+- Format : PNG.
+- Emplacement : `packages/vscode-extension/docs/demo-word.png` — c'est l'endroit que le README
+  référencera une fois le fichier présent.
 
-Pas besoin d'aller plus loin (déplacer la boîte, changer le texte) pour le GIF court — ça, c'est
-pour une éventuelle vidéo longue (voir plus bas).
+## Une fois `demo-word.png` produit
 
-## Export GIF
-
-- Durée finale : 8-12 secondes, en boucle (`loop`).
-- Poids cible : **< 5 Mo** (s'affiche inline dans le README GitHub et la page Marketplace sans
-  clic) — réduire la palette de couleurs (`gifski --fps 12`) plutôt que la résolution si besoin.
-- Nom de fichier et emplacement : `packages/vscode-extension/docs/demo.gif` — c'est l'endroit que
-  le README de l'extension référencera une fois le fichier présent (actuellement pas de lien
-  d'image dans le README pour ne pas pointer vers un fichier inexistant).
-
-## Variante longue (optionnelle, 30-45 s, pour un post Reddit/HN/Twitter)
-
-Reprendre la séquence ci-dessus puis ajouter, dans Word :
-6. **Déplacer** la boîte "Accès accordé" — montrer que les flèches suivent (connecteurs
-   magnétiques `stCxn`/`endCxn`).
-7. **Double-clic** sur le texte d'une boîte, taper un nouveau libellé — montrer que le texte est
-   natif, pas un pixel.
-
-Cette variante peut rester en `.mp4` (pas besoin de la contrainte GIF) et être hébergée sur
-YouTube/un lien direct, référencée séparément dans un post de lancement — pas dans le README lui-même.
-
-## Une fois le fichier `demo.gif` produit
-
-Prévenir pour que le lien soit ajouté en haut du
-[README de l'extension](../README.md) et du [README racine](../../../README.md) — actuellement
-volontairement absent pour ne pas pointer vers un asset qui n'existe pas encore.
+Prévenir pour que le lien soit ajouté au README de l'extension à côté de `demo-vscode.gif`, et que
+les deux soient présentés côte à côte pour raconter l'histoire complète en un coup d'œil.

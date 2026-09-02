@@ -91,33 +91,49 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
   await runExportFlow(() => exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting()));
 }
 
+type ExportOutcome = { ok: true; outputPath: string } | { ok: false; error: unknown };
+
 /** The 4-state export UX from UX_SPEC.md Partie 1: repos (nothing shown
  * until triggered) -> en cours (progress toast, never a silent freeze) ->
  * succès (actions that close the loop in one click) | erreur (explicit
- * message + a repair action, never a raw stack trace in the toast). */
+ * message + a repair action, never a raw stack trace in the toast).
+ *
+ * The progress toast only wraps `run()` — resolving (and disappearing) the
+ * moment the export itself settles, success or failure. Found while
+ * recording the demo GIF: `showInformationMessage` used to be awaited
+ * *inside* the withProgress callback, so the spinner stayed on screen until
+ * the user clicked an action on the success toast, well after the export had
+ * actually finished (visible as two stacked notifications in the recording). */
 async function runExportFlow(run: () => Promise<{ outputPath: string }>): Promise<void> {
-  await vscode.window.withProgress(
+  const outcome = await vscode.window.withProgress<ExportOutcome>(
     { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
     async () => {
       try {
         const { outputPath } = await run();
-        const openInWord = vscode.l10n.t('Open in Word');
-        const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
-        const choice = await vscode.window.showInformationMessage(
-          vscode.l10n.t('Exported: {0}', basename(outputPath)),
-          openInWord,
-          revealInExplorer,
-        );
-        if (choice === openInWord) {
-          await vscode.env.openExternal(vscode.Uri.file(outputPath));
-        } else if (choice === revealInExplorer) {
-          await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(outputPath));
-        }
-      } catch (err) {
-        await handleExportError(err);
+        return { ok: true, outputPath };
+      } catch (error) {
+        return { ok: false, error };
       }
     },
   );
+
+  if (!outcome.ok) {
+    await handleExportError(outcome.error);
+    return;
+  }
+
+  const openInWord = vscode.l10n.t('Open in Word');
+  const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
+  const choice = await vscode.window.showInformationMessage(
+    vscode.l10n.t('Exported: {0}', basename(outcome.outputPath)),
+    openInWord,
+    revealInExplorer,
+  );
+  if (choice === openInWord) {
+    await vscode.env.openExternal(vscode.Uri.file(outcome.outputPath));
+  } else if (choice === revealInExplorer) {
+    await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(outcome.outputPath));
+  }
 }
 
 async function handleExportError(err: unknown): Promise<void> {

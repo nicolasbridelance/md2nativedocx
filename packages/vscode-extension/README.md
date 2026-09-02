@@ -5,6 +5,11 @@ formatting, diagrams) — but unlike everything else on the market, the diagrams
 into an image. They become real vector Word shapes (OOXML/DrawingML): every box and every arrow
 stays individually selectable, movable, and editable once the file is open in Word.
 
+![Clicking Export to Word in VS Code, with a real export in progress and the success notification](docs/demo-vscode.gif)
+
+*The Word half — a screenshot of a shape's selection handles — is still being taken (it needs a
+real Word install, see `docs/demo-script.md`). `docs/demo.docx` is ready to open in the meantime.*
+
 ## The problem nobody else solves
 
 Checked against the VS Code Marketplace (September 2026) — the most-installed Markdown-to-Word
