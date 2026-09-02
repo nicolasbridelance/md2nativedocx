@@ -18,13 +18,19 @@ import type {
   LayoutBox,
   LayoutPoint,
   LayoutResult,
+  NodeShape,
   Subgraph,
   SubgraphBox,
 } from '../types.js';
 
-/** Default node dimensions in logical pixels. */
-export const NODE_WIDTH = 120;
-export const NODE_HEIGHT = 60;
+/**
+ * Minimum node dimensions in logical pixels — a floor under
+ * {@link nodeDimensions}'s text-driven sizing, not the fixed size every node
+ * used to get regardless of its label. Kept as the public export name for
+ * source compatibility (`packages/core`'s barrel, `index.ts`).
+ */
+export const NODE_WIDTH = 70;
+export const NODE_HEIGHT = 40;
 /** Horizontal gap between nodes in the same rank. */
 const RANK_GAP = 60;
 /** Vertical gap between ranks. */
@@ -47,12 +53,211 @@ export interface LayoutOptions {
 }
 
 /**
+ * Text-driven node sizing (spec follow-up, found 2026-09-02): every node used
+ * to get the exact same fixed box (`NODE_WIDTH`x`NODE_HEIGHT`) regardless of
+ * its label — short labels sat lost in an oversized box, long ones wrapped
+ * awkwardly, and a `diamond`'s usable interior (a diamond's inscribed text
+ * area is much smaller than its bounding box) was routinely too small for
+ * its own label, which is what produced the severe text clipping/corruption
+ * documented in TODO.md. Mermaid's own renderer sizes every node to its
+ * text; this is the same idea, minus real font-metrics measurement (no DOM,
+ * no canvas, no new dependency — rule #6, AGENTS.md) — a per-character-class
+ * average-width estimate instead. It won't match Word's actual glyph metrics
+ * pixel-for-pixel (nothing short of asking Word to lay out the text could),
+ * but it only has to get the box roughly right: Word still wraps the text
+ * itself at render time (`wrap="square"` in `bodyPr()`), this just has to
+ * stop being wrong by a factor of 2-3x.
+ */
+
+/** Effective font size node/subgraph-title text renders at: no explicit
+ * `w:sz` is set on that text (`ooxml-translator.ts`), so it inherits Pandoc's
+ * reference.docx `docDefaults` (`w:sz w:val="24"` = 12pt = 16px at 96 DPI) —
+ * which, calibrating against it, turns out to already be close to Mermaid's
+ * own 16px default. Duplicated here rather than imported: the translator
+ * doesn't set this value, it merely doesn't override the inherited default,
+ * so there is no single source of truth to import from. */
+const FONT_SIZE_PX = 16;
+/** Roughly 1.25x font size, the usual single-line-height rule of thumb. */
+const LINE_HEIGHT_PX = 20;
+/** Horizontal/vertical padding between a node's text and its border. */
+const PAD_X = 16;
+const PAD_Y = 12;
+/**
+ * Width `wrapEstimate`'s greedy word-packing wraps to a new line past —
+ * otherwise a long label would produce an arbitrarily wide, increasingly
+ * implausible box. Mermaid does the same (wrap past a threshold rather than
+ * grow forever). Safe to size on the generous side now that wrapping only
+ * ever happens at a word boundary (never mid-word, see `wrapEstimate`):
+ * wrapping a little earlier than strictly necessary just costs a bit of
+ * vertical space, which is a much smaller problem than the mid-word breaks
+ * an earlier, lower value caused.
+ */
+const MAX_LINE_WIDTH_PX = 190;
+/**
+ * Safety margin applied to every box's text-driven dimensions, to survive
+ * `scaledExtent()` shrinking the whole diagram to fit the page.
+ *
+ * Found empirically (2026-09-02): a box sized to exactly fit its label at
+ * native scale wraps anyway once the diagram is large enough that
+ * `scaledExtent()` (further down this file) scales the whole group down —
+ * `wp:extent` (display size) ends up smaller than `a:chExt` (native size),
+ * and Word/LibreOffice appear to scale a group's *shape geometry* by that
+ * ratio without correspondingly shrinking the *literal point size* of text
+ * inside its `wps:txbx` content — so the same text that fit its box at
+ * native scale visibly no longer does once the group is displayed smaller.
+ * Reproduced directly: the label "Traitement" fits its exactly-sized box on
+ * one line in an isolated single-node diagram (never scaled down), but
+ * wraps to two lines in a 5-node `flowchart LR` where the whole group is
+ * scaled to ~80% to fit the page — identical computed box width in both
+ * cases, different rendered outcome. There is no single correct
+ * compensation factor (the actual scale ratio isn't known until the whole
+ * diagram's bounding box is computed, after node sizing), so this errs
+ * generous rather than trying to predict it exactly.
+ */
+const SCALE_SAFETY_MARGIN = 1.5;
+
+/**
+ * Per-character-class average glyph width, as a fraction of font size (em).
+ * A coarse three-tier estimate — no real font metrics available without a
+ * DOM/canvas or a new dependency. Calibrated empirically (2026-09-02) by
+ * bisecting the real minimum non-wrapping box width for "Rectangle" (9
+ * characters, no space to wrap at — the `shapes` fixture's worst case) in an
+ * *unscaled* single-node diagram, isolating this baseline from the separate
+ * `SCALE_SAFETY_MARGIN` effect: 120px fit, 80px didn't. A first pass at this
+ * table (0.52 em/char for lowercase) implied ~77px was enough — undershooting
+ * by roughly a third even before any scale-down is in play.
+ */
+const AVG_CHAR_WIDTH_EM = {
+  upper: 0.7,
+  digit: 0.58,
+  space: 0.3,
+  other: 0.6,
+} as const;
+
+/**
+ * Estimate a label's single-line rendered width in pixels at `fontSizePx`
+ * (defaults to `FONT_SIZE_PX`, node/subgraph-title text's effective size —
+ * pass a different size for text that renders at an explicit `w:sz`, e.g.
+ * the 8pt edge-label captions in `ooxml-translator.ts`). Exported (not part
+ * of the public `packages/core` barrel, `index.ts`) so the translator can
+ * size an edge-label box to its own text instead of a fixed constant, the
+ * same reasoning `nodeDimensions` below already applies to node boxes.
+ */
+export function estimateTextWidth(text: string, fontSizePx: number = FONT_SIZE_PX): number {
+  let em = 0;
+  for (const ch of text) {
+    if (ch === ' ') em += AVG_CHAR_WIDTH_EM.space;
+    else if (ch >= '0' && ch <= '9') em += AVG_CHAR_WIDTH_EM.digit;
+    else if (ch === ch.toUpperCase() && ch !== ch.toLowerCase()) em += AVG_CHAR_WIDTH_EM.upper;
+    else em += AVG_CHAR_WIDTH_EM.other;
+  }
+  return em * fontSizePx;
+}
+
+/**
+ * How many lines a label wraps to, and the resulting box's inner (text)
+ * width, simulating a real greedy word-wrap (pack words onto a line until
+ * the next word would push it past `MAX_LINE_WIDTH_PX`, then start a new
+ * line) rather than dividing the label's total width by the cap.
+ *
+ * That flatter approach — this function's first version — actively broke
+ * things: dividing "Commande recue"'s total estimated width by a threshold
+ * doesn't know where the word boundary is, so it could (and did, once the
+ * threshold was lowered enough to fix the clipping below) size a box too
+ * narrow for even a *single* word, forcing Word to hyphenate/break mid-word
+ * ("Reserver" -> "Rese" / "rver"). Wrapping only ever happens at a space, so
+ * this has to reason in words, not raw character counts. A lone word wider
+ * than the cap is left on its own line at its own (over-cap) width rather
+ * than force-broken — the resulting box is wider than `MAX_LINE_WIDTH_PX`
+ * for that one case, which is a far smaller problem than a split word.
+ *
+ * `SCALE_SAFETY_MARGIN` is applied to the width each packing decision is
+ * based on, not just to the final box — seeding the *packing itself* with
+ * the optimistic, un-margined estimate under-packed lines relative to what
+ * Word's own (wider, in practice) wrapping produced, which is what caused
+ * the clipping this function was rewritten to fix in the first place: a
+ * label predicted to need one line that actually needed two, with no height
+ * reserved for the second.
+ */
+function wrapEstimate(label: string): { lines: number; textWidth: number } {
+  const words = label.split(' ').filter((w) => w.length > 0);
+  if (words.length === 0) return { lines: 1, textWidth: 1 };
+
+  const lineWidths: number[] = [];
+  let current = words[0]!;
+  for (const word of words.slice(1)) {
+    const candidate = `${current} ${word}`;
+    if (estimateTextWidth(candidate) * SCALE_SAFETY_MARGIN <= MAX_LINE_WIDTH_PX) {
+      current = candidate;
+    } else {
+      lineWidths.push(estimateTextWidth(current) * SCALE_SAFETY_MARGIN);
+      current = word;
+    }
+  }
+  lineWidths.push(estimateTextWidth(current) * SCALE_SAFETY_MARGIN);
+
+  return { lines: lineWidths.length, textWidth: Math.max(1, ...lineWidths) };
+}
+
+/**
+ * A node's box dimensions, sized to its label instead of a fixed constant.
+ *
+ * `diamond` doubles both axes over what a rectangle with the same label
+ * would need: a rhombus's largest centered inscribed rectangle of half-width
+ * x and half-height y, within a rhombus of half-diagonals a and b, must
+ * satisfy x/a + y/b <= 1 — setting the rhombus's full width/height to twice
+ * the text box's is a simple sufficient (not tightest) bound that guarantees
+ * the label fits without clipping, at the cost of a visibly larger diamond
+ * than a tightly-fitted one. Favouring "clearly big enough" over "exactly
+ * as small as provably safe" on purpose: the bug this fixes was severe text
+ * corruption from a diamond sized too close to the edge, not a diamond a
+ * few pixels larger than ideal.
+ */
+function nodeDimensions(label: string, shape: NodeShape): { width: number; height: number } {
+  // wrapEstimate's textWidth already has SCALE_SAFETY_MARGIN baked in (it
+  // needs it before the 1-vs-2-line decision, see its own doc comment); only
+  // height still needs it applied here.
+  const { lines, textWidth } = wrapEstimate(label);
+  // A small fractional buffer, not a whole extra line: wrapEstimate's greedy
+  // word-packing (with the same SCALE_SAFETY_MARGIN already folded into its
+  // own packing decisions) is the thing actually responsible for predicting
+  // the right line count now: inflating every box's height by a full line
+  // regardless of whether it needs one (an earlier version of this line)
+  // made every box taller than its label warranted — including single-word
+  // labels that never wrap at all ("Fin" got a 96px-tall box for 3
+  // characters) — which in turn made scaledExtent() shrink the whole
+  // diagram more aggressively to fit the page, which made
+  // SCALE_SAFETY_MARGIN's job *harder*, not easier. This buffer only has to
+  // cover descender/rounding slack at a line boundary.
+  const textHeight = (lines + 0.3) * LINE_HEIGHT_PX;
+  const rectWidth = textWidth + 2 * PAD_X;
+  const rectHeight = (textHeight + 2 * PAD_Y) * SCALE_SAFETY_MARGIN;
+
+  if (shape === 'diamond') {
+    return {
+      width: Math.max(NODE_WIDTH, 2 * rectWidth),
+      height: Math.max(NODE_HEIGHT, 2 * rectHeight),
+    };
+  }
+  return {
+    width: Math.max(NODE_WIDTH, rectWidth),
+    height: Math.max(NODE_HEIGHT, rectHeight),
+  };
+}
+
+/**
  * Compute pixel coordinates for every node and subgraph in the flowchart.
  * Returns a {@link LayoutResult} with node boxes and subgraph container boxes.
  */
 export function layout(flowchart: Flowchart, options: LayoutOptions = {}): LayoutResult {
-  const nodeWidth = options.nodeWidth ?? NODE_WIDTH;
-  const nodeHeight = options.nodeHeight ?? NODE_HEIGHT;
+  // Explicit nodeWidth/nodeHeight forces every node to that fixed size, as
+  // before (an escape hatch, e.g. for a caller comparing layouts head-to-head
+  // without label-length noise). Omitted (the normal case): each node is
+  // sized to its own label via nodeDimensions().
+  const fixedSize =
+    options.nodeWidth !== undefined || options.nodeHeight !== undefined
+      ? { width: options.nodeWidth ?? NODE_WIDTH, height: options.nodeHeight ?? NODE_HEIGHT }
+      : null;
   const engine = options.engine ?? 'dagre';
 
   if (engine === 'graphviz') {
@@ -71,7 +276,8 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const node of flowchart.nodes) {
-    g.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    const { width, height } = fixedSize ?? nodeDimensions(node.label, node.shape);
+    g.setNode(node.id, { width, height });
   }
   for (const edge of flowchart.edges) {
     if (g.hasNode(edge.from) && g.hasNode(edge.to)) {

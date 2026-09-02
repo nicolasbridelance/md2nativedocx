@@ -59,6 +59,67 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ✅ **Trois défauts signalés par l'utilisateur sur `demo.docx` (2026-09-01)** : étiquettes de
+      flèches mal centrées, marges trop serrées sur ces mêmes étiquettes, et double "grand
+      rectangle" visible sur toute forme (sélection Word montrant à la fois le cadre du canevas
+      et celui d'un groupe).
+  - **Étiquettes d'arête — pas un bug de calcul, un bug de proportions.** Vérifié directement
+    (extraction EMU de `demo.docx` + trace pixel sur un rendu LibreOffice) : le centre de la boîte
+    d'étiquette coïncidait déjà exactement avec le vrai milieu du segment de connecteur. Le
+    problème : `EDGE_LABEL_CX` était une largeur fixe (0,75 po) bien plus large que le texte réel
+    ("Oui"/"Non") — sur un segment diagonal, une boîte centrée mais large ne « semble » alignée
+    qu'en un seul point de sa largeur, d'où l'impression de décalage. Corrigé
+    (`ooxml-translator.ts`, `edgeLabelWidthEmu`) : la boîte est maintenant dimensionnée à son texte
+    (réutilise `estimateTextWidth` de `layout.ts`, désormais exportée et paramétrée par taille de
+    police — `nodeDimensions` l'appelait à 16px, l'étiquette d'arête l'appelle à sa propre taille
+    8pt), avec un facteur de sécurité 1,8× calibré empiriquement (bisection LibreOffice : la table
+    de largeur par caractère, calibrée à 16px, sous-estimait franchement une fois mise à l'échelle
+    linéairement vers 8pt). Corrige aussi le problème de marge (même cause : boîte surdimensionnée
+    + `lIns`/`rIns` à 0) — insets non nuls ajoutés en complément.
+  - **Double rectangle — cause confirmée : le groupe racine `wpg:wgp`.** Chaque diagramme était
+    encapsulé `wpc:wpc` (canevas) → `wpg:wgp` (groupe) → formes. Un `wpg:wgp`/`wpg:grpSp` est un
+    vrai objet "Groupe" Word : premier clic sélectionne tout le paquet (double-clic pour entrer),
+    d'où le second contour visible en plus de celui du canevas. Corrigé
+    (`ooxml-translator.ts`, `renderContent`) : plus aucune forme n'est groupée, à la racine ni pour
+    les sous-graphes — `wpc:wpc` accepte `wps:wsp` en enfant direct sans groupe intermédiaire.
+    **Escalade AGENTS.md** : ceci change le contrat de sortie structurel du traducteur (plus de
+    `wpg:wgp` du tout dans la sortie) — signalé ici pour revue humaine avant merge, conformément à
+    la règle « Changement de l'API publique de packages/core (contrat de sortie du traducteur) ».
+  - **Deux régressions trouvées et corrigées en supprimant le groupe, aucune des deux triviale :**
+    1. La mise à l'échelle d'un diagramme trop grand (`scaledExtent`) reposait sur le groupe
+       racine : les enfants gardaient des coordonnées natives et Word appliquait l'homothétie via
+       l'écart `a:chExt`/`a:ext` du groupe. Sans groupe, `scale` est maintenant appliqué
+       directement à chaque coordonnée émise (nœuds, arêtes, étiquettes, sous-graphes) —
+       mathématiquement équivalent, calculé ici plutôt que délégué à Word.
+    2. **Trouvaille plus profonde, non anticipée** : un `wpg:grpSp` placé directement sous
+       `wpc:wpc` (sans `wpg:wgp` englobant) se rend à la **mauvaise position** dans LibreOffice —
+       son `a:off` déclaré n'est pas honoré (vérifié empiriquement sur un diagramme à 3
+       sous-graphes : titres et libellés de nœuds décalés loin de leurs formes, texte tronqué —
+       reproduit aussi en cas minimal à 1 sous-graphe/1 nœud). Plutôt que réintroduire un groupe
+       pour les sous-graphes, `renderSubgraph` a été réécrit : un sous-graphe ne groupait de toute
+       façon jamais de contenu réel (ses nœuds membres sont toujours rendus séparément, en
+       coordonnées absolues — jamais nichés dans le groupe), donc son `wpg:grpSp` ne portait qu'une
+       unique boîte de titre. Cette boîte est maintenant une simple `wps:wsp` de plus, en
+       coordonnées absolues, exactement comme un nœud — élimine le problème à la racine, aucun
+       groupe nécessaire nulle part.
+    3. **Régression de rendu du texte, trouvée en corrigeant la précédente** : sans groupe, un
+       diagramme fortement réduit (`scale` proche de 0,4 sur le cas à 3 sous-graphes) rendait des
+       boîtes vides avec le texte flottant hors champ. Cause : l'ancien groupe appliquait sa
+       transformation visuelle à tout son contenu rendu, texte inclus, gratuitement — sans lui, la
+       taille de police (`w:sz`) et les marges internes (`lIns`/`tIns`/`rIns`/`bIns`, jusqu'ici
+       fixes) doivent être mises à l'échelle explicitement comme le reste. Corrigé : `w:sz` déclaré
+       explicitement (n'était auparavant qu'hérité du `docDefault` de Pandoc) sur le texte de
+       nœud/titre de sous-graphe/étiquette d'arête, et les insets de `bodyPr` scalés eux aussi,
+       tous via le même facteur `scale`.
+  - **Tests** : 82 tests unitaires/golden dans `packages/core` mis à jour pour la nouvelle
+    structure (plus aucune assertion sur un `wpg:wgp` racine) plus les tests `cli`/`pandoc-filter`
+    équivalents — suite complète du monorepo verte. Corpus réel régénéré
+    (`test-corpus/corpus/generated/*.docx`).
+  - **`npm run test:visual` : 12/22 fixtures diffèrent du témoin accepté** (attendu — la géométrie
+    de chaque étiquette/nœud/sous-graphe a changé) — revue visuelle manuelle faite sur un
+    échantillon (`mixed`, `long-labels`, `fan-out`, `subgraph`) via rendu LibreOffice direct,
+    confirmée comme amélioration dans chaque cas inspecté, **mais `--update-baseline` volontairement
+    pas exécuté** (revue humaine systématique requise avant, règle du projet — TESTING.md).
 - ✅ Scaffold monorepo npm (racine `package.json`, `tsconfig.base.json`, `.eslintrc.cjs`, `.gitignore`)
 - ✅ Docs de gouvernance : `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `PULL_REQUEST_TEMPLATE.md`,
   templates d'issues (`bug_report.md`, `feature_request.md`)
@@ -143,12 +204,127 @@ est levé.
       documenté plus bas, découvert *grâce à* cette revue systématique) — `--update-baseline`
       explicite après revue visuelle. `npm run test:visual` (skip proprement si LibreOffice absent
       du PATH) ; `npm run test:visual:update-baseline` pour régénérer après revue.
-- ❌ **Tests manuels dans Word réel** (critère d'acceptation MVP, spec §9) — les corrections de
-      conformité ci-dessus sont validées structurellement (XML bien formé, ZIP valide, ids
-      uniques, hiérarchie comparée à un document Word réel) et maintenant aussi visuellement
-      (LibreOffice), **pas** par une ouverture dans Word lui-même — le rendu OOXML de LibreOffice
-      diverge de Word sur des détails (ex. les têtes de flèche `a:tailEnd` : présentes et
-      correctement positionnées dans le XML, mais leur rendu par Word reste à vérifier).
+- ⚠️ **Premier test manuel dans Word réel (2026-09-02) — a immédiatement trouvé ce que
+      LibreOffice + validation XML structurelle ne pouvaient pas trouver.** `demo.docx` (généré
+      par `packages/vscode-extension/docs/demo.md`) ouvert dans un vrai Word : « Word a trouvé du
+      contenu illisible... Voulez-vous récupérer le contenu de ce document ? ». Le fichier se
+      récupère et s'affiche correctement après le clic sur "Oui", donc pas une corruption totale —
+      mais un vrai défaut de conformité, pas une divergence de rendu cosmétique.
+  - **Cause identifiée** (`packages/cli/src/postprocess.mjs`) : la constante `IGNORABLE` listait
+    `w14 w15 w16se w16cid w16 w16cex w16sdtdh w16sdtfl w16du wp14` dans `mc:Ignorable` sur la
+    racine `w:document`, mais `EXTENDED_NS` (les `xmlns:` réellement déclarés) n'inclut que
+    `wpc`/`mc`/`wp14`/`wpg`/`wps` — neuf préfixes sur dix référencés dans `mc:Ignorable` n'avaient
+    **aucune déclaration `xmlns:` correspondante** nulle part dans le document. Invalide au sens
+    de la spec Markup Compatibility (ECMA-376 Part 3, un préfixe listé dans `mc:Ignorable` doit
+    résoudre vers un namespace en portée) — le genre exact d'entorse à la spec que LibreOffice
+    tolère silencieusement mais que le parseur de Word rejette strictement. La chaîne complète
+    correspond au boilerplate exact qu'un vrai document Word déclare (probablement copiée depuis
+    un document de référence Word sans copier les déclarations `xmlns:` qui l'accompagnent).
+  - **Corrigé** : `IGNORABLE` réduit à `'wp14'` (le seul préfixe de la liste réellement déclaré),
+    plutôt que d'ajouter les 9 déclarations `xmlns:` manquantes avec des URI reconstitués de
+    mémoire — le projet n'émet aucun élément `w14:`/`w15:`/`w16*:`, donc les annoncer comme
+    "ignorables" n'apporte rien, et un URI mal reconstitué serait pire qu'un simple retrait.
+  - **Nouveau test de non-régression** (`packages/cli/test/postprocess.test.mjs`) : vérifie que
+    chaque préfixe de `mc:Ignorable` a une déclaration `xmlns:` correspondante sur la racine —
+    exactement le contrôle qui aurait attrapé ce bug avant qu'il n'atteigne un vrai Word. Les 75+
+    tests structurels existants ne le pouvaient pas : ils vérifient la présence d'attributs, pas
+    la cohérence des préfixes qu'ils référencent.
+  - Tout le corpus régénéré (`test-corpus/corpus/generated/*.docx`) porte le même correctif —
+    même défaut latent dans chaque fichier depuis l'introduction de `postprocess.mjs`.
+  - **Reste à faire** : ouvrir le corpus complet (pas seulement `demo.docx`) dans un vrai Word pour
+    chercher d'autres défauts de cette catégorie (têtes de flèche `a:tailEnd`, notamment — présentes
+    et positionnées correctement dans le XML, jamais vérifiées visuellement dans Word lui-même).
+- ✅ **Nœuds dimensionnés selon leur texte, pas une taille fixe (2026-09-02)** — corrige à la fois
+      un défaut visuel signalé par l'utilisateur ("le texte dans les formes est un peu grand, pas
+      la même impression que Mermaid dans le visualiseur markdown") **et**, en creusant, la cause
+      racine du bug de corruption de texte dans les losanges découvert la veille (ci-dessous,
+      historique conservé).
+  - **Avant** : chaque nœud recevait la même boîte fixe `NODE_WIDTH`x`NODE_HEIGHT` (120×60px),
+    indépendamment de son texte — un texte court flottait dans une boîte trop grande, un texte
+    long débordait/se tronquait, et un losange (dont la zone de texte utile est bien plus petite
+    que sa boîte englobante) était systématiquement trop étroit pour son propre libellé — c'est
+    exactement ce qui produisait le rendu corrompu ("Auth" → glyphe ressemblant à "Λ") documenté
+    précédemment ici.
+  - **Après** (`packages/core/src/layout/layout.ts`, `nodeDimensions()`) : chaque boîte est
+    dimensionnée à son libellé, avec une estimation de largeur de glyphe par classe de caractère
+    (majuscule/chiffre/espace/autre — aucune mesure de police réelle possible sans DOM/canvas ni
+    nouvelle dépendance, règle n°6), un vrai retour à la ligne glouton mot par mot (jamais au
+    milieu d'un mot), et un losange dimensionné au double d'un rectangle équivalent (borne
+    suffisante — pas la plus stricte — garantissant que le texte tient dans le rhombe inscrit).
+    `NODE_WIDTH`/`NODE_HEIGHT` (renommés en sens : ce sont désormais des planchers minimaux, pas
+    une taille imposée) restent exportés pour compatibilité ; `LayoutOptions.nodeWidth/nodeHeight`
+    reste une échappatoire explicite pour forcer une taille fixe si besoin.
+  - **Trouvaille en cours de route, plus profonde que prévu** : une boîte dimensionnée pile pour
+    son texte à l'échelle native peut quand même déborder une fois rendue, si le diagramme entier
+    est réduit par `scaledExtent()` pour tenir sur la page (`wp:extent` < `a:chExt`) — la géométrie
+    des formes suit cette réduction, le texte (taille de police littérale, jamais réduite en
+    conséquence dans le rendu LibreOffice observé ici) semble ne pas la suivre. Non vérifié dans un
+    vrai Word — pourrait être un artefact spécifique au rendu LibreOffice. Compensé par une marge
+    de sécurité (`SCALE_SAFETY_MARGIN`) plutôt que résolu à la racine (résoudre proprement
+    demanderait soit de rendre le texte réellement solidaire de l'échelle du groupe, soit un calcul
+    en deux passes — layout provisoire → facteur d'échelle réel → re-layout — hors budget de cette
+    session).
+  - **Résultat** : net progrès sur les cas courants (diagrammes simples, `demo.md`/`demo-full.md` —
+    losanges et libellés longs parfaitement lisibles, proportions proches du rendu Mermaid officiel
+    vérifié par comparaison directe). **Limite connue, non résolue** : les diagrammes denses
+    (beaucoup de nœuds, donc réduction d'échelle plus agressive) de `test-corpus/visual/fixtures/`
+    (`order-flow`, `mixed`, `fan-out`, `cycle`, `shapes`) montrent encore des débordements de texte
+    occasionnels — 12 des 22 baselines visuelles diffèrent désormais du témoin accepté (attendu,
+    puisque la géométrie de chaque nœud a changé) et **nécessitent une revue humaine avant
+    `--update-baseline`** (jamais fait automatiquement ici, conformément à la règle du projet).
+    Testé abondamment via `packages/core/test/unit/layout.test.ts` (5 nouveaux tests : croissance
+    avec le texte, plancher minimal, retour à la ligne sans dépassement arbitraire, losange plus
+    grand qu'un rectangle équivalent, échappatoire `nodeWidth`/`nodeHeight` toujours fonctionnelle).
+- ✅ **Troisième bug trouvé le même jour, par l'utilisateur, sur une capture d'écran d'un vrai
+      Word (2026-09-02)** : marge basse visiblement plus grande que la marge haute dans le texte
+      des formes — pas juste une impression, un vrai décalage vertical.
+  - **Cause confirmée** (`packages/core/src/translator/ooxml-translator.ts`) : le `w:pPrDefault`
+    du `reference.docx` de Pandoc impose `w:spacing w:after="200"` (10pt) à **tout** paragraphe du
+    document qui ne le surcharge pas explicitement — y compris le seul `w:p` de chaque texte de
+    forme (nœud, titre de sous-graphe, label d'arête), qui ne l'a jamais fait. Avec `anchor="ctr"`
+    centrant toute la boîte de paragraphe (glyphes + ces 10pt invisibles après), le texte visible
+    se retrouve décalé vers le haut — rien côté `w:before` pour compenser symétriquement.
+  - **Corrigé** : `<w:spacing w:before="0" w:after="0"/>` ajouté explicitement aux trois `w:pPr`
+    concernés. Fixture golden (`test/golden/fixtures/two-node.xml`) mise à jour en conséquence
+    (comparaison structurelle — le nouvel élément devait aussi y apparaître). Nouveau test
+    (`translator.test.ts` → `node/subgraph-title/edge-label text overrides the inherited
+    paragraph spacing`). `demo.docx`/`demo-full.docx` régénérés.
+  - **Non re-vérifié visuellement** : LibreOffice ne semblait déjà pas montrer d'asymétrie flagrante
+    avant ce correctif (l'écart a été repéré sur une capture d'écran Word réelle, pas ici) — à
+    confirmer par l'utilisateur dans Word directement.
+- ✅ **Deuxième bug trouvé le même jour, par l'utilisateur, en ouvrant `demo-full.docx` (version
+      `LR` pré-correctif) dans un vrai Word — corrigé et confirmé par une source faisant autorité,
+      pas seulement une hypothèse** : les connecteurs semblaient accrochés au mauvais site (capture
+      d'écran Word montrant des lignes qui se croisent entre le losange, "Traiter"/"401" et le
+      losange suivant, absent du rendu LibreOffice du même fichier statique).
+  - **Cause confirmée** : `SITE = { top: 0, right: 1, bottom: 2, left: 3 }` (`ooxml-translator.ts`)
+    n'avait jamais été vérifié que pour le cas vertical (haut/bas, via
+    `tools/word-reference/`, un connecteur entre deux rectangles empilés) — le couple gauche/droite
+    était une extrapolation "sens horaire depuis le haut" jamais testée. Décodé directement depuis
+    `oox-drawingml-cs-presets` du dépôt LibreOffice/core (leur propre miroir du
+    `presetShapeDefinitions.xml` officiel de Microsoft, cf. le billet de blog
+    [How to use the presetShapeDefinitions.xml file](https://learn.microsoft.com/en-us/archive/blogs/openspecification/how-to-use-the-presetshapedefinitions-xml-file-and-fun-with-drawingml)) :
+    `rect` **et** `diamond` listent tous deux leurs sites de connexion dans l'ordre
+    top(0)/**left(1)**/bottom(2)/**right(3)** — sens anti-horaire, pas horaire. `right` et `left`
+    étaient inversés dans notre code, et ça touche **toutes les formes**, pas seulement les
+    losanges — `flowchart LR` est justement le cas qui exerce idx 1/3.
+  - **Pourquoi LibreOffice ne montrait rien d'anormal** : le tracé du connecteur lui-même
+    (`bentConnectorGeometry`/`straightConnectorGeometry`) est une liste de points littéraux calculée
+    par `sitePoint()`, géométriquement correcte indépendamment de cette constante — `idx` ne sert
+    qu'à l'attribut `stCxn`/`endCxn` (le comportement magnétique). LibreOffice semble dessiner notre
+    tracé littéral tel quel ; Word, lui, semble privilégier sa propre sémantique de site de connexion
+    pour au moins certains cas — d'où la divergence visuelle sur un fichier statique identique.
+  - **Corrigé** : `SITE` devient `{ top: 0, right: 3, bottom: 2, left: 1 }`. Aucun test existant
+    n'affirmait de valeur précise pour gauche/droite (seulement haut/bas, inchangés) — corrigé sans
+    casser les 75 tests précédents. Nouveau test ajouté
+    (`translator.test.ts` → `horizontal connection-site indices: 3=right at the source, 1=left at
+    the target`) : le cas vertical avait sa propre assertion depuis longtemps, l'horizontal n'en
+    avait aucune — c'est justement l'angle mort qui a laissé passer ce bug. `demo.docx` et
+    `demo-full.docx` régénérés avec le correctif.
+  - **Reste à faire** : non re-vérifié sur un vrai document Word (seulement contre la source
+    faisant autorité LibreOffice/Microsoft) — `tools/word-reference/create-word-diagram.ps1` ne
+    génère qu'un connecteur vertical entre rectangles, jamais un cas horizontal ; l'étendre serait
+    la vérification définitive (Windows + Word requis, hors de portée de ce Codespace).
 - ✅ **Corrections de géométrie des connecteurs, trouvées via LibreOffice headless (2026-08-07)**,
       invisibles aux tests structurels — repérées en convertissant un `.docx` généré en PNG
       (`soffice --headless --convert-to png`) et en inspectant le rendu :

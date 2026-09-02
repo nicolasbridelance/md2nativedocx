@@ -30,22 +30,22 @@ test('cli converts a markdown file to a valid docx', () => {
     const { code, out } = runCli([md, '-o', docx]);
     assert.equal(code, 0, out);
     assert.ok(existsSync(docx));
-    // The docx must be a valid ZIP containing the wpg:wgp fragment wrapped in
+    // The docx must be a valid ZIP containing the drawing fragment wrapped in
     // the schema-required w:p/w:drawing hierarchy (spec §5.3).
     const xml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], {
       encoding: 'utf8',
     });
-    assert.ok(xml.includes('<wpg:wgp'));
+    assert.ok(xml.includes('<wpc:wpc'));
     assert.ok(xml.includes('<w:drawing>'));
     // Inline, not anchored: the diagram flows with the text (spec §5.3).
     assert.ok(xml.includes('<wp:inline '));
     assert.ok(!xml.includes('<wp:anchor '));
     assert.ok(xml.includes('<a:graphicData '));
     assert.ok(xml.includes('<wpc:wpc '));
-    // The wpg:wgp must be nested inside wpc:wpc, not a bare child of body.
-    const wgp = xml.indexOf('<wpg:wgp');
+    // The shapes must be nested inside wpc:wpc, not a bare child of body.
+    const wsp = xml.indexOf('<wps:wsp>');
     const wpc = xml.indexOf('<wpc:wpc ');
-    assert.ok(wgp > wpc, 'wpg:wgp must be nested inside wpc:wpc');
+    assert.ok(wsp > wpc, 'wps:wsp must be nested inside wpc:wpc');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

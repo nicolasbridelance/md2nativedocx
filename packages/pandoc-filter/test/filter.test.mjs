@@ -29,9 +29,9 @@ function runPandoc(markdown) {
   }
 }
 
-test('pandoc filter converts a mermaid block into native wpg:wgp', () => {
+test('pandoc filter converts a mermaid block into native shapes', () => {
   const xml = runPandoc('```mermaid\ngraph TD\n  A[Start] --> B[End]\n```\n');
-  assert.ok(xml.includes('<wpg:wgp'));
+  assert.ok(xml.includes('<wpc:wpc'));
   assert.ok(xml.includes('<wps:wsp>'));
   assert.ok(xml.includes('<wps:cNvCnPr>'));
 });
@@ -49,10 +49,10 @@ test('pandoc filter emits the schema-required w:p/w:drawing wrapper', () => {
   assert.ok(xml.includes('<a:graphicData '));
   assert.ok(xml.includes('<wpc:wpc '));
   assert.ok(xml.includes('</w:p>'));
-  // The wpg:wgp must be nested inside the wpc:wpc canvas, not a bare child of body.
-  const wgp = xml.indexOf('<wpg:wgp');
+  // The shapes must be nested inside the wpc:wpc canvas, not a bare child of body.
+  const wsp = xml.indexOf('<wps:wsp>');
   const wpc = xml.indexOf('<wpc:wpc ');
-  assert.ok(wgp > wpc, 'wpg:wgp must be nested inside wpc:wpc');
+  assert.ok(wsp > wpc, 'wps:wsp must be nested inside wpc:wpc');
 });
 
 test('pandoc filter escapes hostile labels (rule #2)', () => {

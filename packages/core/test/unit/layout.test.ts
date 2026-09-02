@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMermaid } from '../../src/parser/index.js';
-import { layout, boundingBox, SUBGRAPH_TITLE_HEIGHT } from '../../src/layout/layout.js';
+import { layout, boundingBox, SUBGRAPH_TITLE_HEIGHT, NODE_WIDTH, NODE_HEIGHT } from '../../src/layout/layout.js';
 
 test('produces a box for every node', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B\n  B --> C');
@@ -135,4 +135,56 @@ test('subgraph boxes never go negative even when the cluster margin extends past
     assert.ok(box.x >= 0, `node ${id} has negative x=${box.x}`);
     assert.ok(box.y >= 0, `node ${id} has negative y=${box.y}`);
   }
+});
+
+// --- Text-driven node sizing (found 2026-09-02: every node used to get the
+// same fixed NODE_WIDTHxNODE_HEIGHT box regardless of its label — short
+// labels sat lost in an oversized box, long ones wrapped badly, and a
+// diamond's much smaller usable interior routinely clipped/corrupted its own
+// label). ---
+
+test('a node box grows with its label instead of staying a fixed size', () => {
+  const { ast } = parseMermaid('graph TD\n  A[A] --> B[Demande soumise]');
+  const result = layout(ast);
+  assert.ok(
+    result.nodes['B']!.width > result.nodes['A']!.width,
+    `"Demande soumise" (${result.nodes['B']!.width}px) should be wider than "A" (${result.nodes['A']!.width}px)`,
+  );
+});
+
+test('a very short label still gets at least the minimum node size', () => {
+  const { ast } = parseMermaid('graph TD\n  A[A] --> B[B]');
+  const result = layout(ast);
+  assert.ok(result.nodes['A']!.width >= NODE_WIDTH);
+  assert.ok(result.nodes['A']!.height >= NODE_HEIGHT);
+});
+
+test('a long label wraps to a taller box rather than growing arbitrarily wide', () => {
+  const { ast } = parseMermaid(
+    'graph TD\n  A[A] --> B[Ceci est un libellé nettement plus long que ce qui tient sur une seule ligne]',
+  );
+  const result = layout(ast);
+  // Should have wrapped (height grew past a single line) rather than
+  // stretching indefinitely wide.
+  assert.ok(result.nodes['B']!.height > NODE_HEIGHT, 'expected the label to wrap to more than one line');
+  assert.ok(result.nodes['B']!.width < 400, `box grew implausibly wide (${result.nodes['B']!.width}px) instead of wrapping`);
+});
+
+test('a diamond gets a bigger box than a rectangle with the same label', () => {
+  const rect = layout(parseMermaid('graph TD\n  A[A] --> B[Validée]').ast);
+  const diamond = layout(parseMermaid('graph TD\n  A[A] --> B{Validée}').ast);
+  assert.ok(
+    diamond.nodes['B']!.width > rect.nodes['B']!.width,
+    'a decision diamond needs a visibly bigger box than a rectangle to fit the same text without clipping it',
+  );
+  assert.ok(diamond.nodes['B']!.height > rect.nodes['B']!.height);
+});
+
+test('explicit nodeWidth/nodeHeight still forces a fixed size for every node (escape hatch)', () => {
+  const { ast } = parseMermaid('graph TD\n  A[A] --> B[A much, much longer label than A]');
+  const result = layout(ast, { nodeWidth: 120, nodeHeight: 60 });
+  assert.equal(result.nodes['A']!.width, 120);
+  assert.equal(result.nodes['B']!.width, 120, 'the override should apply uniformly, ignoring label length');
+  assert.equal(result.nodes['A']!.height, 60);
+  assert.equal(result.nodes['B']!.height, 60);
 });

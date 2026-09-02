@@ -52,6 +52,31 @@ test('an existing mc:Ignorable is preserved', () => {
   assert.ok(out.includes('mc:Ignorable="w14 wp14"'));
 });
 
+test('every mc:Ignorable prefix resolves to a declared xmlns on the root — real Word rejects the file otherwise', () => {
+  // Found opening a generated .docx in real Word for the first time
+  // (2026-09-02): "Word found unreadable content" — the old IGNORABLE list
+  // referenced w14/w15/w16* prefixes with no matching xmlns:w14 etc.
+  // declared anywhere. Invalid per the markup-compatibility spec (ECMA-376
+  // Part 3); LibreOffice tolerated it, real Word did not. This is the check
+  // that would have caught it: every space-separated mc:Ignorable token must
+  // have a corresponding xmlns:<token> in scope.
+  //
+  // Uses a root with no pre-existing mc:Ignorable (unlike PANDOC_ROOT below)
+  // so injectNamespaces actually exercises its own IGNORABLE constant rather
+  // than the "preserve what's already there" branch — that's the branch that
+  // produced the real bug in production, since Pandoc's own template does
+  // not set mc:Ignorable itself.
+  const bareRoot = '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">';
+  const out = injectNamespaces(`${bareRoot}<w:body/></w:document>`);
+  const root = out.slice(0, out.indexOf('>') + 1);
+  const ignorable = root.match(/mc:Ignorable="([^"]*)"/);
+  assert.ok(ignorable, 'no mc:Ignorable on the root');
+  const declaredPrefixes = new Set([...root.matchAll(/xmlns:(\w+)=/g)].map((m) => m[1]));
+  for (const prefix of ignorable[1].split(/\s+/).filter(Boolean)) {
+    assert.ok(declaredPrefixes.has(prefix), `mc:Ignorable references undeclared prefix "${prefix}"`);
+  }
+});
+
 test('rejects a document with no w:document root', () => {
   assert.throws(() => injectNamespaces('<not-a-document/>'), /w:document/);
 });

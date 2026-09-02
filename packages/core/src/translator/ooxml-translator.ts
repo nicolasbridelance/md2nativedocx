@@ -1,7 +1,7 @@
 /**
  * OOXML/DrawingML translator: AST + layout coordinates -> a self-contained
- * WordprocessingML paragraph containing a `wpg:wgp` (grouped drawing) XML
- * string.
+ * WordprocessingML paragraph containing a `wpc:wpc` (drawing canvas) of
+ * ungrouped shapes, as an XML string.
  *
  * This is the heart of the project (spec §5.3). It is a pure function from
  * (Flowchart, Layout) to a single XML string that can be injected verbatim into
@@ -12,22 +12,24 @@
  *
  * The emitted fragment is a complete `w:p` paragraph wrapping the drawing in
  * the schema-required hierarchy `w:p -> w:r -> w:drawing -> wp:inline ->
- * a:graphic -> a:graphicData -> wpc:wpc -> wpg:wgp`. A bare `wpg:wgp` cannot be
- * a direct child of `w:body`; emitting the full paragraph is what makes the
+ * a:graphic -> a:graphicData -> wpc:wpc -> [shapes]`. A bare `wpc:wpc` cannot
+ * be a direct child of `w:body`; emitting the full paragraph is what makes the
  * `.docx` open cleanly in Word (spec §5.3 "Encapsulation en `<wpg:wgp>` ...
- * inséré dans `<w:drawing><wp:inline>...`").
+ * inséré dans `<w:drawing><wp:inline>...`" — the spec's own wording predates
+ * this file dropping the `wpg:wgp` group it originally described, see
+ * `renderContent`'s doc comment; the paragraph-wrapping requirement itself is
+ * unchanged). No shape is ever grouped (`wpg:wgp`/`wpg:grpSp`) any more — see
+ * `renderContent` and `renderSubgraph`'s doc comments for why.
  *
  * The element structure follows the official Microsoft schemas
  * (ECMA-376 + MS-OE376, as published in the Open XML SDK) and was diffed
  * against a real Word-authored document (`tools/word-reference/`):
- *   - `wpg:wgp` / `wpg:grpSp` require `wpg:cNvPr` (with `id` + `name`),
- *     `wpg:cNvGrpSpPr`, `wpg:grpSpPr`, then a choice of `wps:wsp` / `wpg:grpSp`.
  *   - `wps:wsp` requires `wps:cNvPr`, then either `wps:cNvSpPr` (shape) or
  *     `wps:cNvCnPr` (connector), then `wps:spPr`, optional `wps:style`,
  *     optional `wps:txbx`, and `wps:bodyPr`.
  *   - `wp:inline` requires `wp:extent` and `wp:docPr` before `a:graphic`.
- *   - Every `id` in a drawing (`wp:docPr`, `wpg:cNvPr`, `wps:cNvPr`) must be
- *     distinct, or Word reports the file as corrupt and offers to repair it.
+ *   - Every `id` in a drawing (`wp:docPr`, `wps:cNvPr`) must be distinct, or
+ *     Word reports the file as corrupt and offers to repair it.
  *
  * Security invariants (AGENTS.md):
  * - Every user-controlled string is XML-escaped (rule #2) via {@link escapeXml}.
@@ -38,7 +40,7 @@
  *   fully self-contained, with all namespaces declared inline.
  */
 
-import { SUBGRAPH_TITLE_HEIGHT } from '../layout/layout.js';
+import { SUBGRAPH_TITLE_HEIGHT, estimateTextWidth } from '../layout/layout.js';
 import type { Flowchart, Layout, LayoutPoint, LayoutResult, NodeShape, Subgraph } from '../types.js';
 import { escapeXml } from './xml-escape.js';
 
@@ -49,6 +51,36 @@ const EMU_PER_PX = 9525;
 /** Default shape fill/line colors (spec §6.1). */
 const DEFAULT_FILL = 'D9E2F3';
 const DEFAULT_LINE = '2F5496';
+
+/**
+ * Node/subgraph-title text's effective size in half-points (`w:sz`'s unit):
+ * 24 = 12pt, Pandoc's `reference.docx` inherited default (`layout.ts`'s
+ * `FONT_SIZE_PX` doc comment) — node text never used to declare `w:sz`
+ * explicitly, just relying on that inherited default. It has to become
+ * explicit now that the root `wpg:wgp` group is gone (`renderContent`'s doc
+ * comment): that group used to make an oversized/scaled-down diagram's
+ * *rendered* text shrink along with its geometry as one visual unit, for
+ * free, regardless of the literal point size declared in the XML — verified
+ * directly (2026-09-02): a 3-subgraph diagram scaled to ~40% by
+ * `scaledExtent` still rendered legible, properly-proportioned text under
+ * the old group-based approach, but rendered blank boxes with text
+ * overflowing far outside them once the group (and its free visual scaling)
+ * was removed and geometry alone was pre-scaled. Without a group, nothing
+ * shrinks text automatically any more, so every text run's `w:sz` is scaled
+ * by the same `scale` factor as its container's geometry ({@link
+ * scaledFontSizeHalfPt}) to reproduce that same proportion explicitly.
+ */
+const NODE_FONT_SIZE_HALFPT = 24;
+/** Never scale a run below this — a diagram scaled small enough to hit this
+ * floor already has other legibility problems (see TODO.md's "lisibilité
+ * des gros diagrammes" entry); this only prevents an invalid/zero `w:sz`. */
+const MIN_FONT_SIZE_HALFPT = 4;
+
+/** Scale a base `w:sz` (half-points) by the diagram's overall scale factor,
+ * floored so it never reaches zero (see {@link MIN_FONT_SIZE_HALFPT}). */
+function scaledFontSizeHalfPt(baseHalfPt: number, scale: number): number {
+  return Math.max(MIN_FONT_SIZE_HALFPT, Math.round(baseHalfPt * scale));
+}
 
 /**
  * Usable page area in EMU for Pandoc's default reference document (US Letter,
@@ -175,15 +207,30 @@ function textColorFor(fillHex: string): string {
   return luminance > 0.6 ? '000000' : 'FFFFFF';
 }
 
+/** Default node-text insets (EMU, unscaled): 0.1in left/right, 0.05in
+ * top/bottom — Word's own defaults for a text-bearing shape. */
+const NODE_TEXT_INSET_X = 91440;
+const NODE_TEXT_INSET_Y = 45720;
+
 /**
  * The full `wps:bodyPr` element Word emits for a text-bearing shape, with all
  * the attributes needed for the fill to render (a bare `<wps:bodyPr/>` makes
  * Word render the group as an empty gray rectangle).
+ *
+ * Insets scale with `scale` like everything else (`renderContent`'s doc
+ * comment): left at a fixed 91440/45720 EMU regardless of how small `scale`
+ * has made the surrounding box, a significantly scaled-down node's insets
+ * alone can consume the entire box width, leaving no room to lay out the
+ * text at all — found rendering a 3-subgraph diagram scaled to ~40%, where
+ * every node's label rendered as blank (vertOverflow pushed it entirely
+ * outside the visible box) until these insets scaled down too.
  */
-function bodyPr(): string {
+function bodyPr(scale: number): string {
+  const insX = Math.round(NODE_TEXT_INSET_X * scale);
+  const insY = Math.round(NODE_TEXT_INSET_Y * scale);
   return [
     '<wps:bodyPr rot="0" spcFirstLastPara="0" vertOverflow="overflow" horzOverflow="overflow"',
-    '  vert="horz" wrap="square" lIns="91440" tIns="45720" rIns="91440" bIns="45720"',
+    `  vert="horz" wrap="square" lIns="${insX}" tIns="${insY}" rIns="${insX}" bIns="${insY}"`,
     '  numCol="1" spcCol="0" rtlCol="0" fromWordArt="0" anchor="ctr" anchorCtr="0"',
     '  forceAA="0" compatLnSpc="1">',
     '  <a:prstTxWarp prst="textNoShape"><a:avLst/></a:prstTxWarp>',
@@ -232,24 +279,46 @@ export function translateToOoxml(
   // the same allocator and must be taken before the group is rendered.
   const docPrId = nextId();
   const bb = computeBoundingBox(layout);
-  const group = renderGroup(flowchart, layout, fill, line, nextId);
-  return wrapInParagraph(group, bb, docPrId);
+  // Every child coordinate is pre-multiplied by this factor (see
+  // `renderContent`'s doc comment) instead of relying on an enclosing
+  // group's chOff/chExt-vs-ext transform to apply it implicitly.
+  const { scale } = scaledExtent(bb);
+  const content = renderContent(flowchart, layout, fill, line, nextId, scale);
+  return wrapInParagraph(content, bb, docPrId);
 }
 
 /**
- * Render the root `wpg:wgp` group (subgraphs + nodes + edges) with all
- * namespaces declared inline (self-contained).
+ * Render subgraphs + nodes + edges as siblings directly under the drawing
+ * canvas (`wpc:wpc`, `wrapInParagraph`) — no enclosing root `wpg:wgp`.
+ *
+ * A `wpg:wgp`/`wpg:grpSp` is a real Word "Group" object: Word treats its
+ * contents as one bundled unit on first click (double-click, or "Ungroup",
+ * to select an individual shape inside it) and, per user report, visibly
+ * doubles the selection outline (the canvas frame plus the group's own
+ * boundary) around the whole diagram. Subgraphs don't use `wpg:grpSp` either
+ * any more (`renderSubgraph`'s doc comment) — nothing in this translator's
+ * output groups shapes at all now. `wpc:wpc` already accepts `wps:wsp`
+ * directly per the OOXML schema, with no group needed to hold shapes
+ * together as one drawing.
+ *
+ * Dropping the root group loses its chOff/chExt-vs-ext trick for scaling an
+ * oversized diagram down to the page (`scaledExtent`) — that trick worked by
+ * giving every descendant coordinate a *native* value and letting Word's
+ * single group transform apply the visual shrink uniformly. Without a group,
+ * `scale` is applied directly to every coordinate at emission time instead:
+ * mathematically the same result (every descendant coordinate ends up
+ * multiplied by the same factor either way), just computed here rather than
+ * left to Word.
  */
-function renderGroup(
+function renderContent(
   flowchart: Flowchart,
   layout: LayoutResult,
   fill: string,
   line: string,
   nextId: () => number,
+  scale: number,
 ): string {
-  const bb = computeBoundingBox(layout);
   const parts: string[] = [];
-  parts.push(openGroup(bb, nextId()));
 
   // Pre-assign a unique numeric id to every node so connectors (stCxn/endCxn)
   // can reference the shape ids (the `wps:cNvPr id` attribute). Mermaid node
@@ -259,10 +328,10 @@ function renderGroup(
     nodeIds.set(node.id, nextId());
   }
 
-  // Render subgraphs as nested wpg:grpSp groups (spec §6.1), then nodes and edges.
+  // Render subgraph titles (spec §6.1) as flat shapes, then nodes and edges.
   const renderedSubgraphs = new Set<string>();
   for (const sg of flowchart.subgraphs) {
-    parts.push(renderSubgraph(sg, flowchart, layout, renderedSubgraphs, nextId));
+    parts.push(renderSubgraph(sg, flowchart, layout, renderedSubgraphs, nextId, scale));
   }
 
   for (const node of flowchart.nodes) {
@@ -271,7 +340,16 @@ function renderGroup(
     // Per-node fill from classDef takes priority over the global default.
     const nodeFill = hexColor(node.fill, fill);
     parts.push(
-      renderNode(nodeIds.get(node.id)!, node.id, node.label, node.shape, box, nodeFill, line),
+      renderNode(
+        nodeIds.get(node.id)!,
+        node.id,
+        node.label,
+        node.shape,
+        box,
+        nodeFill,
+        line,
+        scale,
+      ),
     );
   }
 
@@ -302,14 +380,16 @@ function renderGroup(
         otherBoxes,
         line,
         nextId,
+        scale,
       ),
     );
     if (edge.label) {
-      parts.push(renderEdgeLabel(edge.label, from, to, dagrePoints, otherBoxes, nextId()));
+      parts.push(
+        renderEdgeLabel(edge.label, from, to, dagrePoints, otherBoxes, nextId(), scale),
+      );
     }
   });
 
-  parts.push('</wpg:wgp>');
   return parts.join('\n');
 }
 
@@ -317,15 +397,20 @@ function renderGroup(
  * Wrap a `wpg:wgp` group in the schema-required paragraph hierarchy so Word
  * accepts the fragment as a drawing:
  * `w:p -> w:r -> w:drawing -> wp:inline -> a:graphic -> a:graphicData ->
- * wpc:wpc -> wpg:wgp`.
+ * wpc:wpc -> [shapes]`.
  *
  * The drawing is **inline** (spec §5.3), so it flows with the surrounding text
  * instead of floating over it, and it sits inside a drawing canvas (`wpc:wpc`)
- * — the container Word itself uses for a group of shapes, hence the
- * `wordprocessingCanvas` `a:graphicData` URI.
+ * — the container Word itself uses for a set of shapes, hence the
+ * `wordprocessingCanvas` `a:graphicData` URI. Content's top-level shapes are
+ * direct children of the canvas rather than wrapped in a `wpg:wgp` group
+ * (`renderContent`'s doc comment) — `wpc:wpc`'s content model accepts
+ * `wps:wsp`/`wpg:grpSp` directly, no enclosing group required — so the
+ * `wpg`/`wps`/`pic`/`r` namespaces those children need are declared here,
+ * on the canvas, instead of on a root group element that no longer exists.
  */
 function wrapInParagraph(
-  group: string,
+  content: string,
   bb: { width: number; height: number },
   docPrId: number,
 ): string {
@@ -341,10 +426,10 @@ function wrapInParagraph(
     '        <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>',
     `        <a:graphic ${NS.a}>`,
     '          <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">',
-    '            <wpc:wpc xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">',
+    `            <wpc:wpc xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" ${NS.wpg} ${NS.wps} ${NS.pic} ${NS.r}>`,
     '              <wpc:bg><a:solidFill><a:prstClr val="white"/></a:solidFill></wpc:bg>',
     '              <wpc:whole/>',
-    group,
+    content,
     '            </wpc:wpc>',
     '          </a:graphicData>',
     '        </a:graphic>',
@@ -360,11 +445,9 @@ function wrapInParagraph(
  * content's actual width when needed to stay clear of the LibreOffice
  * narrow-tall rendering failure (see {@link MIN_SAFE_ASPECT_RATIO}). The
  * padding is inert canvas margin to the right of the content — it does not
- * move or resize any node, subgraph, or edge, it only makes the group's own
- * declared bounding box wide enough to render at all. Both `wp:extent`/`a:ext`
- * (via {@link scaledExtent}) and the group's own `a:chExt` (`openGroup`) must
- * derive from this same padded value, or the two would disagree on what the
- * "native" size even is.
+ * move or resize any node, subgraph, or edge, it only makes the frame's own
+ * declared bounding box wide enough to render at all. `wp:extent`
+ * (via {@link scaledExtent}) derives from this same padded value.
  */
 function nativeExtent(bb: { width: number; height: number }): { cx: number; cy: number } {
   const nativeCx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
@@ -396,8 +479,24 @@ function scaledExtent(bb: { width: number; height: number }): {
 }
 
 /**
- * Render a subgraph as a nested `wpg:grpSp` group with its title in a
- * `wps:wsp` text box (spec §6.1). Nested subgraphs are rendered recursively.
+ * Render a subgraph's title as a plain top-level `wps:wsp` text box (spec
+ * §6.1), positioned with the same absolute (pre-scaled) coordinates as a
+ * node rather than nested in a `wpg:grpSp` group. Nested subgraphs are
+ * rendered recursively, each contributing its own flat title box.
+ *
+ * Not wrapped in a group any more (found 2026-09-02, alongside dropping the
+ * root `wpg:wgp` — `renderContent`'s doc comment): a subgraph never actually
+ * groups real content in the first place — member nodes are always rendered
+ * as separate top-level shapes at absolute coordinates (`renderContent`'s
+ * node loop), never nested inside the subgraph's own group — so the
+ * `wpg:grpSp` here only ever held a single title textbox positioned at
+ * (0,0) local to it. That's not just redundant, it's actively broken
+ * without a `wpg:wgp` ancestor: verified directly (2026-09-02) that
+ * LibreOffice renders a `wpg:grpSp` nested directly under `wpc:wpc` (no
+ * enclosing `wpg:wgp`) at the wrong position — its declared `a:off` is not
+ * honored — while the exact same title rendered as a plain top-level
+ * `wps:wsp` at the equivalent absolute coordinates lands correctly. A flat
+ * shape sidesteps the whole question, and needs no group logic at all.
  */
 function renderSubgraph(
   sg: Subgraph,
@@ -405,98 +504,58 @@ function renderSubgraph(
   layout: LayoutResult,
   rendered: Set<string>,
   nextId: () => number,
+  scale: number,
 ): string {
   if (rendered.has(sg.id)) return '';
   rendered.add(sg.id);
 
   const box = layout.subgraphs[sg.id];
   if (!box) return '';
-  const x = Math.round(box.x * EMU_PER_PX);
-  const y = Math.round(box.y * EMU_PER_PX);
-  const w = Math.max(1, Math.round(box.width * EMU_PER_PX));
-  const h = Math.max(1, Math.round(box.height * EMU_PER_PX));
+  const x = Math.round(box.x * EMU_PER_PX * scale);
+  const y = Math.round(box.y * EMU_PER_PX * scale);
+  const w = Math.max(1, Math.round(box.width * EMU_PER_PX * scale));
   const safeTitle = escapeXml(sg.title);
+  const insX = Math.round(NODE_TEXT_INSET_X * scale);
+  const insY = Math.round(NODE_TEXT_INSET_Y * scale);
 
   const parts: string[] = [];
-  parts.push('  <wpg:grpSp>');
-  parts.push(`    <wpg:cNvPr id="${nextId()}" name="${safeTitle}"/>`);
-  parts.push('    <wpg:cNvGrpSpPr/>');
-  parts.push('    <wpg:grpSpPr>');
+  parts.push('  <wps:wsp>');
+  parts.push(`    <wps:cNvPr id="${nextId()}" name="${safeTitle}"/>`);
+  parts.push('    <wps:cNvSpPr/>');
+  parts.push('    <wps:spPr>');
   parts.push('      <a:xfrm>');
   parts.push(`        <a:off x="${x}" y="${y}"/>`);
-  parts.push(`        <a:ext cx="${w}" cy="${h}"/>`);
-  parts.push('        <a:chOff x="0" y="0"/>');
-  parts.push(`        <a:chExt cx="${w}" cy="${h}"/>`);
+  parts.push(`        <a:ext cx="${w}" cy="${Math.round(SUBGRAPH_TITLE_HEIGHT * EMU_PER_PX * scale)}"/>`);
   parts.push('      </a:xfrm>');
-  parts.push('    </wpg:grpSpPr>');
+  parts.push('      <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
+  parts.push('      <a:noFill/>');
+  parts.push('      <a:ln w="0"><a:noFill/></a:ln>');
+  parts.push('    </wps:spPr>');
+  parts.push('    <wps:txbx>');
+  parts.push('      <w:txbxContent>');
+  parts.push('        <w:p>');
+  parts.push('          <w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>');
+  parts.push('          <w:r>');
+  parts.push(
+    `            <w:rPr><w:color w:val="000000"/><w:sz w:val="${scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)}"/></w:rPr>`,
+  );
+  parts.push(`            <w:t xml:space="preserve">${safeTitle}</w:t>`);
+  parts.push('          </w:r>');
+  parts.push('        </w:p>');
+  parts.push('      </w:txbxContent>');
+  parts.push('    </wps:txbx>');
+  parts.push(
+    `    <wps:bodyPr lIns="${insX}" tIns="${insY}" rIns="${insX}" bIns="${insY}" anchor="ctr" anchorCtr="0"/>`,
+  );
+  parts.push('  </wps:wsp>');
 
-  // Subgraph title as a text box (wps:wsp with wps:txbx) at the top.
-  parts.push('    <wps:wsp>');
-  parts.push(`      <wps:cNvPr id="${nextId()}" name="SubgraphTitle"/>`);
-  parts.push('      <wps:cNvSpPr/>');
-  parts.push('      <wps:spPr>');
-  parts.push('        <a:xfrm>');
-  parts.push('          <a:off x="0" y="0"/>');
-  parts.push(`          <a:ext cx="${w}" cy="${SUBGRAPH_TITLE_HEIGHT * EMU_PER_PX}"/>`);
-  parts.push('        </a:xfrm>');
-  parts.push('        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
-  parts.push('        <a:noFill/>');
-  parts.push('        <a:ln w="0"><a:noFill/></a:ln>');
-  parts.push('      </wps:spPr>');
-  parts.push('      <wps:txbx>');
-  parts.push('        <w:txbxContent>');
-  parts.push('          <w:p>');
-  parts.push('            <w:pPr><w:jc w:val="center"/></w:pPr>');
-  parts.push('            <w:r>');
-  parts.push('              <w:rPr><w:color w:val="000000"/></w:rPr>');
-  parts.push(`              <w:t xml:space="preserve">${safeTitle}</w:t>`);
-  parts.push('            </w:r>');
-  parts.push('          </w:p>');
-  parts.push('        </w:txbxContent>');
-  parts.push('      </wps:txbx>');
-  parts.push('      <wps:bodyPr anchor="ctr" anchorCtr="0"/>');
-  parts.push('    </wps:wsp>');
-
-  // Nested subgraphs.
+  // Nested subgraphs, each its own flat title box.
   for (const childId of sg.subgraphIds) {
     const child = flowchart.subgraphs.find((s) => s.id === childId);
-    if (child) parts.push(renderSubgraph(child, flowchart, layout, rendered, nextId));
+    if (child) parts.push(renderSubgraph(child, flowchart, layout, rendered, nextId, scale));
   }
 
-  parts.push('  </wpg:grpSp>');
   return parts.join('\n');
-}
-
-/**
- * Open the root `wpg:wgp` group with all namespaces declared inline.
- *
- * `a:ext` carries the (possibly scaled-down) on-page size while
- * `a:chOff`/`a:chExt` stay in native pixel-derived EMU, which is what makes
- * Word scale every child shape uniformly instead of clipping them.
- */
-function openGroup(bb: { width: number; height: number }, groupId: number): string {
-  const { cx, cy } = scaledExtent(bb);
-  const { cx: childCx, cy: childCy } = nativeExtent(bb);
-  return [
-    '<wpg:wgp',
-    `  ${NS.wpg}`,
-    `  ${NS.wps}`,
-    `  ${NS.wp}`,
-    `  ${NS.a}`,
-    `  ${NS.pic}`,
-    `  ${NS.r}`,
-    `  ${NS.w}>`,
-    `  <wpg:cNvPr id="${groupId}" name="Diagram group ${groupId}"/>`,
-    '  <wpg:cNvGrpSpPr/>',
-    '  <wpg:grpSpPr>',
-    '    <a:xfrm>',
-    '      <a:off x="0" y="0"/>',
-    `      <a:ext cx="${cx}" cy="${cy}"/>`,
-    '      <a:chOff x="0" y="0"/>',
-    `      <a:chExt cx="${childCx}" cy="${childCy}"/>`,
-    '    </a:xfrm>',
-    '  </wpg:grpSpPr>',
-  ].join('\n');
 }
 
 /**
@@ -518,11 +577,12 @@ function renderNode(
   box: Box,
   fill: string,
   line: string,
+  scale: number,
 ): string {
-  const x = Math.round(box.x * EMU_PER_PX);
-  const y = Math.round(box.y * EMU_PER_PX);
-  const w = Math.max(1, Math.round(box.width * EMU_PER_PX));
-  const h = Math.max(1, Math.round(box.height * EMU_PER_PX));
+  const x = Math.round(box.x * EMU_PER_PX * scale);
+  const y = Math.round(box.y * EMU_PER_PX * scale);
+  const w = Math.max(1, Math.round(box.width * EMU_PER_PX * scale));
+  const h = Math.max(1, Math.round(box.height * EMU_PER_PX * scale));
   const prst = PRST_BY_SHAPE[shape] ?? 'rect';
   const safeLabel = escapeXml(label);
   const safeMermaidId = escapeXml(mermaidId);
@@ -549,16 +609,24 @@ function renderNode(
     style(),
     '    <wps:txbx>',
     '      <w:txbxContent>',
+    // <w:spacing w:before="0" w:after="0"/> overrides Pandoc's reference.docx
+    // docDefaults (w:pPrDefault -> w:spacing w:after="200", i.e. 10pt after
+    // every paragraph unless overridden). Found from a real Word screenshot
+    // (2026-09-02): with `anchor="ctr"` centering the whole paragraph box —
+    // including that trailing 10pt nothing renders into — the visible glyphs
+    // sat noticeably higher than centered, a bigger gap below the text than
+    // above it. No w:before default exists to match, so the extra space was
+    // one-sided rather than at least being symmetric.
     '        <w:p>',
-    '          <w:pPr><w:jc w:val="center"/></w:pPr>',
+    '          <w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
     '          <w:r>',
-    `            <w:rPr><w:color w:val="${textColor}"/></w:rPr>`,
+    `            <w:rPr><w:color w:val="${textColor}"/><w:sz w:val="${scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)}"/></w:rPr>`,
     `            <w:t xml:space="preserve">${safeLabel}</w:t>`,
     '          </w:r>',
     '        </w:p>',
     '      </w:txbxContent>',
     '    </wps:txbx>',
-    bodyPr(),
+    bodyPr(scale),
     '  </wps:wsp>',
   ].join('\n');
 }
@@ -581,14 +649,37 @@ function connectorStyle(): string {
 
 /**
  * Connection-site indices for the built-in preset geometries used here (rect,
- * roundRect, diamond, ellipse, can): 0=top, 1=right, 2=bottom, 3=left,
- * clockwise from the top. Verified against a real Word-authored document
- * (`tools/word-reference/`): a vertical connector between two stacked
- * rectangles used `idx="2"` (bottom) at the source and `idx="0"` (top) at the
- * target — Word's own indices are 0-based, not the 1-based "1=top..4=left"
- * an earlier version of this file assumed.
+ * roundRect, diamond, ellipse, can): 0=top, 1=left, 2=bottom, 3=right —
+ * counter-clockwise from the top, 0-based.
+ *
+ * Corrected 2026-09-02 (previously `{ top: 0, right: 1, bottom: 2, left: 3 }`,
+ * i.e. right/left swapped). The only empirical check this ever had
+ * (`tools/word-reference/`) used a *vertical* connector between two stacked
+ * rectangles, which only exercises idx 0 (top) and 2 (bottom) — the
+ * right/left half of the mapping was never actually tested, just assumed
+ * clockwise-from-top by symmetry. That assumption was wrong: decoded
+ * directly from LibreOffice's `oox-drawingml-cs-presets` (its own mirror of
+ * Microsoft's official `presetShapeDefinitions.xml`, per
+ * https://learn.microsoft.com/en-us/archive/blogs/openspecification/how-to-use-the-presetshapedefinitions-xml-file-and-fun-with-drawingml),
+ * both `rect` and `diamond`'s `GluePoints` (OOXML `cxnLst` equivalent) list
+ * connection sites in the order top(0)/left/(1)/bottom(2)/right(3) — the
+ * same for both shapes, so this isn't diamond-specific.
+ *
+ * This only affects the `idx` we *stamp* on `stCxn`/`endCxn` (the magnetic
+ * attachment Word uses to keep a connector attached to a shape when it's
+ * dragged, and — per user report — appears to influence initial rendering
+ * too); the connector's own drawn path (`bentConnectorGeometry`/
+ * `straightConnectorGeometry`) is a literal point list computed by
+ * `sitePoint()` below, unaffected by this constant and geometrically correct
+ * either way. That's why the old (wrong) mapping never produced a visibly
+ * broken connector in LibreOffice — LibreOffice draws the literal path we
+ * provide — but did in a real Word, which appears to prefer its own
+ * connection-site semantics over the static geometry for at least some
+ * shapes/paths. Not independently re-verified against a real Word document
+ * with a horizontal connector (`tools/word-reference/` only has the vertical
+ * case) — flagged in TODO.md.
  */
-const SITE = { top: 0, right: 1, bottom: 2, left: 3 } as const;
+const SITE = { top: 0, right: 3, bottom: 2, left: 1 } as const;
 
 /** The point where a connector attaches to a box for a given connection site. */
 function sitePoint(box: Box, side: number): { x: number; y: number } {
@@ -825,12 +916,13 @@ function renderEdge(
   otherBoxes: Box[],
   line: string,
   nextId: () => number,
+  scale: number,
 ): string {
   const lineStyle = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
   const { stSide, endSide, points } = connectorGeometry(from, to, dagrePoints, otherBoxes);
   const emuPoints = points.map((p) => ({
-    x: Math.round(p.x * EMU_PER_PX),
-    y: Math.round(p.y * EMU_PER_PX),
+    x: Math.round(p.x * EMU_PER_PX * scale),
+    y: Math.round(p.y * EMU_PER_PX * scale),
   }));
 
   const geometry =
@@ -861,9 +953,56 @@ function renderEdge(
   ].join('\n');
 }
 
-/** Width/height in EMU of the transparent box holding an edge label. */
-const EDGE_LABEL_CX = 685800; // 0.75in — fits a short `-->|Texte|` caption
-const EDGE_LABEL_CY = 228600; // 0.25in
+/** Height in EMU of the transparent box holding an edge label (0.25in). */
+const EDGE_LABEL_CY = 228600;
+/** Point size of edge-label text (`w:sz`, half-points, so 16 = 8pt), in px
+ * at 96 DPI — needed to size the box to its own text (see `edgeLabelWidth`),
+ * distinct from `FONT_SIZE_PX` (node/subgraph-title text's larger effective
+ * size, `layout.ts`). */
+const EDGE_LABEL_FONT_SIZE_PX = (8 * 96) / 72;
+/** Horizontal padding (px, each side) between an edge label's text and its
+ * box edge — mirrors `bodyPr`'s `lIns`/`rIns` below, applied twice (once
+ * baked into the box width, once as the inset) so a same-size rendering
+ * error in `estimateTextWidth` (an approximation, no real font metrics —
+ * see `layout.ts`'s `nodeDimensions` doc comment for why) still leaves the
+ * text clear of the edge instead of exactly touching it. */
+const EDGE_LABEL_PAD_X_PX = 8;
+/**
+ * Safety multiplier applied to `estimateTextWidth`'s raw estimate before
+ * sizing an edge-label box. Found empirically (2026-09-02): `layout.ts`'s
+ * per-character em table was calibrated against `FONT_SIZE_PX` (16px, node
+ * text); scaled linearly down to `EDGE_LABEL_FONT_SIZE_PX` (~10.7px, an 8pt
+ * edge-label caption), it undershot badly — bisecting the real
+ * non-wrapping width for "Non" in LibreOffice landed around 42px total box
+ * width (34px of interior text room after insets), while the unscaled
+ * estimate for the same word predicted only ~20px. Small serif glyphs don't
+ * shrink as fast as their point size at this scale, an effect the
+ * single-size-calibrated table doesn't capture. 1.8x tracks the ~1.7x gap
+ * observed, with a little room to spare.
+ */
+const EDGE_LABEL_TEXT_SAFETY_MARGIN = 1.8;
+/** Floor under a computed edge-label width, so a one-character label (e.g.
+ * a bare "?") doesn't get a box narrower than is comfortable to read. */
+const MIN_EDGE_LABEL_WIDTH_PX = 44;
+
+/**
+ * An edge label's box width in EMU, sized to its own text instead of a fixed
+ * constant — a fixed-width box (previously 0.75in for every label
+ * regardless of content) was both too narrow for long captions, which then
+ * overflowed past its edges (`wrap="none"`, no horizontal insets), and too
+ * *wide* for short ones ("Oui", "Non"): centering an oversized box on a
+ * diagonal connector's midpoint only sits the true center pixel on the
+ * line, not the text itself, since the diagonal only crosses the box's
+ * vertical middle at one point along its width — the wider the box, the more
+ * the visible text departs from that single point, reading as the label not
+ * being centered on the arrow even though the box's geometric center is
+ * exact. Right-sizing the box makes that gap negligible.
+ */
+function edgeLabelWidthEmu(label: string): number {
+  const textWidthPx = estimateTextWidth(label, EDGE_LABEL_FONT_SIZE_PX) * EDGE_LABEL_TEXT_SAFETY_MARGIN;
+  const widthPx = Math.max(MIN_EDGE_LABEL_WIDTH_PX, textWidthPx + 2 * EDGE_LABEL_PAD_X_PX);
+  return Math.round(widthPx * EMU_PER_PX);
+}
 
 /**
  * Render an edge label (`-->|Texte|`) as a borderless, fill-free `wps:txbx`
@@ -881,15 +1020,19 @@ function renderEdgeLabel(
   dagrePoints: LayoutPoint[],
   otherBoxes: Box[],
   id: number,
+  scale: number,
 ): string {
   const { points } = connectorGeometry(from, to, dagrePoints, otherBoxes);
   // The midpoint by arc length along the real (possibly bent) path, not the
   // straight line between the two ends — for a routed edge, that straight
   // line is exactly the segment the routing was drawn to avoid.
   const mid = pointAlongPath(points, 0.5);
-  const x = Math.round(mid.x * EMU_PER_PX - EDGE_LABEL_CX / 2);
-  const y = Math.round(mid.y * EMU_PER_PX - EDGE_LABEL_CY / 2);
+  const cx = Math.round(edgeLabelWidthEmu(label) * scale);
+  const cy = Math.round(EDGE_LABEL_CY * scale);
+  const x = Math.round(mid.x * EMU_PER_PX * scale - cx / 2);
+  const y = Math.round(mid.y * EMU_PER_PX * scale - cy / 2);
   const safeLabel = escapeXml(label);
+  const insetEmu = Math.round((EDGE_LABEL_PAD_X_PX / 2) * EMU_PER_PX * scale);
 
   return [
     '  <wps:wsp>',
@@ -898,7 +1041,7 @@ function renderEdgeLabel(
     '    <wps:spPr>',
     '      <a:xfrm>',
     `        <a:off x="${x}" y="${y}"/>`,
-    `        <a:ext cx="${EDGE_LABEL_CX}" cy="${EDGE_LABEL_CY}"/>`,
+    `        <a:ext cx="${cx}" cy="${cy}"/>`,
     '      </a:xfrm>',
     '      <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
     '      <a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>',
@@ -907,15 +1050,15 @@ function renderEdgeLabel(
     '    <wps:txbx>',
     '      <w:txbxContent>',
     '        <w:p>',
-    '          <w:pPr><w:jc w:val="center"/></w:pPr>',
+    '          <w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
     '          <w:r>',
-    '            <w:rPr><w:color w:val="000000"/><w:sz w:val="16"/></w:rPr>',
+    `            <w:rPr><w:color w:val="000000"/><w:sz w:val="${scaledFontSizeHalfPt(16, scale)}"/></w:rPr>`,
     `            <w:t xml:space="preserve">${safeLabel}</w:t>`,
     '          </w:r>',
     '        </w:p>',
     '      </w:txbxContent>',
     '    </wps:txbx>',
-    '    <wps:bodyPr rot="0" vert="horz" wrap="none" lIns="0" tIns="0" rIns="0" bIns="0"',
+    `    <wps:bodyPr rot="0" vert="horz" wrap="none" lIns="${insetEmu}" tIns="0" rIns="${insetEmu}" bIns="0"`,
     '      anchor="ctr" anchorCtr="1"><a:noAutofit/></wps:bodyPr>',
     '  </wps:wsp>',
   ].join('\n');

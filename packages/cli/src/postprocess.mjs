@@ -49,8 +49,21 @@ const EXTENDED_NS = {
  * Prefixes listed in `mc:Ignorable` — the extensions Word may safely skip.
  * `wpc`/`wpg`/`wps` are deliberately absent: they carry the diagram itself, so
  * declaring them ignorable would licence Word to drop it.
+ *
+ * Every prefix listed here MUST also be declared via `xmlns:` on the root
+ * (`EXTENDED_NS` above, or Pandoc's own declarations) — the markup-compatibility
+ * spec (ECMA-376 Part 3) requires an `mc:Ignorable` prefix to resolve to an
+ * in-scope namespace. This used to list the full boilerplate a real Word
+ * document advertises (`w14 w15 w16se w16cid w16 w16cex w16sdtdh w16sdtfl
+ * w16du wp14`), copied from a real Word document's root without also copying
+ * the xmlns declarations those extra prefixes need — nine undeclared
+ * prefixes, invalid per spec. Word's parser enforces this strictly and
+ * reports the file as needing repair; LibreOffice does not, which is why this
+ * went unnoticed through every LibreOffice-headless and structural-XML check
+ * (found 2026-09-02, opening a generated .docx in real Word for the first
+ * time). `wp14` is the only one of that list we actually declare.
  */
-const IGNORABLE = 'w14 w15 w16se w16cid w16 w16cex w16sdtdh w16sdtfl w16du wp14';
+const IGNORABLE = 'wp14';
 
 /** Elements whose `id` attribute *defines* a drawing object id. */
 const ID_DEFINING_ELEMENTS = ['wp:docPr', 'wpg:cNvPr', 'wps:cNvPr', 'pic:cNvPr'];

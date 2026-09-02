@@ -10,23 +10,23 @@ function translate(text: string): string {
   return translateToOoxml(ast, layout(ast));
 }
 
-test('emits a self-contained wpg:wgp group', () => {
+test('emits a self-contained drawing canvas with the shape/group namespaces declared', () => {
   const xml = translate('graph TD\n  A[Start] --> B[End]');
-  assert.ok(xml.includes('<wpg:wgp'));
-  assert.ok(xml.includes('</wpg:wgp>'));
+  assert.ok(xml.includes('<wpc:wpc'));
+  assert.ok(xml.includes('</wpc:wpc>'));
   assert.ok(xml.includes('xmlns:wpg='));
   assert.ok(xml.includes('xmlns:wps='));
   assert.ok(xml.includes('xmlns:a='));
 });
 
-test('wraps the wpg:wgp in the schema-required paragraph hierarchy (spec §5.3)', () => {
+test('wraps the drawing canvas in the schema-required paragraph hierarchy (spec §5.3)', () => {
   const xml = translate('graph TD\n  A[Start] --> B[End]');
   // The fragment must be a complete w:p paragraph so Word accepts it as a
-  // drawing (a bare wpg:wgp cannot be a direct child of w:body).
+  // drawing (a bare wpc:wpc cannot be a direct child of w:body).
   assert.ok(xml.startsWith('<w:p '));
   assert.ok(xml.trimEnd().endsWith('</w:p>'));
   // Schema-required nesting: w:p -> w:r -> w:drawing -> wp:inline ->
-  // a:graphic -> a:graphicData -> wpc:wpc -> wpg:wgp.
+  // a:graphic -> a:graphicData -> wpc:wpc -> [shapes, no wrapping group].
   const order = [
     '<w:p ',
     '<w:r>',
@@ -35,8 +35,7 @@ test('wraps the wpg:wgp in the schema-required paragraph hierarchy (spec §5.3)'
     '<a:graphic ',
     '<a:graphicData ',
     '<wpc:wpc ',
-    '<wpg:wgp',
-    '</wpg:wgp>',
+    '<wps:wsp>',
     '</wpc:wpc>',
     '</a:graphicData>',
     '</a:graphic>',
@@ -74,8 +73,9 @@ test('maps node shapes to preset geometries', () => {
 
 test('uses EMU coordinates (px * 9525)', () => {
   const xml = translate('graph TD\n  A --> B');
-  // Node width 120px -> 120 * 9525 = 1143000 EMU.
-  assert.ok(xml.includes('cx="1143000"'));
+  // Single-char label "A"/"B": text-driven sizing bottoms out at the
+  // MIN_NODE_WIDTH floor (70px) -> 70 * 9525 = 666750 EMU.
+  assert.ok(xml.includes('cx="666750"'));
 });
 
 test('escapes XML-significant characters in labels (rule #2)', () => {
@@ -117,13 +117,17 @@ test('applies classDef fill to a node (spec §6.3)', () => {
   assert.ok(xml.includes('val="D9E2F3"'));
 });
 
-test('renders a subgraph as a nested wpg:grpSp with title (spec §6.1)', () => {
+test('renders a subgraph title as a flat top-level shape, not a wpg group (spec §6.1)', () => {
   const xml = translate('graph TD\n  subgraph S1[Groupe A]\n    A --> B\n  end\n  B --> C');
-  // Root group (wpg:wgp) + nested subgraph group (wpg:grpSp).
-  assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 1);
-  assert.equal((xml.match(/<\/wpg:wgp>/g) ?? []).length, 1);
-  assert.equal((xml.match(/<wpg:grpSp>/g) ?? []).length, 1);
-  assert.equal((xml.match(/<\/wpg:grpSp>/g) ?? []).length, 1);
+  // No wpg:wgp/wpg:grpSp at all any more: a subgraph never actually nests
+  // real content (member nodes always render as separate top-level shapes,
+  // renderContent's node loop) — its title used to be the sole occupant of
+  // a wpg:grpSp, which only worked by accident since it needed a wpg:wgp
+  // ancestor to position correctly (verified empirically in LibreOffice,
+  // renderSubgraph's doc comment); it now renders as a plain wps:wsp at
+  // absolute coordinates, like a node.
+  assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 0);
+  assert.equal((xml.match(/<wpg:grpSp>/g) ?? []).length, 0);
   assert.ok(xml.includes('Groupe A'));
 });
 
@@ -206,6 +210,21 @@ test('label text gets an explicit colour readable against its fill', () => {
   assert.ok(dark.includes('<w:color w:val="FFFFFF"/>'));
 });
 
+test('node/subgraph-title/edge-label text overrides the inherited paragraph spacing', () => {
+  // Found from a real Word screenshot (2026-09-02): text sat visibly higher
+  // than centered in its shape, a bigger gap below than above. Cause:
+  // Pandoc's reference.docx sets a document-wide default of 10pt space
+  // *after* every paragraph (docDefaults -> w:pPrDefault), which our shape
+  // text never overrode — with `anchor="ctr"` centering the whole paragraph
+  // box (glyphs + that trailing, invisible 10pt), the visible text ends up
+  // off-center. Every w:pPr this translator emits for shape text must zero
+  // both sides explicitly rather than trust the inherited default.
+  const xml = translate('graph TD\n  subgraph S[Title]\n    A[A] -->|label| B[B]\n  end');
+  const spacingCount = (xml.match(/<w:spacing w:before="0" w:after="0"\/>/g) ?? []).length;
+  // One per w:p: the subgraph title, node A, node B, and the edge label.
+  assert.equal(spacingCount, 4, `expected 4 zeroed paragraph spacings, found ${spacingCount}`);
+});
+
 test('an oversized diagram is scaled down to the usable page area', () => {
   // A wide graph would otherwise emit an extent many times the page width and
   // be clipped by Word. Height is capped too, on purpose: verified
@@ -217,45 +236,66 @@ test('an oversized diagram is scaled down to the usable page area', () => {
   const xml = translate(wide);
   const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
   assert.ok(extent);
-  assert.ok(Number(extent[1]) <= 5943600, `extent cx ${extent[1]} exceeds the usable page width`);
-  assert.ok(Number(extent[2]) <= 8229600, `extent cy ${extent[2]} exceeds the usable page height`);
-  // The children keep native coordinates; Word applies the homothety.
-  assert.ok(/<a:chExt cx="(\d+)"/.exec(xml));
+  const cx = Number(extent[1]);
+  const cy = Number(extent[2]);
+  assert.ok(cx <= 5943600, `extent cx ${cx} exceeds the usable page width`);
+  assert.ok(cy <= 8229600, `extent cy ${cy} exceeds the usable page height`);
+  // No enclosing group to let Word apply the shrink for us any more (see
+  // renderContent's doc comment) — every child must already be pre-scaled to
+  // fit inside the declared extent itself. A 41-node LR chain is far wider
+  // natively than the page, so if scaling weren't actually applied to child
+  // coordinates, at least one node would land far past cx.
+  const maxChildRight = Math.max(
+    ...[...xml.matchAll(/<a:off x="(\d+)" y="\d+"\/>\s*<a:ext cx="(\d+)" cy="\d+"\/>/g)].map(
+      (m) => Number(m[1]) + Number(m[2]),
+    ),
+  );
+  assert.ok(
+    maxChildRight <= cx + 9525,
+    `a child shape extends to ${maxChildRight}, past the declared extent cx=${cx} — scaling was not applied to its coordinates`,
+  );
 });
 
-test('a tall, narrow diagram gets its native chExt widened to a safe aspect ratio', () => {
+test('a tall, narrow diagram gets its extent widened to a safe aspect ratio', () => {
   // Regression: verified empirically (soffice --headless render) that a
   // wpc:wpc/wpg:wgp group taller than ~7.5in renders NOTHING AT ALL in
   // LibreOffice once its native width:height ratio drops much below 1:1 —
   // not degraded, completely absent. A single-column chain long enough to
-  // exceed the risk height is exactly that shape.
-  const tall = ['graph TD', ...Array.from({ length: 10 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
+  // exceed the risk height is exactly that shape. There is no more separate
+  // native-vs-display coordinate space to check (no enclosing group) — but
+  // scale multiplies both dimensions of the extent equally, so the widening
+  // is still directly observable on `wp:extent`'s own aspect ratio.
+  // N0..N9 (single-digit ids only): every label is the same length, so
+  // every node gets the same text-driven width and stays centered on the
+  // same x — an N10 here would be one character wider than the rest, no
+  // longer landing at x=0 for reasons unrelated to what this test checks.
+  const tall = ['graph TD', ...Array.from({ length: 9 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
   const xml = translate(tall);
-  const chExt = /<a:chExt cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
-  assert.ok(chExt);
-  const cx = Number(chExt![1]);
-  const cy = Number(chExt![2]);
-  assert.ok(cy > 6858000, `test fixture should exceed the 7.5in risk height (cy=${cy})`);
-  assert.ok(cx / cy >= 1, `native aspect ratio ${cx}/${cy} is below the safe 1:1 floor`);
-  // The padding must not move any node — only the group's own declared bbox
-  // grows; the content stays exactly where the layout put it.
+  const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
+  assert.ok(extent);
+  const cx = Number(extent![1]);
+  const cy = Number(extent![2]);
+  assert.ok(cx / cy >= 1, `extent aspect ratio ${cx}/${cy} is below the safe 1:1 floor`);
+  // The padding must not move any node — only the frame's own declared width
+  // grows; the content stays exactly where the layout put it (x=0).
   const firstNode = /<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="\d+" cy="\d+"\/>\s*<\/a:xfrm>\s*<a:prstGeom prst="rect"/.exec(
     xml,
   );
   assert.ok(firstNode);
-  assert.equal(Number(firstNode![1]), 0, 'the first node should still start at native x=0');
+  assert.equal(Number(firstNode![1]), 0, 'the first node should still start at x=0');
 });
 
 test('a short diagram is not widened, even if narrow', () => {
   const short = translate('graph TD\n  A[A] --> B[B]');
-  const chExt = /<a:chExt cx="(\d+)" cy="(\d+)"\/>/.exec(short);
-  assert.ok(chExt);
-  const cx = Number(chExt![1]);
-  const cy = Number(chExt![2]);
-  assert.ok(cy <= 6858000, 'test fixture should be under the risk height');
-  // Native width matches the actual content width (120px node), not padded
-  // out to match height — the whole point is this case needs no help.
-  assert.equal(cx, 120 * 9525);
+  const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(short);
+  assert.ok(extent);
+  const cy = Number(extent![2]);
+  assert.ok(cy <= 6858000, 'test fixture should be under the 7.5in risk height');
+  // Width matches the actual content width (single-char "A"/"B" labels
+  // bottom out at the 70px MIN_NODE_WIDTH floor), not padded out to match
+  // height, and the diagram is small enough that scale stays 1 — the whole
+  // point is this case needs no help.
+  assert.equal(Number(extent![1]), 70 * 9525);
 });
 
 test('colours reaching a:srgbClr are validated as hex, not merely escaped', () => {
@@ -276,19 +316,38 @@ test('connector endpoints land on the box perimeter, not the box center', () => 
     xml,
   );
   assert.ok(off, 'expected to find the connector xfrm');
-  // A is 60px tall starting at y=0, so its bottom edge is at y=60 (571500 EMU).
-  // The connector's start y must be there, not at A's center (y=30, 285750 EMU).
-  assert.equal(Number(off[2]), 60 * 9525, 'connector must start at the box edge, not its center');
+  // A single-char label "A" is text-driven-sized (nodeDimensions: line
+  // height + padding + the wrap buffer, times SCALE_SAFETY_MARGIN) to 75px,
+  // above the 40px MIN_NODE_HEIGHT floor, so the text-driven value wins. A's
+  // bottom edge is at y=75 (714375 EMU). The connector's start y must be
+  // there, not at A's center.
+  assert.equal(Number(off[2]), 75 * 9525, 'connector must start at the box edge, not its center');
   assert.ok(Number(off[4]) > 0);
 });
 
-test('connection-site indices follow Word\'s own 0-based convention (0=top,1=right,2=bottom,3=left)', () => {
+test('vertical connection-site indices: 2=bottom at the source, 0=top at the target', () => {
   // Verified against a real Word-authored document (tools/word-reference/): a
   // vertical connector used idx=2 (bottom) at the source, idx=0 (top) at the
   // target — not the 1-based "1=top..4=left" an earlier version assumed.
   const xml = translate('graph TD\n  A[A] --> B[B]');
   assert.ok(/<a:stCxn id="\d+" idx="2"\/>/.test(xml), 'source should attach at the bottom (idx=2)');
   assert.ok(/<a:endCxn id="\d+" idx="0"\/>/.test(xml), 'target should attach at the top (idx=0)');
+});
+
+test('horizontal connection-site indices: 3=right at the source, 1=left at the target', () => {
+  // Found 2026-09-02 opening a generated .docx in real Word: connectors
+  // looked attached to the wrong side. The vertical case above (idx 0/2) was
+  // the only one ever checked against a real Word document — the left/right
+  // half of the SITE mapping was an unverified assumption (clockwise from
+  // top: 0=top,1=right,2=bottom,3=left), and it was backwards. Decoded from
+  // LibreOffice's oox-drawingml-cs-presets (its mirror of Microsoft's
+  // presetShapeDefinitions.xml): both `rect` and `diamond` list connection
+  // sites top(0)/left(1)/bottom(2)/right(3) — counter-clockwise, not
+  // clockwise. `flowchart LR` is exactly the case that exercises idx 1/3, so
+  // this would have gone uncaught by every TD-only test in this file.
+  const xml = translate('graph LR\n  A[A] --> B[B]');
+  assert.ok(/<a:stCxn id="\d+" idx="3"\/>/.test(xml), 'source should attach at the right (idx=3)');
+  assert.ok(/<a:endCxn id="\d+" idx="1"\/>/.test(xml), 'target should attach at the left (idx=1)');
 });
 
 test('an arrow head lands on the target box edge, not its center (would otherwise render hidden under the fill)', () => {
@@ -306,13 +365,20 @@ test('an arrow head lands on the target box edge, not its center (would otherwis
 
 test('an edge label sits on the connector segment midpoint, not the node-center midpoint', () => {
   const xml = translate('graph TD\n  A[A] -->|Texte| B[B]');
-  const label = /<wps:cNvPr id="\d+" name="EdgeLabel"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>/.exec(xml);
+  // x can legitimately go slightly negative: the label box has a fixed width
+  // (EDGE_LABEL_CX, sized for a short caption) centered on the connector's
+  // x, which can now be narrower than that fixed label width since node
+  // width is text-driven — a 1px overhang for single-char labels, not a bug.
+  const label = /<wps:cNvPr id="\d+" name="EdgeLabel"\/>[\s\S]*?<a:off x="(-?\d+)" y="(-?\d+)"\/>/.exec(xml);
   assert.ok(label);
   const y = Number(label[2]);
-  // The connector spans from A's bottom (y=60px) to B's top (y=140px), so its
-  // midpoint is y=100px. The old node-center-to-node-center midpoint would
-  // have been y=115px (center of A at 30 to center of B at 200 → 115).
-  const midpointEmu = 100 * 9525;
+  // A[A] is 75px tall (see the connector-perimeter test above), so its
+  // bottom is at y=75px; B[B] is at the next Dagre rank, LEVEL_GAP(80px)
+  // below that, so its top is at y=155px. Midpoint y=115px. The old
+  // node-center-to-node-center midpoint would have been a different value —
+  // what matters here is the connector's real segment midpoint, not a
+  // specific historical number.
+  const midpointEmu = 115 * 9525;
   assert.ok(Math.abs(y + 228600 / 2 - midpointEmu) < 9525, `label y=${y} not on the connector midpoint`);
 });
 

@@ -67,13 +67,15 @@ function readDocumentXml(docxPath) {
 
 /** Assert the .docx is a valid ZIP whose document.xml has the schema-required
  * OOXML hierarchy (spec §5.3): w:p -> w:r -> w:drawing -> wp:inline ->
- * a:graphic -> a:graphicData -> wpc:wpc -> wpg:wgp, with wps:wsp shapes. */
+ * a:graphic -> a:graphicData -> wpc:wpc -> wps:wsp shapes (no wrapping
+ * wpg:wgp group around the top-level content — see ooxml-translator.ts's
+ * renderContent doc comment). A subgraph, if the diagram has one, still
+ * nests as its own wpg:grpSp inside the canvas. */
 function assertConformantDocx(docxPath, name) {
   // Valid ZIP.
   execFileSync('unzip', ['-t', docxPath], { stdio: 'pipe' });
   const xml = readDocumentXml(docxPath);
   const ctx = `corpus file ${name}.docx`;
-  assert.ok(xml.includes('<wpg:wgp'), `${ctx}: missing wpg:wgp`);
   assert.ok(xml.includes('<w:drawing>'), `${ctx}: missing w:drawing`);
   // Inline, not anchored: the diagram flows with the text (spec §5.3).
   assert.ok(xml.includes('<wp:inline '), `${ctx}: missing wp:inline`);
@@ -83,10 +85,10 @@ function assertConformantDocx(docxPath, name) {
   assert.ok(xml.includes('<a:graphicData '), `${ctx}: missing a:graphicData`);
   assert.ok(xml.includes('<wpc:wpc '), `${ctx}: missing wpc:wpc canvas`);
   assert.ok(xml.includes('<wps:wsp>'), `${ctx}: missing wps:wsp shapes`);
-  // The wpg:wgp must be nested inside wpc:wpc, not a bare child of body.
-  const wgp = xml.indexOf('<wpg:wgp');
+  // The shapes must be nested inside wpc:wpc, not a bare child of body.
+  const wsp = xml.indexOf('<wps:wsp>');
   const wpc = xml.indexOf('<wpc:wpc ');
-  assert.ok(wgp > wpc, `${ctx}: wpg:wgp must be nested inside wpc:wpc`);
+  assert.ok(wsp > wpc, `${ctx}: wps:wsp must be nested inside wpc:wpc`);
   // Every wps:wsp must have a wps:cNvPr with id and name (MS-OE376).
   const cNvPrs = xml.match(/<wps:cNvPr [^>]*>/g) ?? [];
   assert.ok(cNvPrs.length > 0, `${ctx}: no wps:cNvPr found`);
@@ -182,12 +184,12 @@ test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   assert.ok(/w:styleId="KeywordTok"[\s\S]{0,200}?<w:color /.test(styles), 'KeywordTok has no colour defined');
   assert.ok(/w:styleId="VerbatimChar"[\s\S]{0,200}?<w:rFonts /.test(styles), 'VerbatimChar has no monospace font defined');
 
-  // Both diagrams converted: two independent wpg:wgp groups, no id collisions
-  // across the whole document (the corpus loop's assertConformantDocx already
-  // checks this per-file, but re-asserted here since this file specifically
-  // exercises two diagrams interleaved with text, the scenario most likely to
-  // produce id reuse).
-  assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 2, 'expected exactly two wpg:wgp groups');
+  // Both diagrams converted: two independent drawing canvases, no id
+  // collisions across the whole document (the corpus loop's
+  // assertConformantDocx already checks this per-file, but re-asserted here
+  // since this file specifically exercises two diagrams interleaved with
+  // text, the scenario most likely to produce id reuse).
+  assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 2, 'expected exactly two wpc:wpc canvases');
 });
 
 test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', () => {
@@ -213,8 +215,9 @@ test('simple: markdown with a mermaid A --> B produces a conformant docx', () =>
     const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab');
     assertConformantDocx(docx, 'ab');
     const xml = readDocumentXml(docx);
-    // Exactly one wpg:wgp group.
-    assert.equal((xml.match(/<wpg:wgp/g) ?? []).length, 1, 'expected exactly one wpg:wgp');
+    // Exactly one drawing canvas, no wrapping group (no subgraphs here).
+    assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas');
+    assert.ok(!xml.includes('<wpg:wgp'), 'a subgraph-free diagram must not emit a wpg:wgp');
     // Two node shapes (A, B) + one connector.
     assert.equal((xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length, 2, 'expected 2 node shapes');
     assert.equal((xml.match(/<wps:cNvCnPr>/g) ?? []).length, 1, 'expected 1 connector');

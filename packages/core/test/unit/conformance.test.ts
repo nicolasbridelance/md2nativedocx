@@ -31,10 +31,13 @@ test('output is a complete w:p paragraph (block-level drawing)', () => {
   assert.ok(xml.trimEnd().endsWith('</w:p>'), 'must end with </w:p>');
 });
 
-test('wpg:wgp is nested in the schema-required hierarchy', () => {
+test('shapes are nested in the schema-required hierarchy, directly under the canvas', () => {
   const xml = translate('graph TD\n  A --> B');
   // w:p -> w:r -> w:drawing -> wp:inline -> a:graphic -> a:graphicData ->
-  // wpc:wpc -> wpg:wgp (Word renders a shape group inside a drawing canvas).
+  // wpc:wpc -> wps:wsp (top-level shapes are direct canvas children, not
+  // wrapped in a wpg:wgp group — see renderContent's doc comment: a real
+  // Word "Group" object bundles its contents as one click target and, per
+  // user report, doubles the selection outline around the whole diagram).
   let idx = assertAfter(xml, '<w:p ', -1);
   idx = assertAfter(xml, '<w:r>', idx);
   idx = assertAfter(xml, '<w:drawing>', idx);
@@ -44,9 +47,9 @@ test('wpg:wgp is nested in the schema-required hierarchy', () => {
   idx = assertAfter(xml, '<a:graphic ', idx);
   idx = assertAfter(xml, '<a:graphicData ', idx);
   idx = assertAfter(xml, '<wpc:wpc ', idx);
-  idx = assertAfter(xml, '<wpg:wgp', idx);
+  idx = assertAfter(xml, '<wps:wsp>', idx);
+  assert.ok(!xml.includes('<wpg:wgp'), 'top-level content must not be wrapped in a wpg:wgp group');
   // And the closing tags in reverse order.
-  idx = assertAfter(xml, '</wpg:wgp>', idx);
   idx = assertAfter(xml, '</wpc:wpc>', idx);
   idx = assertAfter(xml, '</a:graphicData>', idx);
   idx = assertAfter(xml, '</a:graphic>', idx);
@@ -115,13 +118,15 @@ test('no external OOXML relationship is emitted (rule #3)', () => {
   assert.ok(!xml.includes('r:id='));
 });
 
-test('every node and edge lives inside the wpg:wgp group', () => {
+test('every node and edge lives directly inside the canvas, not a wrapping group', () => {
   const xml = translate('graph TD\n  A --> B\n  B --> C');
-  const wgpOpen = xml.indexOf('<wpg:wgp');
-  const wgpClose = xml.lastIndexOf('</wpg:wgp>');
-  assert.ok(wgpOpen > -1 && wgpClose > wgpOpen);
-  const group = xml.slice(wgpOpen, wgpClose);
-  // 3 nodes + 2 connectors, all inside the group.
-  assert.equal((group.match(/<wps:wsp>/g) ?? []).length, 5);
-  assert.equal((group.match(/<wps:cNvCnPr>/g) ?? []).length, 2);
+  const wpcOpen = xml.indexOf('<wpc:wpc ');
+  const wpcClose = xml.lastIndexOf('</wpc:wpc>');
+  assert.ok(wpcOpen > -1 && wpcClose > wpcOpen);
+  const canvas = xml.slice(wpcOpen, wpcClose);
+  // 3 nodes + 2 connectors, all inside the canvas, no subgraphs here so no
+  // wpg:grpSp/wpg:wgp at all.
+  assert.equal((canvas.match(/<wps:wsp>/g) ?? []).length, 5);
+  assert.equal((canvas.match(/<wps:cNvCnPr>/g) ?? []).length, 2);
+  assert.ok(!canvas.includes('<wpg:wgp'), 'no diagram without subgraphs should ever emit a wpg:wgp');
 });
