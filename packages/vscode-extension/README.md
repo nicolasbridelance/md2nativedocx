@@ -7,8 +7,10 @@ stays individually selectable, movable, and editable once the file is open in Wo
 
 ![Clicking Export to Word in VS Code, with a real export in progress and the success notification](docs/demo-vscode.gif)
 
-*The Word half — a screenshot of a shape's selection handles — is still being taken (it needs a
-real Word install, see `docs/demo-script.md`). `docs/demo.docx` is ready to open in the meantime.*
+![The resulting .docx: title, box and diamond shapes, and labeled arrows — every one of them an individually selectable native Word shape, not a flattened image](docs/demo-word.png)
+
+*The second image is the generated `.docx` itself (rendered here for the screenshot; open
+`docs/demo.docx` directly to see it, including moving a shape and watching its connectors follow).*
 
 ## The problem nobody else solves
 

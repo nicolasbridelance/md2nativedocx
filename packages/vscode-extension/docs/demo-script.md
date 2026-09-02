@@ -24,30 +24,23 @@ premier essai (deux notifications empilées) ; corrigé (le `withProgress` ne wr
 `run()`, la notification de succès/erreur vient après, hors du spinner) et re-vérifié par un
 second enregistrement — une seule notification, propre.
 
-## ⏳ Capture d'écran — côté Word (`demo-word.png`, reste à faire)
+## ✅ Capture — côté Word (`demo-word.png`, fait, décision assumée)
 
-Nécessite Word réellement installé (Windows/Mac) — impossible à produire dans ce Codespace Linux
-(LibreOffice n'a ni le même rendu ni les mêmes poignées de sélection, donc pas fiable comme
-substitut pour ce qui doit vendre le produit). Une **capture statique** suffit ici — inutile
-d'animer le survol/clic pour montrer des poignées de sélection déjà visibles à l'arrêt.
+Décision explicite du mainteneur (2026-09-02) : plutôt que d'attendre un accès à un Word réel,
+`demo-word.png` est un rendu de [`docs/demo.docx`](demo.docx) via `soffice --headless
+--convert-to png` (même mécanisme que `scripts/test-visual.mjs`), recadré sur la zone de contenu
+(`PIL`, bbox + marge de 28px). Assumé et documenté ici plutôt que caché : ce n'est **pas** une
+capture Word avec poignées de sélection visibles (ça restait l'idéal — voir plus bas si quelqu'un
+veut la produire un jour) — c'est le rendu du fichier `.docx` généré tel quel, qui démontre déjà ce
+que le README affirme en toutes lettres : formes vectorielles natives (rectangles, losange,
+connecteurs fléchés avec labels), pas une image aplatie. La légende du README le dit explicitement
+("rendered here for the screenshot") pour ne rien laisser croire de plus que ce que l'image montre.
 
-### Fichier à utiliser
-[`docs/demo.docx`](demo.docx) — déjà généré (via le CLI réel à partir de
-[`docs/demo.md`](demo.md)), prêt à ouvrir directement dans Word.
+## Reste ouvert, non bloquant : une vraie capture Word avec poignées de sélection
 
-### Ce qu'il faut dans la capture
-1. Cliquer sur la boîte "Accès accordé" dans le diagramme.
-2. **Le plan qui vend le produit** : les poignées de sélection individuelles (coins + côtés)
-   visibles autour de la forme — la preuve visuelle de l'éditabilité native.
-3. Capturer la fenêtre Word (pas tout l'écran), zoom raisonnable pour que le texte des formes
-   reste lisible en vignette.
-
-### Export
-- Format : PNG.
-- Emplacement : `packages/vscode-extension/docs/demo-word.png` — c'est l'endroit que le README
-  référencera une fois le fichier présent.
-
-## Une fois `demo-word.png` produit
-
-Prévenir pour que le lien soit ajouté au README de l'extension à côté de `demo-vscode.gif`, et que
-les deux soient présentés côte à côte pour raconter l'histoire complète en un coup d'œil.
+Si quelqu'un a accès à un Word réel (Windows/Mac) un jour, la version définitive reste supérieure :
+ouvrir [`docs/demo.docx`](demo.docx), cliquer sur la boîte "Accès accordé", capturer la fenêtre
+Word (pas tout l'écran) avec les poignées de sélection (coins + côtés) visibles autour de la
+forme — la preuve visuelle de l'éditabilité native que LibreOffice ne peut pas montrer (il n'a pas
+la même UI de sélection). Remplacerait `demo-word.png` au même chemin, légende du README à ajuster
+en conséquence.
