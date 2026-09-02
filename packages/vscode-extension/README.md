@@ -6,12 +6,51 @@ get flattened into an image like everywhere else. They become real vector Word s
 (OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
 once the file is open in Word.
 
-![Clicking Export to Word in VS Code, with a real export in progress and the success notification](docs/demo-vscode.gif)
+## See it in action
 
-![The resulting .docx: title, box and diamond shapes, and labeled arrows — every one of them an individually selectable native Word shape, not a flattened image](docs/demo-word.png)
+There's more than one way to trigger the same export — pick whichever fits how you work. Each
+clip below is short and loops.
 
-*The second image is the generated `.docx` itself (rendered here for the screenshot; open
-`docs/demo.docx` directly to see it, including moving a shape and watching its connectors follow).*
+**1. From an open file, one click**
+
+<img src="docs/demo-vscode.gif" width="480" alt="Clicking the Export to Word link above a Mermaid diagram in an open file, then the success notification appearing"/>
+
+Open a Markdown file that contains a Mermaid diagram. A small **⚙ Export to Word** link appears
+right above the diagram — click it, and a few seconds later a notification appears with the
+finished `.docx`, plus buttons to open it or reveal it in the file browser.
+
+**2. Straight from the file list — no need to open anything first**
+
+<img src="docs/demo-context-menu.gif" width="480" alt="Right-clicking a Markdown file in the Explorer file list and choosing Export document to Word from the menu"/>
+
+Don't want to open the file at all? Right-click it in the file list on the left (the same kind of
+right-click menu you'd use in Windows Explorer or macOS Finder) and choose
+**md2nativedocx: Export document to Word**. Same result, without ever looking at the file's
+contents.
+
+**3. Works even when there's no diagram in the file**
+
+<img src="docs/demo-no-diagram.gif" width="480" alt="A plain Markdown file with a table and no Mermaid diagram, exported to Word from a single link at the top of the file"/>
+
+This extension isn't only for diagrams — any Markdown file (plain text, tables, **bold**/*italic*
+formatting) exports to a complete `.docx` the same way. If the file has no Mermaid diagram, the
+**Export to Word** link still shows up, just once at the very top of the file instead of above
+each diagram.
+
+**4. A Mermaid diagram by itself, with no surrounding document**
+
+<img src="docs/demo-raw-mmd.gif" width="480" alt="A raw .mmd file containing only a Mermaid diagram, exported to Word the same way as a Markdown file"/>
+
+Sometimes all you have is the diagram itself — a `.mmd` file, with no title, no surrounding text.
+It exports exactly the same way, producing a `.docx` with that one diagram as a native, editable
+shape.
+
+**The result, opened**
+
+<img src="docs/demo-word.png" width="480" alt="The resulting .docx: title, box and diamond shapes, and labeled arrows — every one of them an individually selectable native Word shape, not a flattened image"/>
+
+*Rendered here for the screenshot — open `docs/demo.docx` directly to try it yourself, including
+moving a shape and watching its connectors follow.*
 
 ## Where it stands out
 

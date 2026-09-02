@@ -59,6 +59,101 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ⚠️ **Épaisseur des connecteurs/flèches jamais mise à l'échelle — corrigé, mais limite de fond
+      probablement pas entièrement résolue (2026-09-02)** : signalé par l'utilisateur sur des
+      captures d'écran d'un **vrai Word** (`medium3`/`medium4`/`medium5`/`large1`, corpus décrit
+      juste au-dessus) — les têtes de flèche paraissent beaucoup trop grosses par rapport aux
+      rectangles une fois le diagramme réduit à l'échelle de la page.
+  - **Cause confirmée** (`ooxml-translator.ts`) : `renderNode`/`renderEdge` calculaient déjà la
+    géométrie (position, taille, police — voir l'entrée `NODE_FONT_SIZE_HALFPT` plus bas) à partir
+    du même `scale`, mais l'épaisseur du trait (`a:ln w=`, table `LINE_STYLE_BY_EDGE`) restait une
+    valeur fixe (12700/25400 EMU) quel que soit `scale` — exactement la même classe de bug que
+    celle déjà corrigée pour le texte (`scaledFontSizeHalfPt`), jamais étendue à l'épaisseur de
+    trait. Idem pour la bordure des nœuds (`renderNode`, fixe à 12700).
+  - **Corrigé** : nouvelle fonction `scaledLineWidth(baseEmu, scale)` (miroir de
+    `scaledFontSizeHalfPt`, plancher `MIN_LINE_WIDTH_EMU` = 0,25pt pour ne jamais atteindre zéro),
+    appliquée à la fois à la bordure des nœuds et au trait des connecteurs. Nouveau test
+    (`translator.test.ts` → `node border and connector line widths shrink along with geometry on a
+    scaled-down diagram`). Corpus entier régénéré avec le correctif.
+  - **Limite confirmée non corrigible dans l'architecture actuelle** : la tête de flèche
+    (`a:tailEnd type="triangle" w="med" len="med"`) n'a pas de taille numérique — `w`/`len` sont
+    des enums (`sm`/`med`/`lg`, ST_LineEndWidth/Length), censés être proportionnels à l'épaisseur
+    du trait selon la spec ECMA-376. **Confirmé par l'utilisateur dans un vrai Word** : même
+    disproportion qu'observé ici en LibreOffice — pas un artefact d'un seul moteur de rendu.
+  - **`w="sm" len="sm"` testé, aucune amélioration mesurable** : régénéré `medium4.docx` avec
+    l'enum le plus petit disponible, rendu LibreOffice comparé côte à côte à `med` — différence
+    imperceptible au même niveau de zoom. Changement annulé (pas de bénéfice démontré, ne valait
+    pas de modifier le rendu de tout le corpus sans preuve). Confirme que le plancher de taille
+    visuelle vient du moteur de rendu lui-même (Word **et** LibreOffice), pas du choix d'enum —
+    les trois paliers sont trop proches les uns des autres pour compenser un facteur d'échelle
+    de diagramme qui peut descendre bien en dessous de 0,1.
+  - **Pourquoi un contournement (dessiner la flèche nous-mêmes plutôt que via `a:tailEnd`) n'a
+    pas été tenté** : casserait le comportement magnétique documenté et testé ("un connecteur
+    suit la forme quand on la déplace dans Word", argument de vente central du produit). Cette
+    décoration est portée par `a:ln`/`spPr`, indépendamment du chemin géométrique — c'est
+    précisément ce qui lui permet de rester correcte quel que soit la façon dont Word recalcule
+    le tracé après un déplacement de forme. Un triangle dessiné à la main (dans le `custGeom` du
+    connecteur, ou en forme séparée) redeviendrait incorrect/détaché dès le premier déplacement
+    interactif d'une des deux formes reliées — trocaerait la lisibilité cosmétique d'un diagramme
+    déjà à la limite contre l'éditabilité native, la vraie proposition de valeur du produit.
+    Aucune tentative de code faite dans ce sens.
+  - **Conclusion : ce n'est pas un bug isolé de flèche, c'est un symptôme de plus de la limite
+    déjà ouverte "lisibilité des gros diagrammes"** (§ plus bas) — 150-360 nœuds écrasés dans les
+    6,5 pouces de largeur utile d'une page US Letter. Le vrai levier n'est pas une variante XML de
+    plus sur la décoration de flèche (déjà exploré, sans résultat), mais l'une des pistes déjà
+    listées et jamais tranchées : page de taille custom via saut de section, seuil de nœuds
+    refusé explicitement, ou pagination/découpage du graphe lui-même. Décision à prendre avec le
+    mainteneur avant tout nouveau code sur ce chantier précis — pas quelque chose à retenter par
+    petites touches côté décoration de connecteur.
+- ⚠️ **Fermeture du socle avant nouvelles fonctionnalités (pptx, SmartArt) — corpus étoffé +
+      thème Word natif, pas encore validé dans un vrai Word (2026-09-02)** : signalé par
+      l'utilisateur — le corpus (`test-corpus/corpus/source/`) était presque exclusivement des
+      `.mmd` bruts (8 fichiers) contre un seul `.md` à texte riche (`mixed-content.md`, diagrammes
+      de 4 et 6 nœuds seulement), et les gros diagrammes (24-318 nœuds, déjà notés plus bas comme
+      jamais ouverts dans un vrai Word) n'avaient jamais été combinés à du texte Markdown riche.
+  - **Corpus étoffé** : deux nouvelles sources `.md` (voir `test-corpus/corpus/README.md` §"Corpus
+    texte"), même structure de rapport que `mixed-content.md` (titres, tableau, liste, citation,
+    note de bas de page, blocs de code) mais avec le contenu réel d'un `.mmd` déjà présent dans le
+    corpus (frontmatter YAML retiré) plutôt qu'un diagramme réécrit pour l'occasion —
+    `large-report.md` (embarque `large1.mmd`, ~360 nœuds) et `medium-report.md` (embarque
+    `mermaid-official-code-flow.mmd`, ~115 nœuds, formes variées, re-teste la limite HTML brut
+    connue à plus grande échelle). Régénérés sans erreur via le CLI réel, conformité structurelle
+    verte (`packages/cli/test/corpus.test.mjs`, découverte automatique du dossier `source/` —
+    aucune modification de test nécessaire), rendu LibreOffice headless inspecté visuellement
+    (titres/tableau/citation/code corrects, les deux diagrammes complets, aucune forme manquante).
+  - **Question soulevée en même temps par l'utilisateur, distincte** : mélange Calibri/Cambria
+    visible dans les `.docx` générés. Vérifié en extrayant `theme1.xml`/`styles.xml` d'un `.docx`
+    réel plutôt que supposé : c'était le thème Office **2007-2010** de Pandoc tel quel
+    (`--print-default-data-file reference.docx`, jamais modifié par ce projet auparavant) —
+    `majorFont`=Calibri/`minorFont`=Cambria (accent1 `#4F81BD`, titres gras 12pt de corps), pas
+    "standard Word" au sens d'un Word installé aujourd'hui. Décision explicite de l'utilisateur
+    (question posée, réponse donnée) : cibler le thème Word moderne (police Aptos, palette de
+    thème "Office" 2013+, titres non gras) plutôt que le classique Calibri/Calibri Light.
+  - **`packages/cli/assets/reference.docx` (nouveau)** : construit en éditant directement
+    `theme1.xml` (polices majorFont/minorFont → Aptos Display/Aptos, palette de couleurs →
+    accent1 `#4472C4` etc.) et `styles.xml` (corps 12pt→11pt, interligne simple/10pt-après→
+    1,08/8pt-après, `Heading1`-`3` plus gras, `Heading4`-`5` plus italique) d'un reference.docx
+    Pandoc de base — **aucun vrai Word disponible ici** pour le faire à la main (méthode
+    habituelle), donc reconstruction directe de l'OOXML, documentée avec ses limites/hypothèses
+    dans `packages/cli/assets/README.md`. Câblé via `--reference-doc` dans
+    `bin/md2nativedocx.mjs` (`REFERENCE_DOC_PATH`, garde `existsSync` avant l'ajout du flag) ;
+    `packages/vscode-extension/scripts/bundle-cli.mjs` copie aussi l'asset dans le `.vsix` vendored
+    (miroir du même chemin relatif que `md2nativedocx.lua`) — vérifié : le CLI vendored produit
+    bien un `.docx` avec `majorFont=Aptos Display`. Le texte des formes de diagramme (nœuds/arêtes)
+    n'a pas été touché dans `ooxml-translator.ts` : il ne déclare toujours aucun `w:rFonts`, donc
+    il hérite automatiquement de la même police de thème (Aptos) que le corps du texte — cohérence
+    gratuite, aucun changement de code translator nécessaire pour ça.
+  - **Escalade AGENTS.md** : pas dans la liste explicite (pas une nouvelle dépendance externe —
+    fichier statique versionné, pas un paquet npm ; pas un changement de contrat de sortie de
+    `packages/core`), mais décision de branding/produit difficile à défaire une fois des documents
+    réels générés avec — la question du thème cible (moderne vs. classique) a été posée
+    explicitement à l'utilisateur avant tout code, dans l'esprit de la règle plutôt que sa lettre.
+  - **Reste à faire, explicitement pas fait ici** : ouvrir tout le corpus (`generated/*.docx`,
+    ancien **et** les deux nouveaux fichiers) dans un vrai Word — LibreOffice ne peut ni afficher
+    la vraie police Aptos (absente de ce Codespace Linux) ni confirmer la sélection individuelle
+    des formes. Valeurs de `reference.docx` (tailles de titre exactes, gras/italique par niveau)
+    documentées comme hypothèses de reconstruction à vérifier dans `packages/cli/assets/README.md`,
+    pas comme certitudes.
 - ✅ **Trois défauts signalés par l'utilisateur sur `demo.docx` (2026-09-01)** : étiquettes de
       flèches mal centrées, marges trop serrées sur ces mêmes étiquettes, et double "grand
       rectangle" visible sur toute forme (sélection Word montrant à la fois le cadre du canevas
@@ -577,13 +672,25 @@ est levé.
       tranchée : ajouter Xvfb à `.devcontainer/setup.sh` (revue humaine requise) et au job CI qui
       exécuterait `test:extension-host`, ou laisser ce chapitre de test manuel/opt-in comme
       `test:visual` l'est pour LibreOffice.
-- [ ] **Packaging Marketplace réel + README avec démo animée** — `npm run package` (`vsce package`)
-      est câblé mais jamais exécuté ; la Marketplace exige un `icon` PNG 128×128 dans `package.json`,
-      alors que `icon.svg` (design source, rationale dans UX_SPEC.md) n'a pas encore été rastérisé
-      faute d'outil de rendu SVG disponible dans ce Codespace (`rsvg-convert`/`imagemagick`/`sharp`
-      absents) — pas bloquant pour le développement/test local (Extension Development Host), mais
-      bloquant pour une publication réelle. Éditeur Marketplace (`publisher: "md2nativedocx"` dans
-      `package.json`) à créer/vérifier avant tout `vsce publish`.
+- [x] **Packaging Marketplace réel — fait (2026-09-02)** : `icon.png` (128×128) rastérisé et présent,
+      éditeur Marketplace `publisher: "md2nativedocx"` créé, `npm run publish` (`vsce publish
+      --no-dependencies --baseContentUrl ... --baseImagesUrl ...`, authentifié via `AZURE_PAT` dans
+      `.env`, gitignoré) exécuté avec succès. Deux versions publiées à ce jour, voir
+      `packages/vscode-extension/CHANGELOG.md` : **0.1.0** (première version fonctionnelle) et
+      **0.2.0** (2026-09-02 — auto-provisioning Pandoc, export Markdown complet sans diagramme
+      requis, clic droit Explorer/éditeur, fix des images cassées sur la fiche Marketplace via les
+      flags `--base*Url`). README avec démo GIF déjà en place (voir commit `599f4ed`).
+- ⚠️ **Démo README désynchronisée du scope réel — 3 nouveaux GIFs préparés, pas encore publiés
+      (2026-09-02)** : signalé par le mainteneur, `demo-vscode.gif` (2026-09-01) ne montrait que le
+      flux CodeLens, alors que 0.2.0 a ajouté le clic droit, l'export sans diagramme et le `.mmd`
+      brut. Trois nouveaux GIFs enregistrés (un par fonction, décision explicite du mainteneur —
+      audience plus à l'aise avec Word qu'avec VS Code, donc une légende en langage courant par
+      flux plutôt qu'un seul GIF combiné) : `docs/demo-context-menu.gif`, `docs/demo-no-diagram.gif`,
+      `docs/demo-raw-mmd.gif` (+ fixtures `docs/demo-no-diagram.md`, `docs/demo-raw.mmd`). README mis
+      à jour en conséquence. Process détaillé dans `docs/demo-script.md`. **Volontairement pas
+      republié** : décision du mainteneur d'attendre un bundling avec d'autres fonctionnalités
+      plutôt qu'un `npm run publish` dédié uniquement à la doc — republication et bump de version à
+      faire au moment de ce bundling.
 - [ ] **Aperçu (Phase 2.5, UX_SPEC.md)** — pas commencé, prérequis explicitement posé comme
       postérieur au cœur ci-dessus. Rappel de la limite qui ne doit pas être assouplie sans
       décision humaine explicite : lecture seule stricte, aucune interaction d'édition.

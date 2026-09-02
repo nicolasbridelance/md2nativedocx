@@ -82,6 +82,28 @@ function scaledFontSizeHalfPt(baseHalfPt: number, scale: number): number {
   return Math.max(MIN_FONT_SIZE_HALFPT, Math.round(baseHalfPt * scale));
 }
 
+/** Never scale a stroke below this (EMU) — same rationale as
+ * {@link MIN_FONT_SIZE_HALFPT}, just in the other unit. */
+const MIN_LINE_WIDTH_EMU = 3175; // 0.25pt
+
+/**
+ * Scale a base `a:ln`/`w` stroke width (EMU) by the diagram's overall scale
+ * factor, floored so it never reaches zero (see {@link MIN_LINE_WIDTH_EMU}).
+ *
+ * Found 2026-09-02 (user report, real Word, a heavily-scaled-down large
+ * diagram): node borders and — much more visibly — connector arrowheads were
+ * declared at a fixed width regardless of `scale`, same class of bug as the
+ * one {@link scaledFontSizeHalfPt} already fixes for text. `a:tailEnd`'s
+ * `w`/`len` (arrowhead size) are enums (`sm`/`med`/`lg`, not a numeric EMU
+ * value — no equivalent scaling possible there directly), but their
+ * *rendered* physical size is proportional to the connector's own `a:ln w`,
+ * so scaling that stroke width alone is enough to make the arrowhead shrink
+ * along with the geometry it decorates, without touching the enum itself.
+ */
+function scaledLineWidth(baseEmu: number, scale: number): number {
+  return Math.max(MIN_LINE_WIDTH_EMU, Math.round(baseEmu * scale));
+}
+
 /**
  * Usable page area in EMU for Pandoc's default reference document (US Letter,
  * 1 inch margins => 6.5in x 9in). A drawing larger than this is scaled down
@@ -601,7 +623,7 @@ function renderNode(
     '        <a:avLst/>',
     '      </a:prstGeom>',
     `      <a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`,
-    '      <a:ln w="12700" cap="flat" cmpd="sng" algn="ctr">',
+    `      <a:ln w="${scaledLineWidth(12700, scale)}" cap="flat" cmpd="sng" algn="ctr">`,
     `        <a:solidFill><a:srgbClr val="${line}"/></a:solidFill>`,
     '        <a:prstDash val="solid"/>',
     '      </a:ln>',
@@ -941,7 +963,7 @@ function renderEdge(
     '    </wps:cNvCnPr>',
     '    <wps:spPr>',
     geometry,
-    `      <a:ln w="${lineStyle.width}" cap="flat" cmpd="sng" algn="ctr">`,
+    `      <a:ln w="${scaledLineWidth(lineStyle.width, scale)}" cap="flat" cmpd="sng" algn="ctr">`,
     `        <a:solidFill><a:srgbClr val="${line}"/></a:solidFill>`,
     `        <a:prstDash val="${lineStyle.dash}"/>`,
     ...(tailEnd ? [tailEnd] : []),

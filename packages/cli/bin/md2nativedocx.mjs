@@ -30,6 +30,13 @@ const FILTER_CANDIDATES = [
 const FILTER_PATH = FILTER_CANDIDATES.find((p) => existsSync(p))
   ?? FILTER_CANDIDATES[0];
 
+// Custom reference.docx (Word's current default look -- Aptos font scheme,
+// modern "Office" theme colors, non-bold flat heading hierarchy) instead of
+// Pandoc's own bundled default, which is still the original 2007-2010 Office
+// theme (Calibri/Cambria mix, bold colored headings) verbatim. See
+// packages/cli/assets/README.md for how it was built and what it changes.
+const REFERENCE_DOC_PATH = fileURLToPath(new URL('../assets/reference.docx', import.meta.url));
+
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx> [options]
 
 Options:
@@ -121,6 +128,9 @@ async function main() {
     '--lua-filter',
     FILTER_PATH,
   ];
+  if (existsSync(REFERENCE_DOC_PATH)) {
+    pandocArgs.push('--reference-doc', REFERENCE_DOC_PATH);
+  }
 
   // MD2NATIVEDOCX_PANDOC_BIN lets a caller (the VS Code extension's automatic
   // Pandoc provisioning, see packages/vscode-extension/src/pandocProvisioner.ts)

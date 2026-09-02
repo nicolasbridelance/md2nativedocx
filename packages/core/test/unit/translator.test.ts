@@ -256,6 +256,23 @@ test('an oversized diagram is scaled down to the usable page area', () => {
   );
 });
 
+test('node border and connector line widths shrink along with geometry on a scaled-down diagram', () => {
+  // Regression (user report, real Word, 2026-09-02): a large diagram scaled
+  // down to fit the page had its node/text geometry shrink correctly, but
+  // every connector's stroke width — and, far more visibly, its arrowhead —
+  // stayed at a fixed size, so arrows towered over the now-tiny boxes they
+  // pointed at. Same fixture shape as "an oversized diagram is scaled down
+  // to the usable page area" above (guaranteed scale < 1).
+  const wide = ['graph LR', ...Array.from({ length: 40 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
+  const xml = translate(wide);
+  const lineWidths = [...xml.matchAll(/<a:ln w="(\d+)"/g)].map((m) => Number(m[1]));
+  assert.ok(lineWidths.length > 0, 'expected at least one a:ln in the output');
+  for (const w of lineWidths) {
+    if (w === 0) continue; // the subgraph title box's borderless w="0" — not a stroke to scale
+    assert.ok(w < 12700, `line width ${w} was not scaled down below the unscaled base (12700)`);
+  }
+});
+
 test('a tall, narrow diagram gets its extent widened to a safe aspect ratio', () => {
   // Regression: verified empirically (soffice --headless render) that a
   // wpc:wpc/wpg:wgp group taller than ~7.5in renders NOTHING AT ALL in

@@ -35,6 +35,7 @@ const vendorDir = join(extensionRoot, 'dist', 'vendor');
 const cliEntry = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 const coreBridgeEntry = join(repoRoot, 'packages', 'pandoc-filter', 'bin', 'md2nativedocx-core.mjs');
 const luaFilter = join(repoRoot, 'packages', 'pandoc-filter', 'md2nativedocx.lua');
+const referenceDoc = join(repoRoot, 'packages', 'cli', 'assets', 'reference.docx');
 const coreDist = join(repoRoot, 'packages', 'core', 'dist', 'index.js');
 
 if (!existsSync(coreDist)) {
@@ -48,6 +49,9 @@ const cliOut = join(vendorDir, 'bin', 'md2nativedocx.mjs');
 const pandocFilterDir = join(vendorDir, 'node_modules', '@md2nativedocx', 'pandoc-filter');
 const coreBridgeOut = join(pandocFilterDir, 'bin', 'md2nativedocx-core.mjs');
 const luaOut = join(pandocFilterDir, 'md2nativedocx.lua');
+// Mirrors bin/md2nativedocx.mjs's REFERENCE_DOC_PATH ('../assets/reference.docx' relative to
+// itself), same reasoning as luaOut mirroring FILTER_CANDIDATES above.
+const referenceDocOut = join(vendorDir, 'assets', 'reference.docx');
 
 await build({
   entryPoints: [cliEntry],
@@ -69,6 +73,9 @@ await build({
 
 mkdirSync(pandocFilterDir, { recursive: true });
 copyFileSync(luaFilter, luaOut);
+
+mkdirSync(dirname(referenceDocOut), { recursive: true });
+copyFileSync(referenceDoc, referenceDocOut);
 
 // Self-check: a broken bundle (a missed import, a wrong relative path) must
 // fail this script, not surface later as a silent MODULE_NOT_FOUND inside a

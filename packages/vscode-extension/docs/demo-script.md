@@ -44,3 +44,57 @@ Word (pas tout l'écran) avec les poignées de sélection (coins + côtés) visi
 forme — la preuve visuelle de l'éditabilité native que LibreOffice ne peut pas montrer (il n'a pas
 la même UI de sélection). Remplacerait `demo-word.png` au même chemin, légende du README à ajuster
 en conséquence.
+
+## ✅ GIFs 2-4 — les flux ajoutés depuis (2026-09-02), un GIF par fonction
+
+Signalé par le mainteneur : `demo-vscode.gif` ne montrait que le flux CodeLens, alors que le scope
+de l'extension a bougé depuis son enregistrement (2026-09-01) — commit `9aa7ad5` a ajouté le clic
+droit (Explorateur/éditeur), l'export Markdown complet sans diagramme requis, et le support `.mmd`
+brut. Décision explicite du mainteneur : **un GIF par fonction, chacun avec sa propre légende**
+plutôt qu'un seul GIF combiné plus long — l'audience visée est plus à l'aise avec Word qu'avec
+VS Code, donc chaque légende du README explique le flux en langage courant (pas de jargon
+"CodeLens"/"Explorer" non expliqué).
+
+**Process technique** (reconstruit à l'identique de celui de `demo-vscode.gif`, aucun script n'avait
+été conservé de la première session) :
+- `Xvfb :99 -screen 0 1280x800x24` comme display virtuel.
+- La vraie build VS Code déjà téléchargée pour les tests d'extension-host
+  (`.vscode-test/vscode-linux-x64-1.135.0/code`), lancée directement (pas via `bin/code`, qui ne
+  sert qu'au mode CLI) avec `--extensionDevelopmentPath`/`--user-data-dir`/`--extensions-dir`
+  isolés, sur un workspace jetable (`/tmp/vscode-demo-workspace`).
+- **Piège trouvé** : la variable d'environnement `ELECTRON_RUN_AS_NODE=1` (héritée de la session,
+  probablement d'un run de tests précédent) force le binaire à se comporter comme du Node brut au
+  lieu de lancer l'UI — `env -u ELECTRON_RUN_AS_NODE` avant l'appel corrige ça.
+- Thème **Light Modern** appliqué manuellement (Ctrl+K Ctrl+T) pour rester visuellement cohérent
+  avec `demo-vscode.gif` (enregistré en thème clair) — le thème par défaut d'un profil neuf est
+  sombre.
+- `xdotool mousemove`/`click` pour rejouer chaque flux (clic droit → item de menu ; clic sur le lien
+  CodeLens), `ffmpeg -f x11grab` pour l'enregistrement continu (h264 ultrafast), conversion en GIF
+  via `palettegen`/`paletteuse` (`stats_mode=diff`, dither `bayer`), recadré pour exclure la barre de
+  titre VS Code (`crop=1280:770:0:30`), réduit à 720px de large, 12 fps.
+- **Piège trouvé, deux fois** : le délai réel entre le lancement de `ffmpeg` en arrière-plan et le
+  premier frame effectivement capturé est significativement plus long que prévu (~7-9s de décalage
+  observé sur les deux premières prises) — une notification de succès attendue "vers t=2-3s" apparaît
+  en réalité bien plus tard dans l'enregistrement. Chaque prise a été vérifiée par extraction de
+  frames à plusieurs timestamps (`ffmpeg -ss <t> -frames:v 1`) avant de fixer le point de coupe
+  final, plutôt que de deviner un timing fixe.
+- **Piège trouvé une fois** : une notification de succès laissée ouverte d'un essai précédent
+  (jamais fermée) réapparaît en fondu au démarrage de l'essai suivant, superposée à la nouvelle —
+  "Notifications: Clear All Notifications" (Palette de commandes) + suppression du `.docx` généré
+  par l'essai précédent avant chaque nouvelle prise, pour repartir d'un état propre et reproductible.
+
+**Fichiers produits** :
+- [`docs/demo-context-menu.gif`](demo-context-menu.gif) — clic droit sur `demo.md` dans
+  l'Explorateur → `md2nativedocx: Export document to Word` → notification de succès. Réutilise
+  [`docs/demo.md`](demo.md) (fixture déjà existante).
+- [`docs/demo-no-diagram.gif`](demo-no-diagram.gif) — CodeLens en haut de fichier (aucun bloc
+  Mermaid) → export → notification. Nouvelle fixture [`docs/demo-no-diagram.md`](demo-no-diagram.md)
+  (texte + tableau, volontairement sans diagramme).
+- [`docs/demo-raw-mmd.gif`](demo-raw-mmd.gif) — CodeLens sur un fichier `.mmd` brut (pas de
+  fencing Markdown) → export → notification. Nouvelle fixture
+  [`docs/demo-raw.mmd`](demo-raw.mmd).
+
+**Statut de publication** : ces GIFs et la mise à jour du README associée sont **prêts mais pas
+publiés** — décision explicite du mainteneur (2026-09-02) d'attendre de les bundler avec d'autres
+fonctionnalités dans une prochaine version plutôt que de faire un `npm run publish` dédié
+uniquement à la doc. Voir `TODO.md` pour le suivi.

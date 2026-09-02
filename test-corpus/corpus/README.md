@@ -7,8 +7,9 @@ humaine dans Word et pour la conformité automatique (spec §9).
 
 Les diagrammes `.mmd` ne sont **pas écrits par ce projet** — ils proviennent de sources
 officielles ou de référence, pour exercer une syntaxe réelle plutôt que celle que
-nous écririons nous-mêmes. Le seul fichier `.md` du corpus (`mixed-content.md`) est
-l'exception délibérée : voir §"Corpus texte" ci-dessous.
+nous écririons nous-mêmes. Les fichiers `.md` du corpus (`mixed-content.md`,
+`large-report.md`, `medium-report.md`) sont l'exception délibérée : voir §"Corpus texte"
+ci-dessous.
 
 ## Provenance des sources (`source/`)
 
@@ -21,7 +22,7 @@ l'exception délibérée : voir §"Corpus texte" ci-dessous.
 Téléchargés depuis la branche `develop` du repo `mermaid-js/mermaid`
 (2026-08-06). Référence : https://github.com/mermaid-js/mermaid
 
-## Corpus texte (`mixed-content.md`)
+## Corpus texte (`mixed-content.md`, `large-report.md`, `medium-report.md`)
 
 Les sources `.mmd` ci-dessus n'exercent que le traducteur de diagramme : le générateur les
 enveloppe dans un titre + un seul bloc ```` ```mermaid ```` minimal (voir `wrapMarkdown` dans
@@ -37,6 +38,32 @@ que les compteurs d'id de forme ne collisionnent pas entre deux diagrammes du m�
 Contrairement aux `.mmd`, ce fichier n'est **pas** enveloppé par le générateur : `.md` = document
 complet utilisé tel quel (voir `toMarkdown()` dans `scripts/generate-corpus.mjs` et
 `packages/cli/test/corpus.test.mjs`).
+
+**`large-report.md` et `medium-report.md` (2026-09-02)** — le trou restant après
+`mixed-content.md` : ses deux diagrammes ne font que 4 et 6 nœuds, donc rien ne combinait texte
+riche **et** diagramme volumineux dans le même document, et `TODO.md` notait explicitement que le
+corpus à gros diagrammes (24-318 nœuds) n'avait jamais été ouvert dans un vrai Word avec du texte
+autour (seulement en enveloppe minimale titre + bloc isolé). Même structure de rapport que
+`mixed-content.md` (titres, tableau, liste ordonnée, citation, note de bas de page, blocs de
+code — deux langages différents ici pour varier la coloration syntaxique), mais le bloc mermaid
+n'est pas écrit pour ce document : c'est le contenu réel d'une source `.mmd` déjà présente dans ce
+corpus, copié tel quel (frontmatter YAML retiré, même transformation que `extractDiagram()` dans
+`scripts/generate-corpus.mjs` applique aux `.mmd`), pour ne pas dupliquer un diagramme "que nous
+écririons nous-mêmes" :
+- `large-report.md` embarque `large1.mmd` (~360 nœuds, sous-graphes imbriqués) — le cas taille
+  brute, jamais testé avec du texte autour.
+- `medium-report.md` embarque `mermaid-official-code-flow.mmd` (~115 nœuds, formes variées,
+  labels multi-lignes `<br/>`) — le cas variété des formes plutôt que taille pure, et re-teste
+  volontairement la limite HTML brut (§ ci-dessous) à une échelle de document plus réaliste que
+  `mixed-content.md`.
+
+Vérifié à ce stade (2026-09-02) : régénération sans erreur via le CLI réel
+(`node scripts/generate-corpus.mjs`), conformité structurelle (`packages/cli/test/corpus.test.mjs`,
+XML bien formé), et rendu LibreOffice headless inspecté visuellement (titres/tableau/liste/
+citation/code correctement stylés, les deux diagrammes visibles et complets, aucune forme
+manquante). **Pas encore ouvert dans un vrai Word** — c'est précisément le but de ces deux
+fichiers, à faire avant toute nouvelle fonctionnalité qui réutilise le même pipeline (pptx,
+SmartArt).
 
 **Coloration syntaxique des blocs de code :** gérée entièrement par le highlighter intégré de
 Pandoc (`skylighting`), pas par ce projet — un bloc ```` ```python ```` produit des styles de

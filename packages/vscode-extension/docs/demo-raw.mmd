@@ -1,0 +1,4 @@
+flowchart LR
+  A[Request received] --> B{Valid token?}
+  B -->|Yes| C[Process request]
+  B -->|No| D[Reject: 401]
