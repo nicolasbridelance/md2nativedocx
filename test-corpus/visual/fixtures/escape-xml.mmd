@@ -1,0 +1,5 @@
+flowchart TD
+    A["Requete <GET> & valeur"] --> B{Valide?}
+    B -->|"oui"| C["Resultat <OK>"]
+    B -->|"non"| D["Erreur 500 & echec"]
+    C --> E["Sauver 'donnees' & finir"]

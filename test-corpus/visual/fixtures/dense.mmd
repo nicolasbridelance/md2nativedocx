@@ -1,0 +1,14 @@
+flowchart LR
+    A[Init] --> B[Parse]
+    B --> C[Analyse]
+    B --> D[Optim]
+    B --> E[Emet]
+    C --> F[AST]
+    C --> G[IL]
+    D --> G
+    D --> H[Reg]
+    E --> I[Codegen]
+    F --> I
+    G --> I
+    H --> I
+    I --> J[Sortie]

@@ -1,0 +1,15 @@
+flowchart LR
+    subgraph Collecte[Collecte des donnees]
+        A[API] --> B[Base]
+        A --> C[Logs]
+    end
+    subgraph Traitement[Traitement]
+        D[Propre] --> E[Aggrege]
+        E --> F[Stocke]
+    end
+    subgraph Livraison[Livraison]
+        G[Rapport] --> H[Email]
+    end
+    B --> D
+    C --> D
+    F --> G

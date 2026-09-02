@@ -1,0 +1,8 @@
+flowchart LR
+    A[Client] --> B[Cache]
+    B --> A
+    B --> C[Base]
+    C --> B
+    C --> D[Log]
+    D --> B
+    A --> E[Direct]

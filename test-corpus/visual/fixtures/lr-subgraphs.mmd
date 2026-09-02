@@ -1,0 +1,14 @@
+flowchart LR
+    subgraph Nord[Nord]
+        A[Paris] --> B[Rouen]
+        B --> C[Le Havre]
+    end
+    subgraph Sud[Sud]
+        D[Marseille] --> E[Toulon]
+        D --> F[Nice]
+    end
+    subgraph Ouest[Ouest]
+        G[Nantes] --> H[Brest]
+    end
+    C --> G
+    E --> G

@@ -1,0 +1,7 @@
+flowchart TD
+    A[Debut] -->|etape 1| B[Action]
+    B ---|sans fleche| C[Suite]
+    C -.->|optionnel| D{Test}
+    D ==>|si vrai| E[Rapide]
+    D -->|si faux| F[Lent]
+    F --> G[Repeter] --> A
