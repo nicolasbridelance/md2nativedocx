@@ -17,6 +17,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Install Pandoc + Lua
+        # The vscode-extension unit tests (exportService.test.ts) invoke the
+        # real CLI -> Pandoc pipeline, not a mock — same requirement as the
+        # visual job below, kept in sync deliberately (AGENTS.md).
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pandoc lua5.4
+
       - name: Install dependencies
         run: npm ci
 
