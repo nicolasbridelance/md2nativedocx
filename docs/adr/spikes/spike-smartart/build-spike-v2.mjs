@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Spike 1 v2 (mmd2smartart, see FUTURE_mmd2smartart_SPEC.md §7 and
+ * Spike 1 v2 (mmd2smartart, see docs/specs/FUTURE_mmd2smartart_SPEC.md §7 and
  * docs/adr/0004-smartart-feasibility-spike.md) -- graft an AUTHENTIC,
  * real-Word-emitted SmartArt "Hiérarchie" (hierarchy1) diagram onto our own
  * minimal Pandoc-produced base.docx, via the same hand-zip-surgery

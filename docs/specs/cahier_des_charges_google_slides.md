@@ -1,7 +1,7 @@
 # Cahier des charges — Compatibilité du cœur avec Google Slides
 
 > Statut : proposition, à valider en ADR avant implémentation.
-> Référence : complète `cahier_des_charges.md` (scope docx) et `docs/adr/` (moteur de layout, intégration Pandoc).
+> Référence : complète `docs/specs/cahier_des_charges.md` (scope docx) et `docs/adr/` (moteur de layout, intégration Pandoc).
 
 ## 1. Contexte et objectif
 

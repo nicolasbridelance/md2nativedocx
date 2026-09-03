@@ -4,7 +4,7 @@ Thanks for considering a contribution. This project is small and early-stage, so
 intentionally short — it will grow as the project does.
 
 Before anything else:
-- **`cahier_des_charges.md`** explains *what* this project is and *why* it's scoped the way it is.
+- **`docs/specs/cahier_des_charges.md`** explains *what* this project is and *why* it's scoped the way it is.
   Read it before proposing anything that touches architecture or scope.
 - **`AGENTS.md`** defines *how* code gets written here — technical conventions, security rules, and
   the non-negotiables. It applies whether the code is written by a human or an AI coding agent.
@@ -14,7 +14,7 @@ Before anything else:
 
 - **Non-trivial change?** Open an issue first and describe what you want to do. This project has
   already changed its own scope and name several times during planning (see
-  `cahier_des_charges.md` §14) — cheap to discuss before you write code, expensive to redo after.
+  `docs/specs/cahier_des_charges.md` §14) — cheap to discuss before you write code, expensive to redo after.
 - **Small fix (typo, obvious bug)?** A PR directly is fine, no issue needed.
 - Check the GitHub Project board (see `AGENTS.md` "Tracking roadmap progress") for what's currently
   in scope for the active phase before picking up something further down the roadmap.

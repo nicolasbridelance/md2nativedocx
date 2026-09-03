@@ -3,9 +3,9 @@
 Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or similar) working on
 [`md2nativedocx`](https://github.com/nicolasbridelance/md2nativedocx).
 
-> Written in English deliberately, even though `cahier_des_charges.md` is in French: this file is read by
+> Written in English deliberately, even though `docs/specs/cahier_des_charges.md` is in French: this file is read by
 > both the agent and any external contributor, and this project targets an international audience
-> (see positioning strategy in the spec, §12). `cahier_des_charges.md` is the source of truth for
+> (see positioning strategy in the spec, §12). `docs/specs/cahier_des_charges.md` is the source of truth for
 > **what** and **why**. This file is the source of truth for **how to work in this repo**. If they
 > ever conflict, stop and ask the maintainer — don't silently pick one.
 
@@ -45,7 +45,6 @@ Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or s
 ```
 md2nativedocx/
 ├── AGENTS.md
-├── cahier_des_charges.md
 ├── LICENSE                     # CC0 1.0 Universal, verbatim legal text — see Licensing section
 ├── README.md
 ├── CONTRIBUTING.md
@@ -75,6 +74,10 @@ md2nativedocx/
 │   ├── cli/                      # `npx md2nativedocx` (spec §8)
 │   └── vscode-extension/         # spec §5.4.b
 └── docs/
+    ├── specs/                     # product specs: cahier_des_charges.md (what/why), UX_SPEC.md,
+    │                              # cahier_des_charges_google_slides.md, FUTURE_*_SPEC.md
+    ├── adr/                       # architecture decision records
+    └── compliance/                # licensing, IT risk analysis, non-technical guide
 ```
 
 `packages/core` has zero knowledge of Pandoc, VS Code, or Office.js — it's a pure function from
@@ -184,7 +187,7 @@ before there's anyone to govern is wasted effort.
 - SemVer once `1.0.0` ships. Before that, breaking changes don't require a major bump — that's
   standard SemVer practice for pre-1.0 software, and this project will break its public API more
   than once before the architecture settles (see the naming/scope history already visible in
-  `cahier_des_charges.md` §14 as a preview of how much this project's own decisions have moved).
+  `docs/specs/cahier_des_charges.md` §14 as a preview of how much this project's own decisions have moved).
 - Conventional Commits (already required above) exist specifically so a changelog can eventually be
   generated automatically (e.g. via `changesets` or `release-please`) instead of hand-written. Pick
   a tool before the first tagged release, not before — no need to wire this up while there's
@@ -196,7 +199,7 @@ before there's anyone to govern is wasted effort.
 
 ## Tracking roadmap progress
 
-`cahier_des_charges.md` §11 defines phases (Phase 0 spike, Phase 1 MVP, etc.) but doesn't say how
+`docs/specs/cahier_des_charges.md` §11 defines phases (Phase 0 spike, Phase 1 MVP, etc.) but doesn't say how
 that turns into day-to-day work. Use a GitHub Project (board) with one column per phase, and link
 every issue to the phase it belongs to. This makes "what's actually left in Phase 1" answerable by
 looking at the board instead of re-reading the whole spec each time — useful for the maintainer, and

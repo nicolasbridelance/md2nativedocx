@@ -3,11 +3,11 @@
 - **Statut :** Spike concluant côté génération/paquet, décision finale **en attente** de
   vérification manuelle dans Google Slides/PowerPoint réels.
 - **Date :** 2026-09-02
-- **Contexte :** `cahier_des_charges_google_slides.md` §8, Phase 0.
+- **Contexte :** `docs/specs/cahier_des_charges_google_slides.md` §8, Phase 0.
 
 ## Contexte
 
-`cahier_des_charges_google_slides.md` propose de prouver l'indépendance du `core`
+`docs/specs/cahier_des_charges_google_slides.md` propose de prouver l'indépendance du `core`
 (parseur → layout Dagre) vis-à-vis du format de sortie en lui branchant un traducteur `.pptx`
 (Option A), réutilisant le même vocabulaire DrawingML que le traducteur `.docx` existant
 (`p:sp`/`p:cxnSp` au lieu de `wps:wsp`/`wps:cxnSp`, sans l'indirection canevas `wpg:wgp`). La

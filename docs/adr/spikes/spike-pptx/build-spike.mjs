@@ -5,7 +5,7 @@
 // Mermaid flowchart) and one connector (`p:cxnSp`) between them, using
 // `a:stCxn`/`a:endCxn` connection-site indices.
 //
-// Purpose: `cahier_des_charges_google_slides.md` §8 "Phase 0 — Spike de
+// Purpose: `docs/specs/cahier_des_charges_google_slides.md` §8 "Phase 0 — Spike de
 // validation" — prove a minimal, self-contained `.pptx` (no external
 // relationships, same OOXML/DrawingML family as the existing `.docx`
 // translator) can be produced by hand, is a well-formed OPC package, and

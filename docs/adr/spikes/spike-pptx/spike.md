@@ -1,6 +1,6 @@
 # Spike pptx — `.pptx` minimal à la main, formes DrawingML + connecteur
 
-Ce document teste la Phase 0 de `cahier_des_charges_google_slides.md` (§8
+Ce document teste la Phase 0 de `docs/specs/cahier_des_charges_google_slides.md` (§8
 "Spike de validation") : générer un `.pptx` minimal à la main (2 formes +
 1 connecteur, même vocabulaire DrawingML que le traducteur `.docx` existant),
 confirmer qu'il s'agit d'un paquet OPC valide et auto-contenu, et vérifier

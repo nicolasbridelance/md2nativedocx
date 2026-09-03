@@ -33,7 +33,7 @@
  * A third function, {@link injectSmartArtParts}, goes further than the two
  * corrections above — it adds brand-new ZIP entries (`word/diagrams/*.xml`),
  * not just same-path replacements. Flagged and signed off on separately
- * (`FUTURE_mmd2smartart_SPEC.md` §8, confirmed with the maintainer
+ * (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §8, confirmed with the maintainer
  * 2026-09-03) since it's a materially bigger relaxation of rule #7 than the
  * two corrections above. See its own doc comment for why it exists and what
  * it does; it is a no-op whenever a document has no SmartArt diagram in it.
@@ -170,13 +170,13 @@ export function postProcessDocx(docxPath) {
 
 /**
  * SmartArt package wiring — the "notable postprocess.mjs extension" flagged
- * in `FUTURE_mmd2smartart_SPEC.md` §8 as needing sign-off before writing
+ * in `docs/specs/FUTURE_mmd2smartart_SPEC.md` §8 as needing sign-off before writing
  * (given 2026-09-03): adds brand-new ZIP entries, not just a same-path
  * replacement like {@link postProcessDocx} above.
  *
  * Why this exists at all: `packages/pandoc-filter/bin/md2nativedocx-core.mjs`
  * cannot add `.docx` package parts or relationships itself (Pandoc's Lua
- * filter API has no such hook, `FUTURE_mmd2smartart_SPEC.md` §2) — it can
+ * filter API has no such hook, `docs/specs/FUTURE_mmd2smartart_SPEC.md` §2) — it can
  * only write the *body* XML Pandoc embeds where the ```mermaid block was
  * (`@md2nativedocx/core`'s `buildSmartArtDrawingXml`). So for each SmartArt
  * diagram it instead writes the diagram's 4 XML parts to a temp directory

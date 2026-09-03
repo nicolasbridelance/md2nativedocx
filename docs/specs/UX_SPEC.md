@@ -1,11 +1,11 @@
-# UX_SPEC.md
+# docs/specs/UX_SPEC.md
 
 Comportement à l'écran des composants utilisateur de `md2nativedocx` : l'extension VS Code
 (Partie 1) et l'add-in Word (Partie 2). Troisième pilier de la documentation du projet, à lire
 avec les deux autres :
-- `cahier_des_charges.md` = le **quoi/pourquoi** (produit, architecture)
+- `docs/specs/cahier_des_charges.md` = le **quoi/pourquoi** (produit, architecture)
 - `AGENTS.md` = le **comment coder** (règles techniques, sécurité)
-- `UX_SPEC.md` (ce fichier) = le **comment ça se comporte à l'écran**
+- `docs/specs/UX_SPEC.md` (ce fichier) = le **comment ça se comporte à l'écran**
 
 Comme les deux autres, ce fichier fait autorité — une implémentation qui diverge de ce qui est
 décrit ici sans décision explicite documentée est un bug, pas une variante acceptable.
@@ -26,7 +26,7 @@ commande) et parce qu'elles laissent l'utilisateur sans retour pendant les opér
 Chaque décision de ce document répond directement à l'un de ces deux problèmes : **découvrabilité
 sans effort de mémoire**, et **retour visuel à chaque étape**.
 
-Contrainte permanente, héritée de `cahier_des_charges.md` §2 : **aucune édition WYSIWYG des
+Contrainte permanente, héritée de `docs/specs/cahier_des_charges.md` §2 : **aucune édition WYSIWYG des
 diagrammes hors de Word.** Toute fonctionnalité UI qui commence à ressembler à un éditeur de formes
 — dans VS Code ou dans le taskpane Word — est hors scope, quelle que soit sa popularité
 potentielle. Cette limite s'applique aux deux parties ci-dessous, chacune a sa propre section
@@ -116,7 +116,7 @@ déplacement de forme, pas de redimensionnement, pas de changement de couleur, p
 persistante. C'est une image rendue, affichée dans un webview, point final. Toute demande future
 ("et si on pouvait juste ajuster la couleur avant d'exporter ?") doit être reconnue comme une
 tentative de reconstruire un éditeur de formes dans VS Code — exactement ce que le projet exclut
-depuis `cahier_des_charges.md` §2 — et escaladée à un humain plutôt qu'implémentée directement.
+depuis `docs/specs/cahier_des_charges.md` §2 — et escaladée à un humain plutôt qu'implémentée directement.
 
 ---
 

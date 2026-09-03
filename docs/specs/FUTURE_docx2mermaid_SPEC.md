@@ -1,7 +1,7 @@
 # SPEC — `docx2mermaid` (nom provisoire) : lecture inverse, formes Word → Mermaid stable
 
 **Statut : piste documentée, hors roadmap de l'équipe cœur pour l'instant.** Contrairement à
-l'extension ODF (`cahier_des_charges.md` §2.1, qui est explicitement "l'équipe cœur ne le fera pas,
+l'extension ODF (`docs/specs/cahier_des_charges.md` §2.1, qui est explicitement "l'équipe cœur ne le fera pas,
 contribution externe bienvenue"), le statut ici est différent et volontairement laissé ouvert : ce
 n'est pas écarté par principe, juste pas priorisé tant que la V1 (Mermaid → Word) n'est pas stable.
 Qui la construira — le mainteneur plus tard, ou un contributeur externe — n'est pas tranché par ce
@@ -38,7 +38,7 @@ pour le sens Mermaid → formes natives (déjà rare), il y en a encore moins po
 | Exclu du scope | Raison |
 |---|---|
 | Reconvertir n'importe quel dessin Word arbitraire | Scope = documents produits par `md2nativedocx`, ou respectant sa convention de formes/connecteurs. Un dessin Word fait à la main de zéro, sans lien avec notre traducteur, n'a pas de garantie de mapping propre |
-| Diagrammes non-flowchart | Aligné sur `cahier_des_charges.md` §2 — même limite que le sens direct |
+| Diagrammes non-flowchart | Aligné sur `docs/specs/cahier_des_charges.md` §2 — même limite que le sens direct |
 | Deviner la sémantique d'une forme non répertoriée en §6.1 | Une forme ajoutée à la main sans référence connue est signalée explicitement (avertissement ou erreur), jamais convertie par supposition silencieuse |
 | Reconstruire le layout dans le Mermaid de sortie | Mermaid n'encode pas de coordonnées, seulement la topologie (nœuds, liens, formes). Un déplacement pur d'une boîte dans Word n'a donc aucun effet sur le Mermaid réexporté — seul l'ajout/suppression de nœuds/liens ou le changement de forme/texte compte |
 

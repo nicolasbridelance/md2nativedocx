@@ -6,12 +6,12 @@
  * future generator is viable: data1.xml in that real document also
  * contains ~40 auto-generated "pres" (presentation) points mirroring the
  * layout algorithm's internal shape tree, which nothing in
- * FUTURE_mmd2smartart_SPEC.md anticipated hand-authoring, and drawing1.xml
+ * docs/specs/FUTURE_mmd2smartart_SPEC.md anticipated hand-authoring, and drawing1.xml
  * caches the exact rendered shapes for that ONE specific tree shape.
  * Neither generalizes to "generate a data1.xml for an arbitrary Mermaid
  * tree" if the render only ever replays those caches.
  *
- * v3 tests the actual MVP target from FUTURE_mmd2smartart_SPEC.md §3: only
+ * v3 tests the actual MVP target from docs/specs/FUTURE_mmd2smartart_SPEC.md §3: only
  * data1.xml + layout1.xml (no colors/quickStyle/drawing, r:qs=""/r:cs=""
  * per that MVP decision), using the AUTHENTIC layout1.xml extracted from
  * real Word (unlike v1, which failed with a hand-approximated one) paired
@@ -33,7 +33,7 @@
  * data alone at render time -- meaning a future generator only needs to
  * emit doc/plain/parTrans/sibTrans/cxn nodes for an arbitrary Mermaid tree
  * and reuse the ONE fixed, authentic layout1.xml verbatim forever. That
- * would fully de-risk FUTURE_mmd2smartart_SPEC.md's generator step (§7
+ * would fully de-risk docs/specs/FUTURE_mmd2smartart_SPEC.md's generator step (§7
  * step 4) for the tree/chain case.
  *
  * If it renders blank or wrong, the "pres" points are load-bearing and a

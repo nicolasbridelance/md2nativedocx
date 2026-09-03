@@ -12,7 +12,7 @@ adapted to this project's actual size and spaces rather than left as generic boi
 ## The short version
 
 Disagree rigorously, not personally. This project has already changed its own scope and name
-several times during planning (see `cahier_des_charges.md` §14) and has a written norm of
+several times during planning (see `docs/specs/cahier_des_charges.md` §14) and has a written norm of
 escalating uncertain calls to a human rather than guessing (see `AGENTS.md`) — arguing hard about
 an architecture decision, a rejected PR, or a security trade-off is exactly the kind of disagreement
 this project runs on. Arguing at the person who made the call is not, and won't be tolerated

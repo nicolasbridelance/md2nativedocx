@@ -16,11 +16,11 @@
   plafond 4, qui était spécifique à l'algorithme `hierarchy1` de Word lui-même) et zéro risque de
   licence. Voir "Round 5" pour la recette complète et "Décision" pour la recommandation à jour.
 - **Date :** 2026-09-02
-- **Contexte :** `FUTURE_mmd2smartart_SPEC.md` §7, Spike 1 ("faisabilité brute").
+- **Contexte :** `docs/specs/FUTURE_mmd2smartart_SPEC.md` §7, Spike 1 ("faisabilité brute").
 
 ## Contexte
 
-`FUTURE_mmd2smartart_SPEC.md` propose un traducteur alternatif ciblant le SmartArt natif de Word
+`docs/specs/FUTURE_mmd2smartart_SPEC.md` propose un traducteur alternatif ciblant le SmartArt natif de Word
 pour les topologies de flowchart "sages" (chaîne/arbre/cycle), en complément du pipeline
 `wpg:wgp` existant. La spec elle-même appelle explicitement à un spike de faisabilité brute avant
 tout investissement dans le classifieur et les générateurs, précisément pour éviter d'investir
@@ -57,7 +57,7 @@ confirme que le frame graphique du diagramme est bien créé (nom et taille corr
 avec `wp:extent`), mais son contenu rendu est un graphique **0×0**. Isolé sur un cas minimal
 (1 boîte, aucun enfant, aucun connecteur) : même résultat blanc, avec ou sans la partie
 `dsp:drawing` de secours (mécanisme "dernier layout réussi", découvert en cours de spike via les
-specs ouvertes Microsoft MS-ODRAWXML — absent de `FUTURE_mmd2smartart_SPEC.md` §3, à noter pour
+specs ouvertes Microsoft MS-ODRAWXML — absent de `docs/specs/FUTURE_mmd2smartart_SPEC.md` §3, à noter pour
 une future révision de la spec).
 
 **Cause la plus probable, non confirmée** : `layout1.xml` de ce spike n'est pas une copie de
@@ -183,7 +183,7 @@ Détail complet, y compris la méthode d'extraction, dans
 
 ## Décision
 
-**Le générateur (`FUTURE_mmd2smartart_SPEC.md` §7, étape 4) doit être construit autour d'un
+**Le générateur (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §7, étape 4) doit être construit autour d'un
 algorithme `dgm:layoutDef` original (pas le `hierarchy1` de Word), accompagné d'un miroir `pres`
 et d'un `colorsDef`/`styleDef` générés par nos soins — la recette complète du Round 5.** C'est un
 changement de direction par rapport à la conclusion précédente de cet ADR (qui visait le vrai
@@ -220,7 +220,7 @@ donc entièrement close et validée : les 4 parties (algorithme, données+miroir
    pour un cas `chain` à 3 éléments).
 2. Décider de la profondeur maximale à supporter en pratique (compromis lisibilité/complexité XML,
    pas une limite technique dure comme l'était le plafond 4 de `hierarchy1`).
-3. `FUTURE_mmd2smartart_SPEC.md` §3, §4 et §7 méritent une révision explicite pour refléter tout ce
+3. `docs/specs/FUTURE_mmd2smartart_SPEC.md` §3, §4 et §7 méritent une révision explicite pour refléter tout ce
    changement de direction (algorithme personnalisé plutôt que `hierarchy1`, miroir `pres`
    généralisé, `colorsDef`/`styleDef` personnalisés) — cette ADR ne modifie pas la spec elle-même,
    à faire séparément si le chantier est poursuivi.

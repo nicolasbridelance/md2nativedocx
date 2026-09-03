@@ -50,7 +50,7 @@ Le principe directeur : **chaque ligne de code écrite doit concerner la traduct
 
 ### 2.2 Piste future — lecture inverse (docx2mermaid)
 
-Direction symétrique : relire un `.docx` édité à la main dans Word pour en extraire du Mermaid stable, permettant une boucle IA-génère → humain-édite-dans-Word → IA-continue. Contrairement à l'ODF (§2.1), le statut n'est pas « l'équipe cœur ne le fera pas » — juste « pas avant que la V1 soit stable ». Spec complète : `FUTURE_docx2mermaid_SPEC.md`. Seule action déjà actionnée dans la V1 actuelle : les formes et connecteurs portent leur ID Mermaid d'origine dans `cNvPr/name` (§5.3 de ce document), pour que cette relecture soit possible sans réécrire le traducteur plus tard.
+Direction symétrique : relire un `.docx` édité à la main dans Word pour en extraire du Mermaid stable, permettant une boucle IA-génère → humain-édite-dans-Word → IA-continue. Contrairement à l'ODF (§2.1), le statut n'est pas « l'équipe cœur ne le fera pas » — juste « pas avant que la V1 soit stable ». Spec complète : `docs/specs/FUTURE_docx2mermaid_SPEC.md`. Seule action déjà actionnée dans la V1 actuelle : les formes et connecteurs portent leur ID Mermaid d'origine dans `cNvPr/name` (§5.3 de ce document), pour que cette relecture soit possible sans réécrire le traducteur plus tard.
 
 ---
 

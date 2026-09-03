@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Spike 1 (mmd2smartart, see FUTURE_mmd2smartart_SPEC.md §7) -- build a
+ * Spike 1 (mmd2smartart, see docs/specs/FUTURE_mmd2smartart_SPEC.md §7) -- build a
  * minimal .docx containing a hand-built SmartArt hierarchy diagram, by
  * hand-editing the ZIP package of a Pandoc-produced base .docx.
  *

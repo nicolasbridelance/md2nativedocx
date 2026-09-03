@@ -1,6 +1,6 @@
 # Spike SmartArt — minimal `hierarchy1`-shaped diagram via hand-built OOXML parts
 
-Spike 1 ("faisabilité brute") from `FUTURE_mmd2smartart_SPEC.md` §7. Tests whether a `.docx`
+Spike 1 ("faisabilité brute") from `docs/specs/FUTURE_mmd2smartart_SPEC.md` §7. Tests whether a `.docx`
 containing a hand-built 2-level SmartArt hierarchy (data + layout parts only, no colors/
 quickStyle, per §3's MVP decision) is structurally acceptable OOXML, without relying on Pandoc
 (which has no mechanism to add custom parts — confirmed in §2 of the spec).
@@ -66,7 +66,7 @@ script (see "Verification" below) that the diagram's graphic frame *was* created
 internal rendered `Graphic` was `0×0` pixels.
 
 Research into this (Microsoft's MS-ODRAWXML / MS-OI29500 open specs) surfaced a mechanism not
-mentioned in `FUTURE_mmd2smartart_SPEC.md` §3: a diagram can carry a third, semi-optional part —
+mentioned in `docs/specs/FUTURE_mmd2smartart_SPEC.md` §3: a diagram can carry a third, semi-optional part —
 `word/diagrams/drawing1.xml` (content type `application/vnd.ms-office.drawingml.diagramDrawing
 +xml`, relationship type `.../2007/relationships/diagramDrawing`), referenced not via
 `dgm:relIds` but via `<dgm:extLst><a:ext uri="...diagram"><dsp:dataModelExt relId="..."/>`
@@ -181,7 +181,7 @@ Word and provided the `.docx`
 (`SmartArt-Hierarchie+Hierarchiehorizontale.docx`, extracted into `real-word-extract/`, the
 "Hiérarchie" diagram's 5 parts copied verbatim into `real-diagram1/`). This unblocked the single
 biggest open question from the v1 round: whether a hand-approximated `layout1.xml` could ever be
-correct. It also surfaced two mechanics not anticipated by `FUTURE_mmd2smartart_SPEC.md` §3, both
+correct. It also surfaced two mechanics not anticipated by `docs/specs/FUTURE_mmd2smartart_SPEC.md` §3, both
 confirmed by inspecting the real parts before writing any new code:
 
 1. `data1.xml`'s `<dsp:dataModelExt relId="rId8"/>` (inside `dgm:extLst`) resolves against
@@ -192,7 +192,7 @@ confirmed by inspecting the real parts before writing any new code:
 2. `data1.xml` for a 6-node, 3-level real tree contains **~40 additional `type="pres"` points**
    (a resolved presentation-node tree, one family of nodes per algorithm shape) plus `parOf`
    connections between data points — far more structure than the "doc + plain nodes + parTrans/
-   sibTrans" model `FUTURE_mmd2smartart_SPEC.md` §4 envisioned a generator producing.
+   sibTrans" model `docs/specs/FUTURE_mmd2smartart_SPEC.md` §4 envisioned a generator producing.
 
 Three follow-up builds, same zip-surgery mechanism, same verification (ZIP validity, XXE-safe
 XML well-formedness, `mc:Ignorable` hygiene, no external relationships — all passed on all three,
@@ -223,7 +223,7 @@ omitted below for brevity; only the render result differs):
 
 ### What this changes about the plan
 
-`FUTURE_mmd2smartart_SPEC.md` §3's MVP simplification ("only emit `data`+`layout`, 2 parts
+`docs/specs/FUTURE_mmd2smartart_SPEC.md` §3's MVP simplification ("only emit `data`+`layout`, 2 parts
 instead of 4, let the diagram inherit the host theme") does not hold up as-is against these
 results, at least under LibreOffice: v4 shows that dropping `colors`/`quickStyle`/`drawing` costs
 more than styling — it costs the shape geometry itself. A production generator likely needs to
@@ -250,7 +250,7 @@ per-shape-count.
   text-only degradation seen in LibreOffice. **This isolates the v4 LibreOffice result as a
   LibreOffice-specific import limitation, not a real OOXML/Word requirement**: Word's diagram
   engine computes full shape geometry from `data`+`layout` alone (given the `pres` node tree is
-  present), exactly as `FUTURE_mmd2smartart_SPEC.md` §3's MVP decision assumed. LibreOffice's
+  present), exactly as `docs/specs/FUTURE_mmd2smartart_SPEC.md` §3's MVP decision assumed. LibreOffice's
   diagram importer apparently needs `colors`/`quickStyle`/`drawing` to render shapes at all — a
   concrete instance of the "~25 known LibreOffice SmartArt bugs" the spec's §10.4 already flagged
   as a risk, now with a specific reproduction case for `test:visual` to account for (a SmartArt
@@ -338,7 +338,7 @@ The full spectrum is now empirically mapped:
 Two independent variables were being tested at once when going from v4 to v3 (presence of `pres`
 nodes, and `modelId` format), so this table does not yet prove which one caused the hard failure
 — only that hand-authoring `data1.xml` from the minimal logical model in
-`FUTURE_mmd2smartart_SPEC.md` §4 (doc/plain/parTrans/sibTrans/cxn, no `pres` mirror) produces a
+`docs/specs/FUTURE_mmd2smartart_SPEC.md` §4 (doc/plain/parTrans/sibTrans/cxn, no `pres` mirror) produces a
 file Word refuses to open, which is unambiguously worse than "renders wrong" for a shipping
 product. The next disambiguating experiment (not attempted here) would be a v5: real `data1.xml`
 verbatim but with `modelId`s changed to plain integers (isolating the id-format variable) versus
@@ -389,7 +389,7 @@ same depth-2 template with no additional `layoutNode` definitions required.
 
 ### What this changes about the recommendation
 
-This substantially de-risks the generator (`FUTURE_mmd2smartart_SPEC.md` §7 step 4) for the
+This substantially de-risks the generator (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §7 step 4) for the
 `tree` topology: the `pres` mirror is not a per-instance snapshot requiring bespoke computation —
 it's a fixed, depth-indexed lookup table (at most 4 rows, known exactly from this real sample) that
 a generator can reproduce mechanically for any Mermaid tree of depth ≤ 4 and arbitrary breadth.
@@ -593,7 +593,7 @@ Word samples and reported back (no `.docx` kept/committed, per the same licensin
 5. **A fresh, better-motivated candidate for `subgraph` surfaced instead**: `Nested Target`
    (Relationship category — concentric rings, real visual *containment*), not yet spiked. Unlike
    `Labeled Hierarchy` (a tree with a side label — the exact "boîte parente en plus, pas un cadre
-   autour du groupe" weakness `FUTURE_mmd2smartart_SPEC.md` §5.1 already flagged), `Nested Target`'s
+   autour du groupe" weakness `docs/specs/FUTURE_mmd2smartart_SPEC.md` §5.1 already flagged), `Nested Target`'s
    own visual language *is* "a ring drawn around a group" — a much closer semantic match to what a
    Mermaid `subgraph` actually is (a container, not a hierarchy node). Worth a real Word sample
    before `Labeled Hierarchy`'s remaining narrow case is invested in further.
@@ -603,7 +603,7 @@ Word samples and reported back (no `.docx` kept/committed, per the same licensin
 Prompted by the maintainer noticing SmartArt's own "Picture" layout family embeds images inside a
 diagram, then asking the inverse question: can a SmartArt contain a SmartArt? The literal answer is
 no — the diagram data model has no element for embedding another live diagram, only `a:blip`
-picture references (`FUTURE_mmd2smartart_SPEC.md`'s "Picture Organization Chart" family). But a
+picture references (`docs/specs/FUTURE_mmd2smartart_SPEC.md`'s "Picture Organization Chart" family). But a
 structurally different, more promising question turned out to be answerable: **can our own existing
 `wpc:wpc` canvas (the one `ooxml-translator.ts` already uses for every non-SmartArt flowchart,
 including subgraph title boxes — `renderSubgraph`'s doc comment) host a `dgm:relIds` diagram
@@ -649,7 +649,7 @@ maintainer to open in a real Word installation — if the nested diagram DOES ap
 would be a Word-only capability, the same compatibility tier SmartArt's own live *editing* already
 sits at today (LibreOffice's SmartArt editing is itself already documented as "experimental only,
 not stable, not usable for production" per the FOSDEM 2023 citation in
-`FUTURE_mmd2smartart_SPEC.md` §10.4) — so a Word-only nested-diagram capability would not be a new
+`docs/specs/FUTURE_mmd2smartart_SPEC.md` §10.4) — so a Word-only nested-diagram capability would not be a new
 category of compromise for this project, just the existing one extended to a new feature. Verdict
 pending the maintainer's real-Word test.
 
