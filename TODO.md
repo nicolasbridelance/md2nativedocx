@@ -923,6 +923,19 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       containment réel, mieux motivée que `Labeled Hierarchy` (voir catalogue). Pas encore de
       générateur ni d'échantillon Word analysé — échantillon demandé dans
       `docs/smartart-samples-wishlist.md`, en attente.
+- [ ] **Piste parallèle, potentiellement meilleure : `subgraph` = boîte-titre existante +
+      diagramme SmartArt réel intégré dans le même canevas `wpc:wpc` via `wpc:graphicFrame`
+      (2026-09-03, `spike.md` Round 7)**. Contrairement aux pistes ci-dessus, ne parie sur aucun
+      layout de galerie précis : réutilise la boîte de titre de sous-graphe déjà produite par
+      `ooxml-translator.ts` (déjà un vrai "cadre autour du groupe") et y intègre un diagramme
+      `chain`/`tree`/`cycle` **déjà livré et vérifié**, généré récursivement pour le contenu du
+      `subgraph`. Confirmé conforme au schéma Microsoft (`MS-ODRAWXML`, sourcé, pas deviné) mais
+      **le rendu LibreOffice ne montre pas le diagramme intégré** (seul le rectangle apparaît,
+      aucune erreur) — probable non-implémentation de cette extension 2010 par LibreOffice, pas une
+      erreur XML (la forme sœur dans le même canevas s'affiche correctement). Fichier de test
+      envoyé au mainteneur pour vérification dans un vrai Word — **en attente de retour** avant de
+      savoir si cette piste est viable (même si Word-only, ce ne serait pas une nouvelle catégorie
+      de compromis : l'édition SmartArt elle-même est déjà Word-only, voir spec §10.4).
 - [ ] **Une fois plusieurs générateurs SmartArt (chain/tree/cycle) validés bout-en-bout** — tâche
       demandée explicitement par le mainteneur (2026-09-03), à faire avant d'aller plus loin sur les
       diagrammes de séquence/l'add-in : télécharger les normes de référence (CommonMark, GitHub

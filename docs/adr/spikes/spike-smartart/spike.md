@@ -597,3 +597,58 @@ Word samples and reported back (no `.docx` kept/committed, per the same licensin
    own visual language *is* "a ring drawn around a group" — a much closer semantic match to what a
    Mermaid `subgraph` actually is (a container, not a hierarchy node). Worth a real Word sample
    before `Labeled Hierarchy`'s remaining narrow case is invested in further.
+
+## Round 7 (2026-09-03) — a genuinely different idea for `subgraph`: embed a real, separate SmartArt inside the existing `wpg:wgp`-free canvas, instead of forcing everything into one gallery layout's data model
+
+Prompted by the maintainer noticing SmartArt's own "Picture" layout family embeds images inside a
+diagram, then asking the inverse question: can a SmartArt contain a SmartArt? The literal answer is
+no — the diagram data model has no element for embedding another live diagram, only `a:blip`
+picture references (`FUTURE_mmd2smartart_SPEC.md`'s "Picture Organization Chart" family). But a
+structurally different, more promising question turned out to be answerable: **can our own existing
+`wpc:wpc` canvas (the one `ooxml-translator.ts` already uses for every non-SmartArt flowchart,
+including subgraph title boxes — `renderSubgraph`'s doc comment) host a `dgm:relIds` diagram
+reference as a sibling of an ordinary `wps:wsp` shape?** If so, a `subgraph` could be rendered as
+today's own subgraph title box (already a real "frame around the group" — arguably better than any
+single gallery layout, since it's literally a rectangle with a title, no compromise needed) with a
+**genuinely separate, fully-featured SmartArt diagram** (generated via our own already-shipped
+`chain.ts`/`tree.ts`/`cycle.ts`, recursively, for whatever's inside the `subgraph`) positioned
+inside its bounds — reusing generators already built and verified rather than betting on any single
+Microsoft-authored gallery layout's fixed data model.
+
+Checked the schema before writing any test XML (not guessed): [MS-ODRAWXML] (the extension spec
+covering the 2010 `wordprocessingCanvas`/`wordprocessingGroup`/`wordprocessingShape` namespaces
+already used throughout this project's `wpc:wpc` canvas) confirms `CT_WordprocessingCanvas`'s
+content model explicitly allows a `wpc:graphicFrame` child (type `wpg:CT_GraphicFrame`, the same
+type used to embed a chart/OLE object inside a `wpg:wgp` group) as a sibling of `wps:wsp`/`pic:pic`/
+`wpg:wgp` — sourced from Microsoft Learn's Open Specifications documentation, not memory:
+- https://learn.microsoft.com/en-us/openspecs/office_standards/ms-odrawxml/0af4dfe1-b07b-41eb-a48b-87aadd16b51b
+  (`CT_WordprocessingCanvas`'s content model)
+- https://learn.microsoft.com/en-us/openspecs/office_standards/ms-odrawxml/c89701a2-99ac-4948-b84f-1eaecc69dfa0
+  (`CT_WordprocessingGroup`, where `CT_GraphicFrame` is actually defined)
+- https://learn.microsoft.com/en-us/openspecs/office_standards/ms-odrawxml/8ae0d876-8e2a-405f-b9c1-3e777d3f8a40
+  (`CT_GraphicFrame` itself: `cNvPr`, `cNvFrPr`, `xfrm`, `a:graphic`, optional `extLst`, in that order)
+
+Built a minimal test docx: one `wpc:wpc` canvas containing (1) a plain `wps:wsp` rectangle with a
+title ("Sous-groupe (titre)"), mimicking today's subgraph box, and (2) a `wpc:graphicFrame`
+positioned directly below it via its own `a:xfrm`, wrapping a real, self-authored, fully-verified
+2-node `chain` SmartArt diagram (same recipe as `chain.ts`, own generated `data`/`layout`/`colors`/
+`quickStyle` parts, real relationships, real content-type overrides — nothing hand-waved).
+
+**Result under headless LibreOffice: the rectangle renders correctly (proving the canvas + shape
+half works exactly as expected); the embedded diagram does not render at all** — no error, no
+broken-image placeholder, nothing. The canvas's own overall frame extent visibly shrank to fit only
+the rectangle, as if the `wpc:graphicFrame` sibling were entirely absent from the XML rather than
+present-but-broken. This is consistent with LibreOffice's WordprocessingML import filter simply not
+implementing the `wordprocessingGroup`/`wordprocessingCanvas` `graphicFrame` extension at all
+(a rare, Microsoft-2010-specific feature — embedding a chart inside a Word group shape is uncommon
+even in real-world Word usage) rather than an XML mistake: the schema was followed exactly as
+documented, and the sibling shape in the very same canvas rendered without issue.
+
+**Not yet known: whether real Word renders this correctly.** Sent the test `.docx` directly to the
+maintainer to open in a real Word installation — if the nested diagram DOES appear there, this
+would be a Word-only capability, the same compatibility tier SmartArt's own live *editing* already
+sits at today (LibreOffice's SmartArt editing is itself already documented as "experimental only,
+not stable, not usable for production" per the FOSDEM 2023 citation in
+`FUTURE_mmd2smartart_SPEC.md` §10.4) — so a Word-only nested-diagram capability would not be a new
+category of compromise for this project, just the existing one extended to a new feature. Verdict
+pending the maintainer's real-Word test.
