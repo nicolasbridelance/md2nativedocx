@@ -22,7 +22,7 @@
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
-import { escapeXml } from '../translator/xml-escape.js';
+import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
 
 /** The four OOXML diagram parts a `chain` SmartArt diagram needs. */
 export interface SmartArtChainOutput {
@@ -39,6 +39,11 @@ export interface SmartArtChainOutput {
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 
+/** `layoutDef` URN for the horizontal (Mermaid `LR`) chain variant. */
+export const CHAIN_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/chain1';
+/** `layoutDef` URN for the vertical (Mermaid `TD`) chain variant (§ below). */
+export const CHAIN_LAYOUT_TD_URN = 'urn:md2nativedocx/smartart-layout/chain1-td';
+
 /**
  * Original `dgm:layoutDef` for a horizontal chain of boxes (`lin` algorithm,
  * one `composite`/`Main` pair per node via `forEach axis="ch"`, one `sibTrans`
@@ -52,7 +57,7 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
  */
 export const CHAIN_LAYOUT_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-  `<dgm:layoutDef xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}" uniqueId="urn:md2nativedocx/smartart-layout/chain1">` +
+  `<dgm:layoutDef xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}" uniqueId="${CHAIN_LAYOUT_URN}">` +
   '<dgm:title val=""/><dgm:desc val=""/>' +
   '<dgm:catLst><dgm:cat type="list" pri="1"/></dgm:catLst>' +
   '<dgm:sampData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:sampData>' +
@@ -91,6 +96,27 @@ export const CHAIN_LAYOUT_XML =
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
   '</dgm:layoutDef>';
+
+/**
+ * The vertical (Mermaid `TD`) variant of {@link CHAIN_LAYOUT_XML}: identical
+ * except for its `uniqueId` and a `<dgm:param type="linDir" val="fromT"/>` on
+ * the root `lin` algorithm, which switches its stacking axis from
+ * left-to-right (the format's own default) to top-to-bottom. Derived by
+ * string substitution rather than duplicated by hand, so the two variants
+ * can never drift apart on anything but direction. Verified this session by
+ * rendering the substituted XML under headless LibreOffice — three boxes
+ * stacked vertically, spacing/styling otherwise identical to the horizontal
+ * variant.
+ *
+ * Before this, neither `chain.ts` nor `tree.ts` (below) read
+ * `flowchart.direction` at all — every chain rendered horizontally
+ * regardless of the Mermaid source's `TD`/`LR`, a gap first written up in
+ * `docs/smartart-compliance-table.md`.
+ */
+export const CHAIN_LAYOUT_XML_TD = CHAIN_LAYOUT_XML.replace(
+  `uniqueId="${CHAIN_LAYOUT_URN}"`,
+  `uniqueId="${CHAIN_LAYOUT_TD_URN}"`
+).replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromT"/></dgm:alg>');
 
 /**
  * Original `dgm:colorsDef` — two `styleLbl`s (`node0`/`node1`, both used by
@@ -185,6 +211,21 @@ function orderedChainNodes(flowchart: Flowchart): FlowNode[] {
 }
 
 /**
+ * Map each node id to the label of the (single, since `chain` guarantees
+ * in-degree <= 1) edge that leads into it, if that edge has one. Used to
+ * apply the spec §5.2 convention below — an edge label has no native
+ * SmartArt connector to sit on, so it's folded into the destination node's
+ * own text instead.
+ */
+function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
+  const labels = new Map<string, string>();
+  for (const edge of flowchart.edges) {
+    if (edge.label) labels.set(edge.to, edge.label);
+  }
+  return labels;
+}
+
+/**
  * Build the `dgm:dataModel` for a chain of `nodes`, including the hand-built
  * `presOf`/`presParOf` presentation mirror {@link CHAIN_LAYOUT_XML}'s own
  * `root`/`composite`/`Main` layoutNodes need to render under LibreOffice
@@ -197,18 +238,48 @@ function orderedChainNodes(flowchart: Flowchart): FlowNode[] {
  * simpler to keep XML-attribute-safe, and ADR 0004 "Round 3" confirmed
  * modelId format has no effect on rendering. Node text is the only
  * user-controlled content and is XML-escaped (rule #2).
+ *
+ * Includes a `presOf` connector from the `doc` point itself to `p-root` (in
+ * addition to the per-node `presOf`s onto each `p-main*`) even though the
+ * doc point carries no text: LibreOffice renders a fully blank diagram
+ * (correct XML shape, zero visible output) without it, discovered by
+ * rendering this function's own output under headless LibreOffice rather
+ * than only asserting on the XML string, which had been this module's only
+ * verification up to that point.
+ *
+ * Two more things folded in here, both verified by rendering the actual
+ * output under headless LibreOffice rather than by XML-structure tests
+ * alone (session that built `docs/smartart-compliance-table.md`):
+ *  - `edge.label` (spec §5.2 convention): prefixed as `"label : "` onto the
+ *    destination node's own text, since SmartArt has no connector text box
+ *    and we don't control connector geometry to place a floating one.
+ *  - `node.fill` (from `classDef`): written as an `a:solidFill` on the
+ *    **content** point's own `dgm:spPr` — confirmed this session to render
+ *    correctly under LibreOffice, unlike the identical override attempted on
+ *    a *presentation* point in ADR 0004 "Round 5" ("no visual effect"). A
+ *    matching `a:prstGeom` shape override on this same content-point `spPr`
+ *    was tested the same way and confirmed **not** to render (stays
+ *    `roundRect` regardless) — not attempted here for that reason.
  */
-function buildChainDataXml(nodes: FlowNode[]): string {
+function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: string): string {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
+  const incomingLabel = incomingLabelByNodeId(flowchart);
 
   const contentPts = nodes
-    .map(
-      (node, i) =>
-        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/>` +
+    .map((node, i) => {
+      const label = incomingLabel.get(node.id);
+      const text = label ? `${label} : ${node.label}` : node.label;
+      const fill = validateHexColor(node.fill, '');
+      const spPr = fill
+        ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
+        : '<dgm:spPr/>';
+      return (
+        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}` +
         `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(node.label)}</a:t></a:r></a:p></dgm:t></dgm:pt>`
-    )
+        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`
+      );
+    })
     .join('');
 
   const presPts =
@@ -225,18 +296,20 @@ function buildChainDataXml(nodes: FlowNode[]): string {
     .map((id, i) => `<dgm:cxn modelId="c${id}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
     .join('');
 
-  const presOfCxns = nodeIds
-    .map(
-      (id) =>
-        `<dgm:cxn modelId="po${id}" type="presOf" srcId="${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>`
-    )
-    .join('');
+  const presOfCxns =
+    `<dgm:cxn modelId="po${docId}" type="presOf" srcId="${docId}" destId="p-root" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
+    nodeIds
+      .map(
+        (id) =>
+          `<dgm:cxn modelId="po${id}" type="presOf" srcId="${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
+      )
+      .join('');
 
   const presParOfCxns = nodeIds
     .map(
       (id, i) =>
-        `<dgm:cxn modelId="pp${id}a" type="presParOf" srcId="p-root" destId="p-composite${id}" srcOrd="${i}" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>` +
-        `<dgm:cxn modelId="pp${id}b" type="presParOf" srcId="p-composite${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>`
+        `<dgm:cxn modelId="pp${id}a" type="presParOf" srcId="p-root" destId="p-composite${id}" srcOrd="${i}" destOrd="0" presId="${layoutUrn}"/>` +
+        `<dgm:cxn modelId="pp${id}b" type="presParOf" srcId="p-composite${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
     )
     .join('');
 
@@ -244,7 +317,7 @@ function buildChainDataXml(nodes: FlowNode[]): string {
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
     `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet ` +
-    'loTypeId="urn:md2nativedocx/smartart-layout/chain1" loCatId="list" ' +
+    `loTypeId="${layoutUrn}" loCatId="list" ` +
     'qsTypeId="urn:md2nativedocx/smartart-quickstyle/chain1" qsCatId="simple" ' +
     'csTypeId="urn:md2nativedocx/smartart-colors/chain1" csCatId="accent1"/></dgm:pt>' +
     contentPts +
@@ -262,12 +335,21 @@ function buildChainDataXml(nodes: FlowNode[]): string {
  * re-run that check, and produces undefined results (or throws, via
  * {@link orderedChainNodes}) on a flowchart that isn't actually a simple
  * path.
+ *
+ * Picks the horizontal ({@link CHAIN_LAYOUT_XML}) or vertical
+ * ({@link CHAIN_LAYOUT_XML_TD}) layout variant from `flowchart.direction` —
+ * before this, the generator always emitted the horizontal layout,
+ * regardless of the Mermaid source's own `TD`/`LR` (see
+ * `docs/smartart-compliance-table.md`).
  */
 export function generateChain(flowchart: Flowchart): SmartArtChainOutput {
   const nodes = orderedChainNodes(flowchart);
+  const isVertical = flowchart.direction === 'TD';
+  const layoutXml = isVertical ? CHAIN_LAYOUT_XML_TD : CHAIN_LAYOUT_XML;
+  const layoutUrn = isVertical ? CHAIN_LAYOUT_TD_URN : CHAIN_LAYOUT_URN;
   return {
-    dataXml: buildChainDataXml(nodes),
-    layoutXml: CHAIN_LAYOUT_XML,
+    dataXml: buildChainDataXml(flowchart, nodes, layoutUrn),
+    layoutXml,
     colorsXml: CHAIN_COLORS_XML,
     styleXml: CHAIN_STYLE_XML,
   };

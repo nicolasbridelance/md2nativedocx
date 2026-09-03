@@ -11,8 +11,8 @@
     <dgm:shape/>
     <dgm:constrLst>
       <dgm:constr op="equ" type="primFontSz" for="des" ptType="node" val="20"/>
-      <dgm:constr type="w" for="ch" forName="level1" val="1"/>
-      <dgm:constr type="h" for="ch" forName="level1" val="1"/>
+      <dgm:constr type="w" for="ch" forName="level1" refType="w"/>
+      <dgm:constr type="h" for="ch" forName="level1" refType="h"/>
       <dgm:constr type="t" for="ch" forName="level1" val="0"/>
       <dgm:constr type="l" for="ch" forName="level1" val="0"/>
     </dgm:constrLst>
@@ -22,13 +22,13 @@
         <dgm:alg type="composite"/>
         <dgm:shape/>
         <dgm:constrLst>
-          <dgm:constr type="w" for="ch" forName="level1Main" val="1"/>
-          <dgm:constr type="h" for="ch" forName="level1Main" val="0.35"/>
+          <dgm:constr type="w" for="ch" forName="level1Main" refType="w"/>
+          <dgm:constr type="h" for="ch" forName="level1Main" refType="h" fact="0.35"/>
           <dgm:constr type="t" for="ch" forName="level1Main" val="0"/>
           <dgm:constr type="l" for="ch" forName="level1Main" val="0"/>
-          <dgm:constr type="w" for="ch" forName="level1Children" val="1"/>
-          <dgm:constr type="h" for="ch" forName="level1Children" val="0.55"/>
-          <dgm:constr type="t" for="ch" forName="level1Children" val="0.45"/>
+          <dgm:constr type="w" for="ch" forName="level1Children" refType="w"/>
+          <dgm:constr type="h" for="ch" forName="level1Children" refType="h" fact="0.55"/>
+          <dgm:constr type="t" for="ch" forName="level1Children" refType="h" fact="0.45"/>
           <dgm:constr type="l" for="ch" forName="level1Children" val="0"/>
         </dgm:constrLst>
         <dgm:layoutNode name="level1Main" styleLbl="node1">

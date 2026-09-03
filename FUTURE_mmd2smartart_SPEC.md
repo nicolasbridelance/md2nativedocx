@@ -1,6 +1,18 @@
 # FUTURE — `mmd2smartart` (spec de première intention)
 
-> Statut : spec de cadrage, non implémentée. À escalader avant tout code (nouvelle branche de
+> Statut (mis à jour 2026-09-03) : spec de cadrage, **partiellement implémentée**. Le classifieur
+> (`classify.ts`) et les 3 générateurs `chain`/`tree`/`cycle` (`chain.ts`/`tree.ts`/`cycle.ts`) sont
+> livrés, testés, **et validés par rendu LibreOffice réel** (pas seulement par test XML — cette
+> vérification a justement révélé un bug de rendu bloquant sur `chain.ts`, corrigé le même jour,
+> voir §3.1 point 4). Direction (`TD`/`LR`), couleur par nœud (`classDef`) et libellés d'arête
+> (convention §5.2) sont également implémentés dans les 3 générateurs (2026-09-03, en poussant vers
+> le 100% de la colonne SmartArt de `docs/smartart-compliance-table.md`). Le dispatch classifieur →
+> générateur dans le vrai pipeline (§7 étape 5) n'est, lui, toujours pas câblé — voir `TODO.md`
+> "Phase 6/7" pour le détail à jour.
+> Plusieurs décisions de cette section datent d'avant les spikes Round 3-5
+> (`docs/adr/0004-smartart-feasibility-spike.md`, `docs/adr/spikes/spike-smartart/spike.md`) qui
+> ont invalidé ou précisé des points ci-dessous — chaque écart est signalé inline par un encart
+> "**Mise à jour (spike)**". À escalader avant tout code additionnel (nouvelle branche de
 > sortie de `packages/core`, manipulation zip non déléguée à Pandoc — voir §7).
 > Positionnement : **complément** au traducteur OOXML natif existant (`wpg:wgp`/`custGeom`), pas
 > un remplacement. Le moat (layout Dagre + graphe arbitraire → formes natives) reste le chemin
@@ -85,6 +97,59 @@ Quatre parties associées, mais **seulement deux obligatoires** (confirmé, doc 
 automatiquement au thème du document cible plutôt que d'imposer une palette — comportement
 préférable de toute façon pour un outil qui s'insère dans un document existant.
 
+> **Mise à jour (spike, Round 5)** : cette simplification MVP tient **uniquement pour un algorithme
+> `layoutDef` réel de Word** (ex. `hierarchy1`), que Word sait résoudre dynamiquement sans `colors`/
+> `quickStyle`. Elle ne tient **pas** pour un algorithme 100 % auto-écrit (décision de licence
+> ci-dessous, §3.1) : sans `quickStyle`, le rendu régresse à du texte seul, sans aucune forme
+> visible, dans Word **et** LibreOffice (`custom-chain1-nostyle.docx`). Le générateur `chain.ts`
+> livré émet donc les **4 parties**, pas 2 — voir §3.1 et §7 étape 4 (signature mise à jour).
+> `colors` reste la seule des deux parties optionnelles réellement omissible sans perte visuelle
+> majeure si on accepte de perdre le contrôle fin de palette ; `quickStyle` est, lui, obligatoire
+> en pratique dès qu'on n'utilise pas l'algorithme intégré de Word.
+
+### 3.1 Mise à jour (spike Round 4/5) — décision de ne pas utiliser `hierarchy1`, recette réelle à 4 parties
+
+Trois découvertes du spike (`docs/adr/0004-smartart-feasibility-spike.md`,
+`docs/adr/spikes/spike-smartart/spike.md`) changent la suite de conception par rapport à la version
+initiale de cette section, écrite avant tout test dans un vrai Word/LibreOffice :
+
+1. **Décision de licence** : le générateur n'utilisera **jamais** le vrai `layout1.xml` de Word
+   (l'algorithme intégré `hierarchy1`, contenu propriétaire Microsoft) — risque de redistribution
+   dans ce dépôt CC0. À la place, chaque topologie supportée (chain/tree/cycle) a son propre
+   `dgm:layoutDef` **entièrement auto-écrit**, dans le vocabulaire public ECMA-376/Open-XML-SDK
+   (`composite`/`tx`/`lin`/`forEach`, etc. — pas de nouveau schéma, juste pas de contenu copié).
+   Conséquence directe sur la table du §4 : la colonne "Layout SmartArt (URN)" ne référence plus
+   les URNs `urn:microsoft.com/office/officeart/...` de Word, mais des URNs `urn:md2nativedocx/...`
+   propres à ce projet (voir `CHAIN_LAYOUT_XML` dans `chain.ts` pour l'exemple `chain`).
+2. **Recette de rendu confirmée à 4 parties, pas 2** (Round 5) : un algorithme auto-écrit a besoin,
+   pour s'afficher correctement dans Word **et** LibreOffice, de (a) son `layoutDef`, (b) un
+   `data1.xml` portant **à la fois** le graphe logique (`parOf`) **et** un miroir de présentation
+   `presOf`/`presParOf` construit à la main (même technique récursive que celle isolée sur le vrai
+   `hierarchy1` en Round 4, reciblée sur les noms de `layoutNode` de notre propre algorithme —
+   Word seul sait résoudre ce miroir dynamiquement via `forEach`, LibreOffice non), (c) un
+   `colorsDef`, (d) un `styleDef`/`quickStyle`. Les 4 parties peuvent être **entièrement
+   auto-écrites** (aucune n'a besoin de contenu Microsoft) — confirmé indépendamment pour chacune.
+3. **Le plafond de profondeur documenté au §4 (arbre) et implémenté dans `classify.ts`
+   (`MAX_TREE_DEPTH`) n'est plus celui de l'algorithme `hierarchy1` de Word (4)** — ce plafond n'a
+   jamais été une contrainte du format OOXML : un `layoutDef` auto-écrit (point 1 ci-dessus) n'a
+   aucune limite de profondeur intrinsèque, la profondeur devient un choix de conception (combien
+   de niveaux explicites écrire). **Tranché (2026-09-03)** : `MAX_TREE_DEPTH` vaut désormais **2**
+   (racine + une rangée d'enfants directs) — pas une limite du format, mais de `tree.ts`'s
+   générateur actuel, dont le `layoutDef` répartit une hauteur fixe (35 %/55 %) à un seul niveau
+   d'imbrication ; répéter ce partage à un niveau supplémentaire léserait tout nœud sans
+   petit-enfant, puisque le partage n'est pas calculé à partir de la forme réelle du sous-arbre
+   (contrairement à `hierarchy1`, qui est dynamique). Généraliser à une profondeur adaptative reste
+   un chantier séparé, non fait. Voir le commentaire de doc de `MAX_TREE_DEPTH` dans `classify.ts`
+   et de `TREE_LAYOUT_XML` dans `tree.ts`.
+4. **Bug critique trouvé et corrigé le même jour sur `chain.ts` (déjà "livré")** : le rendu réel
+   (LibreOffice headless) de la sortie de `generateChain()` — jamais vérifié jusqu'ici, seule la
+   structure XML était testée — était **entièrement blanc**. Cause : il manquait le connecteur
+   `presOf` reliant le point `doc` lui-même à `p-root` (présent dans tous les fichiers de spike
+   validés manuellement, oublié lors de la généralisation en générateur). Corrigé, et la même
+   correction s'est révélée nécessaire pour `tree.ts`. **Leçon retenue** : les tests unitaires
+   XML-only ne suffisent pas à détecter un rendu blanc — vérifier tout nouveau générateur SmartArt
+   par un rendu LibreOffice réel avant de le considérer "livré" (voir `TODO.md`).
+
 ---
 
 ## 4. Classifieur de topologie
@@ -99,10 +164,15 @@ classifyTopology(flowchart: Flowchart): 'chain' | 'tree' | 'cycle' | 'unsupporte
 
 | Topologie détectée | Condition | Layout SmartArt (`layoutDef` URN) | Avantage | Limitation |
 |---|---|---|---|---|
-| **Chaîne** | Tout nœud a in-degré ≤1 ET out-degré ≤1 (chemin simple) | `process1` (LR) / `verticalProcess1` (TB) — direction Mermaid → variante | Réordonnancement au glisser-déposer, style en 1 clic | Casse dès qu'un nœud a 2 sorties |
-| **Arbre** | Chaque nœud a au plus 1 parent, pas de fusion, pas de cycle | `hierarchy1` (TB) / `hierarchyLeftToRight` selon direction Mermaid | Ajout/suppression de branches natif dans Word ; **forme par nœud préservable** (§5.1) | Une fusion casse tout ; pas de texte natif sur les connecteurs (§5.2) |
-| **Cycle** | in-degré = out-degré = 1 pour chaque nœud, boucle fermée | `cycleMatrix` / `basicCycle` | Rendu circulaire propre — Dagre ne le fait pas nativement | Direction LR/TD de Mermaid perd son sens |
+| **Chaîne** | Tout nœud a in-degré ≤1 ET out-degré ≤1 (chemin simple) | auto-écrit, `urn:md2nativedocx/smartart-layout/chain1` — **livré** (`chain.ts`) | Réordonnancement au glisser-déposer, style en 1 clic | Casse dès qu'un nœud a 2 sorties |
+| **Arbre** | Chaque nœud a au plus 1 parent, pas de fusion, pas de cycle, profondeur ≤ 2 (`MAX_TREE_DEPTH`) | auto-écrit, `urn:md2nativedocx/smartart-layout/tree1` — **livré** (`tree.ts`), rendu validé | Ajout/suppression de branches natif dans Word ; **forme par nœud préservable** (§5.1) | Une fusion casse tout ; pas de texte natif sur les connecteurs (§5.2) ; profondeur limitée à 2 (racine + enfants directs), voir §3.1 point 3 |
+| **Cycle** | in-degré = out-degré = 1 pour chaque nœud, boucle fermée | auto-écrit, `urn:md2nativedocx/smartart-layout/cycle1` — **livré** (`cycle.ts`), rendu validé | Rendu circulaire propre — Dagre ne le fait pas nativement | Direction LR/TD de Mermaid perd son sens (pas d'orientation naturelle pour un cercle, une seule variante de layout) |
 | *(tout le reste)* | fusion après branche, cross-links, cycles partiels, multi-parents | — | — | fallback pipeline `wpg:wgp`/`custGeom` existant, couverture 100 % comme aujourd'hui |
+
+> **Mise à jour (spike)** : les URNs de la colonne ci-dessus ne référencent plus les algorithmes
+> intégrés de Word (`process1`/`hierarchy1`/`cycleMatrix`, envisagés dans la version initiale de
+> cette spec) — voir la décision de licence au §3.1 point 1. Ce sont des identifiants
+> `urn:md2nativedocx/...` propres à des `layoutDef` que ce projet écrit et possède.
 
 Le classifieur **disqualifie systématiquement** tout diagramme contenant un `subgraph` avant
 même d'évaluer chain/tree/cycle — sauf le cas du bricolage décrit en §5, qui doit rester un
@@ -219,14 +289,29 @@ tout code de production) :
    content-types, sur le fichier produit au Spike 1. Vérifier round-trip Pandoc → postprocess
    → Word.
 3. **Classifieur** (`packages/core/src/smartart/classify.ts`) — fonction pure, tests unitaires
-   d'abord (chain/tree/cycle/unsupported), sans dépendance au générateur XML.
+   d'abord (chain/tree/cycle/unsupported), sans dépendance au générateur XML. **Livré (2026-09-03)**,
+   12 tests unitaires.
 4. **Générateur** (`packages/core/src/smartart/`) — un module par layout supporté
    (`chain.ts`, `tree.ts`, `cycle.ts`), chacun produit `(dataXml, layoutXml)` à partir du
    graphe classifié.
+   > **Mise à jour (spike Round 5, §3.1)** : signature réelle à **4 parties**, pas 2 —
+   > `(dataXml, layoutXml, colorsXml, styleXml)` — `quickStyle` s'étant révélé load-bearing pour un
+   > algorithme auto-écrit. `layoutXml`/`colorsXml`/`styleXml` sont des constantes par topologie
+   > (indépendantes du diagramme) ; seul `dataXml` est généré par diagramme. `chain.ts`, `tree.ts`
+   > **et `cycle.ts` livrés et validés par rendu LibreOffice réel** (2026-09-03) — les 3 topologies
+   > du classifieur ont chacune leur générateur. `cycle.ts` a fonctionné dès le premier essai
+   > empirique (`dgm:alg type="cycle"`, vocabulaire public ECMA-376), sans le bug de géométrie
+   > rencontré sur `tree.ts`. Chaque générateur applique aussi désormais `edge.label` (convention
+   > §5.2 : préfixe au texte du nœud destination) et `node.fill` (override `a:solidFill` sur le
+   > `dgm:spPr` du point de **contenu**, pas un point de présentation — confirmé sans effet sur ces
+   > derniers, contrairement au point de contenu, jamais testé jusqu'ici) ; `chain.ts`/`tree.ts`
+   > respectent aussi `flowchart.direction` (deux variantes de `layoutDef` chacun). Détail complet
+   > dans `docs/smartart-compliance-table.md` et `TODO.md`.
 5. **Dispatch** dans le filtre Lua / CLI : `classifyTopology()` en premier ; `unsupported` →
-   chemin `wpg:wgp` existant inchangé ; sinon → chemin SmartArt.
+   chemin `wpg:wgp` existant inchangé ; sinon → chemin SmartArt. **Pas commencé** — les 3
+   générateurs existent mais ne sont câblés dans aucun flux de génération réel à ce jour.
 6. **Tests visuels** : même méthodologie que `test:visual` (rendu LibreOffice headless +
-   pixel-diff), corpus dédié de 3-4 fixtures par topologie supportée.
+   pixel-diff), corpus dédié de 3-4 fixtures par topologie supportée. **Pas commencé.**
 
 ---
 

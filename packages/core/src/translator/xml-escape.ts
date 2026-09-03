@@ -28,3 +28,15 @@ const XML_ESCAPES: Readonly<Record<string, string>> = {
 export function escapeXml(input: string): string {
   return input.replace(/[&<>"']/g, (ch) => XML_ESCAPES[ch] ?? ch);
 }
+
+/**
+ * Validate a hex color string before it reaches an `a:srgbClr val="..."`
+ * attribute. Colors are structured data (`classDef fill:#RRGGBB`), not free
+ * text, so `escapeXml` alone isn't the right guard — a malformed or
+ * attacker-controlled value here could break out of the attribute. Returns
+ * the uppercased 6-digit hex on success, `fallback` otherwise. Mirrors
+ * `ooxml-translator.ts`'s private `hexColor` helper for the same reason.
+ */
+export function validateHexColor(value: string | undefined, fallback: string): string {
+  return value !== undefined && /^[0-9A-Fa-f]{6}$/.test(value) ? value.toUpperCase() : fallback;
+}

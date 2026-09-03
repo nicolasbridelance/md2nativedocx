@@ -14,9 +14,7 @@ test('classifies a simple path as chain', () => {
 });
 
 test('classifies a branching tree as tree', () => {
-  const result = classify(
-    'graph TD\n  A --> B\n  A --> C\n  B --> D\n  B --> E'
-  );
+  const result = classify('graph TD\n  A --> B\n  A --> C\n  A --> D');
   assert.deepEqual(result, { eligible: true, layout: 'tree' });
 });
 
@@ -75,22 +73,19 @@ test('rejects a cycle with an attached tail (zero roots, not a pure cycle)', () 
 });
 
 test('accepts a tree at exactly the maximum supported depth', () => {
-  assert.equal(MAX_TREE_DEPTH, 4);
-  // A(1) -> B(2) -> C(3) -> D(4), plus a branch off A so it's a tree, not a chain.
-  const result = classify(
-    'graph TD\n  A --> B\n  A --> G\n  B --> C\n  C --> D'
-  );
+  assert.equal(MAX_TREE_DEPTH, 2);
+  // A(1) -> B(2), A(1) -> C(2): root plus one row of direct children --
+  // exactly what tree.ts's generator supports (see MAX_TREE_DEPTH's doc
+  // comment), not a chain since A branches.
+  const result = classify('graph TD\n  A --> B\n  A --> C');
   assert.deepEqual(result, { eligible: true, layout: 'tree' });
 });
 
-test('rejects a tree deeper than hierarchy1 has a template for', () => {
-  // Depth to F is 6 (A,B,C,D,E,F); A also branches to G so this is a tree,
-  // not a chain. hierarchy1's real layout1.xml has no template past depth 4
-  // (ADR 0004, "Round 3") regardless of how correctly a generator reproduces
-  // the pattern for shallower levels.
-  const result = classify(
-    'graph TD\n  A --> B\n  A --> G\n  B --> C\n  C --> D\n  D --> E\n  E --> F'
-  );
+test('rejects a tree deeper than tree.ts supports', () => {
+  // A(1) -> B(2) -> C(3): a grandchild past the single child row tree.ts's
+  // fixed-height-split layoutDef has room for (see MAX_TREE_DEPTH's doc
+  // comment); A also branches to D so this is a tree, not a chain.
+  const result = classify('graph TD\n  A --> B\n  A --> D\n  B --> C');
   assert.equal(result.eligible, false);
   if (!result.eligible) {
     assert.equal(result.reason, 'tree-too-deep');

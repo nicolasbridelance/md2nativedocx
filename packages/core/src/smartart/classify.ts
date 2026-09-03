@@ -12,10 +12,16 @@
  *
  * `mermaid2docx#docs/adr/0004-smartart-feasibility-spike.md` records the
  * empirical work behind the one constraint this module enforces that isn't
- * in the spec's original text: a `tree` classification is capped at depth 4,
- * because Word's own built-in `hierarchy1` algorithm has no presentation
- * template beyond that depth (confirmed by inspecting a real Word-emitted
- * `layout1.xml`, not asserted from documentation).
+ * in the spec's original text: a `tree` classification is capped at depth 2
+ * (root + one row of direct children). This is **not** a format limit —
+ * Word's own built-in `hierarchy1` algorithm has no presentation template
+ * beyond depth 4, and a fully self-authored `layoutDef` has no ceiling at
+ * all (Round 5) — it's specific to `tree.ts`'s current generator, whose
+ * fixed layoutDef reserves a static height split (35% node / 55% children
+ * row) at one nesting level; naively repeating that split at further levels
+ * would misallocate space for any node without grandchildren, since the
+ * split isn't computed from the real subtree shape. Raise this once
+ * `tree.ts` supports a size-aware deeper layout.
  */
 
 import type { Flowchart } from '../types.js';
@@ -55,10 +61,10 @@ export type SmartArtIneligibleReason =
    * distinct from `merge-after-branch` because the actionable advice differs
    * (no single pair of nodes to point at). */
   | 'irregular-topology'
-  /** The graph is a valid tree shape but deeper than the 4 levels Word's
-   * built-in `hierarchy1` algorithm has a presentation template for (ADR
-   * 0004, "Round 3"). Depth 1 is the root; a value of 5 here means the 5th
-   * level has no node Word's algorithm can render. */
+  /** The graph is a valid tree shape but deeper than `tree.ts`'s generator
+   * currently supports (ADR 0004, "Round 5" + this session's geometry fix).
+   * Depth 1 is the root; a value of 3 here means there's a grandchild level
+   * the generator's fixed layoutDef has no room for. */
   | 'tree-too-deep';
 
 /** A flowchart classified as eligible for one of the three SmartArt layouts. */
@@ -85,16 +91,14 @@ export interface SmartArtIneligible {
 export type SmartArtClassification = SmartArtEligible | SmartArtIneligible;
 
 /**
- * The deepest tree Word's built-in `hierarchy1` layout algorithm has a
- * presentation template for. Verified empirically (not from documentation —
- * none was found) by counting the named `layoutNode` definitions in a real
- * Word-emitted `layout1.xml`: it defines `hierRoot1..hierRoot4` /
- * `composite1..4` / `background1..4` / `text1..4`, plus a terminal
- * `hierChild5` with nothing to render inside it. A 5th level of nodes has no
- * template to map onto, independent of how correctly a future generator
- * reproduces the pattern for levels 1-4. See ADR 0004, "Round 3".
+ * The deepest tree `tree.ts`'s generator currently supports: a root plus one
+ * row of direct children. Depth 1 is the root itself. This is a property of
+ * that generator's fixed-height-split `layoutDef`, not of the OOXML diagram
+ * format or of Word's own `hierarchy1` (which supports depth 4, and a fully
+ * self-authored algorithm has no format-level ceiling at all — see ADR 0004
+ * "Round 5"). Raise this once `tree.ts` supports a size-aware deeper layout.
  */
-export const MAX_TREE_DEPTH = 4;
+export const MAX_TREE_DEPTH = 2;
 
 function eligible(layout: SmartArtLayout): SmartArtEligible {
   return { eligible: true, layout };

@@ -41,8 +41,40 @@ export type {
 // §7 step 4, ADR 0004 "Round 5"). Original layout/colors/style — no
 // Microsoft content. Caller is responsible for calling classifyTopology()
 // first and only invoking this on a 'chain' result.
-export { generateChain, CHAIN_LAYOUT_XML, CHAIN_COLORS_XML, CHAIN_STYLE_XML } from './smartart/chain.js';
+export {
+  generateChain,
+  CHAIN_LAYOUT_XML,
+  CHAIN_LAYOUT_XML_TD,
+  CHAIN_LAYOUT_URN,
+  CHAIN_LAYOUT_TD_URN,
+  CHAIN_COLORS_XML,
+  CHAIN_STYLE_XML,
+} from './smartart/chain.js';
 export type { SmartArtChainOutput } from './smartart/chain.js';
+
+// SmartArt generator for the `tree` topology (same recipe as `chain` above;
+// depth-2 trees only, see MAX_TREE_DEPTH and tree.ts's module doc comment).
+export {
+  generateTree,
+  TREE_LAYOUT_XML,
+  TREE_LAYOUT_XML_LR,
+  TREE_LAYOUT_URN,
+  TREE_LAYOUT_LR_URN,
+  TREE_COLORS_XML,
+  TREE_STYLE_XML,
+} from './smartart/tree.js';
+export type { SmartArtTreeOutput } from './smartart/tree.js';
+
+// SmartArt generator for the `cycle` topology (same self-authored recipe as
+// `chain`/`tree` above).
+export {
+  generateCycle,
+  CYCLE_LAYOUT_XML,
+  CYCLE_LAYOUT_URN,
+  CYCLE_COLORS_XML,
+  CYCLE_STYLE_XML,
+} from './smartart/cycle.js';
+export type { SmartArtCycleOutput } from './smartart/cycle.js';
 
 // Shared types
 export type {

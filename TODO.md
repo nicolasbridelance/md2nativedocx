@@ -821,10 +821,53 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       gérait pas la déclaration `<?xml ... ?>` (les fragments du traducteur existant n'en émettent
       jamais, contrairement aux parties SmartArt qui sont des fichiers autonomes). Monorepo entier
       revérifié vert (build/typecheck/lint/tous les tests des 4 packages).
-- [ ] Réviser `FUTURE_mmd2smartart_SPEC.md` §3/§4/§7 pour refléter toutes les découvertes de cette
-      session (partie `dsp:dataModelExt`, nœuds `pres`, plafond de profondeur, décision de ne pas
-      redistribuer le `layout1.xml` réel, signature réelle du générateur à 4 parties au lieu de 2 —
-      non anticipés par la version initiale de la spec).
+- [x] **`FUTURE_mmd2smartart_SPEC.md` révisée (2026-09-03)** — §3/§3.1 (nouveau)/§4/§7 mis à jour :
+      recette réelle à 4 parties, décision de ne plus utiliser les URNs `hierarchy1`/`process1`
+      de Word, statut d'avancement par générateur (chain livré, tree en cours au moment de la
+      révision, cycle pas commencé), plafond de profondeur signalé comme point ouvert (résolu
+      juste après, voir l'entrée suivante).
+- [x] **Bug critique découvert et corrigé sur `chain.ts` — le générateur "livré" rendait une page
+      blanche (2026-09-03)** : en poursuivant sur `tree`, rendu réel (LibreOffice headless) de la
+      sortie **telle que produite par `generateChain()`** — jamais fait jusqu'ici, la suite de
+      tests de Round 5/chain ne vérifiait que la structure XML, jamais un rendu effectif. Résultat :
+      page blanche, alors que les tests unitaires passaient tous. Cause : `buildChainDataXml`
+      n'émettait de `presOf` que pour les nœuds de contenu (`p-main*`), pas pour le point `doc`
+      lui-même vers `p-root` — connecteur présent dans tous les fichiers de spike validés
+      manuellement (`data-chain1-withpres.xml` etc.) mais oublié dans la généralisation en
+      générateur. Sans lui, LibreOffice ne dessine aucune forme, quelle que soit la présence de
+      `colors`/`quickStyle`. **Corrigé** (`chain.ts` émet désormais ce `presOf` doc→`p-root`) et
+      **revérifié par rendu réel** (plus seulement par test XML) : 3 rectangles "Etape 1/2/3"
+      correctement stylés. Un test unitaire mis à jour en conséquence (le compte de `presOf`
+      attendu passe de 3 à 4) ; aucun autre test affecté.
+- [x] **Générateur `tree` implémenté et corrigé (2026-09-03)** — `packages/core/src/smartart/tree.ts`,
+      `generateTree()` exporté depuis le barrel public. Même recette à 4 parties que `chain`.
+      Deux bugs distincts corrigés sur `layout-tree1.xml`/la donnée générée avant d'obtenir un
+      rendu correct (vérifié par rendu LibreOffice réel, pas seulement structure XML) :
+      1. le même `presOf` doc→`p-root` manquant que sur `chain.ts` ci-dessus (cause commune) ;
+      2. **bug géométrique identifié** : tous les `dgm:constr` de positionnement (répartition
+         35 %/55 % du nœud racine et de sa rangée d'enfants) utilisaient `val="0.35"` etc. en
+         pensant exprimer une fraction — `val` est une valeur absolue (donc ~0.35 EMU, une forme
+         invisible), pas un pourcentage ; la bonne syntaxe pour une contrainte proportionnelle est
+         `refType="h" fact="0.35"` (relatif à la dimension du parent). Corrigé dans
+         `docs/adr/spikes/spike-smartart/custom-algo/layout-tree1.xml` et repris dans
+         `TREE_LAYOUT_XML`. Rendu final confirmé : boîte racine au-dessus d'une rangée d'enfants
+         correctement répartie et stylée. **Portée assumée : arbres de profondeur 2 uniquement**
+         (racine + une rangée d'enfants directs) — le partage de hauteur fixe (35/55) ne
+         s'adapterait pas correctement à un niveau supplémentaire pour un nœud sans
+         petits-enfants ; généraliser à une profondeur adaptative est un chantier à part, pas fait
+         ici. En conséquence, `classify.ts`'s `MAX_TREE_DEPTH` est **abaissé de 4 à 2** (l'ancienne
+         valeur 4 reflétait la capacité de `hierarchy1` de Word, jamais celle du générateur
+         maison) — sinon le classifieur aurait déclaré éligibles des arbres que le générateur ne
+         sait pas produire correctement. 7 tests unitaires
+         (`packages/core/test/unit/smartart-tree.test.ts`), 2 tests de `classify.test.ts` ajustés
+         au nouveau plafond. Monorepo entier revérifié vert (build/typecheck/lint/110 tests core +
+         5 pandoc-filter + 23 vscode-extension).
+- [ ] **Leçon méthodologique à appliquer avant tout futur générateur SmartArt (cycle, tree à
+      profondeur adaptative, etc.)** : les tests unitaires XML-only ne suffisent pas à détecter un
+      rendu blanc — l'ont prouvé les deux bugs ci-dessus, invisibles en test mais flagrants à l'œil
+      sur un rendu LibreOffice réel. Avant de considérer un générateur "livré", le rendre une fois
+      via `soffice --headless --convert-to png` (comme fait ad hoc cette session, pas encore
+      formalisé en test automatisé — voir l'item "Tests visuels" plus bas) et inspecter l'image.
 - [ ] Dispatch classifieur → générateur SmartArt vs. pipeline `wpg:wgp` existant (spec §7 étape 5),
       hover provider + CodeLens conditionnel (spec §10.1), note de fallback dans le document généré
       (spec §10.3) — pas commencés.
@@ -850,11 +893,61 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       couverture complet** comparant 3 stratégies de sortie — SmartArt seul, SmartArt+OOXML hybride
       (l'approche actuelle : classifieur puis fallback `wpg:wgp`), OOXML seul (le pipeline
       `wpg:wgp` existant, sans SmartArt). **Chaque hypothèse et chaque limitation prise doit
-      apparaître dans le tableau** (ex. : plafond de profondeur 4 pour `hierarchy1`, disqualification
-      systématique des `subgraph`, fusion après branche non supportée par SmartArt, etc.) — objectif
-      explicite : permettre à un successeur de décider en connaissance de cause s'il change de
-      stratégie de représentation (voir piste subgraph ci-dessus), vise le 100 % de couverture en
-      SmartArt seul moyennant de nouvelles stratégies/limitations, ou garde l'approche hybride actuelle.
+      apparaître dans le tableau** (ex. : plafond de profondeur 2 pour `tree.ts` — voir
+      `MAX_TREE_DEPTH`, disqualification systématique des `subgraph`, fusion après branche non
+      supportée par SmartArt, etc.) — objectif explicite : permettre à un successeur de décider en
+      connaissance de cause s'il change de stratégie de représentation (voir piste subgraph
+      ci-dessus), vise le 100 % de couverture en SmartArt seul moyennant de nouvelles
+      stratégies/limitations, ou garde l'approche hybride actuelle. **État de la condition de
+      gating (2026-09-03)** : `chain` et `tree` sont désormais tous deux validés bout-en-bout (XML
+      + rendu LibreOffice réel, pas seulement tests unitaires) ; `cycle` reste à faire — condition
+      pas encore entièrement remplie.
+- [x] **Tableau de compliance livré (2026-09-03)** — `docs/smartart-compliance-table.md`, sur
+      demande explicite du mainteneur, **avant** que la condition de gating ci-dessus soit
+      entièrement remplie (`cycle` toujours pas fait) — priorité mainteneur qui prime sur l'ordre
+      initialement prévu. Sources téléchargées et citées : CommonMark 0.31.2, GFM 0.29, doc Mermaid
+      flowchart (branche `develop`, fonctionnalités jusqu'à v11.17.0). Ligne à ligne, 3 colonnes
+      (SmartArt seul / hybride / OOXML seul), chaque case explique le mécanisme et ses limites (pas
+      de simple ✅/❌), conformément à la demande. **Découverte notable au passage, non corrigée
+      (hors scope de cette tâche)** : le parseur ne retire jamais les guillemets englobants d'un
+      texte de nœud écrit `id["texte"]` — la syntaxe pourtant recommandée par Mermaid pour
+      l'Unicode et les caractères spéciaux — les guillemets apparaissent donc littéralement dans le
+      texte final, dans les 3 stratégies (`id["Hello World"]` → label `"Hello World"` guillemets
+      compris, vérifié empiriquement ; `id[Hello World]` sans guillemets → label propre). Idem pour
+      les codes d'entité Mermaid (`#quot;`, `#9829;`), `<br/>`, et les "Markdown Strings"
+      (backticks + `**gras**`) : aucun n'est interprété, tous restent littéraux. À corriger dans
+      `parser.ts` séparément — bug de parseur, pas lié au choix SmartArt/OOXML.
+- [x] **Poussée vers le 100% sur la colonne SmartArt seul (2026-09-03, sur demande explicite du
+      mainteneur, à l'aide de `docs/smartart-layout-catalog.md`)** — quatre améliorations, chacune
+      vérifiée par rendu LibreOffice réel avant d'être considérée faite (pas seulement par test XML,
+      leçon du bug `chain.ts` découvert plus tôt dans la session) :
+      1. **Libellé d'arête implémenté** : la convention spec §5.2 ("Oui : texte") n'était que
+         documentée jusqu'ici — `chain.ts`/`tree.ts`/`cycle.ts` la mettent maintenant réellement en
+         œuvre (préfixe au texte du nœud destination).
+      2. **Couleur par nœud (`classDef`) implémentée** — découverte clé : un override
+         `a:solidFill` sur le `dgm:spPr` du point de **contenu** (pas un point de présentation, où
+         ADR 0004 "Round 5" l'avait trouvé sans effet) rend correctement sous LibreOffice. Testé la
+         même façon pour la **forme** (`a:prstGeom`) : confirmé sans effet, non implémenté.
+      3. **Direction (`TD`/`LR`) prise en compte** : `chain.ts` choisit entre un `layoutDef`
+         horizontal (`lin` par défaut) et vertical (`<dgm:param type="linDir" val="fromT"/>`) ;
+         `tree.ts` entre racine-en-haut et racine-à-gauche (inversion des contraintes
+         `w`/`h`/`t`/`l` + `linDir` sur la rangée d'enfants). Avant ce correctif, aucun des deux
+         générateurs ne lisait `flowchart.direction`.
+      4. **`cycle.ts` livré** — `packages/core/src/smartart/cycle.ts`, `generateCycle()` exporté.
+         Utilise `dgm:alg type="cycle"` (vocabulaire public ECMA-376, celui du "Basic Cycle" intégré
+         de Word, mais `layoutDef` auto-écrit — voir `docs/smartart-layout-catalog.md`). **A
+         fonctionné au premier essai empirique** (4 nœuds correctement répartis en cercle), sans le
+         bug de géométrie qui avait bloqué `tree.ts` — bonne surprise de la session. Les 3 topologies
+         du classifieur (chain/tree/cycle) ont donc désormais chacune leur générateur validé.
+      18 nouveaux tests unitaires au total (110 → 128 dans `packages/core`) : `smartart-cycle.test.ts`
+      (9) + ajouts aux suites chain/tree existantes. `docs/smartart-compliance-table.md` mis à jour
+      en conséquence. Monorepo entier
+      revérifié vert (build/typecheck/lint/128 tests core + 5 pandoc-filter + 23 vscode-extension).
+      **Volontairement pas tenté** : override de forme par nœud (confirmé sans effet, voir point 2) ;
+      `Labeled Hierarchy` pour `subgraph` et layouts "convergents" pour la fusion après branchement
+      (tous deux nécessitent un vrai échantillon Word extrait par le mainteneur, pas quelque chose
+      qui peut être fait à l'aveugle) ; profondeur d'arbre adaptative > 2 (chantier de conception à
+      part entière, pas une extension incrémentale).
 - [ ] **Volet "corporate"** (noté par le mainteneur, 2026-09-03, à faire après le tableau ci-dessus) :
       documenter comment un utilisateur charge le template Word de son entreprise pour générer
       directement dans ce template, depuis l'extension VS Code — via un réglage

@@ -6,6 +6,7 @@ import { classifyTopology } from '../../src/smartart/classify.js';
 import {
   generateChain,
   CHAIN_LAYOUT_XML,
+  CHAIN_LAYOUT_XML_TD,
   CHAIN_COLORS_XML,
   CHAIN_STYLE_XML,
 } from '../../src/smartart/chain.js';
@@ -58,9 +59,9 @@ test('generates well-formed XML for all four parts', () => {
   assertWellFormedXml(out.styleXml);
 });
 
-test('layout/colors/style are the fixed, diagram-independent constants', () => {
-  const a = generateChain(chainFlowchart('graph TD\n  A --> B'));
-  const b = generateChain(chainFlowchart('graph TD\n  X --> Y\n  Y --> Z\n  Z --> W'));
+test('colors/style are fixed, diagram-independent constants; layout is fixed per direction', () => {
+  const a = generateChain(chainFlowchart('graph LR\n  A --> B'));
+  const b = generateChain(chainFlowchart('graph LR\n  X --> Y\n  Y --> Z\n  Z --> W'));
   assert.equal(a.layoutXml, CHAIN_LAYOUT_XML);
   assert.equal(a.colorsXml, CHAIN_COLORS_XML);
   assert.equal(a.styleXml, CHAIN_STYLE_XML);
@@ -69,11 +70,26 @@ test('layout/colors/style are the fixed, diagram-independent constants', () => {
   assert.equal(a.styleXml, b.styleXml);
 });
 
+test('flowchart.direction picks the horizontal or vertical layout variant', () => {
+  // Before this, chain.ts never read flowchart.direction at all -- every
+  // chain rendered horizontally regardless of the Mermaid source's TD/LR
+  // (docs/smartart-compliance-table.md). Verified by rendering the
+  // substituted XML under headless LibreOffice this session, not just this
+  // structural assertion.
+  const lr = generateChain(chainFlowchart('graph LR\n  A --> B'));
+  const td = generateChain(chainFlowchart('graph TD\n  A --> B'));
+  assert.equal(lr.layoutXml, CHAIN_LAYOUT_XML);
+  assert.equal(td.layoutXml, CHAIN_LAYOUT_XML_TD);
+  assert.ok(!lr.layoutXml.includes('linDir'), 'horizontal variant uses the format default, no explicit linDir');
+  assert.ok(td.layoutXml.includes('<dgm:param type="linDir" val="fromT"/>'));
+  assert.ok(td.dataXml.includes(CHAIN_LAYOUT_XML_TD.match(/uniqueId="([^"]+)"/)![1]!), 'data must reference the TD layout URN, not the LR one');
+});
+
 test('none of the fixed parts reference any Microsoft URN or real diagram content', () => {
   // ADR 0004 "Round 5": the whole point of this generator is that it never
   // redistributes Microsoft's own algorithm/colors/style content. Guard
   // against a future edit accidentally reintroducing a real Word URN.
-  for (const xml of [CHAIN_LAYOUT_XML, CHAIN_COLORS_XML, CHAIN_STYLE_XML]) {
+  for (const xml of [CHAIN_LAYOUT_XML, CHAIN_LAYOUT_XML_TD, CHAIN_COLORS_XML, CHAIN_STYLE_XML]) {
     assert.ok(!xml.includes('urn:microsoft.com'), 'must not reference a Microsoft catalog URN');
   }
 });
@@ -107,7 +123,11 @@ test('every content node gets a presOf-bearing Main presentation point (the mirr
   const { dataXml } = generateChain(ast);
   const presOfCount = (dataXml.match(/type="presOf"/g) ?? []).length;
   const presParOfCount = (dataXml.match(/type="presParOf"/g) ?? []).length;
-  assert.equal(presOfCount, 3); // one per content node
+  // One per content node, plus the doc point's own presOf onto p-root: without
+  // it, LibreOffice renders the whole diagram blank (confirmed by rendering
+  // this generator's actual output under headless LibreOffice, not just
+  // asserting on the XML string -- see chain.ts's buildChainDataXml doc comment).
+  assert.equal(presOfCount, 4);
   assert.equal(presParOfCount, 6); // root->composite and composite->Main, per node
 });
 
@@ -117,6 +137,37 @@ test('single-node chain (degenerate case) still produces valid output', () => {
   assertWellFormedXml(out.dataXml);
   const texts = [...out.dataXml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]);
   assert.deepEqual(texts, ['Alone']);
+});
+
+test('an edge label is folded into the destination node text (spec §5.2 convention)', () => {
+  const { ast } = parseMermaid('graph TD\n  A -->|Oui| B\n  B --> C');
+  const classification = classifyTopology(ast);
+  assert.equal(classification.eligible, true);
+  const { dataXml } = generateChain(ast);
+  const texts = [...dataXml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]);
+  assert.deepEqual(texts, ['A', 'Oui : B', 'C']);
+});
+
+test('a node with no incoming edge label keeps its plain text', () => {
+  const ast = chainFlowchart('graph TD\n  A --> B\n  B --> C');
+  const { dataXml } = generateChain(ast);
+  const texts = [...dataXml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]);
+  assert.deepEqual(texts, ['A', 'B', 'C']);
+});
+
+test("a node's classDef fill renders as a solidFill on its own content point (not a pres point)", () => {
+  const ast = chainFlowchart('graph TD\n  A --> B\n  B --> C\n  classDef hot fill:#ED7D31\n  class B hot');
+  const { dataXml } = generateChain(ast);
+  assert.ok(
+    dataXml.includes('modelId="2"><dgm:prSet phldrT="[Texte]"/><dgm:spPr><a:solidFill><a:srgbClr val="ED7D31"/>'),
+    'node B (modelId 2) should carry the fill on its own content-point spPr'
+  );
+});
+
+test('a node with no classDef gets an empty spPr (no fill override)', () => {
+  const ast = chainFlowchart('graph TD\n  A --> B');
+  const { dataXml } = generateChain(ast);
+  assert.ok(dataXml.includes('modelId="1"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/>'));
 });
 
 test('property: output is always well-formed XML for arbitrary hostile chain labels', () => {
