@@ -923,20 +923,22 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       containment réel, mieux motivée que `Labeled Hierarchy` (voir catalogue). Pas encore de
       générateur ni d'échantillon Word analysé — échantillon demandé dans
       `docs/smartart-samples-wishlist.md`, en attente.
-- [ ] **Piste en cours (rouverte) : `subgraph` = boîte-titre existante + diagramme SmartArt réel
-      intégré via `wpc:graphicFrame` (2026-09-03, `spike.md` Round 7)**. Idée : réutiliser la boîte
-      de titre de sous-graphe déjà produite par `ooxml-translator.ts` et y intégrer un diagramme
-      `chain`/`tree`/`cycle` déjà livré, généré récursivement pour le contenu du `subgraph` — sans
-      parier sur un layout de galerie précis. **Premier essai raté plus sévèrement que prévu** :
-      Word refusait purement et simplement d'ouvrir le fichier ("erreur lors de l'ouverture",
-      proposant le convertisseur de récupération de texte) — mais **cause identifiée, pas une
-      impasse** : mauvais préfixe de namespace sur les enfants de `graphicFrame` (`cNvPr`/
-      `cNvFrPr`/`xfrm` doivent être `wpg:`, pas `wpc:`/`a:`, même sous un `wpc:graphicFrame` —
-      vérifié contre un exemple Word réel, pas deviné). Corrigé, rendu identique sous LibreOffice
-      (toujours pas de diagramme intégré — attendu, question distincte de la validation stricte de
-      Word), fichier renvoyé au mainteneur pour un second essai — **verdict en attente**.
-      `wpc:wpc`/`wps:wsp` seuls ne posent aucun problème (déjà utilisés massivement par le
-      traducteur de production, vérifié dans un vrai Word).
+- [x] **Piste définitivement close (2026-09-03, `spike.md` Round 7, 3 essais réels indépendants)** :
+      `subgraph` = boîte-titre existante + diagramme SmartArt réel intégré via `wpc:graphicFrame`.
+      Idée : réutiliser la boîte de titre de sous-graphe déjà produite par `ooxml-translator.ts` et
+      y intégrer un diagramme `chain`/`tree`/`cycle` déjà livré, sans parier sur un layout de
+      galerie précis. **Trois hypothèses distinctes testées dans un vrai Word, le même échec dur à
+      chaque fois** ("erreur lors de l'ouverture du fichier", convertisseur de récupération) :
+      (1) construction initiale (mauvais préfixe `wpc:`/`a:` sur les enfants de `graphicFrame`),
+      (2) préfixe corrigé en `wpg:` (vérifié contre un exemple Word réel, pas deviné) — échec
+      identique, (3) `wpg:` + enveloppe `mc:AlternateContent`/`mc:Choice[Requires="wpg"]` (motif
+      standard des vrais documents Word pour ce type d'extension) — échec identique une troisième
+      fois. `wpc:wpc`/`wps:wsp` seuls ne posent aucun problème (déjà utilisés massivement par le
+      traducteur de production, vérifié dans un vrai Word) — le problème est spécifique à
+      `wpc:graphicFrame` portant un diagramme. Cause exacte non isolée plus finement (chaque
+      hypothèse testée était plausible et sourcée, pas une supposition en l'air) mais 3 échecs
+      identiques sur 3 pistes indépendantes suffisent à clore sans quatrième essai à l'aveugle.
+      `Nested Target` reste la piste active pour `subgraph`.
 - [ ] **Une fois plusieurs générateurs SmartArt (chain/tree/cycle) validés bout-en-bout** — tâche
       demandée explicitement par le mainteneur (2026-09-03), à faire avant d'aller plus loin sur les
       diagrammes de séquence/l'add-in : télécharger les normes de référence (CommonMark, GitHub

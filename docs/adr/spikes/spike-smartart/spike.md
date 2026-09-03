@@ -677,4 +677,34 @@ Fixed in `build-custom-nested-canvas.mjs` (`xmlns:wpg` declared on the root, `wp
 `wpg:cNvFrPr`/`wpg:xfrm` used in the frame) and rebuilt; well-formed, and renders identically to
 before under LibreOffice (still no embedded diagram — expected, this fix targets Word's stricter
 validation, not LibreOffice's apparent non-implementation of the element, a separate question).
-Corrected file sent to the maintainer for a second real-Word test — **verdict pending**, not closed.
+Corrected file sent to the maintainer for a second real-Word test.
+
+**Second attempt: identical failure.** The `wpg:`-prefix fix alone did not change the outcome — same
+exact "Word a rencontré une erreur lors de l'ouverture du fichier" dialog, same recovery-converter
+suggestion. Necessary (it was a genuine mistake against the schema) but not sufficient, or not the
+actual cause of this specific failure.
+
+**Third attempt.** Searched again for how real Word-authored documents structure `wpg`/`wpc`
+content rather than re-guessing: found that such content is typically wrapped in
+`mc:AlternateContent`/`mc:Choice[Requires="wpg"]` — a cross-cutting OOXML compatibility mechanism,
+legal to wrap any element in regardless of whether the immediate parent's own content model
+enumerates `mc:AlternateContent` explicitly. Not a confirmed requirement specifically for
+`wpc:graphicFrame` (the shipped production translator's bare `wpc:wpc`/`wps:wsp` usage works fine
+in real Word *without* this wrapping, so it clearly isn't universally required for every `wpg`/
+`wpc` element) — flagged to the maintainer as the best-evidenced hypothesis available, explicitly
+not a confirmed fix, given the cost of each round-trip test. **Result: identical failure a third
+time**, same dialog, same recovery-converter suggestion.
+
+**Verdict: closed.** Three independent, real-Word-tested hypotheses (wrong-prefix baseline; correct
+prefix; correct prefix + standard compatibility wrapping) all produce the exact same hard
+open-failure, not a softer one, not a different one, not a partial success at any point. Bare
+`wpc:wpc`/`wps:wsp` is independently confirmed fine in real Word by the shipped production
+translator, so the failure is specific to `wpc:graphicFrame` hosting a `dgm:relIds` diagram in
+particular. Whether the true root cause is a fourth, still-unidentified schema/construction mistake
+or a genuine Word-internal restriction on this exact nesting was not, and likely cannot cheaply be,
+distinguished further without a much deeper diagnostic loop (e.g. testing whether *any*
+`wpc:graphicFrame` content opens at all, independent of diagrams — itself another maintainer
+round-trip) — not pursued, given three consistent identical failures already meet a reasonable bar
+for "this technique isn't working," and `Nested Target` remains open as a fundamentally different,
+less speculative approach to the same `subgraph` goal. Not attempted again barring a genuinely new,
+well-evidenced hypothesis (not a fourth guess).

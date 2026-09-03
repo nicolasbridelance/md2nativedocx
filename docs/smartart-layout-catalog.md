@@ -181,14 +181,9 @@ plusieurs nœuds avec des arêtes internes — la même limite qui avait fait é
   `cycle.ts`, dispatch branché dans le vrai pipeline) : `chain`, `tree` (profondeur ≤ 2 —
   généralisation adaptative à une profondeur supérieure un chantier séparé, voir `TODO.md`),
   `cycle`.
-- **Pistes actives pour `subgraph`** :
-  - `Nested Target` — sémantique de containment réelle, mieux motivée que `Labeled Hierarchy` (voir
-    section dédiée ci-dessus). Pas encore spické, échantillon demandé.
-  - Diagramme SmartArt réel intégré dans le canevas `wpc:wpc` existant via `wpc:graphicFrame`, sans
-    parier sur aucun layout de galerie — premier essai réel-Word raté plus sévèrement que prévu
-    (Word refusait d'ouvrir le fichier), mais cause identifiée (mauvais préfixe de namespace sur
-    les enfants de `graphicFrame`, doivent être `wpg:`) et corrigée. Second essai envoyé au
-    mainteneur, verdict en attente — voir `spike.md` Round 7.
+- **Piste active pour `subgraph`** : `Nested Target` — sémantique de containment réelle, mieux
+  motivée que `Labeled Hierarchy` (voir section dédiée ci-dessus). Pas encore spické, échantillon
+  demandé.
 - **Explorées puis écartées avec preuve, pas par manque de temps** :
   - `Labeled Hierarchy` pour `subgraph` général — confirmé par échantillon Word réel que
     l'étiquette est par niveau, pas par branche ; ne couvre qu'un cas restreint de `subgraph`.
@@ -197,6 +192,14 @@ plusieurs nœuds avec des arêtes internes — la même limite qui avait fait é
     test indépendant du mécanisme `presParOf` lui-même montrant qu'un point de présentation ne
     peut avoir qu'un seul parent. Deux preuves convergentes, pas juste une hypothèse non testée.
     `Funnel` (arité non vérifiée) reste la seule variante non testée de cette famille.
+  - Diagramme SmartArt réel intégré dans le canevas `wpc:wpc` existant via `wpc:graphicFrame`, pour
+    `subgraph`, sans parier sur aucun layout de galerie — **3 hypothèses distinctes testées dans un
+    vrai Word, le même échec dur à chaque fois** (fichier refusé à l'ouverture) : préfixe initial,
+    préfixe `wpg:` corrigé (vérifié contre un exemple Word réel), puis `wpg:` + enveloppe
+    `mc:AlternateContent` (motif standard des vrais documents Word). `wpc:wpc`/`wps:wsp` seuls
+    fonctionnent très bien dans un vrai Word (déjà le traducteur de production) — le problème est
+    spécifique à `wpc:graphicFrame` portant un diagramme. Voir `spike.md` Round 7 pour l'historique
+    complet des 3 tentatives.
 - **Écarté avec justification, catégories entières** : Matrix, Pyramid, Picture (toutes
   catégories), la majorité de Relationship (chevauchement d'ensembles, pas containment ni graphe
   dirigé) — aucun n'a de structure nœud/arête compatible avec un flowchart dirigé.
