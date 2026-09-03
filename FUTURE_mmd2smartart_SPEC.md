@@ -7,8 +7,8 @@
 > voir §3.1 point 4). Direction (`TD`/`LR`), couleur par nœud (`classDef`) et libellés d'arête
 > (convention §5.2) sont également implémentés dans les 3 générateurs (2026-09-03, en poussant vers
 > le 100% de la colonne SmartArt de `docs/smartart-compliance-table.md`). Le dispatch classifieur →
-> générateur dans le vrai pipeline (§7 étape 5) n'est, lui, toujours pas câblé — voir `TODO.md`
-> "Phase 6/7" pour le détail à jour.
+> générateur dans le vrai pipeline (§7 étape 5) est désormais câblé et testé de bout en bout —
+> voir `TODO.md` "Phase 6/7" pour le détail à jour.
 > Plusieurs décisions de cette section datent d'avant les spikes Round 3-5
 > (`docs/adr/0004-smartart-feasibility-spike.md`, `docs/adr/spikes/spike-smartart/spike.md`) qui
 > ont invalidé ou précisé des points ci-dessous — chaque écart est signalé inline par un encart
@@ -308,8 +308,16 @@ tout code de production) :
    > respectent aussi `flowchart.direction` (deux variantes de `layoutDef` chacun). Détail complet
    > dans `docs/smartart-compliance-table.md` et `TODO.md`.
 5. **Dispatch** dans le filtre Lua / CLI : `classifyTopology()` en premier ; `unsupported` →
-   chemin `wpg:wgp` existant inchangé ; sinon → chemin SmartArt. **Pas commencé** — les 3
-   générateurs existent mais ne sont câblés dans aucun flux de génération réel à ce jour.
+   chemin `wpg:wgp` existant inchangé ; sinon → chemin SmartArt. **Livré (2026-09-03)** — validé
+   avant code (règle n°7 AGENTS.md, §8 ci-dessous) puis implémenté. Pandoc n'ayant aucun mécanisme
+   pour ajouter des parties/relations `.docx` (§2), le pont core (`md2nativedocx-core.mjs`) écrit
+   les 4 parties dans un dossier temporaire et émet des relIds **provisoires**
+   (`SMARTART_PLACEHOLDER:<uuid>:dm` etc.) ; `postprocess.mjs` (`injectSmartArtParts()`, nouvelle
+   fonction) les repère après coup, attribue de vrais `rId`, et complète `word/diagrams/`,
+   `[Content_Types].xml` et `document.xml.rels` — no-op si aucun marqueur n'est présent. Un seul
+   point d'intégration (`packages/cli/bin/md2nativedocx.mjs`) couvre CLI et extension VS Code (qui
+   invoque ce même binaire). Testé de bout en bout (export CLI réel + rendu LibreOffice), pas
+   seulement en isolation. Détail complet dans `TODO.md`.
 6. **Tests visuels** : même méthodologie que `test:visual` (rendu LibreOffice headless +
    pixel-diff), corpus dédié de 3-4 fixtures par topologie supportée. **Pas commencé.**
 

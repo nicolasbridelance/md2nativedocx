@@ -25,7 +25,13 @@ test('cli converts a markdown file to a valid docx', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');
   const docx = join(dir, 'doc.docx');
-  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n```\n');
+  // A merge-after-branch shape, not a plain A --> B: classifyTopology always
+  // rejects this shape, so it reliably exercises the wpc:wpc/wps:wsp OOXML
+  // path this test asserts on, regardless of what the SmartArt classifier
+  // does or doesn't accept over time. A plain chain like `A --> B` now
+  // dispatches to SmartArt instead (see md2nativedocx-core.mjs) — covered
+  // separately in packages/cli/test/corpus.test.mjs.
+  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n```\n');
   try {
     const { code, out } = runCli([md, '-o', docx]);
     assert.equal(code, 0, out);

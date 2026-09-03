@@ -868,8 +868,37 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       sur un rendu LibreOffice réel. Avant de considérer un générateur "livré", le rendre une fois
       via `soffice --headless --convert-to png` (comme fait ad hoc cette session, pas encore
       formalisé en test automatisé — voir l'item "Tests visuels" plus bas) et inspecter l'image.
-- [ ] Dispatch classifieur → générateur SmartArt vs. pipeline `wpg:wgp` existant (spec §7 étape 5),
-      hover provider + CodeLens conditionnel (spec §10.1), note de fallback dans le document généré
+- [x] **Dispatch classifieur → générateur câblé dans le vrai pipeline (2026-09-03)** — spec §7
+      étape 5, sur demande explicite du mainteneur. Plan validé avant code (règle n°7 d'AGENTS.md,
+      §8 de la spec) puis implémenté :
+      - `packages/core/src/smartart/dispatch.ts` (`generateSmartArt()`) et `embed.ts`
+        (`buildSmartArtDrawingXml()`) — dispatch classifieur→générateur et construction du
+        fragment `<w:p>` référençant 4 relIds, tous deux purs (aucune connaissance ZIP/Pandoc).
+      - `md2nativedocx-core.mjs` (pont Pandoc) : si `MD2NATIVEDOCX_SMARTART_DIR` est positionnée et
+        le diagramme est éligible, écrit les 4 parties dans `<dir>/<uuid aléatoire>/` et émet des
+        relIds **provisoires** (`SMARTART_PLACEHOLDER:<uuid>:dm` etc., jamais des ids Word valides)
+        — sinon (variable absente, diagramme non éligible, ou erreur) repli silencieux vers
+        `wpg:wgp`/`wpc:wpc` inchangé.
+      - `postprocess.mjs` (`injectSmartArtParts()`, nouvelle fonction, no-op si aucun marqueur
+        présent) : repère les marqueurs après Pandoc, attribue de vrais `rId`, ajoute les parties
+        dans `word/diagrams/`, met à jour `[Content_Types].xml` et `document.xml.rels` — extension
+        notable de la chirurgie ZIP (au-delà des corrections de namespace déjà en place),
+        explicitement validée avant code comme demandé par §8 de la spec.
+      - `md2nativedocx.mjs` (CLI, point d'intégration unique couvrant aussi l'extension VS Code qui
+        invoque ce même binaire) : crée le dossier temporaire, le passe en variable d'environnement
+        à Pandoc, appelle `injectSmartArtParts()` après `postProcessDocx()`, nettoie ensuite.
+      - **Bug trouvé et corrigé en testant de bout en bout** (pas en isolation) : `unzip` interprète
+        `[Content_Types].xml` comme un motif glob (les crochets sont une classe de caractères) —
+        échoue silencieusement à le trouver sans échappement (`\[Content_Types\].xml`).
+      - **Tests corpus mis à jour** (2 fixtures qui utilisaient trivialement une chaîne/un arbre
+        comme "cas simple" pour tester le chemin OOXML — remplacées par des diagrammes avec fusion
+        après branchement, qui restent non éligibles indépendamment de l'évolution du classifieur ;
+        une nouvelle paire de tests couvre explicitement les deux chemins, dispatché et replié).
+      13 nouveaux tests (`smartart-dispatch.test.ts`, `smartart-embed.test.ts`,
+      `smartart-dispatch.test.mjs` côté pandoc-filter, 4 nouveaux dans `postprocess.test.mjs`) +
+      2 fixtures corrigées. Vérifié par un export CLI réel de bout en bout (pas seulement les
+      tests), rendu LibreOffice à l'appui. **Reste explicitement hors scope de cet item** : hover
+      provider + CodeLens conditionnel (spec §10.1), note de fallback dans le document généré
       (spec §10.3) — pas commencés.
 - [ ] Traducteur `.pptx` de production (spec Google Slides §5-§7) — pas commencé, en attente de la
       vérification manuelle Google Slides/PowerPoint listée ci-dessus.

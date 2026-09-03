@@ -184,12 +184,18 @@ test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   assert.ok(/w:styleId="KeywordTok"[\s\S]{0,200}?<w:color /.test(styles), 'KeywordTok has no colour defined');
   assert.ok(/w:styleId="VerbatimChar"[\s\S]{0,200}?<w:rFonts /.test(styles), 'VerbatimChar has no monospace font defined');
 
-  // Both diagrams converted: two independent drawing canvases, no id
-  // collisions across the whole document (the corpus loop's
-  // assertConformantDocx already checks this per-file, but re-asserted here
-  // since this file specifically exercises two diagrams interleaved with
-  // text, the scenario most likely to produce id reuse).
-  assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 2, 'expected exactly two wpc:wpc canvases');
+  // Both diagrams converted, no id collisions across the whole document (the
+  // corpus loop's assertConformantDocx already checks this per-file, but
+  // re-asserted here since this file specifically exercises two diagrams
+  // interleaved with text, the scenario most likely to produce id reuse).
+  // Only *one* wpc:wpc canvas, not two: the first diagram (Collecteur ->
+  // File d'attente -> Worker -> Base de données, a plain 4-node chain) is
+  // SmartArt-eligible and dispatches to a `dgm:relIds` diagram instead
+  // (see md2nativedocx-core.mjs's SmartArt dispatch); the second (same
+  // chain plus a branch to a dead-letter queue) is not -- classifyTopology
+  // rejects it as `tree-too-deep` -- and still renders via the wpc:wpc path.
+  assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the tree-too-deep diagram)');
+  assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 1, 'expected exactly one SmartArt diagram (the plain chain)');
 });
 
 test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', () => {
@@ -209,18 +215,56 @@ test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', (
   }
 });
 
-test('simple: markdown with a mermaid A --> B produces a conformant docx', () => {
+test('simple: markdown with a mermaid A --> B dispatches to SmartArt (chain-eligible)', () => {
+  // A --> B is the simplest possible chain -- classifyTopology accepts it,
+  // so the CLI now produces a native SmartArt diagram here, not wpc:wpc
+  // shapes (see md2nativedocx-core.mjs's SmartArt dispatch). This test used
+  // to assert the opposite (wpc:wpc/wps:wsp shape counts) before that
+  // dispatch existed; the OOXML-shapes path is still covered by the next
+  // test below, using a fixture the classifier rejects.
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
   try {
     const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab');
-    assertConformantDocx(docx, 'ab');
+    execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
     const xml = readDocumentXml(docx);
-    // Exactly one drawing canvas, no wrapping group (no subgraphs here).
+    assert.ok(xml.includes('<dgm:relIds '), 'expected a SmartArt dgm:relIds reference');
+    assert.ok(!xml.includes('<wpc:wpc '), 'a SmartArt-eligible diagram must not also emit wpc:wpc shapes');
+    assert.ok(!xml.includes('SMARTART_PLACEHOLDER'), 'no placeholder relIds should survive post-processing');
+    // The 4 diagram parts must actually be in the package, correctly typed.
+    const entries = execFileSync('unzip', ['-l', docx], { encoding: 'utf8' });
+    for (const part of ['data1.xml', 'layout1.xml', 'colors1.xml', 'quickStyle1.xml']) {
+      assert.ok(entries.includes(`word/diagrams/${part}`), `missing word/diagrams/${part}`);
+    }
+    const contentTypes = execFileSync('unzip', ['-p', docx, '\\[Content_Types\\].xml'], { encoding: 'utf8' });
+    assert.ok(contentTypes.includes('diagramData+xml'), 'missing diagramData content-type override');
+    const rels = execFileSync('unzip', ['-p', docx, 'word/_rels/document.xml.rels'], { encoding: 'utf8' });
+    assert.ok(rels.includes('relationships/diagramData'), 'missing diagramData relationship');
+    assert.ok(!rels.includes('SMARTART_PLACEHOLDER'), 'no placeholder relIds should survive in the rels file either');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('simple: a non-SmartArt-eligible mermaid diagram still produces a conformant OOXML docx', () => {
+  // Same shape-conformance coverage the old A --> B test provided, using a
+  // merge-after-branch fixture (classifyTopology always rejects this shape)
+  // so this specifically exercises the wpc:wpc/wps:wsp fallback path,
+  // independent of whatever the classifier does or doesn't accept over time.
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
+  try {
+    const docx = convertTo(
+      '# Test\n\n```mermaid\ngraph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n```\n',
+      dir,
+      'merge',
+    );
+    assertConformantDocx(docx, 'merge');
+    const xml = readDocumentXml(docx);
     assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas');
     assert.ok(!xml.includes('<wpg:wgp'), 'a subgraph-free diagram must not emit a wpg:wgp');
-    // Two node shapes (A, B) + one connector.
-    assert.equal((xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length, 2, 'expected 2 node shapes');
-    assert.equal((xml.match(/<wps:cNvCnPr>/g) ?? []).length, 1, 'expected 1 connector');
+    assert.ok(!xml.includes('<dgm:relIds'), 'a merge-after-branch diagram must not dispatch to SmartArt');
+    // Four node shapes (A, B, C, D) + four connectors.
+    assert.equal((xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length, 4, 'expected 4 node shapes');
+    assert.equal((xml.match(/<wps:cNvCnPr>/g) ?? []).length, 4, 'expected 4 connectors');
     // The diagram must fit on a page: wp:extent within a reasonable size
     // (A4 usable width ~ 6.5in = 5943600 EMU; height ~ 9in = 8229600 EMU).
     const extent = xml.match(/<wp:extent cx="(\d+)" cy="(\d+)"/);

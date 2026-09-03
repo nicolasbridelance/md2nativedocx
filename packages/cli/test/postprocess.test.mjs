@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { injectNamespaces, renumberDrawingIds } from '../src/postprocess.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { injectNamespaces, renumberDrawingIds, injectSmartArtParts } from '../src/postprocess.mjs';
 
 /** A `w:document` root as Pandoc emits it: no wpc/wpg/wps declarations. */
 const PANDOC_ROOT =
@@ -114,4 +118,164 @@ test('renumbering keeps each connector attached to its own shapes', () => {
 test('renumbering leaves a document with no drawings untouched', () => {
   const xml = '<w:body><w:p><w:r><w:t>plain</w:t></w:r></w:p></w:body>';
   assert.equal(renumberDrawingIds(xml), xml);
+});
+
+// -- injectSmartArtParts -----------------------------------------------
+//
+// Unlike injectNamespaces/renumberDrawingIds (pure string transforms),
+// injectSmartArtParts does real ZIP I/O -- it needs an actual .docx on disk.
+// These tests build the smallest package that exercises it directly, faster
+// and more isolated than going through the whole Pandoc pipeline the way
+// corpus.test.mjs's SmartArt tests do.
+
+const CONTENT_TYPES =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+  '<Default Extension="xml" ContentType="application/xml" />' +
+  '<Override PartName="/word/document.xml" ' +
+  'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />' +
+  '</Types>';
+
+const DOCUMENT_RELS =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml" />' +
+  '</Relationships>';
+
+/** Build a minimal but valid-enough .docx at `docxPath`, with `documentXml` as `word/document.xml`. */
+function buildMinimalDocx(docxPath, documentXml) {
+  const work = mkdtempSync(join(tmpdir(), 'md2nativedocx-post-fixture-'));
+  try {
+    mkdirSync(join(work, 'word', '_rels'), { recursive: true });
+    writeFileSync(join(work, '[Content_Types].xml'), CONTENT_TYPES, 'utf8');
+    writeFileSync(join(work, 'word', 'document.xml'), documentXml, 'utf8');
+    writeFileSync(join(work, 'word', '_rels', 'document.xml.rels'), DOCUMENT_RELS, 'utf8');
+    execFileSync('zip', ['-q', '-X', '-r', docxPath, '.'], { cwd: work, stdio: 'pipe' });
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
+/** Write `content` as `<smartArtDir>/<id>/<name>`. */
+function writeSmartArtPart(smartArtDir, id, name, content) {
+  const dir = join(smartArtDir, id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, name), content, 'utf8');
+}
+
+function withTempFiles(fn) {
+  const dir = mktempTestDir();
+  try {
+    return fn(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function mktempTestDir() {
+  return mkdtempSync(join(tmpdir(), 'md2nativedocx-smartart-test-'));
+}
+
+test('is a no-op when document.xml has no SmartArt placeholders', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'plain.docx');
+    const documentXml = '<w:document><w:body><w:p><w:r><w:t>plain</w:t></w:r></w:p></w:body></w:document>';
+    buildMinimalDocx(docx, documentXml);
+    const before = readFileSync(docx);
+    injectSmartArtParts(docx, join(dir, 'smartart'));
+    const after = readFileSync(docx);
+    assert.deepEqual(before, after, 'a document with no placeholders must be left byte-for-byte untouched');
+  });
+});
+
+test('replaces placeholders with real rIds and adds the 4 parts/relationships/content-types', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'chain.docx');
+    const documentXml =
+      '<w:document><w:body><w:p><w:r><w:drawing>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:abc:dm" r:lo="SMARTART_PLACEHOLDER:abc:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:abc:qs" r:cs="SMARTART_PLACEHOLDER:abc:cs"/>' +
+      '</w:drawing></w:r></w:p></w:body></w:document>';
+    buildMinimalDocx(docx, documentXml);
+
+    const smartArtDir = join(dir, 'smartart');
+    writeSmartArtPart(smartArtDir, 'abc', 'data.xml', '<dgm:dataModel>DATA</dgm:dataModel>');
+    writeSmartArtPart(smartArtDir, 'abc', 'layout.xml', '<dgm:layoutDef>LAYOUT</dgm:layoutDef>');
+    writeSmartArtPart(smartArtDir, 'abc', 'colors.xml', '<dgm:colorsDef>COLORS</dgm:colorsDef>');
+    writeSmartArtPart(smartArtDir, 'abc', 'quickStyle.xml', '<dgm:styleDef>STYLE</dgm:styleDef>');
+
+    injectSmartArtParts(docx, smartArtDir);
+
+    const outDocumentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(!outDocumentXml.includes('SMARTART_PLACEHOLDER'), 'no placeholder text should remain');
+    const relIds = [...outDocumentXml.matchAll(/r:(?:dm|lo|qs|cs)="([^"]+)"/g)].map((m) => m[1]);
+    assert.equal(new Set(relIds).size, 4, 'all 4 relIds must be distinct');
+
+    const rels = execFileSync('unzip', ['-p', docx, 'word/_rels/document.xml.rels'], { encoding: 'utf8' });
+    for (const relId of relIds) {
+      assert.ok(rels.includes(`Id="${relId}"`), `rels file is missing relationship "${relId}"`);
+    }
+    assert.ok(rels.includes('diagrams/data1.xml'));
+    assert.ok(rels.includes('diagrams/layout1.xml'));
+    assert.ok(rels.includes('diagrams/colors1.xml'));
+    assert.ok(rels.includes('diagrams/quickStyle1.xml'));
+
+    const contentTypes = execFileSync('unzip', ['-p', docx, '\\[Content_Types\\].xml'], { encoding: 'utf8' });
+    assert.ok(contentTypes.includes('diagramData+xml'));
+    assert.ok(contentTypes.includes('diagramLayout+xml'));
+    assert.ok(contentTypes.includes('diagramColors+xml'));
+    assert.ok(contentTypes.includes('diagramStyle+xml'));
+
+    const dataXml = execFileSync('unzip', ['-p', docx, 'word/diagrams/data1.xml'], { encoding: 'utf8' });
+    assert.equal(dataXml, '<dgm:dataModel>DATA</dgm:dataModel>');
+  });
+});
+
+test('numbers new parts past any diagram already in the archive (no collision)', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'existing.docx');
+    const documentXml =
+      '<w:document><w:body><w:p><w:r><w:drawing>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:xyz:dm" r:lo="SMARTART_PLACEHOLDER:xyz:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:xyz:qs" r:cs="SMARTART_PLACEHOLDER:xyz:cs"/>' +
+      '</w:drawing></w:r></w:p></w:body></w:document>';
+    buildMinimalDocx(docx, documentXml);
+    // Simulate a diagram that already occupies number 1, added out of band
+    // (e.g. by a real Word-authored SmartArt already in a reference.docx).
+    const existingDir = mkdtempSync(join(tmpdir(), 'existing-part-'));
+    try {
+      mkdirSync(join(existingDir, 'word', 'diagrams'), { recursive: true });
+      writeFileSync(join(existingDir, 'word', 'diagrams', 'data1.xml'), '<dgm:dataModel/>', 'utf8');
+      execFileSync('zip', ['-q', '-X', docx, 'word/diagrams/data1.xml'], { cwd: existingDir, stdio: 'pipe' });
+    } finally {
+      rmSync(existingDir, { recursive: true, force: true });
+    }
+
+    const smartArtDir = join(dir, 'smartart');
+    writeSmartArtPart(smartArtDir, 'xyz', 'data.xml', '<dgm:dataModel>NEW</dgm:dataModel>');
+    writeSmartArtPart(smartArtDir, 'xyz', 'layout.xml', '<dgm:layoutDef/>');
+    writeSmartArtPart(smartArtDir, 'xyz', 'colors.xml', '<dgm:colorsDef/>');
+    writeSmartArtPart(smartArtDir, 'xyz', 'quickStyle.xml', '<dgm:styleDef/>');
+
+    injectSmartArtParts(docx, smartArtDir);
+
+    const listing = execFileSync('unzip', ['-l', docx], { encoding: 'utf8' });
+    assert.ok(listing.includes('word/diagrams/data1.xml'), 'the pre-existing data1.xml must survive');
+    assert.ok(listing.includes('word/diagrams/data2.xml'), 'the new diagram must be numbered 2, not collide with 1');
+    const data2 = execFileSync('unzip', ['-p', docx, 'word/diagrams/data2.xml'], { encoding: 'utf8' });
+    assert.equal(data2, '<dgm:dataModel>NEW</dgm:dataModel>');
+  });
+});
+
+test('throws a clear error when a placeholder has no matching directory in smartArtDir', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'orphan.docx');
+    const documentXml =
+      '<w:document><w:body><w:p><w:r><w:drawing>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:missing:dm" r:lo="SMARTART_PLACEHOLDER:missing:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:missing:qs" r:cs="SMARTART_PLACEHOLDER:missing:cs"/>' +
+      '</w:drawing></w:r></w:p></w:body></w:document>';
+    buildMinimalDocx(docx, documentXml);
+    assert.throws(() => injectSmartArtParts(docx, join(dir, 'smartart')), /no SmartArt parts found/);
+  });
 });

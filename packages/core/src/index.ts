@@ -76,6 +76,17 @@ export {
 } from './smartart/cycle.js';
 export type { SmartArtCycleOutput } from './smartart/cycle.js';
 
+// SmartArt dispatch: classify + run the matching generator in one call
+// (spec §7 step 5). Pure — no filesystem/ZIP knowledge, see dispatch.ts.
+export { generateSmartArt } from './smartart/dispatch.js';
+export type { SmartArtGenerated } from './smartart/dispatch.js';
+
+// Build the <w:p> fragment that embeds a SmartArt diagram inline, given 4
+// relationship ids (real or placeholder — see embed.ts's doc comment for why
+// callers may need to pass placeholders here).
+export { buildSmartArtDrawingXml } from './smartart/embed.js';
+export type { SmartArtRelIds, SmartArtEmbedOptions } from './smartart/embed.js';
+
 // Shared types
 export type {
   Flowchart,

@@ -3,26 +3,97 @@
  * Thin CLI bridge between the Pandoc Lua filter and the core engine.
  *
  * Reads Mermaid flowchart text from a file path given as argv[1] (or stdin if
- * no argument), writes the OOXML/DrawingML XML string to stdout. This keeps the
- * Lua filter free of any shell-string interpolation of diagram text (AGENTS.md
- * rule #4): the filter invokes this binary with a fixed argument array and the
- * diagram text lives in a temp file, never in a shell string.
+ * no argument), writes an OOXML/DrawingML `<w:p>` fragment to stdout. This
+ * keeps the Lua filter free of any shell-string interpolation of diagram
+ * text (AGENTS.md rule #4): the filter invokes this binary with a fixed
+ * argument array and the diagram text lives in a temp file, never in a
+ * shell string.
  *
  * Usage: md2nativedocx-core.mjs <diagram.mmd> > diagram.xml
+ *
+ * ## SmartArt dispatch (spec §7 step 5)
+ *
+ * When `MD2NATIVEDOCX_SMARTART_DIR` is set, this script first tries
+ * `classifyTopology()`/`generateSmartArt()` on the parsed diagram. If it's
+ * eligible for `chain`/`tree`/`cycle`, the 4 generated diagram parts are
+ * written to `<MD2NATIVEDOCX_SMARTART_DIR>/<random id>/` and a `<w:p>`
+ * fragment referencing that id via **placeholder** relationship ids
+ * (`SMARTART_PLACEHOLDER:<id>:dm` etc. — never real Word `rId`s) is emitted
+ * instead of the usual `wpg:wgp` shapes. `packages/cli/src/postprocess.mjs`'s
+ * `injectSmartArtParts` (run by the CLI after Pandoc, once the whole `.docx`
+ * exists) finds those placeholders and completes the wiring — this script
+ * cannot do that part itself, Pandoc's Lua filter API has no mechanism to
+ * add new `.docx` package parts or relationships (spec §2).
+ *
+ * If `MD2NATIVEDOCX_SMARTART_DIR` is unset, or the diagram isn't
+ * SmartArt-eligible, or anything in the SmartArt path throws unexpectedly,
+ * this silently falls back to the existing `wpg:wgp` translator — the same
+ * output as before this dispatch existed. This is deliberate, not just
+ * defensive: every flowchart the classifier rejects (subgraphs,
+ * merge-after-branch, a tree deeper than `tree.ts` supports, etc.) is
+ * expected to still render correctly, and the env-var gate means every
+ * caller that doesn't opt in (including this package's own existing tests)
+ * is completely unaffected.
  */
 
-import { readFileSync } from 'node:fs';
-import { parseMermaid } from '@md2nativedocx/core';
-import { layout } from '@md2nativedocx/core';
-import { translateToOoxml } from '@md2nativedocx/core';
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
+import {
+  parseMermaid,
+  layout,
+  translateToOoxml,
+  generateSmartArt,
+  buildSmartArtDrawingXml,
+} from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
 const input = inputPath ? readFileSync(inputPath, 'utf8') : readFileSync(0, 'utf8');
 
+/**
+ * Try the SmartArt path for `ast`; returns the `<w:p>` fragment to emit, or
+ * `null` to fall back to the `wpg:wgp` translator. Never throws — any
+ * failure here (including `generateSmartArt` itself, defensively) falls
+ * back rather than failing the whole export over an alternate rendering
+ * path that was never guaranteed in the first place.
+ */
+function trySmartArt(ast, smartArtDir) {
+  if (!smartArtDir) return null;
+  try {
+    const generated = generateSmartArt(ast);
+    if (!generated) return null;
+
+    const id = randomUUID();
+    const dir = join(smartArtDir, id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'data.xml'), generated.dataXml, 'utf8');
+    writeFileSync(join(dir, 'layout.xml'), generated.layoutXml, 'utf8');
+    writeFileSync(join(dir, 'colors.xml'), generated.colorsXml, 'utf8');
+    writeFileSync(join(dir, 'quickStyle.xml'), generated.styleXml, 'utf8');
+
+    return buildSmartArtDrawingXml({
+      dm: `SMARTART_PLACEHOLDER:${id}:dm`,
+      lo: `SMARTART_PLACEHOLDER:${id}:lo`,
+      qs: `SMARTART_PLACEHOLDER:${id}:qs`,
+      cs: `SMARTART_PLACEHOLDER:${id}:cs`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`md2nativedocx: SmartArt path failed, falling back to shapes: ${message}\n`);
+    return null;
+  }
+}
+
 try {
   const { ast } = parseMermaid(input);
-  const result = layout(ast);
-  process.stdout.write(translateToOoxml(ast, result));
+
+  const smartArtXml = trySmartArt(ast, process.env.MD2NATIVEDOCX_SMARTART_DIR);
+  if (smartArtXml) {
+    process.stdout.write(smartArtXml);
+  } else {
+    const result = layout(ast);
+    process.stdout.write(translateToOoxml(ast, result));
+  }
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`md2nativedocx: ${message}\n`);

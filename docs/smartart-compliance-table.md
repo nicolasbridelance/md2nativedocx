@@ -38,13 +38,14 @@ limite de SmartArt ou d'OOXML — c'est très généralement l'un des points ci-
    ne reconnaît pas n'atteint **aucune** des 3 stratégies : ce n'est jamais une limite de SmartArt ou
    d'OOXML spécifiquement. Le tableau le signale explicitly par 🔧 *(limite du parseur, pas de la
    stratégie)*.
-2. **Le dispatch classifieur → générateur n'est pas encore câblé** (`TODO.md`, item "Dispatch
-   classifieur → générateur SmartArt vs. pipeline `wpg:wgp` existant"). La colonne "Hybride" décrit
-   le comportement **prévu** une fois ce câblage fait — `classifyTopology()` (livré, testé) puis
-   `generateChain()`/`generateTree()` (livrés, testés, rendu réel vérifié — voir la session
-   2026-09-03) si éligible, sinon le traducteur `wpg:wgp` existant (production, utilisé par la
-   colonne OOXML-only) inchangé. Chaque moitié existe et fonctionne indépendamment ; seul le fil qui
-   les relie manque.
+2. **[Corrigé le 2026-09-03, après la première version de ce tableau] Le dispatch classifieur →
+   générateur est désormais câblé dans le vrai pipeline.** La colonne "Hybride" décrit le
+   comportement **réel** de `md2nativedocx` (CLI et extension VS Code, qui invoque le même
+   binaire) : `classifyTopology()` puis `generateChain()`/`generateTree()`/`generateCycle()` si
+   éligible (parties écrites dans un dossier temporaire, relIds provisoires remplacés par de vrais
+   `rId` après coup par `postprocess.mjs`), sinon le traducteur `wpg:wgp` existant inchangé. Testé
+   de bout en bout (export CLI réel, rendu LibreOffice), pas seulement en isolation. Détail complet
+   dans `TODO.md` (item "Dispatch classifieur → générateur câblé").
 3. **[Corrigé le 2026-09-03, après la première version de ce tableau] SmartArt respecte désormais
    `flowchart.direction`.** `chain.ts` choisit entre `CHAIN_LAYOUT_XML` (horizontal, `LR`) et
    `CHAIN_LAYOUT_XML_TD` (vertical, `TD` — `<dgm:param type="linDir" val="fromT"/>` sur l'algorithme
@@ -102,7 +103,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 
 ### 5.1 Déclaration du diagramme et direction
 
-| Fonctionnalité | Syntaxe Mermaid | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe Mermaid | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Mot-clé `graph`/`flowchart` | `graph TD` / `flowchart TD` | ✅ Full — les deux mots-clés sont acceptés en amont du classifieur | ✅ Full — idem | ✅ Full — idem, seul mot-clé requis par le parseur |
 | Direction `TD` | `graph TD` | ✅ Full (corrigé 2026-09-03) — `chain.ts` émet `CHAIN_LAYOUT_XML_TD` (vertical), `tree.ts` émet `TREE_LAYOUT_XML` (racine en haut, déjà son comportement par défaut) ; rendu réel vérifié | ✅ Full | ✅ Full — Dagre respecte la direction demandée |
@@ -114,14 +115,14 @@ Mermaid, pas une fonctionnalité Markdown générale.
 
 ### 5.2 Formes de nœud
 
-| Fonctionnalité | Syntaxe | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Rectangle | `id[Texte]` | 🟡 Partial — le nœud est représenté, mais SmartArt affiche systématiquement `roundRect`, jamais un rectangle droit (aucune des 6 formes parsées n'est propagée dans `chain.ts`/`tree.ts` aujourd'hui — le champ `NodeShape` du nœud n'est simplement pas lu par ces générateurs) | 🟡 Partial si classifié SmartArt (même perte) ; ✅ Full si fallback OOXML | ✅ Full — `PRST_BY_SHAPE` mappe `rect` → `<a:prstGeom prst="rect">` exactement |
 | Coins arrondis | `id(Texte)` | ✅ Full *par accident* — SmartArt affiche `roundRect` pour tout nœud, donc un nœud `roundRect` d'origine "tombe juste", mais ce n'est pas une transmission fidèle de l'info : n'importe quelle forme d'origine donnerait le même rendu (voir ligne Rectangle) | ✅ Full *par accident*, même remarque | ✅ Full |
 | Stade (pilule) | `id([Texte])` | 🟡 Partial — même dégradation que Rectangle (toujours `roundRect`) | 🟡 Partial / ✅ Full selon fallback | ✅ Full |
 | Cylindre (BDD) | `id[(Texte)]` | 🟡 Partial — idem | 🟡 Partial / ✅ Full | ✅ Full |
 | Cercle/ellipse | `id((Texte))` | 🟡 Partial — idem | 🟡 Partial / ✅ Full | ✅ Full |
-| Losange (décision) | `id{Texte}` | 🟡 Partial — même dégradation visuelle ; la spec §5.1 décrit un mécanisme prévu (`dgm:spPr`/`a:prstGeom prst="diamond"` par nœud à out-degré ≥ 2, via ISO/IEC 29500-1 §21.4.3.7) mais **pas encore implémenté** dans `chain.ts`/`tree.ts` (⏳) | 🟡 Partial (même manque) / ✅ Full si fallback | ✅ Full |
+| Losange (décision) | `id{Texte}` | 🟡 Partial — même dégradation visuelle ; la spec §5.1 décrivait un mécanisme envisagé (`dgm:spPr`/`a:prstGeom prst="diamond"` par nœud à out-degré ≥ 2) mais **testé et confirmé sans effet sous LibreOffice cette session** (voir §2.4) — impasse actée, pas juste "pas encore fait" | 🟡 Partial (même impasse) / ✅ Full si fallback | ✅ Full |
 | Sous-routine `id[[Texte]]` | `[[ ]]` | 🔧 🟡 — mal parsé : les crochets internes ne sont pas reconnus, le nœud est créé en `rect` avec le label littéral `"[Texte]"` (crochets superflus visibles dans le texte). Dégradation cosmétique, pas une perte totale | 🔧 idem | 🔧 idem |
 | Asymétrique `id>Texte]` | `>` / `]` | 🔧 ❌ None — aucun bracket de `SHAPE_BY_SYNTAX` ne commence par `>` ; la ligne entière échoue à parser (`parseNodeRef` retourne `null`), **le nœud ET toute arête qui le référence sont perdus intégralement**, pas seulement la forme | 🔧 idem | 🔧 idem |
 | Hexagone `id{{Texte}}` | `{{ }}` | 🔧 🟡 — mal parsé : matché comme `diamond` (le bracket `{`/`}` du losange matche avant qu'un hexagone dédié n'existe), label littéral `"{Texte}"` avec accolades superflues visibles | 🔧 idem | 🔧 idem |
@@ -134,7 +135,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 
 ### 5.3 Texte de nœud
 
-| Fonctionnalité | Syntaxe | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Texte Unicode | `id["This ❤ Unicode"]` | 🔧 🟡 Partial — **bug confirmé empiriquement cette session** : le parseur ne retire jamais les guillemets englobants, il les inclut littéralement dans `label` (`id["Hello World"]` → label = `"Hello World"` guillemets compris, vérifié directement ; `id[Hello World]` sans guillemets → label = `Hello World` sans eux). Or les guillemets sont précisément la syntaxe **recommandée** par Mermaid pour l'Unicode et tout texte à caractères spéciaux (§"Unicode text" et §"Special characters that break syntax" de la doc) — donc l'usage le plus sûr est celui qui produit le texte le plus abîmé. Aucun caractère n'est perdu (`escapeXml` protège bien le XML), mais deux guillemets parasites apparaissent visiblement dans Word, quelle que soit la stratégie | 🔧 idem | 🔧 idem |
 | Retours à la ligne (`<br/>`) | `id["Ligne1<br/>Ligne2"]` | 🔧 ❌ None — vérifié empiriquement : `<br/>` n'est pas interprété, il reste texte littéral dans le label (`"Ligne1<br/>Ligne2"`, guillemets inclus — cumul avec le bug ci-dessus) ; aucun retour à la ligne réel n'apparaît dans Word | 🔧 idem | 🔧 idem |
@@ -150,7 +151,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 
 ### 5.4 Arêtes (liens)
 
-| Fonctionnalité | Syntaxe | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Flèche simple | `A-->B` | ✅ Full pour la topologie (l'arête existe dans le modèle) — mais voir libellés/style ci-dessous pour les pertes associées | ✅ Full | ✅ Full — flèche + type de trait rendus (`EDGE_STYLE`) |
 | Lien ouvert (sans flèche) | `A---B` | ✅ Full pour la topologie ; SmartArt ne distingue de toute façon jamais visuellement "avec/sans flèche" entre nœuds d'une chaîne/arbre (pas de rendu de connecteur du tout, l'ordre/l'imbrication porte l'information) | ✅ Full (même remarque) | ✅ Full — `line` (`---`) est le seul type sans tête de flèche, rendu correctement |
@@ -169,13 +170,13 @@ Mermaid, pas une fonctionnalité Markdown générale.
 
 ### 5.5 Commentaires
 
-| Fonctionnalité | Syntaxe | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Commentaire `%%` | `%% commentaire` | ✅ Full — ligne ignorée proprement par le parseur (`line.startsWith('%%')`), sans warning, comme attendu | ✅ Full | ✅ Full |
 
 ### 5.6 Sous-graphes
 
-| Fonctionnalité | Syntaxe | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | `subgraph`/`end` basique | `subgraph X\n...\nend` | ❌ None — `classifyTopology()` disqualifie **systématiquement** tout flowchart contenant un `subgraph`, avant même d'évaluer chain/tree/cycle (`classify.ts` ligne 117-121) | ✅ Full — disqualification → fallback automatique vers le pipeline OOXML, qui supporte pleinement les sous-graphes | ✅ Full — titres de sous-graphe rendus en boîte plate (spec §6.1), imbrication suivie correctement (fix git "track nested subgraph relationships correctly") |
 | ID explicite (`subgraph id [Titre]`) | — | ❌ None (même disqualification) | ✅ Full (fallback) | ✅ Full |
@@ -192,7 +193,7 @@ globale) mais de `classify.ts`, le module qui décide quelle stratégie s'appliq
 utilement les sections précédentes qui listent des *constructions syntaxiques* plutôt que des
 *formes de graphe*.
 
-| Topologie | Condition (`classify.ts`) | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Topologie | Condition (`classify.ts`) | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Chaîne simple (chemin, in/out-degré ≤ 1) | — | ✅ Full — `chain.ts` livré, testé, **rendu réel vérifié** (LibreOffice, session 2026-09-03) ; sous réserve des pertes détaillées en §5.1-§5.4 (forme, couleur, libellé d'arête) | ✅ Full (même générateur) | ✅ Full (chemin par défaut, fidélité totale sur forme/couleur/libellé, moins l'éditabilité "au clic" propre à SmartArt) |
 | Arbre, profondeur ≤ 2 (racine + une rangée d'enfants directs) | `MAX_TREE_DEPTH = 2` | ✅ Full — `tree.ts` livré, testé, **rendu réel vérifié** (racine + rangée d'enfants stylée, cette session) ; mêmes pertes de forme/couleur/libellé qu'en chaîne | ✅ Full | ✅ Full |
@@ -205,7 +206,7 @@ utilement les sections précédentes qui listent des *constructions syntaxiques*
 
 ### 5.8 Interaction / configuration du rendu Mermaid
 
-| Fonctionnalité | Syntaxe | SmartArt seul | Hybride (prévu) | OOXML seul |
+| Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | `click nodeId ...` (callback JS, lien, tooltip) | `click A "url"` | N/A — concept propre à un rendu SVG interactif dans un navigateur ; un `.docx` statique n'a pas d'équivalent direct (Word sait faire des hyperliens sur une forme, mais rien dans le pipeline actuel — SmartArt ou OOXML — ne consomme cette syntaxe aujourd'hui, dans aucune des 3 colonnes) | N/A | N/A |
 | Config renderer (`layout: dagre\|elk`), largeur, thème/`look` Mermaid | config front-matter | N/A — ces réglages pilotent le moteur de rendu *de Mermaid lui-même* (jamais exécuté dans ce pipeline : notre propre parseur+Dagre+traducteur XML remplace entièrement le rendu SVG natif de Mermaid, spec §1 "perte de fidélité 'même moteur que l'aperçu' assumée dès le départ") | N/A | N/A |
@@ -243,5 +244,6 @@ factuels utiles pour la décision à venir :
   précisément pourquoi l'approche **hybride** (plutôt que SmartArt-only) a été choisie dès le
   départ (spec §1 : "complément… pas un remplacement").
 - **L'hybride, tel que conçu, n'ajoute jamais de risque de régression** : chaque ligne "❌ None" en
-  colonne SmartArt-only redevient "✅ Full" en colonne Hybride via le fallback automatique — sous
-  réserve que le dispatch (§2.2) soit effectivement câblé un jour, ce qui n'est pas encore le cas.
+  colonne SmartArt-only redevient "✅ Full" en colonne Hybride via le fallback automatique — câblé
+  et testé de bout en bout depuis le 2026-09-03 (§2.2), plus une simple description de
+  comportement prévu.
