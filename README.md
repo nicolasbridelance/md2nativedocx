@@ -1,5 +1,8 @@
 # md2nativedocx
 
+[![CI](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml)
+
 Convertir du Markdown avec des diagrammes **Mermaid** en un `.docx` complet avec des
 **formes vectorielles OOXML natives et éditables** — pas des PNG aplatis.
 
@@ -7,6 +10,10 @@ Convertir du Markdown avec des diagrammes **Mermaid** en un `.docx` complet avec
 > PlantUML) à une image PNG intégrée. Le texte source est parfois conservé en fallback, jamais la
 > structure vectorielle. `md2nativedocx` fait l'inverse : chaque nœud, chaque arête devient une
 > forme Word native, sélectionnable et modifiable individuellement.
+
+> **Compliance & confiance.** Licence, dépendances, analyse de risque IT, coût réel, et un guide
+> sans jargon pour les non-techniciens — chacun trouve directement ce qui le concerne dans
+> [`docs/compliance/`](docs/compliance/README.md).
 
 | | PNG intégré (outils existants) | **md2nativedocx (OOXML natif)** |
 |---|---|---|
@@ -18,7 +25,7 @@ Convertir du Markdown avec des diagrammes **Mermaid** en un `.docx` complet avec
 | Formules LaTeX en équations Word natives | Variable selon l'outil | ✅ via Pandoc, gratuit (voir §2) |
 
 Comparaison nominative avec les extensions VS Code concurrentes (installs, méthode de rendu
-vérifiée dans leur propre doc) : voir `cahier_des_charges.md` §12.1, ou directement le
+vérifiée dans leur propre doc) : voir `docs/specs/cahier_des_charges.md` §12.1, ou directement le
 [README de l'extension](packages/vscode-extension/README.md).
 
 ## Comment ça marche
@@ -35,7 +42,7 @@ Markdown + ```mermaid  ──►  Pandoc (parsing MD, tables, style, ZIP)
 
 L'architecture délègue à Pandoc tout ce qui n'est pas diagramme (parsing Markdown, tableaux,
 style, manipulation ZIP) et ne construit que le module manquant : layout + traduction OOXML d'un
-diagramme. Voir `cahier_des_charges.md` pour le détail.
+diagramme. Voir `docs/specs/cahier_des_charges.md` pour le détail.
 
 ## Installation
 
@@ -69,10 +76,11 @@ npm run test:visual  # rendu LibreOffice headless + pixel-diff (CI)
 
 ## Documentation
 
-- `cahier_des_charges.md` — le **quoi** et le **pourquoi** (spec, phases, scope).
+- `docs/specs/cahier_des_charges.md` — le **quoi** et le **pourquoi** (spec, phases, scope).
 - `AGENTS.md` — le **comment** (conventions, règles de sécurité non négociables).
 - `docs/adr/` — décisions d'architecture (moteur de layout, intégration Pandoc).
 - `TESTING.md` — les six chapitres de test, ce que chacun garantit, où il vit.
+- `docs/compliance/` — licence, dépendances, analyse de risque IT, guide non-technicien.
 - `CONTRIBUTING.md` — comment contribuer.
 
 ## Licence

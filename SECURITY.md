@@ -1,5 +1,8 @@
 # Security Policy
 
+> Pour une analyse de risque complète (table des menaces, pipeline CI, coût/empreinte
+> d'infrastructure), voir [`docs/compliance/it-security.md`](docs/compliance/it-security.md).
+
 ## Supported versions
 
 Pre-1.0: only the latest published version on npm/the VS Code Marketplace is supported. There is no
