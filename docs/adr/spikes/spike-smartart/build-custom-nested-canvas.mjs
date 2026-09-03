@@ -60,6 +60,7 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const WPC_NS = 'http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas';
 const WPS_NS = 'http://schemas.microsoft.com/office/word/2010/wordprocessingShape';
 const WPG_NS = 'http://schemas.microsoft.com/office/word/2010/wordprocessingGroup';
+const MC_NS = 'http://schemas.openxmlformats.org/markup-compatibility/2006';
 const WP_NS = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 
@@ -133,7 +134,7 @@ function main() {
     const rootTagEnd = documentXml.indexOf('>', rootStart);
     if (rootStart < 0 || rootTagEnd < 0) fail('could not find <w:document> root element');
     const rootOpenTag = documentXml.slice(rootStart, rootTagEnd + 1);
-    const needed = { 'xmlns:dgm': DGM_NS, 'xmlns:wpc': WPC_NS, 'xmlns:wps': WPS_NS, 'xmlns:wpg': WPG_NS, 'xmlns:wp': WP_NS, 'xmlns:a': A_NS, 'xmlns:r': R_NS };
+    const needed = { 'xmlns:dgm': DGM_NS, 'xmlns:wpc': WPC_NS, 'xmlns:wps': WPS_NS, 'xmlns:wpg': WPG_NS, 'xmlns:wp': WP_NS, 'xmlns:a': A_NS, 'xmlns:r': R_NS, 'xmlns:mc': MC_NS };
     let newOpenTag = rootOpenTag;
     for (const [attr, uri] of Object.entries(needed)) {
       if (!newOpenTag.includes(`${attr}=`)) newOpenTag = newOpenTag.replace('>', ` ${attr}="${uri}">`);
@@ -168,9 +169,22 @@ function main() {
     // declared in the wordprocessingGroup schema that actually defines
     // CT_GraphicFrame, so they must be wpg-qualified, not wpc- or
     // a-qualified -- confirmed against a real Word-emitted example (not
-    // guessed), see spike.md Round 7's follow-up. This was the bug that
-    // made Word refuse to open the file outright the first time around.
-    const graphicFrame =
+    // guessed), see spike.md Round 7's follow-up. This fixed a well-formedness/
+    // schema mistake but a *second* real-Word test with this fix alone still
+    // failed to open identically -- same hard failure, not a softer one.
+    //
+    // Third attempt: real Word-authored documents that use wpg/wpc content
+    // almost always wrap it in mc:AlternateContent/mc:Choice[Requires="wpg"]
+    // (confirmed via a real-world example search, not guessed) -- a
+    // cross-cutting OOXML compatibility mechanism, legal to wrap any element
+    // in regardless of whether the immediate parent's own raw content model
+    // enumerates mc:AlternateContent explicitly. Not yet confirmed this is
+    // what a real Word parser actually requires specifically for
+    // wpc:graphicFrame (the shipped production translator's bare wpc:wpc/
+    // wps:wsp usage works fine WITHOUT this wrapping, so it isn't universally
+    // required for every wpg/wpc element) -- this is the next best-evidenced
+    // hypothesis, not a confirmed fix.
+    const graphicFrameInner =
       '<wpc:graphicFrame>' +
       '<wpg:cNvPr id="102" name="NestedSmartArt"/>' +
       '<wpg:cNvFrPr/>' +
@@ -179,6 +193,12 @@ function main() {
       `<dgm:relIds r:dm="${rId.data}" r:lo="${rId.layout}" r:qs="${rId.quickStyle}" r:cs="${rId.colors}"/>` +
       '</a:graphicData></a:graphic>' +
       '</wpc:graphicFrame>';
+    const graphicFrame =
+      '<mc:AlternateContent>' +
+      '<mc:Choice Requires="wpg">' +
+      graphicFrameInner +
+      '</mc:Choice>' +
+      '</mc:AlternateContent>';
 
     const drawingParagraph =
       '<w:p><w:r><w:drawing>' +
