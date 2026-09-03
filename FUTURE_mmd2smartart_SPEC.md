@@ -7,6 +7,9 @@
 > par défaut ; `mmd2smartart` ne s'active que sur un sous-ensemble de topologies "sages"
 > volontairement restreint (§4), en excluant explicitement les layouts non pertinents pour un
 > flowchart (pas de matrice, pyramide, tuiles hexagonales, image accent, etc.).
+> Voir `docs/smartart-layout-catalog.md` pour le catalogue complet des ~150 layouts SmartArt
+> existants et le jugement de pertinence par layout (pistes non explorées : `Labeled Hierarchy`
+> pour `subgraph`, layouts convergents pour la fusion après branchement).
 
 ---
 

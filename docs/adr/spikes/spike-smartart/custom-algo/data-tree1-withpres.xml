@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dgm:dataModel xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><dgm:ptLst>
+<dgm:pt modelId="0" type="doc"><dgm:prSet loTypeId="urn:md2nativedocx/smartart-layout/tree1" loCatId="hierarchy" qsTypeId="urn:md2nativedocx/smartart-quickstyle/tree1" qsCatId="simple" csTypeId="urn:md2nativedocx/smartart-colors/tree1" csCatId="accent1"/></dgm:pt>
+<dgm:pt modelId="1"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>Racine</a:t></a:r></a:p></dgm:t></dgm:pt>
+<dgm:pt modelId="2"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>Enfant A</a:t></a:r></a:p></dgm:t></dgm:pt>
+<dgm:pt modelId="3"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>Enfant B</a:t></a:r></a:p></dgm:t></dgm:pt>
+<!-- Presentation mirror, mirroring layout-tree1.xml's own layoutNode nesting
+     exactly: root -> level1 -> [level1Main, level1Children -> [level2composite -> level2Main] * N] -->
+<dgm:pt modelId="p-root" type="pres"><dgm:prSet presAssocID="0" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level1" type="pres"><dgm:prSet presAssocID="1" presName="level1" presStyleCnt="0"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level1main" type="pres"><dgm:prSet presAssocID="1" presName="level1Main" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="1"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level1children" type="pres"><dgm:prSet presAssocID="1" presName="level1Children" presStyleCnt="0"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level2composite-a" type="pres"><dgm:prSet presAssocID="2" presName="level2composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level2main-a" type="pres"><dgm:prSet presAssocID="2" presName="level2Main" presStyleLbl="node2" presStyleIdx="0" presStyleCnt="2"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level2composite-b" type="pres"><dgm:prSet presAssocID="3" presName="level2composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-level2main-b" type="pres"><dgm:prSet presAssocID="3" presName="level2Main" presStyleLbl="node2" presStyleIdx="1" presStyleCnt="2"/><dgm:spPr/></dgm:pt>
+</dgm:ptLst>
+<dgm:cxnLst>
+<dgm:cxn modelId="c1" type="parOf" srcId="0" destId="1" srcOrd="0" destOrd="0"/>
+<dgm:cxn modelId="c2" type="parOf" srcId="1" destId="2" srcOrd="0" destOrd="0"/>
+<dgm:cxn modelId="c3" type="parOf" srcId="1" destId="3" srcOrd="1" destOrd="0"/>
+<dgm:cxn modelId="po1" type="presOf" srcId="1" destId="p-level1main" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="po2" type="presOf" srcId="2" destId="p-level2main-a" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="po3" type="presOf" srcId="3" destId="p-level2main-b" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp1" type="presParOf" srcId="p-root" destId="p-level1" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp2" type="presParOf" srcId="p-level1" destId="p-level1main" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp3" type="presParOf" srcId="p-level1" destId="p-level1children" srcOrd="1" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp4" type="presParOf" srcId="p-level1children" destId="p-level2composite-a" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp5" type="presParOf" srcId="p-level2composite-a" destId="p-level2main-a" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp6" type="presParOf" srcId="p-level1children" destId="p-level2composite-b" srcOrd="1" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+<dgm:cxn modelId="pp7" type="presParOf" srcId="p-level2composite-b" destId="p-level2main-b" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/tree1"/>
+</dgm:cxnLst>
+<dgm:bg/><dgm:whole/></dgm:dataModel>

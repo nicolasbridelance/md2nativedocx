@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dgm:colorsDef xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" uniqueId="urn:md2nativedocx/smartart-colors/tree1" minVer="12.0">
+  <dgm:title val=""/>
+  <dgm:desc val=""/>
+  <dgm:catLst><dgm:cat type="mainScheme" pri="1"/></dgm:catLst>
+  <dgm:styleLbl name="node1">
+    <dgm:fillClrLst><a:srgbClr val="4472C4"/></dgm:fillClrLst>
+    <dgm:linClrLst><a:srgbClr val="2E528F"/></dgm:linClrLst>
+    <dgm:effectClrLst/>
+    <dgm:txLinClrLst/>
+    <dgm:txFillClrLst><a:srgbClr val="FFFFFF"/></dgm:txFillClrLst>
+    <dgm:txEffectClrLst/>
+  </dgm:styleLbl>
+  <dgm:styleLbl name="node2">
+    <dgm:fillClrLst><a:srgbClr val="ED7D31"/></dgm:fillClrLst>
+    <dgm:linClrLst><a:srgbClr val="AC5A22"/></dgm:linClrLst>
+    <dgm:effectClrLst/>
+    <dgm:txLinClrLst/>
+    <dgm:txFillClrLst><a:srgbClr val="FFFFFF"/></dgm:txFillClrLst>
+    <dgm:txEffectClrLst/>
+  </dgm:styleLbl>
+</dgm:colorsDef>

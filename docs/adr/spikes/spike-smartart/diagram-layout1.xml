@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Hand-approximated 2-level hierarchy layout for the mmd2smartart spike
+  (docs/adr/spikes/spike-smartart/spike.md). This is NOT a copy of Word's
+  built-in "hierarchy1" gallery algorithm (hierRoot1/hierChild1); see
+  spike.md for why a verbatim copy could not be sourced. Instead it is a
+  from-scratch dgm:layoutDef built only from algorithm types (composite, tx,
+  sp) documented with concrete worked XML in the 2007 MSDN article "Create
+  Custom SmartArt Graphics For Use In The 2007 Office System". It hard-codes
+  positions for exactly one root node and two children; it does not
+  generalize to arbitrary child counts the way a production generator would
+  have to (out of scope for this feasibility spike).
+
+  Connecting lines are plain axis-aligned rectangle shapes placed by the
+  composite algorithm at fixed coordinates (an "elbow" of 4 bars: one down
+  from the root, one horizontal spine, two down into each child), not
+  SmartArt's dynamic "conn" algorithm, whose parameter schema (begPts,
+  endPts, connRout) could not be confirmed from a primary source in the
+  time available. See spike.md's "layout1.xml provenance" section.
+-->
+<dgm:layoutDef xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" uniqueId="urn:md2nativedocx:spike:hierarchy-approx" minVer="http://schemas.openxmlformats.org/drawingml/2006/diagram">
+  <dgm:layoutNode name="diagram">
+    <dgm:alg type="composite"/>
+    <dgm:shape/>
+    <dgm:presOf/>
+    <dgm:constrLst>
+      <dgm:constr type="w" for="ch" forName="rootShape" val="0.40"/>
+      <dgm:constr type="h" for="ch" forName="rootShape" val="0.20"/>
+      <dgm:constr type="l" for="ch" forName="rootShape" val="0.30"/>
+      <dgm:constr type="t" for="ch" forName="rootShape" val="0"/>
+
+      <dgm:constr type="w" for="ch" forName="vBarRoot" val="0.03"/>
+      <dgm:constr type="h" for="ch" forName="vBarRoot" val="0.10"/>
+      <dgm:constr type="l" for="ch" forName="vBarRoot" val="0.485"/>
+      <dgm:constr type="t" for="ch" forName="vBarRoot" val="0.20"/>
+
+      <dgm:constr type="w" for="ch" forName="hBar" val="0.62"/>
+      <dgm:constr type="h" for="ch" forName="hBar" val="0.03"/>
+      <dgm:constr type="l" for="ch" forName="hBar" val="0.19"/>
+      <dgm:constr type="t" for="ch" forName="hBar" val="0.30"/>
+
+      <dgm:constr type="w" for="ch" forName="vBarChild1" val="0.03"/>
+      <dgm:constr type="h" for="ch" forName="vBarChild1" val="0.22"/>
+      <dgm:constr type="l" for="ch" forName="vBarChild1" val="0.175"/>
+      <dgm:constr type="t" for="ch" forName="vBarChild1" val="0.33"/>
+
+      <dgm:constr type="w" for="ch" forName="vBarChild2" val="0.03"/>
+      <dgm:constr type="h" for="ch" forName="vBarChild2" val="0.22"/>
+      <dgm:constr type="l" for="ch" forName="vBarChild2" val="0.795"/>
+      <dgm:constr type="t" for="ch" forName="vBarChild2" val="0.33"/>
+
+      <dgm:constr type="w" for="ch" forName="child1Shape" val="0.28"/>
+      <dgm:constr type="h" for="ch" forName="child1Shape" val="0.20"/>
+      <dgm:constr type="l" for="ch" forName="child1Shape" val="0.05"/>
+      <dgm:constr type="t" for="ch" forName="child1Shape" val="0.55"/>
+
+      <dgm:constr type="w" for="ch" forName="child2Shape" val="0.28"/>
+      <dgm:constr type="h" for="ch" forName="child2Shape" val="0.20"/>
+      <dgm:constr type="l" for="ch" forName="child2Shape" val="0.67"/>
+      <dgm:constr type="t" for="ch" forName="child2Shape" val="0.55"/>
+    </dgm:constrLst>
+    <dgm:ruleLst/>
+
+    <dgm:layoutNode name="rootShape" styleLbl="node1">
+      <dgm:alg type="tx"/>
+      <dgm:shape type="roundRect">
+        <dgm:adjLst/>
+      </dgm:shape>
+      <dgm:presOf axis="des" ptType="node" st="1" cnt="1"/>
+      <dgm:constrLst/>
+      <dgm:ruleLst>
+        <dgm:rule type="primFontSz" val="5"/>
+      </dgm:ruleLst>
+    </dgm:layoutNode>
+
+    <dgm:layoutNode name="vBarRoot" styleLbl="node1">
+      <dgm:alg type="sp"/>
+      <dgm:shape type="rect"/>
+      <dgm:presOf/>
+      <dgm:constrLst/>
+      <dgm:ruleLst/>
+    </dgm:layoutNode>
+
+    <dgm:layoutNode name="hBar" styleLbl="node1">
+      <dgm:alg type="sp"/>
+      <dgm:shape type="rect"/>
+      <dgm:presOf/>
+      <dgm:constrLst/>
+      <dgm:ruleLst/>
+    </dgm:layoutNode>
+
+    <dgm:layoutNode name="vBarChild1" styleLbl="node1">
+      <dgm:alg type="sp"/>
+      <dgm:shape type="rect"/>
+      <dgm:presOf/>
+      <dgm:constrLst/>
+      <dgm:ruleLst/>
+    </dgm:layoutNode>
+
+    <dgm:layoutNode name="vBarChild2" styleLbl="node1">
+      <dgm:alg type="sp"/>
+      <dgm:shape type="rect"/>
+      <dgm:presOf/>
+      <dgm:constrLst/>
+      <dgm:ruleLst/>
+    </dgm:layoutNode>
+
+    <dgm:layoutNode name="child1Shape" styleLbl="node1">
+      <dgm:alg type="tx"/>
+      <dgm:shape type="rect"/>
+      <dgm:presOf axis="des" ptType="node" st="2" cnt="1"/>
+      <dgm:constrLst/>
+      <dgm:ruleLst>
+        <dgm:rule type="primFontSz" val="5"/>
+      </dgm:ruleLst>
+    </dgm:layoutNode>
+
+    <dgm:layoutNode name="child2Shape" styleLbl="node1">
+      <dgm:alg type="tx"/>
+      <dgm:shape type="rect"/>
+      <dgm:presOf axis="des" ptType="node" st="3" cnt="1"/>
+      <dgm:constrLst/>
+      <dgm:ruleLst>
+        <dgm:rule type="primFontSz" val="5"/>
+      </dgm:ruleLst>
+    </dgm:layoutNode>
+  </dgm:layoutNode>
+</dgm:layoutDef>

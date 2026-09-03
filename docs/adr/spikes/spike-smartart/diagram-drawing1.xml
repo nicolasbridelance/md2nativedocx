@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Pre-rendered fallback ("last successful layout") for the SmartArt diagram
+  in this spike; see spike.md, "The dsp:drawing fallback part (the actual
+  fix)". Consumers (LibreOffice confirmed here; believed to include Word's
+  initial paint too, pending human confirmation) display THIS static shape
+  tree rather than executing diagram-layout1.xml's algorithm on open. The
+  coordinates below are hand-computed EMU values matching the percentage
+  layout in diagram-layout1.xml's constrLst, against a 5486400 x 3200400 EMU
+  canvas (the wp:extent set on the drawing in word/document.xml).
+-->
+<dsp:drawing xmlns:dsp="http://schemas.microsoft.com/office/drawing/2008/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <dsp:spTree>
+    <dsp:nvGrpSpPr>
+      <dsp:cNvPr id="0" name=""/>
+      <dsp:cNvGrpSpPr/>
+    </dsp:nvGrpSpPr>
+    <dsp:grpSpPr>
+      <a:xfrm>
+        <a:off x="0" y="0"/>
+        <a:ext cx="5486400" cy="3200400"/>
+        <a:chOff x="0" y="0"/>
+        <a:chExt cx="5486400" cy="3200400"/>
+      </a:xfrm>
+    </dsp:grpSpPr>
+
+    <dsp:sp modelId="{11111111-1111-4111-8111-111111111111}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="1" name="Root"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="1645920" y="0"/>
+          <a:ext cx="2194560" cy="640080"/>
+        </a:xfrm>
+        <a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="accent1"/></a:solidFill>
+        <a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"><a:shade val="50000"/></a:schemeClr></a:solidFill></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr anchor="ctr" anchorCtr="1" wrap="square"/>
+        <a:lstStyle/>
+        <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1400"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:rPr><a:t>Root</a:t></a:r></a:p>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="1645920" y="0"/>
+        <a:ext cx="2194560" cy="640080"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+
+    <dsp:sp modelId="{a0000000-0000-4000-8000-000000000002}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="2" name="ConnectorFromRoot"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="2660904" y="640080"/>
+          <a:ext cx="164592" cy="320040"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="50000"/><a:lumOff val="50000"/></a:schemeClr></a:solidFill>
+        <a:ln><a:noFill/></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        <a:p/>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="2660904" y="640080"/>
+        <a:ext cx="164592" cy="320040"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+
+    <dsp:sp modelId="{a0000000-0000-4000-8000-000000000003}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="3" name="ConnectorSpine"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="1042416" y="960120"/>
+          <a:ext cx="3401568" cy="96012"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="50000"/><a:lumOff val="50000"/></a:schemeClr></a:solidFill>
+        <a:ln><a:noFill/></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        <a:p/>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="1042416" y="960120"/>
+        <a:ext cx="3401568" cy="96012"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+
+    <dsp:sp modelId="{a0000000-0000-4000-8000-000000000004}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="4" name="ConnectorToChild1"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="960120" y="1056132"/>
+          <a:ext cx="164592" cy="704088"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="50000"/><a:lumOff val="50000"/></a:schemeClr></a:solidFill>
+        <a:ln><a:noFill/></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        <a:p/>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="960120" y="1056132"/>
+        <a:ext cx="164592" cy="704088"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+
+    <dsp:sp modelId="{a0000000-0000-4000-8000-000000000005}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="5" name="ConnectorToChild2"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="4361688" y="1056132"/>
+          <a:ext cx="164592" cy="704088"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="50000"/><a:lumOff val="50000"/></a:schemeClr></a:solidFill>
+        <a:ln><a:noFill/></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        <a:p/>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="4361688" y="1056132"/>
+        <a:ext cx="164592" cy="704088"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+
+    <dsp:sp modelId="{22222222-2222-4222-8222-222222222222}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="6" name="Child 1"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="274320" y="1760220"/>
+          <a:ext cx="1536192" cy="640080"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="accent1"><a:tint val="60000"/></a:schemeClr></a:solidFill>
+        <a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"><a:shade val="50000"/></a:schemeClr></a:solidFill></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr anchor="ctr" anchorCtr="1" wrap="square"/>
+        <a:lstStyle/>
+        <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:rPr><a:t>Child 1</a:t></a:r></a:p>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="274320" y="1760220"/>
+        <a:ext cx="1536192" cy="640080"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+
+    <dsp:sp modelId="{33333333-3333-4333-8333-333333333333}">
+      <dsp:nvSpPr>
+        <dsp:cNvPr id="7" name="Child 2"/>
+        <dsp:cNvSpPr/>
+      </dsp:nvSpPr>
+      <dsp:spPr>
+        <a:xfrm>
+          <a:off x="3675888" y="1760220"/>
+          <a:ext cx="1536192" cy="640080"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:schemeClr val="accent1"><a:tint val="60000"/></a:schemeClr></a:solidFill>
+        <a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"><a:shade val="50000"/></a:schemeClr></a:solidFill></a:ln>
+      </dsp:spPr>
+      <dsp:txBody>
+        <a:bodyPr anchor="ctr" anchorCtr="1" wrap="square"/>
+        <a:lstStyle/>
+        <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:rPr><a:t>Child 2</a:t></a:r></a:p>
+      </dsp:txBody>
+      <dsp:txXfrm>
+        <a:off x="3675888" y="1760220"/>
+        <a:ext cx="1536192" cy="640080"/>
+      </dsp:txXfrm>
+    </dsp:sp>
+  </dsp:spTree>
+</dsp:drawing>

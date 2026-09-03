@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dgm:layoutDef xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" uniqueId="urn:md2nativedocx/smartart-layout/tree1">
+  <dgm:title val=""/>
+  <dgm:desc val=""/>
+  <dgm:catLst><dgm:cat type="hierarchy" pri="1"/></dgm:catLst>
+  <dgm:sampData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:sampData>
+  <dgm:styleData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:styleData>
+  <dgm:clrData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:clrData>
+  <dgm:layoutNode name="root">
+    <dgm:alg type="composite"/>
+    <dgm:shape/>
+    <dgm:constrLst>
+      <dgm:constr op="equ" type="primFontSz" for="des" ptType="node" val="20"/>
+      <dgm:constr type="w" for="ch" forName="level1" val="1"/>
+      <dgm:constr type="h" for="ch" forName="level1" val="1"/>
+      <dgm:constr type="t" for="ch" forName="level1" val="0"/>
+      <dgm:constr type="l" for="ch" forName="level1" val="0"/>
+    </dgm:constrLst>
+    <dgm:forEach name="rootForEach" axis="ch" ptType="node" st="1" cnt="1">
+      <!-- Depth 1: the tree's single root content node (Mermaid's start node). -->
+      <dgm:layoutNode name="level1">
+        <dgm:alg type="composite"/>
+        <dgm:shape/>
+        <dgm:constrLst>
+          <dgm:constr type="w" for="ch" forName="level1Main" val="1"/>
+          <dgm:constr type="h" for="ch" forName="level1Main" val="0.35"/>
+          <dgm:constr type="t" for="ch" forName="level1Main" val="0"/>
+          <dgm:constr type="l" for="ch" forName="level1Main" val="0"/>
+          <dgm:constr type="w" for="ch" forName="level1Children" val="1"/>
+          <dgm:constr type="h" for="ch" forName="level1Children" val="0.55"/>
+          <dgm:constr type="t" for="ch" forName="level1Children" val="0.45"/>
+          <dgm:constr type="l" for="ch" forName="level1Children" val="0"/>
+        </dgm:constrLst>
+        <dgm:layoutNode name="level1Main" styleLbl="node1">
+          <dgm:alg type="tx"/>
+          <dgm:shape type="roundRect"/>
+          <dgm:presOf axis="desOrSelf" ptType="node" st="1" cnt="0"/>
+          <dgm:constrLst>
+            <dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>
+            <dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>
+            <dgm:constr type="tMarg" refType="primFontSz" fact="0.15"/>
+            <dgm:constr type="bMarg" refType="primFontSz" fact="0.15"/>
+          </dgm:constrLst>
+          <dgm:ruleLst>
+            <dgm:rule type="primFontSz" val="5"/>
+          </dgm:ruleLst>
+        </dgm:layoutNode>
+        <!-- Row of this node's children (depth 2), arbitrary count via forEach,
+             auto-distributed left-to-right by "lin" exactly like the proven
+             chain1 layout's row of top-level items. -->
+        <dgm:layoutNode name="level1Children">
+          <dgm:alg type="lin"/>
+          <dgm:shape/>
+          <dgm:constrLst>
+            <dgm:constr type="w" for="ch" forName="level2composite" refType="w"/>
+            <dgm:constr type="h" for="ch" forName="level2composite" refType="h"/>
+            <dgm:constr op="equ" type="sp" refType="w" refFor="ch" refForName="level2composite" fact="0.1"/>
+          </dgm:constrLst>
+          <dgm:forEach name="level2ForEach" axis="ch" ptType="node">
+            <dgm:layoutNode name="level2composite">
+              <dgm:alg type="composite"/>
+              <dgm:shape/>
+              <dgm:layoutNode name="level2Main" styleLbl="node2">
+                <dgm:alg type="tx"/>
+                <dgm:shape type="roundRect"/>
+                <dgm:presOf axis="desOrSelf" ptType="node" st="1" cnt="0"/>
+                <dgm:constrLst>
+                  <dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>
+                  <dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>
+                  <dgm:constr type="tMarg" refType="primFontSz" fact="0.15"/>
+                  <dgm:constr type="bMarg" refType="primFontSz" fact="0.15"/>
+                </dgm:constrLst>
+                <dgm:ruleLst>
+                  <dgm:rule type="primFontSz" val="5"/>
+                </dgm:ruleLst>
+              </dgm:layoutNode>
+            </dgm:layoutNode>
+          </dgm:forEach>
+        </dgm:layoutNode>
+      </dgm:layoutNode>
+    </dgm:forEach>
+  </dgm:layoutNode>
+</dgm:layoutDef>

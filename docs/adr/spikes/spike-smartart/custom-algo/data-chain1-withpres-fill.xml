@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dgm:dataModel xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><dgm:ptLst>
+<dgm:pt modelId="0" type="doc"/>
+<dgm:pt modelId="1"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>Etape 1</a:t></a:r></a:p></dgm:t></dgm:pt>
+<dgm:pt modelId="2"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>Etape 2</a:t></a:r></a:p></dgm:t></dgm:pt>
+<dgm:pt modelId="3"><dgm:prSet phldrT="[Texte]"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>Etape 3</a:t></a:r></a:p></dgm:t></dgm:pt>
+<!-- Presentation mirror: one "composite" + "Main" pair per content node, all
+     nested under a single "root" pres point associated with the doc point,
+     mirroring the recursive bundle pattern reverse-engineered from real
+     Word hierarchy1 data (ADR 0004 "Round 3/4"), adapted to chain1's own
+     layoutNode names (root/composite/Main) instead of Word's
+     (hierRoot/composite/text). No sibTrans pres points yet: this first
+     test only checks whether presOf/presParOf presence unblocks LibreOffice
+     rendering at all, not spacing accuracy. -->
+<dgm:pt modelId="p-root" type="pres"><dgm:prSet presAssocID="0" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-composite1" type="pres"><dgm:prSet presAssocID="1" presName="composite" presStyleCnt="0"/><dgm:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></dgm:spPr></dgm:pt>
+<dgm:pt modelId="p-main1" type="pres"><dgm:prSet presAssocID="1" presName="Main" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="3"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-composite2" type="pres"><dgm:prSet presAssocID="2" presName="composite" presStyleCnt="0"/><dgm:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></dgm:spPr></dgm:pt>
+<dgm:pt modelId="p-main2" type="pres"><dgm:prSet presAssocID="2" presName="Main" presStyleLbl="node1" presStyleIdx="1" presStyleCnt="3"/><dgm:spPr/></dgm:pt>
+<dgm:pt modelId="p-composite3" type="pres"><dgm:prSet presAssocID="3" presName="composite" presStyleCnt="0"/><dgm:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></dgm:spPr></dgm:pt>
+<dgm:pt modelId="p-main3" type="pres"><dgm:prSet presAssocID="3" presName="Main" presStyleLbl="node1" presStyleIdx="2" presStyleCnt="3"/><dgm:spPr/></dgm:pt>
+</dgm:ptLst>
+<dgm:cxnLst>
+<dgm:cxn modelId="c1" type="parOf" srcId="0" destId="1" srcOrd="0" destOrd="0"/>
+<dgm:cxn modelId="c2" type="parOf" srcId="0" destId="2" srcOrd="1" destOrd="0"/>
+<dgm:cxn modelId="c3" type="parOf" srcId="0" destId="3" srcOrd="2" destOrd="0"/>
+<!-- presOf: each content node's text maps to its own "Main" pres point. -->
+<dgm:cxn modelId="po0" type="presOf" srcId="0" destId="p-root" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="po1" type="presOf" srcId="1" destId="p-main1" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="po2" type="presOf" srcId="2" destId="p-main2" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="po3" type="presOf" srcId="3" destId="p-main3" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<!-- presParOf: root pres point contains the 3 composite bundles, in order;
+     each composite bundle contains its own Main. -->
+<dgm:cxn modelId="pp0" type="presParOf" srcId="p-root" destId="p-composite1" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="pp1" type="presParOf" srcId="p-composite1" destId="p-main1" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="pp2" type="presParOf" srcId="p-root" destId="p-composite2" srcOrd="1" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="pp3" type="presParOf" srcId="p-composite2" destId="p-main2" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="pp4" type="presParOf" srcId="p-root" destId="p-composite3" srcOrd="2" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+<dgm:cxn modelId="pp5" type="presParOf" srcId="p-composite3" destId="p-main3" srcOrd="0" destOrd="0" presId="urn:md2nativedocx/smartart-layout/chain1"/>
+</dgm:cxnLst>
+<dgm:bg/><dgm:whole/></dgm:dataModel>

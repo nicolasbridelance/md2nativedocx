@@ -11,3 +11,44 @@ coverage/
 # Compiled JS/maps emitted into src/ by tsc (should not be committed)
 packages/**/src/**/*.js
 packages/**/src/**/*.js.map
+
+# Real Word-generated SmartArt exports and their extracted parts (docs/adr/0004,
+# "Round 2-4"): contain verbatim Microsoft algorithm/style XML (layout1.xml,
+# colors1.xml, quickStyle1.xml, drawing1.xml) from the maintainer's own Word
+# installation. Kept as local research reference only, deliberately never
+# committed to this CC0 public repo pending a licensing decision (maintainer
+# chose to reimplement an original layoutDef instead of redistributing these,
+# 2026-09-03) — see spike.md's "Round 4" for the reasoning.
+docs/adr/spikes/spike-smartart/real-diagram1/
+docs/adr/spikes/spike-smartart/real-diagram-deep/
+docs/adr/spikes/spike-smartart/real-diagram-flat/
+docs/adr/spikes/spike-smartart/*Hierarchie*.docx
+docs/adr/spikes/spike-smartart/*hierarchie*.docx
+docs/adr/spikes/spike-smartart/*niveaux*.docx
+docs/adr/spikes/spike-smartart/*enfants*.docx
+# hand-data-v4-real-nodrawing.xml is the real data1.xml verbatim (only its
+# extLst stripped) — not "hand" content despite the filename.
+docs/adr/spikes/spike-smartart/hand-data-v4-real-nodrawing.xml
+# v2/v3/v4/v5 build OUTPUTS all graft real-diagram1/'s real layout1.xml (v2
+# also colors1/quickStyle1/drawing1) onto base.docx, so the produced .docx/
+# .pdf/.png embed real Microsoft content even where the *script* and the
+# *hand-authored data* going in are self-written. The build-spike-v*.mjs
+# scripts themselves are fine to keep (pure logic, no embedded content) —
+# only their outputs are excluded. v1 (spike.docx, diagram-*.xml,
+# build-spike.mjs) predates any real Word sample and is fully self-authored,
+# so it stays committable.
+docs/adr/spikes/spike-smartart/spike-v2.*
+docs/adr/spikes/spike-smartart/spike-v3.*
+docs/adr/spikes/spike-smartart/spike-v4.*
+docs/adr/spikes/spike-smartart/spike-v5.*
+# custom-chain1-realstyle.* and custom-chain1-ownercolors.* (Round 5) still
+# embed the real quickStyle1.xml (and, for -realstyle, also real colors1.xml)
+# borrowed from real-diagram1/ -- everything else under custom-chain1-*/
+# custom-tree1.* is fully self-authored (own layout + own data + own
+# colorsDef) and stays committable.
+docs/adr/spikes/spike-smartart/custom-chain1-realstyle.*
+docs/adr/spikes/spike-smartart/custom-chain1-ownercolors.*
+# custom-tree1-styled.* embeds the real quickStyle1.xml (own layout/data/colors,
+# borrowed quickStyle -- the tree geometry test predates the self-authored
+# styleDef confirmation done for chain1).
+docs/adr/spikes/spike-smartart/custom-tree1-styled.*

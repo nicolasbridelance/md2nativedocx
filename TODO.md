@@ -717,6 +717,152 @@ est levé.
 
 - [ ] Diagrammes de séquence (priorité, demande la plus fréquente après flowchart).
 
+## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
+
+Cadrage complet dans `cahier_des_charges_google_slides.md` et `FUTURE_mmd2smartart_SPEC.md`.
+Priorisation décidée par le mainteneur (2026-09-03) : Slides et SmartArt en parallèle (spikes bon
+marché, ne touchent pas la production), avant les diagrammes de séquence (gros effort from-scratch)
+et l'add-in Word (canal de distribution entièrement nouveau).
+
+- [x] **Spike Phase 0 pptx (2026-09-02/03)** — `.pptx` minimal à la main (2 formes + connecteur,
+      mêmes indices de site de connexion que le traducteur docx), ZIP/XML valides, rendu
+      LibreOffice Impress propre. `docs/adr/0003-pptx-translator-spike.md`,
+      `docs/adr/spikes/spike-pptx/`. **Reste à faire avant la Phase 1 (traducteur de
+      production)** : vérification manuelle dans un vrai Google Slides/PowerPoint (sélection
+      individuelle des formes, comportement magnétique du connecteur — non testable en headless).
+- [x] **Spike Phase 0 SmartArt, 3 manches (2026-09-02/03)** — `docs/adr/0004-smartart-feasibility-spike.md`,
+      `docs/adr/spikes/spike-smartart/`. Résultat : chirurgie ZIP validée dans un vrai Word ; le
+      modèle de données minimal envisagé par la spec §4 (sans miroir de nœuds `pres`) est rejeté
+      catégoriquement par Word à l'ouverture — mais le miroir `pres` s'avère être une table de
+      correspondance fixe indexée par profondeur (confirmée sur 3 échantillons Word réels de
+      topologies différentes), donc mécaniquement reproductible. **Contrainte dure découverte,
+      non documentée par Microsoft** : l'algorithme `hierarchy1` de Word est plafonné à 4 niveaux
+      de profondeur (aucun `layoutNode` de rendu au-delà de `hierChild5`/`hierRoot4` dans un
+      `layout1.xml` réel) — largeur illimitée en revanche.
+- [x] **Classifieur de topologie (2026-09-03)** — `packages/core/src/smartart/classify.ts`,
+      `classifyTopology()` exporté depuis le barrel public de `packages/core` (spec §4).
+      **Escalade AGENTS.md** : nouvelle branche de sortie publique de `packages/core` — validée
+      explicitement par le mainteneur en choisissant cette tâche comme prochaine étape, pas
+      décidée unilatéralement. Fonction pure, aucune dépendance à Dagre ni au traducteur OOXML ;
+      retourne une raison structurée (`{ eligible: false, reason: ..., at: [...] }`, spec §10.1)
+      plutôt qu'un simple booléen. Règle de profondeur ≤ 4 (`MAX_TREE_DEPTH`) ajoutée en plus des
+      règles chaîne/arbre/cycle de la spec, directement issue du spike ci-dessus. 12 tests
+      unitaires (`packages/core/test/unit/classify.test.ts`) — a immédiatement attrapé un vrai bug
+      de conception (un cycle pur satisfaisait aussi le test naïf de chaîne "in/out-degré ≤ 1" ;
+      corrigé en distinguant les topologies par présence d'une racine plutôt que par les seules
+      bornes de degré). Monorepo entier revérifié vert (build/typecheck/lint/tous les tests des 4
+      packages) après l'ajout.
+- [x] **Règle exacte de câblage `presOf`/`presParOf` extraite (2026-09-03)** — `spike.md` "Round 4" :
+      motif récursif entièrement caractérisé (bundle fixe de 5 points `pres` par profondeur, table
+      de noms de transition fixe `Name10`/`Name17`/`Name23`), confirmé sur 3 échantillons Word réels.
+- [x] **Décision de licence (2026-09-03)** : ne pas redistribuer le `layout1.xml` authentique de
+      Word (contenu propriétaire Microsoft) dans ce dépôt CC0 public — le mainteneur a choisi de
+      réécrire un algorithme `dgm:layoutDef` original (vocabulaire `composite`/`tx`/`lin`/`forEach`
+      documenté publiquement par Microsoft, pas copié). Fichiers Word réels du spike exclus du
+      dépôt (`.gitignore`), gardés en local uniquement comme référence de recherche.
+- ⚠️ **Algorithme personnalisé — chain prouvé fonctionnel dans un vrai Word, tree en cours,
+      LibreOffice catégoriquement non fonctionnel pour tout algorithme personnalisé (2026-09-03)** :
+      `docs/adr/spikes/spike-smartart/custom-algo/` — `layout-chain1.xml` (transcription d'un
+      exemple complet documenté par Microsoft, `lin`/`composite`/`tx`/`forEach`) + `data-chain1.xml`
+      (modèle de données minimal §4 : doc + nœuds simples + `parOf`, **sans aucun nœud `pres`**) :
+      **rendu confirmé correct dans un vrai Word** (capture d'écran : 3 rectangles bleus "Etape
+      1/2/3" reliés) — prouve que `forEach axis="ch"` résout dynamiquement la présentation sans
+      cache `pres` pré-calculé, au moins pour Word. `layout-tree1.xml` (imbrication à 2 niveaux,
+      même principe) : le modèle de données est correctement lu par Word (panneau de texte outline
+      montre l'arborescence Racine/Enfant A/Enfant B) mais **aucune forme visible** — bug de
+      contraintes géométriques dans l'algorithme (`composite` mal câblé pour un nœud ayant à la
+      fois son propre texte et une rangée d'enfants), pas un problème fondamental ; en cours de
+      correction, pas encore retesté.
+  - **Confirmation catégorique découverte au passage** : `custom-chain1.docx`, pourtant validé
+    fonctionnel dans Word, **rend une page blanche sous LibreOffice** — comme tous les algorithmes
+    personnalisés testés jusqu'ici (le hand-authored raté de la v1, comme celui-ci qui pourtant
+    fonctionne dans Word). LibreOffice ne semble jamais exécuter `forEach`/`presOf`, quel que soit
+    l'algorithme, personnalisé ou non — voir hypothèse ci-dessous.
+  - **Pause stratégique demandée par le mainteneur (2026-09-03)** avant de continuer à itérer sur
+    la géométrie de `layout-tree1.xml` : voir le catalogue de layouts SmartArt ci-dessous d'abord.
+- [x] **Catalogue complet des layouts SmartArt** — voir entrée dédiée ci-dessus.
+- [x] **Compatibilité LibreOffice résolue pour un algorithme 100 % personnalisé, sans plafond de
+      profondeur (2026-09-03, "Round 5")** — le mainteneur a explicitement demandé de pousser la
+      compatibilité plutôt que d'accepter la limite Word-only. `docs/adr/spikes/spike-smartart/spike.md`
+      "Round 5" : ajouter à la main le miroir `presOf`/`presParOf` (motif du Round 4, retargeté sur
+      les noms `layoutNode` de NOTRE PROPRE `layout-chain1.xml`) débloque LibreOffice — texte
+      correctement positionné (`custom-chain1-withpres.docx`), même phénomène que le vrai
+      `hierarchy1` en Round 2-4. Formes/couleurs complètes obtenues en ajoutant `colors`+`quickStyle`
+      (`custom-chain1-realstyle.docx`, rendu identique à du SmartArt intégré). **Testé et confirmé :
+      un `colorsDef` entièrement inventé par nous (aucun contenu Microsoft, juste le schéma public
+      ECMA-376/Open-XML-SDK) donne le même résultat** (`custom-chain1-ownercolors.docx`) —
+      `quickStyle` reste nécessaire (`custom-chain1-nostyle.docx` sans lui retombe au texte seul)
+      mais sa version auto-écrite n'a pas encore été testée directement (prochaine étape). **Ceci
+      change la direction du générateur** : plus besoin du vrai `hierarchy1` de Word, donc plus de
+      plafond de profondeur 4 (qui était spécifique à son implémentation) — la profondeur devient un
+      choix de conception (combien de niveaux explicites écrire dans notre propre `layoutDef`, le
+      format n'ayant pas de récursion native). `layout-tree1.xml` (imbrication réelle, pas juste une
+      liste plate) reste à corriger géométriquement avant de pouvoir appliquer la même recette au
+      cas `tree` — fait en Word (données lues correctement) mais formes non visibles pour l'instant.
+      Fichiers embarquant du vrai contenu Word (`custom-chain1-realstyle.*`,
+      `custom-chain1-ownercolors.*`) exclus du dépôt (`.gitignore`), le reste (algorithme, données,
+      `colorsDef` personnalisé) committable.
+- [x] **`styleDef`/`quickStyle` entièrement auto-écrit confirmé (2026-09-03)** — recette Round 5
+      définitivement close, les 4 parties (algorithme, données+miroir `pres`, `colorsDef`,
+      `styleDef`) sont toutes auto-écrites et testées individuellement.
+- [x] **Générateur `chain` implémenté (2026-09-03)** — `packages/core/src/smartart/chain.ts`,
+      `generateChain()` exporté depuis le barrel public de `packages/core`. Produit les 4 parties
+      (`dataXml`/`layoutXml`/`colorsXml`/`styleXml`) — écart assumé par rapport au signature
+      `(dataXml, layoutXml)` de la spec §7 étape 4 initiale, qui n'anticipait pas le besoin de
+      `colors`/`quickStyle` (découvert en Round 5). `layoutXml`/`colorsXml`/`styleXml` sont des
+      constantes (l'algorithme ne dépend pas du diagramme) ; seul `dataXml` est généré par
+      diagramme, à partir de l'ordre réel de la chaîne (calculé en suivant les arêtes depuis le
+      nœud à in-degré 0, pas l'ordre de déclaration Mermaid). 9 tests unitaires
+      (`packages/core/test/unit/smartart-chain.test.ts`, dont un test de propriété `fast-check` sur
+      des libellés hostiles arbitraires) — a attrapé deux bugs de test (pas de générateur) au
+      passage : le parseur Mermaid existant ne supporte pas le chaînage `A --> B --> C` sur une
+      seule ligne (pas corrigé, hors scope de cette tâche — tests réécrits en une arête par ligne),
+      et l'aide de vérification de bonne formation XML réutilisée depuis `parser-fuzz.test.ts` ne
+      gérait pas la déclaration `<?xml ... ?>` (les fragments du traducteur existant n'en émettent
+      jamais, contrairement aux parties SmartArt qui sont des fichiers autonomes). Monorepo entier
+      revérifié vert (build/typecheck/lint/tous les tests des 4 packages).
+- [ ] Réviser `FUTURE_mmd2smartart_SPEC.md` §3/§4/§7 pour refléter toutes les découvertes de cette
+      session (partie `dsp:dataModelExt`, nœuds `pres`, plafond de profondeur, décision de ne pas
+      redistribuer le `layout1.xml` réel, signature réelle du générateur à 4 parties au lieu de 2 —
+      non anticipés par la version initiale de la spec).
+- [ ] Dispatch classifieur → générateur SmartArt vs. pipeline `wpg:wgp` existant (spec §7 étape 5),
+      hover provider + CodeLens conditionnel (spec §10.1), note de fallback dans le document généré
+      (spec §10.3) — pas commencés.
+- [ ] Traducteur `.pptx` de production (spec Google Slides §5-§7) — pas commencé, en attente de la
+      vérification manuelle Google Slides/PowerPoint listée ci-dessus.
+- [x] **Catalogue complet des layouts SmartArt (2026-09-03)** — `docs/smartart-layout-catalog.md`,
+      ~150 layouts (source : Microsoft Support "All SmartArt graphics, described") classés par
+      pertinence pour un flowchart Mermaid. Deux pistes concrètes identifiées, non encore spikées :
+      `Labeled Hierarchy`/`Horizontal Labeled Hierarchy` (correspond exactement à l'idée
+      "subgraph = hiérarchie libellée" notée par le mainteneur, potentiellement plus fidèle
+      sémantiquement que le bricolage §5 actuel — le titre du `subgraph` deviendrait une étiquette
+      de niveau, pas un nœud fictif) ; et les layouts "convergents" (`Converging Arrows`,
+      `Converging Text`, `Funnel`, `Random to Result Process`) pour lever la limitation "fusion
+      après branchement", la plus citée dans tout ce chantier — aucun des deux n'a d'échantillon
+      Word réel extrait à ce jour, contrairement à `hierarchy1`/`hierarchy2`.
+- [ ] **Piste "subgraph = hiérarchie libellée"** (notée par le mainteneur 2026-09-03, précisée par
+      le catalogue ci-dessus) — pas encore explorée. Pertinent à réévaluer une fois le tableau de
+      compliance ci-dessous en main.
+- [ ] **Une fois plusieurs générateurs SmartArt (chain/tree/cycle) validés bout-en-bout** — tâche
+      demandée explicitement par le mainteneur (2026-09-03), à faire avant d'aller plus loin sur les
+      diagrammes de séquence/l'add-in : télécharger les normes de référence (CommonMark, GitHub
+      Flavored Markdown, syntaxe Mermaid flowchart) et construire un **tableau de compliance/
+      couverture complet** comparant 3 stratégies de sortie — SmartArt seul, SmartArt+OOXML hybride
+      (l'approche actuelle : classifieur puis fallback `wpg:wgp`), OOXML seul (le pipeline
+      `wpg:wgp` existant, sans SmartArt). **Chaque hypothèse et chaque limitation prise doit
+      apparaître dans le tableau** (ex. : plafond de profondeur 4 pour `hierarchy1`, disqualification
+      systématique des `subgraph`, fusion après branche non supportée par SmartArt, etc.) — objectif
+      explicite : permettre à un successeur de décider en connaissance de cause s'il change de
+      stratégie de représentation (voir piste subgraph ci-dessus), vise le 100 % de couverture en
+      SmartArt seul moyennant de nouvelles stratégies/limitations, ou garde l'approche hybride actuelle.
+- [ ] **Volet "corporate"** (noté par le mainteneur, 2026-09-03, à faire après le tableau ci-dessus) :
+      documenter comment un utilisateur charge le template Word de son entreprise pour générer
+      directement dans ce template, depuis l'extension VS Code — via un réglage
+      (`md2nativedocx.referenceDoc` ou équivalent, chemin vers un `.docx` de référence personnalisé,
+      dans l'esprit de `--reference-doc` de Pandoc déjà utilisé en interne pour
+      `packages/cli/assets/reference.docx`) ou une commande explicite "Charger un fichier de
+      référence". Mécanisme d'exposition côté VS Code pas encore déterminé — à concevoir.
+
 ---
 
 ## CI/CD & environnement

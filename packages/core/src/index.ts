@@ -26,6 +26,24 @@ export type { TranslateOptions } from './translator/ooxml-translator.js';
 // XML escaping for user-controlled text (rule #2)
 export { escapeXml } from './translator/xml-escape.js';
 
+// SmartArt topology classifier (FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
+// Complements the OOXML translator above; never required by it.
+export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
+export type {
+  SmartArtLayout,
+  SmartArtClassification,
+  SmartArtEligible,
+  SmartArtIneligible,
+  SmartArtIneligibleReason,
+} from './smartart/classify.js';
+
+// SmartArt generator for the `chain` topology (FUTURE_mmd2smartart_SPEC.md
+// §7 step 4, ADR 0004 "Round 5"). Original layout/colors/style — no
+// Microsoft content. Caller is responsible for calling classifyTopology()
+// first and only invoking this on a 'chain' result.
+export { generateChain, CHAIN_LAYOUT_XML, CHAIN_COLORS_XML, CHAIN_STYLE_XML } from './smartart/chain.js';
+export type { SmartArtChainOutput } from './smartart/chain.js';
+
 // Shared types
 export type {
   Flowchart,
