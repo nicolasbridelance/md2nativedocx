@@ -884,8 +884,9 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       après branchement", la plus citée dans tout ce chantier — aucun des deux n'a d'échantillon
       Word réel extrait à ce jour, contrairement à `hierarchy1`/`hierarchy2`.
 - [ ] **Piste "subgraph = hiérarchie libellée"** (notée par le mainteneur 2026-09-03, précisée par
-      le catalogue ci-dessus) — pas encore explorée. Pertinent à réévaluer une fois le tableau de
-      compliance ci-dessous en main.
+      le catalogue ci-dessus) — pas encore explorée. Nécessite un échantillon Word réel du layout
+      `Labeled Hierarchy`/`Horizontal Labeled Hierarchy` à extraire et analyser (même méthodologie
+      que `hierarchy1`/`hierarchy2`) — voir la liste de courses `docs/smartart-samples-wishlist.md`.
 - [ ] **Une fois plusieurs générateurs SmartArt (chain/tree/cycle) validés bout-en-bout** — tâche
       demandée explicitement par le mainteneur (2026-09-03), à faire avant d'aller plus loin sur les
       diagrammes de séquence/l'add-in : télécharger les normes de référence (CommonMark, GitHub
@@ -948,6 +949,42 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       (tous deux nécessitent un vrai échantillon Word extrait par le mainteneur, pas quelque chose
       qui peut être fait à l'aveugle) ; profondeur d'arbre adaptative > 2 (chantier de conception à
       part entière, pas une extension incrémentale).
+- [ ] **Durcissement du parseur Mermaid** (`packages/core/src/parser/parser.ts`) — bugs trouvés en
+      construisant `docs/smartart-compliance-table.md` (2026-09-03), tous vérifiés empiriquement,
+      bénéficiant aux **3** stratégies de sortie à la fois (pas spécifique à SmartArt) :
+      - texte de nœud entre guillemets (`id["texte"]`, la syntaxe recommandée par Mermaid pour
+        l'Unicode) garde les guillemets littéralement dans le label — `id[texte]` sans guillemets
+        n'a pas ce problème ;
+      - `<br/>`, les codes d'entité Mermaid (`#quot;`, `#9829;`), et les "Markdown Strings"
+        (backticks + `**gras**`) ne sont jamais interprétés, tous restent littéraux ;
+      - directions `TB` (alias documenté de `TD`), `BT`, `RL` non reconnues, retombent
+        silencieusement à `TD` ;
+      - libellé d'arête au milieu du tiret (`A-- texte -->B`) non supporté, seule la forme
+        `A-->|texte|B` l'est ;
+      - `classDef` échoue dès que `fill:` n'est pas la première propriété (`stroke:...,fill:...`),
+        ou avec plusieurs classes (`classDef a,b ...`) ;
+      - `:::` (raccourci de classe) ne fonctionne que sur une extrémité d'arête, jamais sur une
+        déclaration de nœud isolée (`A[Texte]:::foo` seul sur sa ligne) ;
+      - arêtes multidirectionnelles (`o--o`, `x--x`, `<-->`), liens invisibles (`~~~`),
+        modificateurs de longueur (`---->`), chaînage sur une ligne (`A-->B-->C`), opérateur `&`
+        (`a --> b & c`), `style`/`linkStyle` : aucun n'est reconnu.
+      Détail complet avec preuves empiriques dans `docs/smartart-compliance-table.md` §5.
+- [ ] **Profondeur d'arbre adaptative (> 2)** pour `tree.ts` — le partage de hauteur fixe (35 %
+      nœud / 55 % rangée d'enfants) ne peut pas simplement se répéter à un niveau supplémentaire
+      sans léser tout nœud sans petit-enfant (voir le commentaire de doc de `MAX_TREE_DEPTH` dans
+      `classify.ts` et de `TREE_LAYOUT_XML` dans `tree.ts`). Nécessite un schéma de répartition
+      calculé à partir de la forme réelle du sous-arbre (comme le fait `hierarchy1` de Word,
+      dynamiquement) plutôt qu'un partage figé — chantier de conception à part entière, pas une
+      extension incrémentale du `layoutDef` actuel. Ne nécessite pas d'échantillon Word réel,
+      contrairement aux deux items suivants.
+- [ ] **Spike layouts "convergents"** (`Converging Arrows`, `Converging Text`, `Funnel`, `Random to
+      Result Process` — voir `docs/smartart-layout-catalog.md`) pour lever la fusion après
+      branchement, la limitation la plus citée de tout ce chantier. Inconnu si leur `dataModel`
+      accepte une topologie "plusieurs sources, une destination" à arité variable ou s'ils sont
+      figés à un nombre fixe d'éléments — nécessite un échantillon Word réel à extraire et
+      analyser (même méthodologie que `hierarchy1`/`hierarchy2`, voir la liste de courses
+      `docs/smartart-samples-wishlist.md`). Serait un 4ᵉ chemin de classification, distinct de
+      chain/tree/cycle.
 - [ ] **Volet "corporate"** (noté par le mainteneur, 2026-09-03, à faire après le tableau ci-dessus) :
       documenter comment un utilisateur charge le template Word de son entreprise pour générer
       directement dans ce template, depuis l'extension VS Code — via un réglage

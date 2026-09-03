@@ -52,3 +52,9 @@ docs/adr/spikes/spike-smartart/custom-chain1-ownercolors.*
 # borrowed quickStyle -- the tree geometry test predates the self-authored
 # styleDef confirmation done for chain1).
 docs/adr/spikes/spike-smartart/custom-tree1-styled.*
+
+# Real Word-built SmartArt samples requested from the maintainer via
+# docs/smartart-samples-wishlist.md (Labeled Hierarchy, Converging Arrows,
+# etc.) -- same rationale as above: verbatim Microsoft-authored content,
+# local research reference only, never committed.
+handmade_samples/
