@@ -652,3 +652,20 @@ not stable, not usable for production" per the FOSDEM 2023 citation in
 `FUTURE_mmd2smartart_SPEC.md` §10.4) — so a Word-only nested-diagram capability would not be a new
 category of compromise for this project, just the existing one extended to a new feature. Verdict
 pending the maintainer's real-Word test.
+
+**Verdict (2026-09-03, maintainer's real Word)**: worse than the LibreOffice result, not better.
+Word does not silently drop the `wpc:graphicFrame` the way LibreOffice did — it refuses to open the
+file at all ("Word a rencontré une erreur lors de l'ouverture du fichier... Ouvrir le fichier avec
+le convertisseur Récupération de texte"), the harder failure mode Word reserves for a file it can't
+parse as OOXML at all, not the softer "needs repair, here's what I dropped" prompt it shows for a
+recoverable-but-invalid document. `custom-chain1.docx`'s plain `wp:inline` diagram (no canvas
+nesting) is independently confirmed to open fine in real Word (Round 5), so `wpc:wpc`/`wps:wsp`
+usage itself isn't the problem — the shipped production translator already relies on exactly that
+combination, extensively verified in real Word. The one genuinely new element in this test is
+`wpc:graphicFrame` wrapping a `dgm:relIds` diagram specifically. Root-cause not isolated further
+(would need more Word-side iteration to tell a schema mistake in this specific attempt apart from a
+hard Word-internal limitation on nesting a live diagram inside a canvas graphicFrame) — but given
+the failure is more severe than a soft degradation, **this path is closed**, not just deprioritized:
+a construct that makes real Word refuse to open the file at all is disqualified regardless of the
+exact root cause. `Nested Target` (still open, still needs its own real-Word sample per
+`docs/smartart-samples-wishlist.md`) remains the live candidate for `subgraph`.

@@ -175,7 +175,7 @@ plusieurs nœuds avec des arêtes internes — la même limite qui avait fait é
   noms (`Circle Process` ≈ Basic Cycle, `Hexagon Radial` ≈ Radial Cycle, etc.) — pas de nouvelle
   structure de données à évaluer séparément.
 
-## Résumé pour décision (mis à jour 2026-09-03, Round 6 de `spike.md`)
+## Résumé pour décision (mis à jour 2026-09-03, Round 7 de `spike.md`)
 
 - **Aujourd'hui livré et câblé** (`packages/core/src/smartart/classify.ts` + `chain.ts`/`tree.ts`/
   `cycle.ts`, dispatch branché dans le vrai pipeline) : `chain`, `tree` (profondeur ≤ 2 —
@@ -191,6 +191,10 @@ plusieurs nœuds avec des arêtes internes — la même limite qui avait fait é
     test indépendant du mécanisme `presParOf` lui-même montrant qu'un point de présentation ne
     peut avoir qu'un seul parent. Deux preuves convergentes, pas juste une hypothèse non testée.
     `Funnel` (arité non vérifiée) reste la seule variante non testée de cette famille.
+  - Diagramme SmartArt réel intégré dans le canevas `wpc:wpc` existant via `wpc:graphicFrame`, pour
+    `subgraph` (idée indépendante de tout layout de galerie) — schéma Microsoft respecté, mais rejet
+    encore plus net que les deux ci-dessus : Word refuse purement et simplement d'ouvrir le fichier
+    (pas juste un rendu dégradé sous LibreOffice). Voir `spike.md` Round 7.
 - **Écarté avec justification, catégories entières** : Matrix, Pyramid, Picture (toutes
   catégories), la majorité de Relationship (chevauchement d'ensembles, pas containment ni graphe
   dirigé) — aucun n'a de structure nœud/arête compatible avec un flowchart dirigé.
