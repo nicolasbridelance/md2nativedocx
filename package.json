@@ -13,6 +13,7 @@
     "typecheck": "npm run typecheck --workspaces",
     "lint": "eslint .",
     "test": "npm run test --workspaces",
+    "test:ci": "npm run test:ci --workspaces",
     "test:fuzz": "npm run test:fuzz -w packages/core",
     "test:visual": "node scripts/test-visual.mjs",
     "test:visual:update-baseline": "node scripts/test-visual.mjs --update-baseline"
@@ -29,6 +30,7 @@
     "node": ">=18"
   },
   "overrides": {
-    "serialize-javascript": "^7.0.7"
+    "serialize-javascript": "^7.0.7",
+    "diff": "^8.0.3"
   }
 }
