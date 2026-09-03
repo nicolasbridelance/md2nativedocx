@@ -653,19 +653,28 @@ not stable, not usable for production" per the FOSDEM 2023 citation in
 category of compromise for this project, just the existing one extended to a new feature. Verdict
 pending the maintainer's real-Word test.
 
-**Verdict (2026-09-03, maintainer's real Word)**: worse than the LibreOffice result, not better.
-Word does not silently drop the `wpc:graphicFrame` the way LibreOffice did — it refuses to open the
-file at all ("Word a rencontré une erreur lors de l'ouverture du fichier... Ouvrir le fichier avec
-le convertisseur Récupération de texte"), the harder failure mode Word reserves for a file it can't
+**First attempt (2026-09-03, maintainer's real Word): failed harder than LibreOffice.** Word does
+not silently drop the `wpc:graphicFrame` the way LibreOffice did — it refused to open the file at
+all ("Word a rencontré une erreur lors de l'ouverture du fichier... Ouvrir le fichier avec le
+convertisseur Récupération de texte"), the harder failure mode Word reserves for a file it can't
 parse as OOXML at all, not the softer "needs repair, here's what I dropped" prompt it shows for a
 recoverable-but-invalid document. `custom-chain1.docx`'s plain `wp:inline` diagram (no canvas
 nesting) is independently confirmed to open fine in real Word (Round 5), so `wpc:wpc`/`wps:wsp`
 usage itself isn't the problem — the shipped production translator already relies on exactly that
-combination, extensively verified in real Word. The one genuinely new element in this test is
-`wpc:graphicFrame` wrapping a `dgm:relIds` diagram specifically. Root-cause not isolated further
-(would need more Word-side iteration to tell a schema mistake in this specific attempt apart from a
-hard Word-internal limitation on nesting a live diagram inside a canvas graphicFrame) — but given
-the failure is more severe than a soft degradation, **this path is closed**, not just deprioritized:
-a construct that makes real Word refuse to open the file at all is disqualified regardless of the
-exact root cause. `Nested Target` (still open, still needs its own real-Word sample per
-`docs/smartart-samples-wishlist.md`) remains the live candidate for `subgraph`.
+combination, extensively verified in real Word.
+
+**Root cause found, not a dead end**: reusing a lesson from this same session's earlier
+`mc:Ignorable` incident (`postprocess.mjs`'s own doc comment — a real Word document reported as
+needing repair the first time this project used extended namespaces, fixed once the actual
+namespace-declaration rule was understood, not by abandoning `wpc`/`wps`). Searched for a real
+Word-emitted `wpc:graphicFrame` example instead of re-deriving the schema from memory: its children
+(`cNvPr`/`cNvFrPr`/`xfrm`/`extLst`) must be **`wpg:`-qualified**, not `wpc:`- or `a:`-qualified —
+the `graphicFrame` *element* is a local name in the `wpc` schema, but `CT_GraphicFrame` (the type it
+uses) and its own child element declarations are actually defined in the `wordprocessingGroup`
+schema, so they carry that namespace regardless of which parent (`wpc:wpc` or `wpg:wgp`) hosts the
+frame. The first attempt used `wpc:cNvPr`/`wpc:cNvFrPr`/`a:xfrm` throughout — plausible but wrong.
+Fixed in `build-custom-nested-canvas.mjs` (`xmlns:wpg` declared on the root, `wpg:cNvPr`/
+`wpg:cNvFrPr`/`wpg:xfrm` used in the frame) and rebuilt; well-formed, and renders identically to
+before under LibreOffice (still no embedded diagram — expected, this fix targets Word's stricter
+validation, not LibreOffice's apparent non-implementation of the element, a separate question).
+Corrected file sent to the maintainer for a second real-Word test — **verdict pending**, not closed.

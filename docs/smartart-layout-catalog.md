@@ -181,8 +181,14 @@ plusieurs nœuds avec des arêtes internes — la même limite qui avait fait é
   `cycle.ts`, dispatch branché dans le vrai pipeline) : `chain`, `tree` (profondeur ≤ 2 —
   généralisation adaptative à une profondeur supérieure un chantier séparé, voir `TODO.md`),
   `cycle`.
-- **Piste active, non encore spické** : `Nested Target` pour `subgraph` — sémantique de
-  containment réelle, mieux motivée que `Labeled Hierarchy` (voir section dédiée ci-dessus).
+- **Pistes actives pour `subgraph`** :
+  - `Nested Target` — sémantique de containment réelle, mieux motivée que `Labeled Hierarchy` (voir
+    section dédiée ci-dessus). Pas encore spické, échantillon demandé.
+  - Diagramme SmartArt réel intégré dans le canevas `wpc:wpc` existant via `wpc:graphicFrame`, sans
+    parier sur aucun layout de galerie — premier essai réel-Word raté plus sévèrement que prévu
+    (Word refusait d'ouvrir le fichier), mais cause identifiée (mauvais préfixe de namespace sur
+    les enfants de `graphicFrame`, doivent être `wpg:`) et corrigée. Second essai envoyé au
+    mainteneur, verdict en attente — voir `spike.md` Round 7.
 - **Explorées puis écartées avec preuve, pas par manque de temps** :
   - `Labeled Hierarchy` pour `subgraph` général — confirmé par échantillon Word réel que
     l'étiquette est par niveau, pas par branche ; ne couvre qu'un cas restreint de `subgraph`.
@@ -191,10 +197,6 @@ plusieurs nœuds avec des arêtes internes — la même limite qui avait fait é
     test indépendant du mécanisme `presParOf` lui-même montrant qu'un point de présentation ne
     peut avoir qu'un seul parent. Deux preuves convergentes, pas juste une hypothèse non testée.
     `Funnel` (arité non vérifiée) reste la seule variante non testée de cette famille.
-  - Diagramme SmartArt réel intégré dans le canevas `wpc:wpc` existant via `wpc:graphicFrame`, pour
-    `subgraph` (idée indépendante de tout layout de galerie) — schéma Microsoft respecté, mais rejet
-    encore plus net que les deux ci-dessus : Word refuse purement et simplement d'ouvrir le fichier
-    (pas juste un rendu dégradé sous LibreOffice). Voir `spike.md` Round 7.
 - **Écarté avec justification, catégories entières** : Matrix, Pyramid, Picture (toutes
   catégories), la majorité de Relationship (chevauchement d'ensembles, pas containment ni graphe
   dirigé) — aucun n'a de structure nœud/arête compatible avec un flowchart dirigé.
