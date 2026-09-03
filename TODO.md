@@ -912,10 +912,17 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       `Converging Text`, `Funnel`, `Random to Result Process`) pour lever la limitation "fusion
       après branchement", la plus citée dans tout ce chantier — aucun des deux n'a d'échantillon
       Word réel extrait à ce jour, contrairement à `hierarchy1`/`hierarchy2`.
-- [ ] **Piste "subgraph = hiérarchie libellée"** (notée par le mainteneur 2026-09-03, précisée par
-      le catalogue ci-dessus) — pas encore explorée. Nécessite un échantillon Word réel du layout
-      `Labeled Hierarchy`/`Horizontal Labeled Hierarchy` à extraire et analyser (même méthodologie
-      que `hierarchy1`/`hierarchy2`) — voir la liste de courses `docs/smartart-samples-wishlist.md`.
+- [x] **Piste "subgraph = hiérarchie libellée" testée, cas général écarté (2026-09-03)** — le
+      mainteneur a construit l'échantillon Word réel demandé (`docs/smartart-samples-wishlist.md`) :
+      l'étiquette de `Labeled Hierarchy` s'applique par niveau de profondeur, pas par branche —
+      confirmé impossible de donner une étiquette différente à deux branches de même profondeur
+      dans l'UI Word. Ne couvre donc que le cas restreint "tous les nœuds d'une même profondeur
+      appartiennent au même `subgraph`", pas le cas général. Détail dans `spike.md` Round 6,
+      `docs/smartart-layout-catalog.md`.
+- [ ] **Nouvelle piste "subgraph = `Nested Target`" (2026-09-03)** — cercles concentriques,
+      containment réel, mieux motivée que `Labeled Hierarchy` (voir catalogue). Pas encore de
+      générateur ni d'échantillon Word analysé — échantillon demandé dans
+      `docs/smartart-samples-wishlist.md`, en attente.
 - [ ] **Une fois plusieurs générateurs SmartArt (chain/tree/cycle) validés bout-en-bout** — tâche
       demandée explicitement par le mainteneur (2026-09-03), à faire avant d'aller plus loin sur les
       diagrammes de séquence/l'add-in : télécharger les normes de référence (CommonMark, GitHub
@@ -1006,14 +1013,19 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       dynamiquement) plutôt qu'un partage figé — chantier de conception à part entière, pas une
       extension incrémentale du `layoutDef` actuel. Ne nécessite pas d'échantillon Word réel,
       contrairement aux deux items suivants.
-- [ ] **Spike layouts "convergents"** (`Converging Arrows`, `Converging Text`, `Funnel`, `Random to
-      Result Process` — voir `docs/smartart-layout-catalog.md`) pour lever la fusion après
-      branchement, la limitation la plus citée de tout ce chantier. Inconnu si leur `dataModel`
-      accepte une topologie "plusieurs sources, une destination" à arité variable ou s'ils sont
-      figés à un nombre fixe d'éléments — nécessite un échantillon Word réel à extraire et
-      analyser (même méthodologie que `hierarchy1`/`hierarchy2`, voir la liste de courses
-      `docs/smartart-samples-wishlist.md`). Serait un 4ᵉ chemin de classification, distinct de
-      chain/tree/cycle.
+- [x] **Spike layouts "convergents" pour la fusion après branchement — écarté avec preuve
+      (2026-09-03)**, pas juste par manque de temps. Deux preuves indépendantes, le même jour :
+      (1) l'échantillon Word réel de `Converging Arrows` construit par le mainteneur n'a pas
+      d'élément "résultat" distinct — le résultat est du texte sur une flèche supplémentaire, pas
+      une boîte, alors qu'un nœud de fusion Mermaid réel a toujours son propre texte ; (2) un test
+      indépendant du mécanisme `presParOf` lui-même (sur la recette `chain1` déjà éprouvée, sans
+      nouvel échantillon Word) montre qu'un point de présentation ne peut avoir qu'un seul parent —
+      un second lien `presParOf` vers un point déjà utilisé est silencieusement ignoré par
+      LibreOffice, aucun rendu partagé. Conclusion : ni un layout nommé particulier, ni le
+      mécanisme sous-jacent, ne semblent supporter une vraie fusion à boîte partagée. Détail complet
+      dans `docs/adr/spikes/spike-smartart/spike.md` Round 6. `Funnel` (arité non testée) reste la
+      seule variante non vérifiée de cette famille, à reconsidérer seulement si un contre-exemple
+      apparaît.
 - [ ] **Volet "corporate"** (noté par le mainteneur, 2026-09-03, à faire après le tableau ci-dessus) :
       documenter comment un utilisateur charge le template Word de son entreprise pour générer
       directement dans ce template, depuis l'extension VS Code — via un réglage

@@ -545,3 +545,55 @@ ceiling** (that was specific to how many levels Word's own `hierarchy1` happens 
 - No generalization to arbitrary child counts, no `conn`-algorithm connectors, no
   colors/quickStyle parts (per §3's MVP decision) — all deliberate simplifications for a
   feasibility spike, not gaps to close here.
+
+(`postprocess.mjs` and the rest of `packages/` were of course touched later, once chain/tree/cycle
+were actually shipped and dispatched — the line above records this spike's own boundary at the
+time, not a standing constraint.)
+
+## Round 6 (2026-09-03) — two real-Word samples close the `Labeled Hierarchy`/`Converging` questions; a same-day multi-parent test independently confirms the second
+
+Following the samples wishlist (`docs/smartart-samples-wishlist.md`), the maintainer built two real
+Word samples and reported back (no `.docx` kept/committed, per the same licensing stance as
+`hierarchy1`/`hierarchy2` — only the structural finding matters here, not the file):
+
+1. **`Labeled Hierarchy`, échantillon 2 (different label per branch): not possible.** The
+   maintainer could not get the UI to give branch A's children a different level-label than branch
+   B's — confirming the open question flagged in `docs/smartart-layout-catalog.md`: the label is
+   **per depth level**, not per subtree. This closes that question definitively, in the negative:
+   `Labeled Hierarchy` cannot represent a real Mermaid diagram where two sibling `subgraph`s at the
+   same nominal depth need different labels (a common real case — e.g. "Frontend" and "Backend"
+   groups side by side), only the narrow case where every `subgraph` at a given depth shares one
+   label. Materially weakens this layout as *the* answer for `subgraph`, though échantillon 1's
+   simple-case structure is still worth mining if the piste is pursued for that narrower case.
+2. **`Converging Arrows`: has no distinct "result" element.** The maintainer's build shows the
+   convergence result rendered as text **on an additional arrow**, not as its own box/node — the
+   layout's data model apparently has no separate "downstream node" a real Mermaid merge target
+   (which is typically a real process step with its own meaningful text, e.g. `D[Fin]`) could map
+   onto. This is a structural mismatch with the actual shape of the problem (`merge-after-branch`:
+   two real upstream nodes feeding one real downstream node, not two nodes feeding a label), not
+   just an inconvenience — the layout doesn't have the element this generator would need to bind
+   the merge target's text to.
+3. **Independent same-day test: a `presParOf` destination cannot have two parents.** Before hearing
+   back on (2), a cheaper question was tested directly against our own proven `chain1` recipe (no
+   new Word sample needed — this is a question about the `presParOf` mechanism itself, not about
+   any specific named gallery layout): take the working 3-node `custom-chain1-ownerstyle`-style
+   data and add one extra `presParOf` cxn claiming `p-main2` as *also* a child of `p-composite1`,
+   in addition to its real, already-declared parent `p-composite2` — a genuine multi-parent
+   (DAG, not tree) presentation graph. **Result: the extra edge is silently ignored.** LibreOffice
+   renders the ordinary 3-box chain, unaffected — "Etape 2" appears exactly once, at its original
+   position; no duplication, no error, no merged/shared visual. The renderer resolves each pres
+   point to exactly one parent, dropping the rest.
+4. **Synthesis of (2) and (3), two independent lines of evidence pointing the same way**: neither a
+   named gallery layout's own description nor the underlying `presParOf` mechanism supports a real
+   "two branches converge on one shared, textful box" — which is the actual shape of Mermaid's
+   `merge-after-branch` pattern. This is a reason to stop searching the layout catalog for a better
+   *name* and treat "no native SmartArt representation of a real merge target" as the working
+   conclusion pending a specific, falsifying counter-example (not: absence of further evidence, but
+   a converging finding from a real Word sample AND our own mechanism-level test).
+5. **A fresh, better-motivated candidate for `subgraph` surfaced instead**: `Nested Target`
+   (Relationship category — concentric rings, real visual *containment*), not yet spiked. Unlike
+   `Labeled Hierarchy` (a tree with a side label — the exact "boîte parente en plus, pas un cadre
+   autour du groupe" weakness `FUTURE_mmd2smartart_SPEC.md` §5.1 already flagged), `Nested Target`'s
+   own visual language *is* "a ring drawn around a group" — a much closer semantic match to what a
+   Mermaid `subgraph` actually is (a container, not a hierarchy node). Worth a real Word sample
+   before `Labeled Hierarchy`'s remaining narrow case is invested in further.

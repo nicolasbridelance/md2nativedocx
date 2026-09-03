@@ -80,7 +80,7 @@ familles de mécaniques observées :
 | **Table Hierarchy** | Hiérarchie construite de bas en haut façon organigramme inversé, dans un tableau. | ❌ Peu probable | Direction "bottom-up" peu naturelle pour un flowchart Mermaid typiquement TD/LR. |
 | **Circle Picture Hierarchy** / **Picture Organization Chart** | Variantes Hierarchy/OrgChart nécessitant une image par nœud. | ❌ Non | Un nœud Mermaid n'a pas d'image associée par défaut — hors scope sans fonctionnalité supplémentaire (upload d'image par nœud, jamais demandé). |
 
-## Piste à creuser : `Labeled Hierarchy` pour représenter un `subgraph`
+## Piste explorée : `Labeled Hierarchy` pour représenter un `subgraph` — cas restreint confirmé, plutôt écartée au profit de `Nested Target` (voir plus bas)
 
 Le mainteneur a noté cette idée avant de connaître le nom exact du layout Microsoft concerné —
 `Labeled Hierarchy` / `Horizontal Labeled Hierarchy` correspondent très probablement à l'intuition
@@ -88,25 +88,18 @@ Le mainteneur a noté cette idée avant de connaître le nom exact du layout Mic
 étiquette dédiée à côté (pas une boîte de plus dans l'arbre, contrairement au bricolage "niveau
 supplémentaire" déjà retenu §5 de `FUTURE_mmd2smartart_SPEC.md`).
 
-Pourquoi c'est potentiellement mieux que le bricolage actuel : la limitation n°1 identifiée en §5.1
-de la spec ("le titre du sous-graphe devient une boîte parente en plus, pas un cadre autour du
-groupe") pourrait disparaître si le titre du `subgraph` devient l'étiquette de niveau plutôt qu'un
-nœud fictif dans l'arbre — fidélité sémantique bien supérieure au Mermaid d'origine (un `subgraph`
-Mermaid *est* un cadre autour d'un groupe, pas un nœud).
+**Verdict (2026-09-03, échantillon Word réel testé par le mainteneur, `spike.md` Round 6)** :
+l'étiquette est bien **par niveau de profondeur, pas par branche** — impossible de donner une
+étiquette différente aux enfants de la branche A vs la branche B dans l'UI Word. Ça confirme le
+point ouvert ci-dessous dans le sens le plus restrictif : ce layout ne correspondrait qu'à un
+Mermaid où **tous** les nœuds d'une même profondeur appartiennent au même `subgraph` — un cas bien
+plus étroit que le Mermaid réel (deux branches à la même profondeur appartenant à des `subgraph`
+différents, le cas le plus courant en pratique, ex. "Frontend"/"Backend" côte à côte). Reste
+potentiellement valable pour ce cas restreint spécifiquement, mais **`Nested Target` (ci-dessous)
+est un candidat mieux motivé** pour le cas général — pas d'échantillon `labelHierarchy1` extrait à
+ce jour, plus la peine de le prioriser tant que `Nested Target` n'a pas été essayé.
 
-**Non vérifié à ce stade** :
-- Structure exacte du `dataModel`/`layoutDef` de `labelHierarchy1` (aucun échantillon réel extrait
-  pour ce layout précis — seulement `hierarchy1`/`hierarchy2` l'ont été jusqu'ici).
-- Est-ce que l'étiquette de niveau peut varier librement par sous-arbre (un `subgraph` différent
-  par branche) ou si elle s'applique uniformément à tout un niveau de profondeur — si c'est ce
-  second cas, ça ne correspondrait qu'à un Mermaid où **tous** les nœuds d'une même profondeur
-  appartiennent au même `subgraph`, un cas bien plus restrictif que le Mermaid réel (où deux
-  branches à la même profondeur peuvent appartenir à des `subgraph` différents ou à aucun).
-- Prochaine étape concrète si cette piste est retenue : demander un nouvel échantillon Word réel
-  (créer un SmartArt "Hiérarchie libellée" à la main) et l'analyser avec la même méthode que
-  `hierarchy1`/`hierarchy2` (Round 1-4 de `spike.md`).
-
-## Piste à creuser : layouts "convergents" pour la fusion après branchement
+## Piste explorée puis écartée : layouts "convergents" pour la fusion après branchement
 
 Plusieurs layouts décrivent explicitement une **convergence** de plusieurs éléments vers un point
 unique — exactement le pattern "fusion après branchement" que `hierarchy1`/`chain`/`cycle`
@@ -120,13 +113,39 @@ un vrai flowchart utilisateur, cf. §10.1) :
 | **Funnel** | "Montrer le filtrage d'information ou comment des parties fusionnent." | Process, Relationship |
 | **Random to Result Process** | "Montrer comment plusieurs idées chaotiques aboutissent à un objectif unifié." | Process |
 
-**Aucun de ces layouts n'a été spické** — inconnu si leur `dataModel` accepte une topologie
-"plusieurs sources, une destination" à arité variable (2 branches ? N branches ?) ou s'ils sont
-figés à un nombre fixe d'éléments convergents (comme beaucoup de layouts SmartArt le sont pour les
-formes décoratives). Si l'un de ces layouts s'avère généralisable, ça lèverait la limitation la
-plus citée dans tout ce chantier (fusion après branchement, cf. `FUTURE_mmd2smartart_SPEC.md` §6,
-§10.1) — mais ce serait un **4ᵉ chemin de classification**, distinct de chain/tree/cycle, avec son
-propre spike complet à mener (même méthodologie : Phase 0 → extraction Word réelle → Round 1-4).
+**Écarté (2026-09-03, `spike.md` Round 6), pour deux raisons indépendantes qui pointent dans le
+même sens** :
+1. Échantillon Word réel de `Converging Arrows` construit par le mainteneur : **pas d'élément
+   "résultat" distinct** — le résultat de la convergence est du texte porté par une flèche
+   supplémentaire, pas une boîte à part. Un nœud de fusion Mermaid réel (`D[Fin]`, typiquement une
+   vraie étape avec son propre texte) n'a nulle part où se loger dans ce `dataModel`.
+2. Test indépendant, le même jour, sur notre propre recette `chain1` éprouvée (pas besoin d'un
+   nouvel échantillon Word — question sur le mécanisme `presParOf` lui-même, pas sur un layout
+   nommé) : ajouter un second lien `presParOf` réclamant un point de présentation déjà utilisé
+   comme enfant d'un **second** parent (un vrai graphe, pas un arbre) — **silencieusement ignoré**
+   par LibreOffice, aucune forme partagée, aucune erreur, juste le rendu normal à 1-parent-par-nœud.
+3. **Conclusion retenue** : ni la description d'un layout nommé, ni le mécanisme `presParOf`
+   sous-jacent, ne semblent supporter "deux branches convergent vers une seule boîte partagée
+   porteuse de texte" — la forme exacte du pattern `merge-after-branch`. Piste abandonnée en
+   l'absence d'un contre-exemple précis, plutôt qu'auto-close par manque de temps — voir `spike.md`
+   Round 6 pour le détail complet des deux preuves. `Funnel` (arité non testée) reste la seule
+   variante de cette famille non encore vérifiée, à considérer seulement si un contre-exemple
+   apparaît qui invaliderait la conclusion ci-dessus.
+
+## Piste à creuser (nouvelle, 2026-09-03) : `Nested Target` pour représenter un `subgraph`
+
+Suggérée en reconsidérant la catégorie Relationship après l'échec de `Labeled Hierarchy` sur le cas
+général — `Nested Target` (cercles concentriques, sémantique de **containment** réel) n'a pas la
+faiblesse n°1 identifiée en §5.1 de la spec ("le titre du sous-graphe devient une boîte parente en
+plus, pas un cadre autour du groupe") : son langage visuel *est* littéralement "un anneau dessiné
+autour d'un groupe", bien plus proche de ce qu'est réellement un `subgraph` Mermaid (un conteneur,
+pas un nœud de hiérarchie). Aucun échantillon Word extrait à ce jour — prochaine étape concrète si
+cette piste est retenue : demander un échantillon (`docs/smartart-samples-wishlist.md`) et
+l'analyser avec la même méthode que `hierarchy1`/`hierarchy2` (Round 1-4 de `spike.md`). Question
+ouverte à vérifier en priorité sur l'échantillon : est-ce que chaque anneau ne porte qu'un seul
+élément de texte (auquel cas ça ne couvre que "un `subgraph` = un seul nœud", pas un groupe de
+plusieurs nœuds avec des arêtes internes — la même limite qui avait fait écarter `Grouped List`/
+`Vertical Box List` en §5 de la spec), ou si un anneau peut contenir plusieurs éléments distincts.
 
 ## Catégories écartées — détail sommaire (pas de tableau ligne par ligne, ~90 layouts au total)
 
@@ -141,10 +160,11 @@ propre spike complet à mener (même méthodologie : Phase 0 → extraction Word
   (`Bending Picture Blocks`, `Circular Picture Callout`, etc.) — un nœud Mermaid n'a pas d'image
   associée, et en ajouter une supposerait une fonctionnalité entièrement nouvelle (upload d'image
   par nœud) jamais demandée dans ce projet.
-- **Relationship, le reste** (Basic Venn, Balance, Basic Target, Nested Target, Stacked Venn,
-  Linear Venn, Opposing Ideas, Counterbalance Arrows...) : relations non-dirigées de type
-  "chevauchement d'ensembles" ou "containment" — un flowchart Mermaid encode des relations
-  dirigées explicites (`-->`), pas des ensembles qui se chevauchent. Les quelques exceptions
+- **Relationship, le reste** (Basic Venn, Balance, Basic Target, Stacked Venn, Linear Venn,
+  Opposing Ideas, Counterbalance Arrows...) : relations non-dirigées de type "chevauchement
+  d'ensembles" — un flowchart Mermaid encode des relations dirigées explicites (`-->`), pas des
+  ensembles qui se chevauchent. `Nested Target` (containment, pas chevauchement) en est sorti,
+  piste active pour `subgraph` — voir section dédiée ci-dessus. Les quelques autres exceptions
   potentiellement pertinentes (`Circle Relationship`, `Radial Cluster`, `Radial List` — topologie
   "étoile", un hub relié à N satellites) ne correspondent à aucune des topologies déjà couvertes
   par le classifieur (chain/tree/cycle) — un flowchart Mermaid en étoile réelle (un nœud central
@@ -155,14 +175,22 @@ propre spike complet à mener (même méthodologie : Phase 0 → extraction Word
   noms (`Circle Process` ≈ Basic Cycle, `Hexagon Radial` ≈ Radial Cycle, etc.) — pas de nouvelle
   structure de données à évaluer séparément.
 
-## Résumé pour décision
+## Résumé pour décision (mis à jour 2026-09-03, Round 6 de `spike.md`)
 
-- **Aujourd'hui couvert par le classifieur** (`packages/core/src/smartart/classify.ts`) :
-  `chain` (Process/Basic Block List), `tree` (Hierarchy, profondeur ≤ 4), `cycle` (Cycle).
-- **Pistes concrètes identifiées par ce catalogue, non encore spické** : `Labeled Hierarchy` pour
-  `subgraph` (probablement la piste la plus prometteuse et la plus alignée avec l'intuition
-  "subgraph = cadre visuel, pas un nœud" du Mermaid d'origine), et les layouts convergents
-  (`Converging Arrows`/`Converging Text`/`Funnel`) pour lever la limitation "fusion après
-  branchement" — la plus citée dans toute cette spec.
-- **Écarté avec justification** : Matrix, Pyramid, Picture (toutes catégories), la majorité de
-  Relationship — aucun n'a de structure nœud/arête compatible avec un flowchart dirigé.
+- **Aujourd'hui livré et câblé** (`packages/core/src/smartart/classify.ts` + `chain.ts`/`tree.ts`/
+  `cycle.ts`, dispatch branché dans le vrai pipeline) : `chain`, `tree` (profondeur ≤ 2 —
+  généralisation adaptative à une profondeur supérieure un chantier séparé, voir `TODO.md`),
+  `cycle`.
+- **Piste active, non encore spické** : `Nested Target` pour `subgraph` — sémantique de
+  containment réelle, mieux motivée que `Labeled Hierarchy` (voir section dédiée ci-dessus).
+- **Explorées puis écartées avec preuve, pas par manque de temps** :
+  - `Labeled Hierarchy` pour `subgraph` général — confirmé par échantillon Word réel que
+    l'étiquette est par niveau, pas par branche ; ne couvre qu'un cas restreint de `subgraph`.
+  - Layouts convergents (`Converging Arrows`/`Converging Text`/`Random to Result Process`) pour la
+    fusion après branchement — échantillon Word réel sans élément "résultat" distinct, **et**
+    test indépendant du mécanisme `presParOf` lui-même montrant qu'un point de présentation ne
+    peut avoir qu'un seul parent. Deux preuves convergentes, pas juste une hypothèse non testée.
+    `Funnel` (arité non vérifiée) reste la seule variante non testée de cette famille.
+- **Écarté avec justification, catégories entières** : Matrix, Pyramid, Picture (toutes
+  catégories), la majorité de Relationship (chevauchement d'ensembles, pas containment ni graphe
+  dirigé) — aucun n'a de structure nœud/arête compatible avec un flowchart dirigé.
