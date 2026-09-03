@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Split-diamond "graph -> text" concept. Right half (bars) and colors as
+       measured in icon-v5-measured.svg. Left half rebuilt per the maintainer's
+       direct geometric correction (2026-09-03): four same-size elements in a
+       strict chain square -> circle -> diamond -> circle. The two circles and
+       the square form an isosceles triangle: the circles at the two ends of
+       its vertical base (the diamond sits at the base's midpoint), the square
+       at the apex ("la hauteur"); the square connects to only the
+       nearer circle, not to the diamond directly. Supersedes v5's left half,
+       which had the square converging into the diamond instead. -->
+  <defs>
+    <clipPath id="diamondClip6">
+      <path d="M8.7071 1.9071 L14.0929 7.2929 Q14.8 8 14.0929 8.7071 L8.7071 14.0929
+               Q8 14.8 7.2929 14.0929 L1.9071 8.7071 Q1.2 8 1.9071 7.2929
+               L7.2929 1.9071 Q8 1.2 8.7071 1.9071 Z" />
+    </clipPath>
+    <linearGradient id="leftGrad6" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#332552" />
+      <stop offset="1" stop-color="#1F1735" />
+    </linearGradient>
+    <linearGradient id="rightGrad6" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8A72F7" />
+      <stop offset="1" stop-color="#6B4FE8" />
+    </linearGradient>
+    <filter id="shadow6" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0.35" stdDeviation="0.4" flood-color="#20153D" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow6)">
+    <g clip-path="url(#diamondClip6)">
+      <rect x="0" y="0" width="8" height="16" fill="url(#leftGrad6)" />
+      <rect x="8" y="0" width="8" height="16" fill="url(#rightGrad6)" />
+    </g>
+    <path d="M8.7071 1.9071 L14.0929 7.2929 Q14.8 8 14.0929 8.7071 L8.7071 14.0929
+             Q8 14.8 7.2929 14.0929 L1.9071 8.7071 Q1.2 8 1.9071 7.2929
+             L7.2929 1.9071 Q8 1.2 8.7071 1.9071 Z"
+          fill="none" stroke="#5A3FE0" stroke-width="0.18" stroke-opacity="0.6" />
+  </g>
+
+  <!-- left: square -> circle(top) -> diamond -> circle(bottom), all four
+       elements the same width/height (1.6). Circle centers (6.2,5.8) and
+       (6.2,10.2) form the vertical base of an isosceles triangle; the square
+       at (4.2,8.0) is the apex, equidistant from both (2.973 either way). -->
+  <g stroke="#7D63F5" stroke-width="0.55" stroke-linecap="round">
+    <line x1="4.2" y1="8.0" x2="6.2" y2="5.8" />
+    <line x1="6.2" y1="5.8" x2="6.2" y2="8.0" />
+    <line x1="6.2" y1="8.0" x2="6.2" y2="10.2" />
+  </g>
+  <circle cx="6.2" cy="5.8" r="0.8" fill="#7D63F5" />
+  <circle cx="6.2" cy="10.2" r="0.8" fill="#7D63F5" />
+  <path d="M6.2 7.2 L7.0 8.0 L6.2 8.8 L5.4 8.0 Z" fill="#7D63F5" />
+  <rect x="3.4" y="7.2" width="1.6" height="1.6" rx="0.37" fill="#7D63F5" />
+
+  <!-- right: measured paragraph bars (unchanged from v5). -->
+  <g fill="#F7F7FE">
+    <rect x="8.901" y="5.596" width="1.502" height="0.42" rx="0.2" />
+    <rect x="8.802" y="6.798" width="2.804" height="0.42" rx="0.2" />
+    <rect x="8.901" y="7.900" width="3.606" height="0.42" rx="0.2" />
+    <rect x="8.802" y="9.102" width="2.804" height="0.42" rx="0.2" />
+    <rect x="8.901" y="10.204" width="1.502" height="0.42" rx="0.2" />
+  </g>
+</svg>
