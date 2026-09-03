@@ -3,51 +3,51 @@
 [![CI](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml)
 
-Convertir du Markdown avec des diagrammes **Mermaid** en un `.docx` complet avec des
-**formes vectorielles OOXML natives et éditables** — pas des PNG aplatis.
+Convert Markdown containing **Mermaid** diagrams into a complete `.docx` with
+**native, editable OOXML vector shapes** — not flattened PNGs.
 
-> **Positionnement.** Tous les outils existants réduisent les diagrammes (Mermaid, Graphviz,
-> PlantUML) à une image PNG intégrée. Le texte source est parfois conservé en fallback, jamais la
-> structure vectorielle. `md2nativedocx` fait l'inverse : chaque nœud, chaque arête devient une
-> forme Word native, sélectionnable et modifiable individuellement.
+> **Positioning.** Every existing tool reduces diagrams (Mermaid, Graphviz, PlantUML) to an
+> embedded PNG image. The source text is sometimes kept as a fallback, never the vector structure.
+> `md2nativedocx` does the opposite: every node, every edge becomes a native Word shape,
+> individually selectable and editable.
 
-> **Compliance & confiance.** Licence, dépendances, analyse de risque IT, coût réel, et un guide
-> sans jargon pour les non-techniciens — chacun trouve directement ce qui le concerne dans
+> **Compliance & trust.** License, dependencies, IT risk analysis, real cost, and a jargon-free
+> guide for non-technical readers — each audience finds what's relevant to them directly in
 > [`docs/compliance/`](docs/compliance/README.md).
 
-| | PNG intégré (outils existants) | **md2nativedocx (OOXML natif)** |
+| | Embedded PNG (existing tools) | **md2nativedocx (native OOXML)** |
 |---|---|---|
-| Formes éditables dans Word | ❌ | ✅ Chaque nœud/arête est une forme |
-| Texte modifiable | ❌ | ✅ Labels natifs |
-| Connecteurs dynamiques | ❌ | ✅ Connecteurs magnétiques (`stCxn`/`endCxn`) |
-| Fidélité à l'aperçu Mermaid | ~ | ✅ Même moteur de layout (Dagre) |
-| Dépendance à un rendu externe | Oui (image) | Non (vectoriel) |
-| Formules LaTeX en équations Word natives | Variable selon l'outil | ✅ via Pandoc, gratuit (voir §2) |
+| Editable shapes in Word | ❌ | ✅ Every node/edge is a shape |
+| Editable text | ❌ | ✅ Native labels |
+| Dynamic connectors | ❌ | ✅ Magnetic connectors (`stCxn`/`endCxn`) |
+| Fidelity to the Mermaid preview | ~ | ✅ Same layout engine (Dagre) |
+| Dependency on external rendering | Yes (image) | No (vector) |
+| LaTeX formulas as native Word equations | Varies by tool | ✅ via Pandoc, free (see §2) |
 
-Comparaison nominative avec les extensions VS Code concurrentes (installs, méthode de rendu
-vérifiée dans leur propre doc) : voir `docs/specs/cahier_des_charges.md` §12.1, ou directement le
-[README de l'extension](packages/vscode-extension/README.md).
+Named comparison against competing VS Code extensions (installs, rendering method verified from
+their own docs): see `docs/specs/cahier_des_charges.md` §12.1 (French), or directly the
+[extension's README](packages/vscode-extension/README.md).
 
-## Comment ça marche
+## How it works
 
 ```
-Markdown + ```mermaid  ──►  Pandoc (parsing MD, tables, style, ZIP)
+Markdown + ```mermaid  ──►  Pandoc (MD parsing, tables, styling, ZIP)
                               │
-                              └─►  filtre Lua md2nativedocx
+                              └─►  md2nativedocx Lua filter
                                       │
-                                      └─►  core (parseur → layout Dagre → traducteur OOXML)
+                                      └─►  core (parser → Dagre layout → OOXML translator)
                                               │
-                                              └─►  fragment wpg:wgp natif injecté dans le .docx
+                                              └─►  native wpg:wgp fragment injected into the .docx
 ```
 
-L'architecture délègue à Pandoc tout ce qui n'est pas diagramme (parsing Markdown, tableaux,
-style, manipulation ZIP) et ne construit que le module manquant : layout + traduction OOXML d'un
-diagramme. Voir `docs/specs/cahier_des_charges.md` pour le détail.
+The architecture delegates everything that isn't a diagram (Markdown parsing, tables, styling, ZIP
+manipulation) to Pandoc, and builds only the missing piece: layout + OOXML translation of a
+diagram. See `docs/specs/cahier_des_charges.md` (French) for the full detail.
 
 ## Installation
 
-Prérequis : **Node.js ≥ 18**, **Pandoc** (installé séparément), et un interpréteur **Lua** pour le
-filtre.
+Prerequisites: **Node.js ≥ 18**, **Pandoc** (installed separately), and a **Lua** interpreter for
+the filter.
 
 ```bash
 npm install
@@ -57,37 +57,37 @@ npm run build
 ## Usage (CLI)
 
 ```bash
-npx md2nativedocx rapport.md -o rapport.docx
+npx md2nativedocx report.md -o report.docx
 ```
 
-Chaque bloc ```` ```mermaid ```` du document est converti en un groupe de dessin Word natif
-(`wpg:wgp`) : formes vectorielles éditables, connecteurs dynamiques, texte natif.
+Every ```` ```mermaid ```` block in the document is converted into a native Word drawing group
+(`wpg:wgp`): editable vector shapes, dynamic connectors, native text.
 
-## Développement
+## Development
 
 ```bash
-npm run build        # build tous les packages
+npm run build        # build all packages
 npm run typecheck    # tsc --noEmit, strict
 npm run lint         # ESLint + eslint-plugin-security
-npm run test         # tests unitaires + golden
-npm run test:fuzz    # tests property-based sur la frontière non fiable
-npm run test:visual  # rendu LibreOffice headless + pixel-diff (CI)
+npm run test         # unit + golden tests
+npm run test:fuzz    # property-based tests on the untrusted-input boundary
+npm run test:visual  # headless LibreOffice render + pixel-diff (CI)
 ```
 
 ## Documentation
 
-- `docs/specs/cahier_des_charges.md` — le **quoi** et le **pourquoi** (spec, phases, scope).
-- `AGENTS.md` — le **comment** (conventions, règles de sécurité non négociables).
-- `docs/adr/` — décisions d'architecture (moteur de layout, intégration Pandoc).
-- `TESTING.md` — les six chapitres de test, ce que chacun garantit, où il vit.
-- `docs/compliance/` — licence, dépendances, analyse de risque IT, guide non-technicien.
-- `CONTRIBUTING.md` — comment contribuer.
+- `docs/specs/cahier_des_charges.md` (French) — the **what** and **why** (spec, phases, scope).
+- `AGENTS.md` — the **how** (conventions, non-negotiable security rules).
+- `docs/adr/` — architecture decisions (layout engine, Pandoc integration).
+- `TESTING.md` — the six testing chapters, what each one guarantees, where it lives.
+- `docs/compliance/` — license, dependencies, IT risk analysis, non-technical guide.
+- `CONTRIBUTING.md` — how to contribute.
 
-## Licence
+## License
 
-**CC0 1.0 Universal** — domaine public. Voir `LICENSE` pour le texte légal complet.
+**CC0 1.0 Universal** — public domain. See `LICENSE` for the full legal text.
 
-> Note : Pandoc (GPL-2.0-or-later) est invoqué comme sous-processus externe — jamais lié à ce
-> codebase. Dans l'extension VS Code, il est téléchargé automatiquement au premier export si absent
-> (binaire officiel non modifié, vérifié par empreinte SHA-256, jamais embarqué dans le `.vsix`).
-> Voir `AGENTS.md` → Licensing.
+> Note: Pandoc (GPL-2.0-or-later) is invoked as an external subprocess — never linked into this
+> codebase. In the VS Code extension, it's downloaded automatically on first export if missing
+> (official, unmodified binary, verified by SHA-256 checksum, never bundled inside the `.vsix`).
+> See `AGENTS.md` → Licensing.

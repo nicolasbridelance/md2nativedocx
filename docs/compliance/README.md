@@ -1,56 +1,54 @@
-# Compliance & confiance
+# Compliance & trust
 
-`md2nativedocx` est pensé pour être installé au cœur d'un outillage IT d'entreprise — pas
-seulement utilisé une fois sur un poste isolé. Cette page existe pour que chaque interlocuteur
-d'un dossier d'homologation trouve directement l'information qui le concerne, sourcée et à jour,
-sans avoir à relire tout le dépôt.
+`md2nativedocx` is meant to be installed at the core of enterprise IT tooling — not just used
+once on an isolated machine. This page exists so that everyone involved in an approval process
+finds directly the information relevant to them, sourced and current, without having to read the
+whole repository.
 
-## Le constat qui motive l'outil
+## The problem this tool solves
 
-Un diagramme Mermaid est illisible pour la plupart des relecteurs non techniques — c'est du texte
-structuré, pas un document. Un compte-rendu Word rédigé intégralement par une IA, phrase par
-phrase, est verbeux, lent à produire et coûteux à faire relire — ce n'est pas le format dans
-lequel une IA raisonne le mieux. Entre les deux, il n'y avait pas de passerelle sans perte :
-soit on gardait le Markdown/Mermaid technique, soit on le figeait en image PNG dans un Word,
-dans les deux cas au prix d'un aller simple.
+A Mermaid diagram is unreadable for most non-technical reviewers — it's structured text, not a
+document. A Word report written entirely by an AI, sentence by sentence, is verbose, slow to
+produce, and costly to proofread — it isn't the format an AI reasons best in. Between the two,
+there was no lossless bridge: either you kept the technical Markdown/Mermaid, or you froze it
+into a PNG image inside a Word document — either way, a one-way trip.
 
-`md2nativedocx` est cette passerelle : une IA (ou un développeur) écrit en Markdown + Mermaid —
-le format dense, versionnable, dans lequel un LLM est le plus fiable — et l'outil produit un vrai
-`.docx` avec des formes OOXML natives, éditables, que n'importe quel relecteur métier ouvre et
-modifie dans Word sans rien installer ni rien apprendre. Dans un monde où la communication
-homme/IA devient un flux de travail permanent plutôt qu'un cas d'usage ponctuel, ce genre de
-passerelle sans perte cesse d'être un confort et devient une nécessité d'infrastructure.
+`md2nativedocx` is that bridge: an AI (or a developer) writes in Markdown + Mermaid — the dense,
+versionable format an LLM is most reliable in — and the tool produces a real `.docx` with native,
+editable OOXML shapes that any business reviewer opens and edits in Word without installing or
+learning anything. In a world where human/AI communication is becoming a permanent workflow
+rather than a one-off use case, this kind of lossless bridge stops being a convenience and becomes
+infrastructure.
 
-## Qui êtes-vous ?
+## Who are you?
 
-| Vous êtes... | Ce qui vous intéresse | Document |
+| You are... | What you care about | Document |
 |---|---|---|
-| **Juridique / achats** | Licence du code, audit des dépendances tierces, gestion de Pandoc (GPL), absence de télémétrie, flux de données | [`legal.md`](legal.md) |
-| **IT / sécurité / RSSI** | Analyse de risque, pipeline CI (tests, SAST, secrets, audit de dépendances), empreinte d'infrastructure et coût réel | [`it-security.md`](it-security.md) |
-| **Métier / non-technicien** | Comment ça marche pour moi, sans lire une ligne de code | [`guide-metier.md`](guide-metier.md) |
+| **Legal / procurement** | Code license, third-party dependency audit, Pandoc (GPL) handling, absence of telemetry, data flows | [`legal.md`](legal.md) |
+| **IT / security / CISO** | Risk analysis, CI pipeline (tests, SAST, secrets, dependency audit), infrastructure footprint and real cost | [`it-security.md`](it-security.md) |
+| **Business / non-technical** | How this works for me, without reading a line of code | [`non-technical-guide.md`](non-technical-guide.md) |
 
-## En un coup d'œil
+## At a glance
 
-Les badges en tête du [`README`](../../README.md) donnent l'état **live** (dernier run CI sur
-`main`) : pas besoin de croire un chiffre figé dans une page de doc.
+The badges at the top of the [`README`](../../README.md) show the **live** state (latest CI run
+on `main`) — no need to trust a number frozen on a doc page.
 
 | | |
 |---|---|
-| Licence du code | **CC0 1.0 Universal** (domaine public) |
-| Dépendances runtime | 6 packages, **100 % MIT** (voir [`legal.md`](legal.md)) |
-| Outil externe invoqué | Pandoc (GPL-2.0-or-later), en sous-processus, jamais lié au code |
-| Tests automatisés | 214 (dont 3 property-based, ré-exécutés indépendamment en CI pour couvrir d'autres cas aléatoires) — voir le badge CI |
-| Couverture (`packages/core`) | voir le rapport daté du dernier run (ci-dessous) |
-| Vulnérabilités connues (`npm audit`) | voir le badge CI + l'artefact `npm-audit-<sha>` du dernier run |
-| Analyse statique (SAST) | CodeQL, à chaque push/PR + hebdomadaire |
-| Scan de secrets | gitleaks, à chaque push/PR |
-| Mises à jour de dépendances | Dependabot, hebdomadaire |
-| Télémétrie / appel réseau non documenté | **Aucun** — voir [`legal.md`](legal.md) |
+| Code license | **CC0 1.0 Universal** (public domain) |
+| Runtime dependencies | 6 packages, **100% MIT** (see [`legal.md`](legal.md)) |
+| External tool invoked | Pandoc (GPL-2.0-or-later), as a subprocess, never linked into the code |
+| Automated tests | 214 (3 of them property-based, re-run independently in CI to cover more random cases) — see the CI badge |
+| Coverage (`packages/core`) | see the latest run's dated report (below) |
+| Known vulnerabilities (`npm audit`) | see the CI badge + the latest run's `npm-audit-<sha>` artifact |
+| Static analysis (SAST) | CodeQL, on every push/PR + weekly |
+| Secret scanning | gitleaks, on every push/PR |
+| Dependency updates | Dependabot, weekly |
+| Undocumented telemetry / network call | **None** — see [`legal.md`](legal.md) |
 
-Ces chiffres ne sont pas une capture recopiée à la main : chaque run CI sur `main` génère un
-résumé daté (Job Summary, visible dans l'onglet **Actions**) et des rapports téléchargeables
-(`junit.xml`, `lcov.info`, `npm-audit.json`, conservés 90 jours, rattachés au commit exact) —
-détail complet, et où vivent les fichiers source de chaque test, dans
-[`it-security.md`](it-security.md) → *Rapports automatiques et datés*. Voir aussi
-[`TESTING.md`](../../TESTING.md) pour les six chapitres de test et
-[`AGENTS.md`](../../AGENTS.md) → *Security requirements* pour la table de risques complète.
+These numbers aren't a snapshot copied by hand: every CI run on `main` produces a dated summary
+(Job Summary, visible in the **Actions** tab) and downloadable reports (`junit.xml`, `lcov.info`,
+`npm-audit.json`, kept 90 days, tied to the exact commit) — full detail, and where each test's
+source files live, in [`it-security.md`](it-security.md) → *Automated, dated reports*. See also
+[`TESTING.md`](../../TESTING.md) for the six test chapters and
+[`AGENTS.md`](../../AGENTS.md) → *Security requirements* for the complete risk table.

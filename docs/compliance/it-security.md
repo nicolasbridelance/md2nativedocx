@@ -1,116 +1,115 @@
-# IT / sécurité — analyse de risque, pipeline, coût
+# IT / security — risk analysis, pipeline, cost
 
-## Empreinte d'infrastructure et coût
+## Infrastructure footprint and cost
 
-`md2nativedocx` n'a **pas de composante serveur**. C'est un moteur qui tourne dans le processus
-Node.js de la CLI, du filtre Pandoc, ou de l'extension VS Code — sur le poste de l'utilisateur ou
-dans une CI, jamais sur une infrastructure dédiée.
+`md2nativedocx` has **no server component**. It's an engine that runs inside the Node.js process
+of the CLI, the Pandoc filter, or the VS Code extension — on the user's machine or in CI, never
+on dedicated infrastructure.
 
-| Poste de coût habituel | Ici |
+| Usual cost line | Here |
 |---|---|
-| Licence logicielle | 0 € — CC0 (code propre) + 100 % dépendances runtime MIT + Pandoc GPL gratuit (voir [`legal.md`](legal.md)) |
-| Infrastructure serveur / cloud | Aucune — exécution locale uniquement |
-| Abonnement SaaS | Aucun |
-| Prérequis logiciel | Node.js ≥ 18, Pandoc, un interpréteur Lua — tous gratuits, tous open source |
-| Prérequis matériel | Poste de travail standard, aucune ressource dédiée |
-| Téléchargement ponctuel (extension VS Code uniquement) | Binaire Pandoc officiel, une fois si absent du poste, mis en cache local — ordre de grandeur documenté dans `AGENTS.md` (~140 Mo par plateforme, c'est le chiffre qui a justifié de *ne pas* l'embarquer dans le `.vsix`) |
+| Software license | $0 — CC0 (own code) + 100% MIT runtime dependencies + free GPL Pandoc (see [`legal.md`](legal.md)) |
+| Server / cloud infrastructure | None — local execution only |
+| SaaS subscription | None |
+| Software prerequisites | Node.js ≥ 18, Pandoc, a Lua interpreter — all free, all open source |
+| Hardware prerequisites | Standard workstation, no dedicated resource |
+| One-time download (VS Code extension only) | Official Pandoc binary, once if absent from the machine, cached locally — order of magnitude documented in `AGENTS.md` (~140 MB per platform, the figure that justified *not* bundling it inside the `.vsix`) |
 
-Le seul coût réel de déploiement est humain : installation initiale de Node.js/Pandoc sur les
-postes, et la revue de sécurité elle-même.
+The only real deployment cost is human: initial Node.js/Pandoc installation on machines, and the
+security review itself.
 
-## Analyse de risque
+## Risk analysis
 
-Ce projet accepte du texte non fiable (Mermaid écrit par un humain ou une IA) et produit du XML
-que Microsoft Word va parser et rendre — c'est exactement la classe de vulnérabilité des formats
-de document. La table ci-dessous, tenue à jour dans [`AGENTS.md`](../../AGENTS.md) →
-*Security requirements*, est la référence faisant autorité ; elle est reproduite ici pour éviter
-un aller-retour :
+This project accepts untrusted text (Mermaid written by a human or an AI) and produces XML that
+Microsoft Word will parse and render — that's exactly the vulnerability class document formats
+fall into. The table below, kept up to date in [`AGENTS.md`](../../AGENTS.md) →
+*Security requirements*, is the authoritative reference; it's reproduced here to save a round
+trip:
 
-| Risque | Où | Mitigation |
+| Risk | Where | Mitigation |
 |---|---|---|
-| Injection XML via les libellés de nœud/arête | Traducteur OOXML | Échappement XML strict (`& < > " '`) de tout texte utilisateur avant insertion, vérifié par tests + fuzzing property-based |
-| XXE (XML External Entity) | Tout parsing XML du pipeline, y compris les tests | Résolution DTD/entités externes désactivée sur tout parseur utilisé |
-| Relation OOXML externe (classe Follina, CVE-2022-30190) | Traducteur | Jamais de `TargetMode="External"` ni de référence distante — sortie toujours autonome, vérifié par test property-based dédié |
-| Injection de commande | Pont CLI → Pandoc | `execFile`/`spawn` avec tableau d'arguments uniquement, jamais d'interpolation shell |
-| Path traversal | Chemins d'E/S CLI, extension VS Code | Résolution et validation des chemins avant toute opération fichier |
-| Zip bomb / ratio de décompression | Délégué à Pandoc aujourd'hui | Signalé comme point de vigilance si un contributeur manipule un jour directement le ZIP |
-| Supply chain | Tout le dépôt | `npm audit` en CI (échoue sur high/critical) + Dependabot hebdomadaire |
-| Fuite de secret | Tout le dépôt, public dès le premier commit | Scan `gitleaks` à chaque push/PR |
-| Entrée non testée | Frontière la plus exposée : le parseur Mermaid, potentiellement généré par une IA pour le compte d'un tiers | Tests property-based (`fast-check`) dédiés à cette frontière, pas seulement des cas d'exemple |
+| XML injection via node/edge labels | OOXML translator | Strict XML escaping (`& < > " '`) of all user text before insertion, verified by tests + property-based fuzzing |
+| XXE (XML External Entity) | Any XML parsing in the pipeline, tests included | DTD/external entity resolution disabled on every parser used |
+| External OOXML relationship (Follina class, CVE-2022-30190) | Translator | Never `TargetMode="External"` nor a remote reference — output is always self-contained, verified by a dedicated property-based test |
+| Command injection | CLI → Pandoc bridge | `execFile`/`spawn` with an argument array only, never shell interpolation |
+| Path traversal | CLI I/O paths, VS Code extension | Paths resolved and validated before any file operation |
+| Zip bomb / decompression ratio | Delegated to Pandoc today | Flagged as a watch point if a contributor ever manipulates the ZIP directly |
+| Supply chain | Whole repository | `npm audit` in CI (fails on high/critical) + weekly Dependabot |
+| Secret leakage | Whole repository, public since the first commit | `gitleaks` scan on every push/PR |
+| Untested input | Most exposed boundary: the Mermaid parser, potentially AI-generated on someone else's behalf | Property-based tests (`fast-check`) dedicated to this boundary, not just example cases |
 
-## Ce que la CI vérifie à chaque push/PR
+## What CI checks on every push/PR
 
-Fichiers sources : [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) et
+Source files: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) and
 [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml).
 
-| Contrôle | Outil | Fréquence | Bloquant |
+| Check | Tool | Frequency | Blocking |
 |---|---|---|---|
-| Typecheck strict | `tsc --noEmit` | Chaque push/PR | Oui |
-| Lint + règles de sécurité | ESLint + `eslint-plugin-security` | Chaque push/PR | Oui |
-| Tests unitaires + golden | `node --test` | Chaque push/PR | Oui |
-| Tests property-based (fuzzing) | `fast-check` | Chaque push/PR | Oui |
-| Audit de dépendances | `npm audit --audit-level=high` | Chaque push/PR | Oui (high/critical) |
-| Scan de secrets | `gitleaks` | Chaque push/PR | Oui |
-| Analyse statique (SAST) | CodeQL | Chaque push/PR + hebdomadaire | Oui (alertes remontées à l'onglet Security GitHub) |
-| Mise à jour des dépendances | Dependabot | Hebdomadaire | Non-bloquant, PR automatique |
-| Régression visuelle (rendu réel) | LibreOffice headless + pixel-diff | Planifié / branches de release | Non-bloquant sur chaque PR (documenté comme arbitrage explicite) |
+| Strict typecheck | `tsc --noEmit` | Every push/PR | Yes |
+| Lint + security rules | ESLint + `eslint-plugin-security` | Every push/PR | Yes |
+| Unit + golden tests | `node --test` | Every push/PR | Yes |
+| Property-based tests (fuzzing) | `fast-check` | Every push/PR | Yes |
+| Dependency audit | `npm audit --audit-level=high` | Every push/PR | Yes (high/critical) |
+| Secret scanning | `gitleaks` | Every push/PR | Yes |
+| Static analysis (SAST) | CodeQL | Every push/PR + weekly | Yes (alerts surfaced in the GitHub Security tab) |
+| Dependency updates | Dependabot | Weekly | Non-blocking, automatic PR |
+| Visual regression (real render) | Headless LibreOffice + pixel-diff | Scheduled / release branches | Non-blocking on every PR (documented as an explicit trade-off) |
 
-Statut live : les badges en tête du [`README`](../../README.md) reflètent le dernier run sur
-`main`, pas un instantané figé.
+Live status: the badges at the top of the [`README`](../../README.md) reflect the latest run on
+`main`, not a frozen snapshot.
 
-## Où sont les fichiers source des tests
+## Where the tests' source files live
 
-Chaque test est un fichier versionné dans le dépôt, pas une boîte noire :
+Every test is a versioned file in the repository, not a black box:
 
-| Package | Tests unitaires/golden | Tests property-based (fuzz) |
+| Package | Unit/golden tests | Property-based (fuzz) tests |
 |---|---|---|
-| `packages/core` (moteur — parseur, layout, traducteur) | `packages/core/test/unit/`, `packages/core/test/golden/` | `packages/core/test/fuzz/` |
+| `packages/core` (engine — parser, layout, translator) | `packages/core/test/unit/`, `packages/core/test/golden/` | `packages/core/test/fuzz/` |
 | `packages/cli` | `packages/cli/test/` | — |
 | `packages/pandoc-filter` | `packages/pandoc-filter/test/` | — |
 | `packages/vscode-extension` | `packages/vscode-extension/test/unit/` | — |
 
-Détail de ce que chaque chapitre garantit et où vivent les cinq autres (corpus de diagrammes
-réels, régression visuelle, comparaison Word natif, spikes historiques) : [`TESTING.md`](../../TESTING.md).
+Detail on what each chapter guarantees and where the other five live (real diagram corpus, visual
+regression, native Word comparison, historical spikes): [`TESTING.md`](../../TESTING.md).
 
-## Rapports automatiques et datés
+## Automated, dated reports
 
-Les chiffres ci-dessus ne sont pas une capture ponctuelle recopiée à la main : chaque run CI sur
-`main` (déclenché à chaque push, donc daté et rattaché à un commit précis) produit et conserve :
+The numbers above aren't a one-off snapshot copied by hand: every CI run on `main` (triggered on
+every push, so dated and tied to a specific commit) produces and keeps:
 
-- **Un résumé lisible dans l'onglet Actions** : chaque run affiche un "Job Summary" — nombre de
-  tests, pass/fail, couverture — généré par [`scripts/ci-summary.mjs`](../../scripts/ci-summary.mjs)
-  à partir des rapports du run, pas retapé.
-- **Des rapports téléchargeables (artefacts GitHub Actions, conservés 90 jours, un par run/commit)** :
-  - `test-reports-<sha>` : un `junit.xml` par package (format standard, exploitable par un outil
-    tiers) + `lcov.info` (couverture) pour `packages/core`.
-  - `npm-audit-<sha>` : sortie complète de `npm audit --json`, y compris quand l'audit échoue —
-    utile pour voir précisément *quoi* a échoué, pas juste que ça a échoué.
-- **Les alertes CodeQL**, nativement datées et historisées par GitHub dans l'onglet *Security* →
-  *Code scanning*.
+- **A readable summary in the Actions tab**: every run shows a "Job Summary" — test count,
+  pass/fail, coverage — generated by [`scripts/ci-summary.mjs`](../../scripts/ci-summary.mjs)
+  from that run's own reports, not retyped.
+- **Downloadable reports (GitHub Actions artifacts, kept 90 days, one per run/commit)**:
+  - `test-reports-<sha>`: a `junit.xml` per package (standard format, usable by third-party
+    tooling) + `lcov.info` (coverage) for `packages/core`.
+  - `npm-audit-<sha>`: the full output of `npm audit --json`, including when the audit fails —
+    useful to see precisely *what* failed, not just that it did.
+- **CodeQL alerts**, natively dated and tracked by GitHub in the *Security* → *Code scanning* tab.
 
-Pour consulter l'état exact à une date donnée : onglet **Actions** du dépôt → sélectionner le run
-correspondant à cette date/ce commit → *Summary* (résumé inline) ou section *Artifacts* en bas de
-page (rapports bruts).
+To check the exact state as of a given date: the repository's **Actions** tab → select the run
+matching that date/commit → *Summary* (inline summary) or the *Artifacts* section at the bottom
+of the page (raw reports).
 
-Reproductible en local, à l'identique de ce que la CI exécute, avec :
+Reproducible locally, identically to what CI runs, with:
 `npm run build && npm run typecheck && npm run lint && npm run test:ci && npm run test:fuzz
-&& npm audit --audit-level=high` — `test:ci` produit les mêmes `reports/junit.xml` (et `lcov.info`
-pour `core`) que le run CI, dans `packages/*/reports/`.
+&& npm audit --audit-level=high` — `test:ci` produces the same `reports/junit.xml` (and
+`lcov.info` for `core`) as the CI run, under `packages/*/reports/`.
 
-## Ce que la CI ne couvre pas encore (transparence)
+## What CI doesn't cover yet (transparency)
 
-- **Hook pre-commit local pour le scan de secrets** — la CI l'a (gitleaks), pas encore de hook
-  local (husky/lefthook). Le secret ne sortirait pas du poste avant d'être bloqué au push, mais il
-  serait déjà dans l'historique local.
-- **CODEOWNERS / revue obligatoire** — projet mono-mainteneur à ce stade (voir `SECURITY.md`),
-  pas encore de règle de branche protégée exigeant une revue tierce.
-- **Test de régression visuelle** — nécessite LibreOffice headless, pas exécuté sur chaque PR par
-  choix explicite de compromis vitesse/couverture (voir commentaire dans `ci.yml`).
+- **Local pre-commit hook for secret scanning** — CI has it (gitleaks), no local hook yet
+  (husky/lefthook). A secret wouldn't leave the machine before being blocked at push time, but it
+  would already be in the local history.
+- **CODEOWNERS / required review** — single-maintainer project at this stage (see `SECURITY.md`),
+  no branch-protection rule requiring a third-party review yet.
+- **Visual regression test** — requires headless LibreOffice, not run on every PR by an explicit
+  speed/coverage trade-off (see the comment in `ci.yml`).
 
-## Documents liés
+## Related documents
 
-- [`SECURITY.md`](../../SECURITY.md) — politique de signalement de vulnérabilité, périmètre.
-- [`TESTING.md`](../../TESTING.md) — les six chapitres de test et ce que chacun garantit.
-- [`AGENTS.md`](../../AGENTS.md) → *Development environment* — le risque spécifique aux
-  Codespaces/PR externes (exécution de `.devcontainer/`/`.vscode/` à l'ouverture) et sa mitigation
-  procédurale.
+- [`SECURITY.md`](../../SECURITY.md) — vulnerability disclosure policy, scope.
+- [`TESTING.md`](../../TESTING.md) — the six test chapters and what each guarantees.
+- [`AGENTS.md`](../../AGENTS.md) → *Development environment* — the specific risk around
+  Codespaces/external PRs (`.devcontainer/`/`.vscode/` executing on open) and its procedural
+  mitigation.

@@ -1,81 +1,79 @@
-# Legal — licences, dépendances, flux de données
+# Legal — licenses, dependencies, data flows
 
-> Ceci n'est pas un avis juridique. C'est un état des lieux factuel, vérifiable par les commandes
-> indiquées, destiné à accélérer la revue d'un service juridique ou achats.
+> This is not legal advice. It's a factual state of affairs, verifiable via the commands listed,
+> meant to speed up a legal or procurement team's review.
 
-## Licence du code
+## Code license
 
-Tout le code de ce dépôt (`packages/cli`, `packages/core`, `packages/pandoc-filter`,
-`packages/vscode-extension`) est publié sous **CC0 1.0 Universal** — domaine public. Texte légal
-intégral et non modifié dans [`LICENSE`](../../LICENSE) (copie exacte de
+All code in this repository (`packages/cli`, `packages/core`, `packages/pandoc-filter`,
+`packages/vscode-extension`) is published under **CC0 1.0 Universal** — public domain. Full,
+unmodified legal text in [`LICENSE`](../../LICENSE) (exact copy of
 <https://creativecommons.org/publicdomain/zero/1.0/legalcode>).
 
-Conséquence pratique : aucune attribution requise, aucune clause copyleft, aucune restriction
-d'usage commercial, aucune redevance. C'est la licence la plus permissive qui existe — plus
-permissive que le MIT (qui exige encore la conservation de la notice de copyright).
+Practical consequence: no attribution required, no copyleft clause, no restriction on commercial
+use, no royalty. It's the most permissive license that exists — more permissive than MIT (which
+still requires keeping the copyright notice).
 
-## Dépendances tierces embarquées (runtime)
+## Embedded third-party dependencies (runtime)
 
-Arbre de dépendances réellement exécuté en production (`npm ls --omit=dev --all`), pas les
-outils de développement/CI :
+The dependency tree actually executed in production (`npm ls --omit=dev --all`), not the
+development/CI tooling:
 
-| Package | Rôle | Licence |
+| Package | Role | License |
 |---|---|---|
-| `dagre` | Moteur de layout de graphe (positionnement des nœuds/arêtes) | MIT |
-| `graphlib` | Dépendance de `dagre` | MIT |
-| `lodash` | Dépendance de `graphlib` | MIT |
-| `fast-check` | Génération de cas de test property-based (frontière parseur) | MIT |
-| `pure-rand` | Dépendance de `fast-check` | MIT |
-| `@types/dagre` | Typage TypeScript, aucun code exécuté à l'usage | MIT |
+| `dagre` | Graph layout engine (node/edge positioning) | MIT |
+| `graphlib` | `dagre` dependency | MIT |
+| `lodash` | `graphlib` dependency | MIT |
+| `fast-check` | Property-based test case generation (parser boundary) | MIT |
+| `pure-rand` | `fast-check` dependency | MIT |
+| `@types/dagre` | TypeScript typings, no code executed at runtime | MIT |
 
-**100 % MIT.** Aucune dépendance runtime sous licence copyleft (GPL, AGPL, LGPL) ou sous licence
-non-OSI. Vérifiable avec `npx license-checker --production` depuis la racine du dépôt.
+**100% MIT.** No runtime dependency under a copyleft license (GPL, AGPL, LGPL) or a non-OSI
+license. Verifiable with `npx license-checker --production` from the repo root.
 
-## Le cas Pandoc (GPL-2.0-or-later)
+## The Pandoc case (GPL-2.0-or-later)
 
-Le pipeline délègue à [Pandoc](https://pandoc.org) tout ce qui n'est pas la conversion de
-diagramme elle-même (parsing Markdown, tableaux, styles, manipulation de l'archive `.docx`) — voir
-[`README.md`](../../README.md) → *Comment ça marche*. Pandoc est distribué sous GPL-2.0-or-later
-(vérifié directement dans `COPYING.md` du dépôt `jgm/pandoc`).
+The pipeline delegates to [Pandoc](https://pandoc.org) everything that isn't the diagram
+conversion itself (Markdown parsing, tables, styling, `.docx` archive manipulation) — see
+[`README.md`](../../README.md) → *How it works*. Pandoc is distributed under GPL-2.0-or-later
+(verified directly from `jgm/pandoc`'s `COPYING.md`).
 
-Ce que ça signifie concrètement :
+What that means in practice:
 
-- Pandoc est **toujours invoqué comme sous-processus externe** (`execFile`/`spawn` avec un
-  tableau d'arguments, jamais une chaîne shell — voir `AGENTS.md` règle 4), **jamais lié** au code
-  de ce projet, ni statiquement ni dynamiquement. L'invocation à l'arm's length est généralement
-  comprise comme n'imposant pas les obligations de la GPL au programme appelant — ce point reste
-  à faire valider par votre propre service juridique si le dossier l'exige, ce document ne
-  remplace pas cet avis.
-- **CLI (`packages/cli`)** : suppose Pandoc déjà installé sur le poste (prérequis documenté dans
-  `README.md`), ne le télécharge ni ne le distribue.
-- **Extension VS Code (`packages/vscode-extension`)** : si Pandoc est absent du `PATH`, le binaire
-  officiel non modifié est téléchargé depuis les releases GitHub de `jgm/pandoc`, vérifié par
-  empreinte SHA-256 pinnée dans le code (`src/pandocProvisioner.ts`), et mis en cache **hors** du
-  `.vsix` — jamais embarqué dans le package publié sur le Marketplace. Détail complet, y compris
-  le texte GPL-2.0 intégral, dans
+- Pandoc is **always invoked as an external subprocess** (`execFile`/`spawn` with an argument
+  array, never a shell string — see `AGENTS.md` rule 4), **never linked** into this project's
+  code, neither statically nor dynamically. Arm's-length invocation is generally understood not
+  to impose GPL obligations on the calling program — this point still needs validation from your
+  own legal team if your review requires it; this document doesn't replace that advice.
+- **CLI (`packages/cli`)**: assumes Pandoc is already installed on the machine (prerequisite
+  documented in `README.md`), neither downloads nor distributes it.
+- **VS Code extension (`packages/vscode-extension`)**: if Pandoc is absent from `PATH`, the
+  official, unmodified binary is downloaded from `jgm/pandoc`'s GitHub releases, verified against
+  a SHA-256 checksum pinned in the code (`src/pandocProvisioner.ts`), and cached **outside** the
+  `.vsix` — never bundled inside the package published on the Marketplace. Full detail, including
+  the complete GPL-2.0 text, in
   [`packages/vscode-extension/THIRD_PARTY_NOTICES.md`](../../packages/vscode-extension/THIRD_PARTY_NOTICES.md).
 
-## Flux de données / vie privée
+## Data flows / privacy
 
-- Le traitement (parsing Markdown, layout, génération OOXML) est **100 % local**, dans le
-  processus Node.js qui exécute la CLI ou l'extension. Aucun contenu de document n'est envoyé à
-  un service tiers.
-- **Aucune télémétrie, aucun SDK d'analytics** dans le code (`grep` reproductible : pas de
-  `fetch`/appel réseau hors ceux listés ci-dessous).
-- Les seuls appels réseau du code sont, tous les deux dans l'extension VS Code uniquement, sur
-  action explicite de l'utilisateur :
-  1. Téléchargement du binaire Pandoc officiel depuis GitHub Releases (voir ci-dessus), une seule
-     fois, si Pandoc est absent.
-  2. Ouverture de la page `pandoc.org/installing.html` dans le navigateur si l'utilisateur clique
-     sur le lien d'aide à l'installation.
-- La CLI et le cœur (`packages/core`) n'effectuent **aucun** appel réseau.
+- Processing (Markdown parsing, layout, OOXML generation) is **100% local**, inside the Node.js
+  process running the CLI or the extension. No document content is sent to any third-party
+  service.
+- **No telemetry, no analytics SDK** in the code (reproducible via `grep`: no `fetch`/network call
+  other than the ones listed below).
+- The code's only network calls are, both in the VS Code extension only, on explicit user action:
+  1. Downloading the official Pandoc binary from GitHub Releases (see above), once, if Pandoc is
+     absent.
+  2. Opening the `pandoc.org/installing.html` page in the browser if the user clicks the
+     installation help link.
+- The CLI and the core engine (`packages/core`) make **no** network calls at all.
 
-## Où vérifier par vous-même
+## Where to verify for yourself
 
-| Question | Commande / fichier |
+| Question | Command / file |
 |---|---|
-| Licence de chaque dépendance runtime | `npx license-checker --production` |
-| Texte légal de la licence du projet | [`LICENSE`](../../LICENSE) |
-| Notices tierces (Pandoc) | [`packages/vscode-extension/THIRD_PARTY_NOTICES.md`](../../packages/vscode-extension/THIRD_PARTY_NOTICES.md) |
-| Décision et historique sur le choix de licence/Pandoc | [`AGENTS.md`](../../AGENTS.md) → *Licensing* |
-| Politique de vulnérabilité / contact sécurité | [`SECURITY.md`](../../SECURITY.md) |
+| License of each runtime dependency | `npx license-checker --production` |
+| Project license's legal text | [`LICENSE`](../../LICENSE) |
+| Third-party notices (Pandoc) | [`packages/vscode-extension/THIRD_PARTY_NOTICES.md`](../../packages/vscode-extension/THIRD_PARTY_NOTICES.md) |
+| Decision and history on the license/Pandoc choice | [`AGENTS.md`](../../AGENTS.md) → *Licensing* |
+| Vulnerability policy / security contact | [`SECURITY.md`](../../SECURITY.md) |
