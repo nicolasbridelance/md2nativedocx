@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -66,8 +66,31 @@ test('with MD2NATIVEDOCX_SMARTART_DIR set, a merge-after-branch diagram still fa
     assert.ok(xml.includes('<wpc:wpc'));
     assert.ok(!xml.includes('dgm:relIds'));
     assert.deepEqual(readdirSync(smartArtDir), [], 'nothing should be written for a diagram that falls back');
+    // spec §10.3: a diagram that was actually attempted for SmartArt and
+    // rejected gets a small note explaining why, right after the shapes.
+    assert.ok(xml.includes('merge detected between'), 'expected the spec §10.3 fallback note');
+    assert.ok(xml.includes('<w:i/>'), 'note must be italic (spec §10.3 discreet style)');
   } finally {
     rmSync(smartArtDir, { recursive: true, force: true });
+  }
+});
+
+test('without MD2NATIVEDOCX_SMARTART_DIR, a merge-after-branch diagram gets no fallback note (never attempted)', () => {
+  const xml = runCore('graph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n');
+  assert.ok(xml.includes('<wpc:wpc'));
+  assert.ok(!xml.includes('merge detected between'));
+});
+
+test('parser warnings are written to stderr, prefixed for the CLI to surface (spec §10)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-core-'));
+  const mmd = join(dir, 'diagram.mmd');
+  writeFileSync(mmd, 'graph TD\n  A --> B\n  style X fill:#fff\n');
+  try {
+    const result = spawnSync('node', [coreBin, mmd], { encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    assert.match(result.stderr, /^md2nativedocx: warning: /m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 

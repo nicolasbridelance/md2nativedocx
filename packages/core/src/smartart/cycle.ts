@@ -1,5 +1,5 @@
 /**
- * SmartArt generator for the `cycle` topology (`FUTURE_mmd2smartart_SPEC.md`
+ * SmartArt generator for the `cycle` topology (`docs/specs/FUTURE_mmd2smartart_SPEC.md`
  * §7 step 4; classification comes from {@link classifyTopology} in
  * `./classify.ts`, not repeated here).
  *

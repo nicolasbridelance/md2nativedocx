@@ -1,5 +1,5 @@
 /**
- * SmartArt topology classifier (`FUTURE_mmd2smartart_SPEC.md` §4).
+ * SmartArt topology classifier (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §4).
  *
  * Pure function, no dependency on Dagre or the OOXML translator: it runs on
  * the parsed {@link Flowchart} AST alone, before layout, and decides whether

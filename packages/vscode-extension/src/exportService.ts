@@ -6,6 +6,14 @@ import { blockAtLine, parseMermaidBlocks, wrapBlockAsDocument, wrapMermaidSource
 
 export interface ExportResult {
   outputPath: string;
+  /** Non-fatal warnings surfaced by this export (spec §10) — parser
+   * warnings and SmartArt-fallback failures, read back from the `.log` file
+   * `md2nativedocx.mjs` always writes next to `outputPath`. 0 when clean. */
+  warningCount: number;
+  /** Path to that `.log` file — same basename as `outputPath`, `.log`
+   * extension. Always set; the caller can offer to open it when
+   * `warningCount > 0`. */
+  logPath: string;
 }
 
 export class PandocMissingError extends Error {}
@@ -44,9 +52,24 @@ function resolveCliBin(): string {
   return join(dirname(pkgJsonPath), 'bin', 'md2nativedocx.mjs');
 }
 
-function runCli(input: string, output: string, cwd: string, pandocBin?: string): Promise<void> {
+export interface RunCliOptions {
+  pandocBin?: string;
+  /** Path to a `.docx` used as Pandoc's `--reference-doc` (mirrors the
+   * `md2nativedocx.referenceDocument` setting) — a company/corporate
+   * template instead of the bundled default. */
+  referenceDoc?: string;
+  /** Mirrors the `md2nativedocx.smartArt.enabled` setting. `false` forces
+   * every eligible diagram through the OOXML canvas fallback instead of
+   * native SmartArt. Omitted/`true` changes nothing (the CLI's default). */
+  smartArtEnabled?: boolean;
+}
+
+function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
   const cliBin = resolveCliBin();
-  const env = pandocBin ? { ...process.env, MD2NATIVEDOCX_PANDOC_BIN: pandocBin } : process.env;
+  const env = { ...process.env };
+  if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
+  if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
+  if (options.smartArtEnabled === false) env.MD2NATIVEDOCX_DISABLE_SMARTART = '1';
   return new Promise((resolve, reject) => {
     execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {
@@ -69,6 +92,26 @@ function runCli(input: string, output: string, cwd: string, pandocBin?: string):
   });
 }
 
+/** Path to the `.log` file `md2nativedocx.mjs` writes next to `output` —
+ * same basename, `.log` extension, mirroring the CLI's own naming. */
+function logPathFor(output: string): string {
+  return output.toLowerCase().endsWith('.docx') ? `${output.slice(0, -'.docx'.length)}.log` : `${output}.log`;
+}
+
+/** Read back the warning count the CLI recorded in `output`'s `.log` file
+ * (written on every successful export — see `md2nativedocx.mjs`). Returns 0
+ * if the log is missing or unparseable rather than throwing: a missing log
+ * must never turn a successful export into a reported failure. */
+function readWarningCount(logPath: string): number {
+  try {
+    const content = readFileSync(logPath, 'utf8');
+    const match = content.match(/^Warnings: (\d+)/m);
+    return match ? Number(match[1]) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Where to write a generated `.docx`, honouring `md2nativedocx.outputDirectory`
  * (empty = same folder as the source, the zero-config default). */
 export function resolveOutputPath(sourcePath: string, outputBaseName: string, outputDirectory: string): string {
@@ -79,11 +122,12 @@ export function resolveOutputPath(sourcePath: string, outputBaseName: string, ou
 export async function exportDocument(
   sourcePath: string,
   outputDirectory: string,
-  pandocBin?: string,
+  options: RunCliOptions = {},
 ): Promise<ExportResult> {
   const outputPath = resolveOutputPath(sourcePath, basename(sourcePath, '.md'), outputDirectory);
-  await runCli(sourcePath, outputPath, dirname(sourcePath), pandocBin);
-  return { outputPath };
+  await runCli(sourcePath, outputPath, dirname(sourcePath), options);
+  const logPath = logPathFor(outputPath);
+  return { outputPath, logPath, warningCount: readWarningCount(logPath) };
 }
 
 /** Export a single mermaid block by wrapping it in a minimal standalone
@@ -95,7 +139,7 @@ export async function exportBlock(
   sourceText: string,
   blockIndex: number,
   outputDirectory: string,
-  pandocBin?: string,
+  options: RunCliOptions = {},
 ): Promise<ExportResult> {
   const blocks = parseMermaidBlocks(sourceText);
   const block = blocks.find((b) => b.index === blockIndex);
@@ -111,8 +155,9 @@ export async function exportBlock(
     writeFileSync(tmpMd, wrapBlockAsDocument(block));
     const outputBaseName = `${basename(sourcePath, '.md')}-diagram-${blockIndex + 1}`;
     const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory);
-    await runCli(tmpMd, outputPath, dirname(sourcePath), pandocBin);
-    return { outputPath };
+    await runCli(tmpMd, outputPath, dirname(sourcePath), options);
+    const logPath = logPathFor(outputPath);
+    return { outputPath, logPath, warningCount: readWarningCount(logPath) };
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -125,7 +170,7 @@ export async function exportBlock(
 export async function exportMermaidFile(
   sourcePath: string,
   outputDirectory: string,
-  pandocBin?: string,
+  options: RunCliOptions = {},
 ): Promise<ExportResult> {
   const source = readFileSync(sourcePath, 'utf8');
   const title = basename(sourcePath, '.mmd');
@@ -134,8 +179,9 @@ export async function exportMermaidFile(
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapMermaidSource(source, title));
     const outputPath = resolveOutputPath(sourcePath, title, outputDirectory);
-    await runCli(tmpMd, outputPath, dirname(sourcePath), pandocBin);
-    return { outputPath };
+    await runCli(tmpMd, outputPath, dirname(sourcePath), options);
+    const logPath = logPathFor(outputPath);
+    return { outputPath, logPath, warningCount: readWarningCount(logPath) };
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }

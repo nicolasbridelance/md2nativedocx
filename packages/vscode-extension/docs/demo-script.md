@@ -1,7 +1,7 @@
 # Script de démo — GIF + capture
 
 Un GIF (côté VS Code) et une capture d'écran statique (côté Word) plutôt qu'un seul GIF combiné
-(cahier_des_charges.md §12.2) : la partie VS Code ne demande pas Word et a pu être enregistrée
+(docs/specs/cahier_des_charges.md §12.2) : la partie VS Code ne demande pas Word et a pu être enregistrée
 automatiquement dans ce Codespace (Xvfb + la vraie build VS Code déjà utilisée pour les tests
 d'extension-host, `xdotool` pour le clic, `ffmpeg` pour la capture) ; la partie Word demande une
 vraie installation de Word, hors de portée de ce Codespace Linux — et n'a pas besoin d'être animée,

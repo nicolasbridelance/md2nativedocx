@@ -6,6 +6,11 @@ get flattened into an image like everywhere else. They become real vector Word s
 (OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
 once the file is open in Word.
 
+> **Deploying this in a corporate environment?** License, third-party dependency audit, IT risk
+> analysis, and a no-jargon guide for non-technical users each live in
+> [`docs/compliance/`](https://github.com/nicolasbridelance/md2nativedocx/tree/main/docs/compliance)
+> in the main repository.
+
 ## See it in action
 
 There's more than one way to trigger the same export — pick whichever fits how you work. Each
@@ -84,9 +89,11 @@ way — and on a raw `.mmd` Mermaid file too.
    the Command Palette.
 3. A notification offers to open the generated `.docx` or reveal it in the file explorer.
 
-No configuration required before first use. The one optional setting,
-`md2nativedocx.outputDirectory`, chooses where `.docx` files are written (default: the same
-folder as the source).
+No configuration required before first use. Optional settings: `md2nativedocx.outputDirectory`
+chooses where `.docx` files are written (default: the same folder as the source);
+`md2nativedocx.referenceDocument` points at a company Word template to match its fonts/colors/
+styles; `md2nativedocx.smartArt.enabled` (default: on) can force every diagram through the plain
+OOXML canvas shapes instead of native SmartArt.
 
 A guided Getting Started walkthrough (Command Palette → *Get Started with md2nativedocx*) shows
 the three steps in practice right after install.

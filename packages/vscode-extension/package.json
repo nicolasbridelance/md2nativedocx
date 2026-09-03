@@ -81,6 +81,16 @@
           "type": "string",
           "default": "",
           "markdownDescription": "%configuration.outputDirectory.markdownDescription%"
+        },
+        "md2nativedocx.referenceDocument": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%configuration.referenceDocument.markdownDescription%"
+        },
+        "md2nativedocx.smartArt.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%"
         }
       }
     },
@@ -123,6 +133,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pretest": "tsc -p tsconfig.test.json",
     "test": "node --test dist-test/test/unit/*.test.js",
+    "pretest:ci": "tsc -p tsconfig.test.json && mkdir -p reports",
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/unit/*.test.js",
     "pretest:extension-host": "tsc -p tsconfig.test.json",
     "test:extension-host": "node scripts/run-extension-host-tests.mjs",
     "bundle": "node scripts/bundle-cli.mjs",

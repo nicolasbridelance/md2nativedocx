@@ -8,6 +8,8 @@
   "Open in Word": "在 Word 中打开",
   "Reveal in Explorer": "在资源管理器中显示",
   "Exported: {0}": "已导出：{0}",
+  "Exported: {0} (with {1} warning(s))": "已导出：{0}（有 {1} 条警告）",
+  "View warnings": "查看警告",
   "Install Pandoc": "安装 Pandoc",
   "Pandoc could not be found on this machine.": "在此计算机上未找到 Pandoc。",
   "This mermaid block could not be found — the document may have changed.": "找不到此 mermaid 代码块 —— 文档可能已发生变化。",

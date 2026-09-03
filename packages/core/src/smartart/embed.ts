@@ -9,7 +9,7 @@
  * parts (`data`/`layout`/`colors`/`quickStyle`) don't exist as package
  * relationships yet at the point this module runs — Pandoc's Lua filter API
  * has no mechanism to add new `.docx` package parts or relationships
- * (`FUTURE_mmd2smartart_SPEC.md` §2, confirmed by testing `pandoc.mediabag`).
+ * (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §2, confirmed by testing `pandoc.mediabag`).
  * The `relIds` passed in here are therefore opaque caller-chosen strings
  * (`packages/pandoc-filter/bin/md2nativedocx-core.mjs` uses
  * `SMARTART_PLACEHOLDER:<uuid>:dm` etc.) that a later, package-aware step
@@ -27,6 +27,9 @@
  * already resolves collisions between multiple `wpg:wgp` diagrams handles a
  * SmartArt diagram for free.
  */
+
+import { escapeXml } from '../translator/xml-escape.js';
+import type { SmartArtIneligible } from './classify.js';
 
 const WP_NS = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
@@ -93,4 +96,68 @@ export function buildSmartArtDrawingXml(relIds: SmartArtRelIds, options: SmartAr
     '  </w:r>',
     '</w:p>',
   ].join('\n');
+}
+
+/**
+ * Build the fallback-note `<w:p>` placed directly under a diagram that was
+ * attempted for SmartArt but rejected by {@link classifyTopology}
+ * (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §10.3 — "phrase sous le graphe" was chosen
+ * over a `w:comment` because it's the only option guaranteed to survive a
+ * PDF export). Callers (`packages/pandoc-filter/bin/md2nativedocx-core.mjs`)
+ * must only emit this when SmartArt was actually attempted and rejected —
+ * never for a diagram that succeeded as SmartArt, and never for the default
+ * `wpg:wgp` pipeline when SmartArt wasn't attempted at all.
+ *
+ * Uses direct run formatting (italic, gray, smaller size) rather than a
+ * named paragraph style, so it renders correctly regardless of which
+ * `--reference-doc` produced the surrounding document — spec §10.3's "style
+ * discret dédié ... ou équivalent" explicitly allows this. The text is
+ * still a single, contiguous run, easy to select and delete in Word before
+ * final distribution.
+ */
+export function buildSmartArtFallbackNoteXml(classification: SmartArtIneligible): string {
+  const message = escapeXml(fallbackMessage(classification));
+  return [
+    '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
+    '  <w:pPr>',
+    '    <w:spacing w:before="0" w:after="120"/>',
+    '  </w:pPr>',
+    '  <w:r>',
+    '    <w:rPr>',
+    '      <w:i/>',
+    '      <w:color w:val="808080"/>',
+    '      <w:sz w:val="18"/>',
+    '    </w:rPr>',
+    `    <w:t xml:space="preserve">${message}</w:t>`,
+    '  </w:r>',
+    '</w:p>',
+  ].join('\n');
+}
+
+/** Specific, actionable text per {@link SmartArtIneligibleReason} (spec
+ * §10.3: never a generic "auto-generated, may contain errors" disclaimer). */
+function fallbackMessage(classification: SmartArtIneligible): string {
+  const { reason, at } = classification;
+  switch (reason) {
+    case 'merge-after-branch':
+      return `Native shapes used (merge detected between ${formatAt(at)} — not supported by SmartArt export).`;
+    case 'subgraph':
+      return 'Native shapes used (nested subgraph detected — not supported by SmartArt export).';
+    case 'self-loop':
+      return `Native shapes used (self-loop detected at ${formatAt(at)} — not supported by SmartArt export).`;
+    case 'disconnected':
+      return 'Native shapes used (diagram has multiple disconnected parts — not supported by SmartArt export).';
+    case 'tree-too-deep':
+      return `Native shapes used (hierarchy under ${formatAt(at)} is deeper than SmartArt export currently supports).`;
+    case 'irregular-topology':
+      return 'Native shapes used (diagram shape not recognized by SmartArt export).';
+  }
+}
+
+/** Quote and join node ids for a message, e.g. `"B" and "E"`. */
+function formatAt(at: string[]): string {
+  const quoted = at.map((id) => `"${id}"`);
+  if (quoted.length === 0) return '';
+  if (quoted.length === 1) return quoted[0]!;
+  return `${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]}`;
 }

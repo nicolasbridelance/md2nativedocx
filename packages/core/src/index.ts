@@ -26,7 +26,7 @@ export type { TranslateOptions } from './translator/ooxml-translator.js';
 // XML escaping for user-controlled text (rule #2)
 export { escapeXml } from './translator/xml-escape.js';
 
-// SmartArt topology classifier (FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
+// SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
 export type {
@@ -37,7 +37,7 @@ export type {
   SmartArtIneligibleReason,
 } from './smartart/classify.js';
 
-// SmartArt generator for the `chain` topology (FUTURE_mmd2smartart_SPEC.md
+// SmartArt generator for the `chain` topology (docs/specs/FUTURE_mmd2smartart_SPEC.md
 // §7 step 4, ADR 0004 "Round 5"). Original layout/colors/style — no
 // Microsoft content. Caller is responsible for calling classifyTopology()
 // first and only invoking this on a 'chain' result.
@@ -86,6 +86,11 @@ export type { SmartArtGenerated } from './smartart/dispatch.js';
 // callers may need to pass placeholders here).
 export { buildSmartArtDrawingXml } from './smartart/embed.js';
 export type { SmartArtRelIds, SmartArtEmbedOptions } from './smartart/embed.js';
+
+// Build the fallback-note <w:p> placed under a diagram that was attempted
+// for SmartArt but rejected by classifyTopology() (spec §10.3). Caller-only
+// responsibility: only emit this for an actual SmartArt attempt+rejection.
+export { buildSmartArtFallbackNoteXml } from './smartart/embed.js';
 
 // Shared types
 export type {

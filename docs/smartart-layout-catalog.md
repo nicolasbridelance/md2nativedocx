@@ -86,7 +86,7 @@ Le mainteneur a noté cette idée avant de connaître le nom exact du layout Mic
 `Labeled Hierarchy` / `Horizontal Labeled Hierarchy` correspondent très probablement à l'intuition
 ("hiérarchie libellée") : dans ce layout, chaque **niveau hiérarchique complet** porte une
 étiquette dédiée à côté (pas une boîte de plus dans l'arbre, contrairement au bricolage "niveau
-supplémentaire" déjà retenu §5 de `FUTURE_mmd2smartart_SPEC.md`).
+supplémentaire" déjà retenu §5 de `docs/specs/FUTURE_mmd2smartart_SPEC.md`).
 
 **Verdict (2026-09-03, échantillon Word réel testé par le mainteneur, `spike.md` Round 6)** :
 l'étiquette est bien **par niveau de profondeur, pas par branche** — impossible de donner une

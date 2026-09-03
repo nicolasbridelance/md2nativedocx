@@ -3,6 +3,17 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- A diagram with a simple chain, tree, or cycle shape now exports as a native, editable Word
+  **SmartArt** graphic instead of the OOXML canvas shapes every diagram previously got — richer,
+  Word-native diagram type for the cases it applies to; anything else (branches that merge,
+  subgraphs, deeper structures) still falls back to the canvas shapes automatically, with a
+  visible in-document note when a diagram was eligible-looking but couldn't be converted.
+- `md2nativedocx.smartArt.enabled` setting (default: on) to force the canvas fallback for every
+  diagram instead, e.g. for consistent shape rendering across a whole document.
+
 ## [0.2.0] — 2026-09-02
 
 ### Added

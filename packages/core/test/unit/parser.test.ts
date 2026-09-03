@@ -86,6 +86,31 @@ test('warns when a class references an undefined classDef', () => {
   assert.ok(warnings.some((w) => w.includes('not defined')));
 });
 
+test('strips surrounding double quotes from a node label (Mermaid\'s recommended Unicode syntax)', () => {
+  const { ast } = parseMermaid('graph TD\n  A["Hello, World"] --> B[Plain]');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.label, 'Hello, World');
+  const b = ast.nodes.find((n) => n.id === 'B')!;
+  assert.equal(b.label, 'Plain');
+});
+
+test('strips quotes from a quoted node label at an edge endpoint reference', () => {
+  const { ast } = parseMermaid('graph TD\n  A --> B["Quoted"]');
+  const b = ast.nodes.find((n) => n.id === 'B')!;
+  assert.equal(b.label, 'Quoted');
+});
+
+test('strips surrounding double quotes from an edge label', () => {
+  const { ast } = parseMermaid('graph TD\n  A -->|"Yes"| B');
+  assert.equal(ast.edges[0]!.label, 'Yes');
+});
+
+test('does not strip an internal, non-surrounding quote', () => {
+  const { ast } = parseMermaid('graph TD\n  A[He said "hi"]');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.label, 'He said "hi"');
+});
+
 test('warns on unclosed subgraph', () => {
   const { warnings } = parseMermaid('graph TD\n  subgraph S1\n    A --> B');
   assert.ok(warnings.some((w) => w.includes('Unclosed')));

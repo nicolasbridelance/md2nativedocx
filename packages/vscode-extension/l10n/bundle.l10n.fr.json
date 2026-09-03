@@ -8,6 +8,8 @@
   "Open in Word": "Ouvrir dans Word",
   "Reveal in Explorer": "Révéler dans l'explorateur",
   "Exported: {0}": "Exporté : {0}",
+  "Exported: {0} (with {1} warning(s))": "Exporté : {0} (avec {1} avertissement(s))",
+  "View warnings": "Voir les avertissements",
   "Install Pandoc": "Installer Pandoc",
   "Pandoc could not be found on this machine.": "Pandoc est introuvable sur cette machine.",
   "This mermaid block could not be found — the document may have changed.": "Ce bloc mermaid est introuvable — le document a peut-être changé.",

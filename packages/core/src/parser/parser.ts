@@ -63,6 +63,21 @@ function isSafeId(id: string): boolean {
   return !RESERVED_IDS.has(id);
 }
 
+/**
+ * Strip a pair of surrounding double quotes from a node/edge label, the
+ * syntax Mermaid itself recommends for Unicode/special characters
+ * (`id["Hello, World"]`). Without this the quotes were kept literally in
+ * the rendered text — found empirically while building
+ * `docs/smartart-compliance-table.md` (2026-09-03), logged in `TODO.md`.
+ * Unquoted text (`id[Hello World]`) is returned unchanged.
+ */
+function stripQuotedLabel(text: string): string {
+  if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+    return text.slice(1, -1);
+  }
+  return text;
+}
+
 export interface ParseResult {
   ast: Flowchart;
   /** Human-readable warnings for unsupported constructs (non-fatal). */
@@ -332,7 +347,7 @@ function parseNodeStatement(line: string): FlowNode | null {
     // Longest patterns first to avoid `(` matching `((`.
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: inner, shape };
+      return { id, label: stripQuotedLabel(inner), shape };
     }
   }
 
@@ -361,7 +376,7 @@ function parseNodeRef(
   for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: inner, shape, className };
+      return { id, label: stripQuotedLabel(inner), shape, className };
     }
   }
   return null;
@@ -380,7 +395,7 @@ function parseEdgeStatement(
       const from = parseNodeRef(mLabel[1]!);
       const to = parseNodeRef(mLabel[3]!);
       if (from && to) {
-        return { from: from.id, to: to.id, fromLabel: from.label, toLabel: to.label, fromShape: from.shape, toShape: to.shape, fromClass: from.className, toClass: to.className, type, label: mLabel[2]! };
+        return { from: from.id, to: to.id, fromLabel: from.label, toLabel: to.label, fromShape: from.shape, toShape: to.shape, fromClass: from.className, toClass: to.className, type, label: stripQuotedLabel(mLabel[2]!) };
       }
     }
     // Edge without label: A --> B

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
 
-/** Persistent second entry point (UX_SPEC.md Partie 1 — "Points d'entrée"),
+/** Persistent second entry point (docs/specs/UX_SPEC.md Partie 1 — "Points d'entrée"),
  * deliberately redundant with the CodeLens: visible without scrolling to a
  * specific block, for users who filter out CodeLens visually (GitLens,
  * Copilot, etc. already crowd that space). Shown for any Markdown (`.md`) or

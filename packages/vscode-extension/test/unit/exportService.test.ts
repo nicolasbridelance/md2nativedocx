@@ -50,6 +50,33 @@ test('exportMermaidFile wraps a raw .mmd file and produces a .docx named after i
   }
 });
 
+test('exportMermaidFile reports 0 warnings and a .log path alongside the .docx on a clean export', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-mmd-export-test-'));
+  try {
+    const mmdPath = join(dir, 'flow.mmd');
+    writeFileSync(mmdPath, 'graph TD\n  A --> B\n');
+    const result = await exportMermaidFile(mmdPath, '');
+    assert.equal(result.warningCount, 0);
+    assert.equal(result.logPath, join(dir, 'flow.log'));
+    assert.ok(existsSync(result.logPath));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('exportMermaidFile surfaces parser warnings via warningCount (spec §10)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-mmd-export-test-'));
+  try {
+    const mmdPath = join(dir, 'flow.mmd');
+    writeFileSync(mmdPath, 'graph TD\n  A --> B\n  style X fill:#fff\n');
+    const result = await exportMermaidFile(mmdPath, '');
+    assert.equal(result.warningCount, 1);
+    assert.ok(existsSync(result.logPath));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('resolveBlockForCursor returns null when ambiguous (cursor outside any block, several present)', () => {
   const md = [
     '```mermaid',

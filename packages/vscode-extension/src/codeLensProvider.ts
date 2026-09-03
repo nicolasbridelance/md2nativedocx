@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { parseMermaidBlocks, isMermaidFilePath } from './mermaidBlocks';
 
-/** Two CodeLenses above every ```mermaid block (UX_SPEC.md Partie 1 —
+/** Two CodeLenses above every ```mermaid block (docs/specs/UX_SPEC.md Partie 1 —
  * "Points d'entrée"): exporting the whole document is the primary action,
  * exporting just this block the secondary one. Deliberately redundant with
- * the status bar item — see UX_SPEC.md for why.
+ * the status bar item — see docs/specs/UX_SPEC.md for why.
  *
  * A `.mmd` file (no fences of its own) or a `.md` file with no mermaid block
  * yet gets a single top-of-file lens instead — the export pipeline handles

@@ -399,7 +399,7 @@ test('an edge label sits on the connector segment midpoint, not the node-center 
   assert.ok(Math.abs(y + 228600 / 2 - midpointEmu) < 9525, `label y=${y} not on the connector midpoint`);
 });
 
-// --- Future-proofing (FUTURE_docx2mermaid_SPEC.md §4): retain the original
+// --- Future-proofing (docs/specs/FUTURE_docx2mermaid_SPEC.md §4): retain the original
 // Mermaid id on every emitted shape/connector, cheap now while the output
 // format is still actively changing, expensive to retrofit once it's frozen.
 // `descr` carries the id (not `name`, which stays the human label Word shows

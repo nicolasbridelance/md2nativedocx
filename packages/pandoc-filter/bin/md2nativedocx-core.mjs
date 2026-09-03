@@ -33,7 +33,20 @@
  * merge-after-branch, a tree deeper than `tree.ts` supports, etc.) is
  * expected to still render correctly, and the env-var gate means every
  * caller that doesn't opt in (including this package's own existing tests)
- * is completely unaffected.
+ * is completely unaffected. When it does fall back this way with
+ * `MD2NATIVEDOCX_SMARTART_DIR` set, a small gray-italic note is appended
+ * under the diagram explaining why (spec §10.3), via
+ * `buildSmartArtFallbackNoteXml()`.
+ *
+ * ## Warnings (spec §10, "surface warnings")
+ *
+ * Non-fatal parser warnings (`ParseResult.warnings`) and the SmartArt
+ * fallback message below are both written to stderr, prefixed
+ * `md2nativedocx: `. Pandoc's own child-process stderr is inherited by
+ * `packages/cli/bin/md2nativedocx.mjs`'s `execFile` call, which counts
+ * `md2nativedocx: `-prefixed lines and surfaces them (CLI stdout summary +
+ * a `.log` file next to the output; the VS Code extension turns the count
+ * into a toast).
  */
 
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -45,6 +58,8 @@ import {
   translateToOoxml,
   generateSmartArt,
   buildSmartArtDrawingXml,
+  classifyTopology,
+  buildSmartArtFallbackNoteXml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -85,14 +100,30 @@ function trySmartArt(ast, smartArtDir) {
 }
 
 try {
-  const { ast } = parseMermaid(input);
+  const { ast, warnings } = parseMermaid(input);
+  for (const warning of warnings) {
+    process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+  }
 
-  const smartArtXml = trySmartArt(ast, process.env.MD2NATIVEDOCX_SMARTART_DIR);
+  const smartArtDir = process.env.MD2NATIVEDOCX_SMARTART_DIR;
+  const smartArtXml = trySmartArt(ast, smartArtDir);
   if (smartArtXml) {
     process.stdout.write(smartArtXml);
   } else {
     const result = layout(ast);
-    process.stdout.write(translateToOoxml(ast, result));
+    let output = translateToOoxml(ast, result);
+    // Only note the fallback when SmartArt was actually attempted for this
+    // diagram (smartArtDir set) and rejected for one of classifyTopology's
+    // structured reasons — never for an unexpected generation error (already
+    // logged by trySmartArt above) and never when SmartArt wasn't attempted
+    // at all (spec §10.3: "jamais ... sur le pipeline wpg:wgp").
+    if (smartArtDir) {
+      const classification = classifyTopology(ast);
+      if (!classification.eligible) {
+        output += '\n' + buildSmartArtFallbackNoteXml(classification);
+      }
+    }
+    process.stdout.write(output);
   }
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);

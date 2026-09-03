@@ -8,6 +8,8 @@
   "Open in Word": "Открыть в Word",
   "Reveal in Explorer": "Показать в проводнике",
   "Exported: {0}": "Экспортировано: {0}",
+  "Exported: {0} (with {1} warning(s))": "Экспортировано: {0} (с предупреждениями: {1})",
+  "View warnings": "Показать предупреждения",
   "Install Pandoc": "Установить Pandoc",
   "Pandoc could not be found on this machine.": "Не удалось найти Pandoc на этом компьютере.",
   "This mermaid block could not be found — the document may have changed.": "Этот блок mermaid не найден — возможно, документ изменился.",

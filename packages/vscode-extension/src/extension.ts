@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { basename } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, isAbsolute, join } from 'node:path';
 import { MermaidCodeLensProvider } from './codeLensProvider';
 import { registerStatusBar } from './statusBar';
 import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
@@ -11,6 +12,7 @@ import {
   PandocMissingError,
   BlockNotFoundError,
   ExportFailedError,
+  type ExportResult,
 } from './exportService';
 import { ensurePandoc } from './pandocProvisioner';
 
@@ -43,6 +45,39 @@ function outputDirectorySetting(): string {
   return vscode.workspace.getConfiguration('md2nativedocx').get<string>('outputDirectory', '');
 }
 
+/** `md2nativedocx.referenceDocument` — mirrors Pandoc's own `--reference-doc`
+ * (spec follow-up: "how does a user load their company's Word template").
+ * Validated against the filesystem here (not in `exportService.ts`, which
+ * stays free of any UI concern): an unreadable/misconfigured path must fall
+ * back to the CLI's bundled default, not fail the export outright — same
+ * "never leave the user worse off" rule `resolvePandocBin` already follows
+ * for Pandoc provisioning. */
+function referenceDocumentSetting(): string | undefined {
+  const raw = vscode.workspace.getConfiguration('md2nativedocx').get<string>('referenceDocument', '').trim();
+  if (!raw) return undefined;
+  const resolved = resolveAgainstWorkspace(raw);
+  if (!existsSync(resolved)) {
+    outputChannel.appendLine(`md2nativedocx.referenceDocument is set to "${raw}" but that file could not be found — using the default template instead.`);
+    return undefined;
+  }
+  return resolved;
+}
+
+/** `md2nativedocx.smartArt.enabled` — `true` (default) lets an eligible
+ * diagram (chain/tree/cycle shape) become a native SmartArt graphic instead
+ * of the OOXML canvas fallback every diagram otherwise gets. `false` forces
+ * the canvas fallback for everything, e.g. for a reviewer workflow that
+ * expects one consistent shape rendering across all diagrams. */
+function smartArtEnabledSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', true);
+}
+
+function resolveAgainstWorkspace(rawPath: string): string {
+  if (isAbsolute(rawPath)) return rawPath;
+  const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  return folder ? join(folder, rawPath) : rawPath;
+}
+
 async function resolveExportableUri(uri: vscode.Uri | undefined): Promise<vscode.Uri | null> {
   if (uri) return uri;
   const active = vscode.window.activeTextEditor;
@@ -56,9 +91,11 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
   if (!uri) return;
   await runExportFlow(async (progress) => {
     const pandocBin = await resolvePandocBin(progress);
+    const referenceDoc = referenceDocumentSetting();
+    const smartArtEnabled = smartArtEnabledSetting();
     return isMermaidFilePath(uri.fsPath)
-      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), pandocBin)
-      : exportDocument(uri.fsPath, outputDirectorySetting(), pandocBin);
+      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled })
+      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled });
   });
 }
 
@@ -99,7 +136,9 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
 
   await runExportFlow(async (progress) => {
     const pandocBin = await resolvePandocBin(progress);
-    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), pandocBin);
+    const referenceDoc = referenceDocumentSetting();
+    const smartArtEnabled = smartArtEnabledSetting();
+    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled });
   });
 }
 
@@ -128,9 +167,11 @@ async function resolvePandocBin(progress: vscode.Progress<{ message?: string }>)
   }
 }
 
-type ExportOutcome = { ok: true; outputPath: string } | { ok: false; error: unknown };
+type ExportOutcome =
+  | { ok: true; outputPath: string; warningCount: number; logPath: string }
+  | { ok: false; error: unknown };
 
-/** The 4-state export UX from UX_SPEC.md Partie 1: repos (nothing shown
+/** The 4-state export UX from docs/specs/UX_SPEC.md Partie 1: repos (nothing shown
  * until triggered) -> en cours (progress toast, never a silent freeze) ->
  * succès (actions that close the loop in one click) | erreur (explicit
  * message + a repair action, never a raw stack trace in the toast).
@@ -142,14 +183,14 @@ type ExportOutcome = { ok: true; outputPath: string } | { ok: false; error: unkn
  * the user clicked an action on the success toast, well after the export had
  * actually finished (visible as two stacked notifications in the recording). */
 async function runExportFlow(
-  run: (progress: vscode.Progress<{ message?: string }>) => Promise<{ outputPath: string }>,
+  run: (progress: vscode.Progress<{ message?: string }>) => Promise<ExportResult>,
 ): Promise<void> {
   const outcome = await vscode.window.withProgress<ExportOutcome>(
     { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
     async (progress) => {
       try {
-        const { outputPath } = await run(progress);
-        return { ok: true, outputPath };
+        const { outputPath, warningCount, logPath } = await run(progress);
+        return { ok: true, outputPath, warningCount, logPath };
       } catch (error) {
         return { ok: false, error };
       }
@@ -163,15 +204,22 @@ async function runExportFlow(
 
   const openInWord = vscode.l10n.t('Open in Word');
   const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
-  const choice = await vscode.window.showInformationMessage(
-    vscode.l10n.t('Exported: {0}', basename(outcome.outputPath)),
-    openInWord,
-    revealInExplorer,
-  );
+  const hasWarnings = outcome.warningCount > 0;
+  const viewWarnings = vscode.l10n.t('View warnings');
+  const message = hasWarnings
+    ? vscode.l10n.t('Exported: {0} (with {1} warning(s))', basename(outcome.outputPath), outcome.warningCount)
+    : vscode.l10n.t('Exported: {0}', basename(outcome.outputPath));
+  const actions = hasWarnings ? [openInWord, revealInExplorer, viewWarnings] : [openInWord, revealInExplorer];
+  const choice = hasWarnings
+    ? await vscode.window.showWarningMessage(message, ...actions)
+    : await vscode.window.showInformationMessage(message, ...actions);
   if (choice === openInWord) {
     await vscode.env.openExternal(vscode.Uri.file(outcome.outputPath));
   } else if (choice === revealInExplorer) {
     await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(outcome.outputPath));
+  } else if (choice === viewWarnings) {
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(outcome.logPath));
+    await vscode.window.showTextDocument(doc);
   }
 }
 

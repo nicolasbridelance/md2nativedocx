@@ -18,8 +18,8 @@
  */
 
 import { execFile } from 'node:child_process';
-import { resolve, isAbsolute, dirname, basename, join } from 'node:path';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { resolve, isAbsolute, dirname, basename, join, extname } from 'node:path';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
@@ -40,6 +40,15 @@ const FILTER_PATH = FILTER_CANDIDATES.find((p) => existsSync(p))
 // theme (Calibri/Cambria mix, bold colored headings) verbatim. See
 // packages/cli/assets/README.md for how it was built and what it changes.
 const REFERENCE_DOC_PATH = fileURLToPath(new URL('../assets/reference.docx', import.meta.url));
+
+// MD2NATIVEDOCX_REFERENCE_DOC lets a caller (the VS Code extension's
+// `md2nativedocx.referenceDocument` setting — mirrors Pandoc's own
+// `--reference-doc`) point Pandoc at a company/corporate template instead of
+// this package's bundled default above. Unset for standalone `npx
+// md2nativedocx` usage, which is unaffected.
+const referenceDocOverride = process.env.MD2NATIVEDOCX_REFERENCE_DOC;
+const EFFECTIVE_REFERENCE_DOC_PATH =
+  referenceDocOverride && existsSync(referenceDocOverride) ? referenceDocOverride : REFERENCE_DOC_PATH;
 
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx> [options]
 
@@ -132,8 +141,8 @@ async function main() {
     '--lua-filter',
     FILTER_PATH,
   ];
-  if (existsSync(REFERENCE_DOC_PATH)) {
-    pandocArgs.push('--reference-doc', REFERENCE_DOC_PATH);
+  if (existsSync(EFFECTIVE_REFERENCE_DOC_PATH)) {
+    pandocArgs.push('--reference-doc', EFFECTIVE_REFERENCE_DOC_PATH);
   }
 
   // MD2NATIVEDOCX_PANDOC_BIN lets a caller (the VS Code extension's automatic
@@ -142,15 +151,25 @@ async function main() {
   // standalone `npx md2nativedocx` usage, which is unaffected.
   const pandocBin = process.env.MD2NATIVEDOCX_PANDOC_BIN || 'pandoc';
 
+  // MD2NATIVEDOCX_DISABLE_SMARTART lets a caller (the VS Code extension's
+  // `md2nativedocx.smartArt.enabled` setting) force every eligible diagram
+  // through the OOXML canvas (wpc:wpc) fallback instead of native SmartArt —
+  // e.g. a reviewer workflow that expects one consistent shape rendering.
+  // Unset for standalone `npx md2nativedocx` usage, which is unaffected.
+  const smartArtDisabled = process.env.MD2NATIVEDOCX_DISABLE_SMARTART === '1';
+
   // A scratch directory the core bridge (spawned by the Lua filter, once per
   // ```mermaid block) uses to hand SmartArt-eligible diagram parts back to
   // this process — see postprocess.mjs's injectSmartArtParts doc comment for
   // why this indirection exists (Pandoc's Lua filter API cannot add .docx
-  // package parts/relationships itself). Always created: the cost of an
-  // unused empty temp dir is negligible, and it keeps this code path
-  // identical whether or not any block in the document turns out eligible.
-  const smartArtDir = mktempSmartArtDir();
-  const pandocEnv = { ...process.env, MD2NATIVEDOCX_SMARTART_DIR: smartArtDir };
+  // package parts/relationships itself). Created whenever SmartArt isn't
+  // disabled: the cost of an unused empty temp dir is negligible, and it
+  // keeps this code path identical whether or not any block turns out
+  // eligible.
+  const smartArtDir = smartArtDisabled ? null : mktempSmartArtDir();
+  const pandocEnv = smartArtDir
+    ? { ...process.env, MD2NATIVEDOCX_SMARTART_DIR: smartArtDir }
+    : { ...process.env };
 
   execFile(pandocBin, pandocArgs, { cwd, env: pandocEnv }, (err, stdout, stderr) => {
     try {
@@ -167,17 +186,70 @@ async function main() {
         // reads the namespace-fixed/id-renumbered document.xml this writes.
         postProcessDocx(output);
         // Complete the SmartArt wiring for any diagram the core bridge
-        // dispatched to it (no-op if none did).
-        injectSmartArtParts(output, smartArtDir);
+        // dispatched to it (no-op if none did, and skipped entirely when
+        // SmartArt is disabled — nothing could have been dispatched).
+        if (smartArtDir) injectSmartArtParts(output, smartArtDir);
       } catch (postErr) {
         process.stderr.write(`md2nativedocx: post-processing failed: ${postErr instanceof Error ? postErr.message : String(postErr)}\n`);
         process.exit(1);
       }
+
+      // Every `md2nativedocx-core.mjs` invocation (one per ```mermaid block,
+      // spawned by the Lua filter) writes non-fatal notices to its own
+      // stderr, prefixed `md2nativedocx: ` — parser warnings and SmartArt
+      // fallback failures alike. Those child processes inherit Pandoc's own
+      // stderr fd, so they end up here in Pandoc's captured `stderr`
+      // alongside anything Pandoc itself printed. Surface them: never leave
+      // a successful export silently hiding something the author should
+      // know about.
+      const warnings = extractWarnings(stderr);
+      const logPath = writeExportLog({ input, output, warnings, rawStderr: stderr });
+      if (warnings.length > 0) {
+        process.stdout.write(`Warnings: ${warnings.length} (see ${basename(logPath)})\n`);
+        for (const warning of warnings) process.stderr.write(`${warning}\n`);
+      }
       process.stdout.write(`Wrote ${basename(output)}\n`);
     } finally {
-      rmSync(smartArtDir, { recursive: true, force: true });
+      if (smartArtDir) rmSync(smartArtDir, { recursive: true, force: true });
     }
   });
+}
+
+/** Lines this project itself wrote to stderr (`md2nativedocx: ...`) — as
+ * opposed to Pandoc's own diagnostics, which share the same stream but
+ * aren't ours to count as "warnings". */
+function extractWarnings(stderrText) {
+  if (!stderrText) return [];
+  return stderrText.split('\n').filter((line) => line.startsWith('md2nativedocx: ') && line.trim().length > 0);
+}
+
+/** Write a plain-text log next to the output .docx (same basename, `.log`
+ * extension) so a click-right export (no VS Code Problems panel in view) has
+ * somewhere durable to point to — spec §10, "surface warnings". Written on
+ * every successful export, not just when there are warnings, for a
+ * consistent, discoverable location. */
+function writeExportLog({ input, output, warnings, rawStderr }) {
+  const logPath = extname(output).toLowerCase() === '.docx'
+    ? output.slice(0, -extname(output).length) + '.log'
+    : `${output}.log`;
+  const lines = [
+    'md2nativedocx export log',
+    `Date: ${new Date().toISOString()}`,
+    `Input: ${input}`,
+    `Output: ${output}`,
+    `Warnings: ${warnings.length}`,
+    '',
+  ];
+  if (warnings.length > 0) {
+    lines.push(...warnings.map((w) => `- ${w.replace(/^md2nativedocx:\s*(warning:\s*)?/, '')}`), '');
+  } else {
+    lines.push('No warnings.', '');
+  }
+  if (rawStderr && rawStderr.trim().length > 0) {
+    lines.push('--- Raw Pandoc/tool output ---', rawStderr.trimEnd(), '');
+  }
+  writeFileSync(logPath, lines.join('\n'), 'utf8');
+  return logPath;
 }
 
 /** A fresh, empty temp directory for this run's SmartArt part hand-off. */

@@ -1,6 +1,6 @@
 /**
  * SmartArt dispatch: classify a flowchart and, if eligible, run the matching
- * generator (`FUTURE_mmd2smartart_SPEC.md` §7 step 5). Centralizes the
+ * generator (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §7 step 5). Centralizes the
  * classification-result -> generator mapping so callers (the pandoc-filter
  * core bridge) don't each need to know which of `chain.ts`/`tree.ts`/
  * `cycle.ts` handles which {@link SmartArtLayout}.

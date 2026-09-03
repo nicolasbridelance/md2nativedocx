@@ -1,6 +1,6 @@
 # TODO — `md2nativedocx`
 
-> Plan de travail vivant, aligné sur `cahier_des_charges.md` (le **quoi/pourquoi**) et `AGENTS.md`
+> Plan de travail vivant, aligné sur `docs/specs/cahier_des_charges.md` (le **quoi/pourquoi**) et `AGENTS.md`
 > (le **comment**). Ce fichier reflète l'état réel du repo à la date de dernière mise à jour.
 > Cochez les cases au fur et à mesure. Toute tâche qui touche à l'API publique de
 > `packages/core`, ajoute une dépendance, ou assouplit une règle de sécurité doit être
@@ -216,8 +216,8 @@ est levé.
     confirmée comme amélioration dans chaque cas inspecté, **mais `--update-baseline` volontairement
     pas exécuté** (revue humaine systématique requise avant, règle du projet — TESTING.md).
 - ✅ Scaffold monorepo npm (racine `package.json`, `tsconfig.base.json`, `.eslintrc.cjs`, `.gitignore`)
-- ✅ Docs de gouvernance : `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `PULL_REQUEST_TEMPLATE.md`,
-  templates d'issues (`bug_report.md`, `feature_request.md`)
+- ✅ Docs de gouvernance : `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/PULL_REQUEST_TEMPLATE.md`,
+  templates d'issues (`.github/ISSUE_TEMPLATE/bug_report.md`, `.github/ISSUE_TEMPLATE/feature_request.md`)
 - ✅ Environnement : Pandoc 3.1.3 + Lua 5.4 installés dans le Codespace (figés dans
   `.devcontainer/`, PR séparée non mergée — revue humaine obligatoire)
 - ✅ Phase 0 spikes résolus : Dagre choisi (ADR 0001), `RawBlock('openxml')` validé (ADR 0002)
@@ -584,7 +584,7 @@ est levé.
 - [x] **Aucune relation OOXML externe** (`TargetMode="External"` interdit) — règle n°3.
 - [x] Sortie : une chaîne XML unique, autonome, injectable telle quelle.
 - [x] `src/index.ts` : barrel d'export public avec TSDoc sur chaque fonction/type exporté.
-- [x] 🔮 **Futur-proofing** (voir `FUTURE_docx2mermaid_SPEC.md` §4) — implémenté avec un écart
+- [x] 🔮 **Futur-proofing** (voir `docs/specs/FUTURE_docx2mermaid_SPEC.md` §4) — implémenté avec un écart
       assumé par rapport à la spec, tranché avec le mainteneur : `name` reste le label humain sur
       les nœuds (meilleure UX dans le volet Sélection de Word, ce que la spec n'avait pas
       anticipé puisqu'on utilisait déjà `name` ainsi), et l'ID Mermaid d'origine va dans `descr`
@@ -623,16 +623,16 @@ est levé.
       usage CLI, licence CC0.
 - [x] `CONTRIBUTING.md` : mapping §6 comme point d'entrée des contributions externes.
 
-## Phase 2 — Extension VS Code voir aussi UX_SPEC.md
+## Phase 2 — Extension VS Code voir aussi docs/specs/UX_SPEC.md
 
-- [x] **`packages/vscode-extension/` scaffoldé et fonctionnel (2026-08-07)**, Partie 1 d'UX_SPEC.md
+- [x] **`packages/vscode-extension/` scaffoldé et fonctionnel (2026-08-07)**, Partie 1 d'docs/specs/UX_SPEC.md
       au complet : détection automatique des blocs ```` ```mermaid ```` (`src/mermaidBlocks.ts`,
       pur — pas d'API vscode, testable en `node:test` sans Extension Development Host), CodeLens
       "⚙️ Exporter en Word" + "Exporter le bloc seul" au-dessus de chaque bloc
       (`src/codeLensProvider.ts`), pastille de barre de statut redondante avec le CodeLens
       (`src/statusBar.ts`), Palette de Commandes en filet de sécurité, walkthrough d'accueil
       (`contributes.walkthroughs`, 3 étapes), icône `icon.svg` (losange + poignées, rationale dans
-      UX_SPEC.md). Les 4 états de l'export (repos/en cours/succès/erreur) implémentés dans
+      docs/specs/UX_SPEC.md). Les 4 états de l'export (repos/en cours/succès/erreur) implémentés dans
       `src/extension.ts` : `vscode.window.withProgress` (jamais de gel silencieux), toast succès
       avec "Ouvrir dans Word"/"Révéler dans l'explorateur", toast erreur avec action de réparation
       contextuelle — jamais de stack trace brute (va dans l'Output Channel).
@@ -647,7 +647,7 @@ est levé.
     `exportDocument()` directement sur le module compilé.
   - Réglage exposé volontairement réduit à un seul (`md2nativedocx.outputDirectory`, vide par
     défaut = même dossier que la source, "zéro config avant le premier usage") : les deux autres
-    réglages mentionnés dans `cahier_des_charges.md`/`UX_SPEC.md` (choix Dagre/Graphviz,
+    réglages mentionnés dans `docs/specs/cahier_des_charges.md`/`docs/specs/UX_SPEC.md` (choix Dagre/Graphviz,
     `reference.docx` personnalisé) n'existent pas encore côté CLI — les exposer aurait été un
     réglage sans effet, pas une vraie option.
   - **Nouvelles dépendances (escaladées et approuvées par l'utilisateur avant ajout, voir
@@ -691,7 +691,7 @@ est levé.
       republié** : décision du mainteneur d'attendre un bundling avec d'autres fonctionnalités
       plutôt qu'un `npm run publish` dédié uniquement à la doc — republication et bump de version à
       faire au moment de ce bundling.
-- [ ] **Aperçu (Phase 2.5, UX_SPEC.md)** — pas commencé, prérequis explicitement posé comme
+- [ ] **Aperçu (Phase 2.5, docs/specs/UX_SPEC.md)** — pas commencé, prérequis explicitement posé comme
       postérieur au cœur ci-dessus. Rappel de la limite qui ne doit pas être assouplie sans
       décision humaine explicite : lecture seule stricte, aucune interaction d'édition.
 - [ ] **Tests manuels dans un vrai VS Code** (pas seulement l'Extension Development Host
@@ -719,7 +719,7 @@ est levé.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
-Cadrage complet dans `cahier_des_charges_google_slides.md` et `FUTURE_mmd2smartart_SPEC.md`.
+Cadrage complet dans `docs/specs/cahier_des_charges_google_slides.md` et `docs/specs/FUTURE_mmd2smartart_SPEC.md`.
 Priorisation décidée par le mainteneur (2026-09-03) : Slides et SmartArt en parallèle (spikes bon
 marché, ne touchent pas la production), avant les diagrammes de séquence (gros effort from-scratch)
 et l'add-in Word (canal de distribution entièrement nouveau).
@@ -821,7 +821,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       gérait pas la déclaration `<?xml ... ?>` (les fragments du traducteur existant n'en émettent
       jamais, contrairement aux parties SmartArt qui sont des fichiers autonomes). Monorepo entier
       revérifié vert (build/typecheck/lint/tous les tests des 4 packages).
-- [x] **`FUTURE_mmd2smartart_SPEC.md` révisée (2026-09-03)** — §3/§3.1 (nouveau)/§4/§7 mis à jour :
+- [x] **`docs/specs/FUTURE_mmd2smartart_SPEC.md` révisée (2026-09-03)** — §3/§3.1 (nouveau)/§4/§7 mis à jour :
       recette réelle à 4 parties, décision de ne plus utiliser les URNs `hierarchy1`/`process1`
       de Word, statut d'avancement par générateur (chain livré, tree en cours au moment de la
       révision, cycle pas commencé), plafond de profondeur signalé comme point ouvert (résolu
@@ -900,6 +900,41 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       tests), rendu LibreOffice à l'appui. **Reste explicitement hors scope de cet item** : hover
       provider + CodeLens conditionnel (spec §10.1), note de fallback dans le document généré
       (spec §10.3) — pas commencés.
+- [x] **Note de fallback dans le document généré, expédition des warnings, réglage de template de
+      référence (2026-09-03)** — 3 items priorisés explicitement par le mainteneur, tous livrés :
+      1. **Note de fallback (spec §10.3)** — `buildSmartArtFallbackNoteXml()` dans
+         `packages/core/src/smartart/embed.ts`, exportée depuis le barrel public. `md2nativedocx-
+         core.mjs` l'appelle quand `MD2NATIVEDOCX_SMARTART_DIR` est positionnée et
+         `classifyTopology()` rejette le diagramme (jamais quand SmartArt n'a pas été tenté, ni sur
+         un SmartArt réussi). Phrase discrète (italique, gris `808080`, formatage direct plutôt
+         qu'un style nommé — "ou équivalent" autorisé par la spec) juste sous le diagramme, message
+         spécifique par `SmartArtIneligibleReason` (pas un disclaimer générique). Vérifié par rendu
+         LibreOffice réel.
+      2. **Warnings remontés** — `parseMermaid()`'s `warnings` (jusque-là silencieusement ignorés
+         dans le pont Pandoc) sont écrits sur stderr, préfixés `md2nativedocx: warning: `, avec le
+         message existant de repli SmartArt. `md2nativedocx.mjs` (CLI) compte ces lignes dans le
+         stderr capturé de Pandoc, écrit un résumé sur stdout (`Warnings: N (see fichier.log)`) et
+         un fichier `.log` texte à côté du `.docx` (même nom de base, écrit à **chaque** export
+         réussi, pas seulement s'il y a des warnings). Côté VS Code, `exportService.ts` relit ce
+         `.log` (`warningCount`/`logPath` dans `ExportResult`) et `extension.ts` affiche un toast
+         `showWarningMessage` ("Exported: X (with N warning(s))") avec une action "View warnings"
+         qui ouvre le `.log`.
+      3. **Réglage de template de référence** — `md2nativedocx.referenceDocument` (nouvelle
+         propriété de configuration VS Code, miroir de `--reference-doc` de Pandoc), résolue contre
+         le dossier de l'espace de travail si relative, repli silencieux vers le template intégré
+         si le fichier est introuvable (même philosophie que `resolvePandocBin`). Câblé via
+         `MD2NATIVEDOCX_REFERENCE_DOC` (même mécanisme que `MD2NATIVEDOCX_PANDOC_BIN`) jusqu'à
+         `md2nativedocx.mjs`. Répond au volet "corporate" (voir item correspondant plus bas dans ce
+         fichier, marqué fait) — le mécanisme choisi est le réglage, pas une commande "charger un
+         fichier de référence".
+      Tests : nouveaux tests unitaires (`smartart-embed.test.ts`, `parser.test.ts` pour le point 1
+      voisin ci-dessous), `smartart-dispatch.test.mjs` (note conditionnelle + warnings sur stderr),
+      `cli.test.mjs` (résumé stdout, contenu du `.log`, réglage de référence honoré/replié),
+      `exportService.test.ts` (warningCount/logPath). l10n : nouvelles chaînes traduites dans les
+      5 bundles (`fr`/`de`/`es`/`ru`/`zh-cn`) + `package.nls.*.json`. Monorepo entier revérifié vert
+      (build/typecheck/lint/213 tests). **Hors scope, non tenté** : hover provider + CodeLens
+      conditionnel (spec §10.1), commentaire Word natif en canal secondaire (spec §10.3, la spec le
+      marque optionnel).
 - [ ] Traducteur `.pptx` de production (spec Google Slides §5-§7) — pas commencé, en attente de la
       vérification manuelle Google Slides/PowerPoint listée ci-dessus.
 - [x] **Catalogue complet des layouts SmartArt (2026-09-03)** — `docs/smartart-layout-catalog.md`,
@@ -1001,12 +1036,17 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       (tous deux nécessitent un vrai échantillon Word extrait par le mainteneur, pas quelque chose
       qui peut être fait à l'aveugle) ; profondeur d'arbre adaptative > 2 (chantier de conception à
       part entière, pas une extension incrémentale).
-- [ ] **Durcissement du parseur Mermaid** (`packages/core/src/parser/parser.ts`) — bugs trouvés en
-      construisant `docs/smartart-compliance-table.md` (2026-09-03), tous vérifiés empiriquement,
-      bénéficiant aux **3** stratégies de sortie à la fois (pas spécifique à SmartArt) :
-      - texte de nœud entre guillemets (`id["texte"]`, la syntaxe recommandée par Mermaid pour
-        l'Unicode) garde les guillemets littéralement dans le label — `id[texte]` sans guillemets
-        n'a pas ce problème ;
+- [x] **Bug des guillemets englobants corrigé (2026-09-03)** — `stripQuotedLabel()` ajouté à
+      `packages/core/src/parser/parser.ts`, appliqué au texte de nœud (`parseNodeStatement`,
+      `parseNodeRef`) et au libellé d'arête (`parseEdgeStatement`). `id["texte"]` (syntaxe
+      recommandée par Mermaid pour l'Unicode) produit désormais un label propre, sans les guillemets
+      parasites ; un guillemet interne non englobant reste intact. Priorité maintenue par le
+      mainteneur avant toute mise en avant publique du produit. Tests unitaires + vérification par
+      rendu LibreOffice réel. `docs/smartart-compliance-table.md` §5.3 mis à jour en conséquence.
+- [ ] **Reste du durcissement du parseur Mermaid** (`packages/core/src/parser/parser.ts`) — bugs
+      trouvés en construisant `docs/smartart-compliance-table.md` (2026-09-03), tous vérifiés
+      empiriquement, bénéficiant aux **3** stratégies de sortie à la fois (pas spécifique à
+      SmartArt) :
       - `<br/>`, les codes d'entité Mermaid (`#quot;`, `#9829;`), et les "Markdown Strings"
         (backticks + `**gras**`) ne sont jamais interprétés, tous restent littéraux ;
       - directions `TB` (alias documenté de `TD`), `BT`, `RL` non reconnues, retombent
@@ -1042,13 +1082,12 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       dans `docs/adr/spikes/spike-smartart/spike.md` Round 6. `Funnel` (arité non testée) reste la
       seule variante non vérifiée de cette famille, à reconsidérer seulement si un contre-exemple
       apparaît.
-- [ ] **Volet "corporate"** (noté par le mainteneur, 2026-09-03, à faire après le tableau ci-dessus) :
-      documenter comment un utilisateur charge le template Word de son entreprise pour générer
-      directement dans ce template, depuis l'extension VS Code — via un réglage
-      (`md2nativedocx.referenceDoc` ou équivalent, chemin vers un `.docx` de référence personnalisé,
-      dans l'esprit de `--reference-doc` de Pandoc déjà utilisé en interne pour
-      `packages/cli/assets/reference.docx`) ou une commande explicite "Charger un fichier de
-      référence". Mécanisme d'exposition côté VS Code pas encore déterminé — à concevoir.
+- [x] **Volet "corporate" (2026-09-03)** — décision du mainteneur : un réglage, pas une commande.
+      `md2nativedocx.referenceDocument` (VS Code, chemin vers un `.docx` personnalisé, résolu contre
+      le dossier de l'espace de travail si relatif) → `MD2NATIVEDOCX_REFERENCE_DOC` →
+      `md2nativedocx.mjs` (repli silencieux vers `packages/cli/assets/reference.docx` si le fichier
+      est introuvable). Voir l'item "Note de fallback ... réglage de template de référence" plus
+      haut dans ce fichier pour le détail complet.
 
 ---
 

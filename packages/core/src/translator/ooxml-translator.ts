@@ -587,7 +587,7 @@ function renderSubgraph(
  * label, which is what Word shows in its Selection Pane (a friendlier UX than
  * a raw Mermaid id like "A" or "decision1"), while `descr` — a standard OOXML
  * accessibility field, invisible in Word — carries the original id so a
- * future docx2mermaid reader can recover it (`FUTURE_docx2mermaid_SPEC.md`
+ * future docx2mermaid reader can recover it (`docs/specs/FUTURE_docx2mermaid_SPEC.md`
  * §4). Cheap to add now, while the translator is still actively worked on;
  * expensive to retrofit once the output format and golden tests are frozen.
  */
@@ -922,7 +922,7 @@ function bentConnectorGeometry(points: { x: number; y: number }[]): string {
  * another node — see {@link connectorGeometry}.
  *
  * `cNvPr/name` is set to `"{mermaidFromId}--{mermaidToId}"` rather than a
- * generic label (spec follow-up, `FUTURE_docx2mermaid_SPEC.md` §4) — no
+ * generic label (spec follow-up, `docs/specs/FUTURE_docx2mermaid_SPEC.md` §4) — no
  * downside here, unlike node `name`: connectors don't currently carry a
  * friendlier alternative Word would otherwise show in its Selection Pane.
  */
