@@ -3,7 +3,7 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.3.0] — 2026-09-03
 
 ### Added
 - A diagram with a simple chain, tree, or cycle shape now exports as a native, editable Word
@@ -13,6 +13,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   visible in-document note when a diagram was eligible-looking but couldn't be converted.
 - `md2nativedocx.smartArt.enabled` setting (default: on) to force the canvas fallback for every
   diagram instead, e.g. for consistent shape rendering across a whole document.
+
+### Changed
+- New extension icon: a split diamond (Mermaid graph on one half, paragraph lines on the other),
+  visualizing the graph → Word-text conversion the extension does.
 
 ## [0.2.0] — 2026-09-02
 
