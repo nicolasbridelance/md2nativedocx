@@ -11,6 +11,8 @@
   "scripts": {
     "build": "echo \"pandoc-filter: no build step (Lua + JS bridge)\"",
     "typecheck": "echo \"pandoc-filter: no typecheck step\"",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "pretest:ci": "mkdir -p reports",
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs"
   }
 }

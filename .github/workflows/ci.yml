@@ -29,11 +29,24 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Unit + golden tests
-        run: npm run test
+      - name: Unit + golden tests (with JUnit + LCOV reports)
+        run: npm run test:ci
 
       - name: Fuzz tests (core)
         run: npm run test:fuzz
+
+      - name: Write job summary
+        if: always()
+        run: node scripts/ci-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test & coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.sha }}
+          path: packages/*/reports/**
+          retention-days: 90
+          if-no-files-found: warn
 
   audit:
     name: npm audit (fail on high/critical)
@@ -45,7 +58,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Audit
+      - name: Save audit report (dated artifact, doesn't gate)
+        if: always()
+        run: |
+          mkdir -p reports
+          npm audit --json > reports/npm-audit.json || true
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ github.sha }}
+          path: reports/npm-audit.json
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Audit (fails the build on high/critical)
         run: npm audit --audit-level=high
 
   secret-scan:

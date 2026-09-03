@@ -11,7 +11,9 @@
   "scripts": {
     "build": "echo \"cli: no build step (plain JS)\"",
     "typecheck": "echo \"cli: no typecheck step\"",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "pretest:ci": "mkdir -p reports",
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs"
   },
   "dependencies": {
     "@md2nativedocx/pandoc-filter": "0.1.0"

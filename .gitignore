@@ -5,6 +5,8 @@ dist-test/
 *.log
 .DS_Store
 coverage/
+reports/
+packages/*/reports/
 .env
 .vscode-test/
 *.vsix
