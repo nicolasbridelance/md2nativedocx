@@ -18,6 +18,23 @@ test('parses LR direction', () => {
   assert.equal(ast.direction, 'LR');
 });
 
+test('TB is recognized as Mermaid\'s own documented alias for TD', () => {
+  const { ast, warnings } = parseMermaid('graph TB\n  A --> B');
+  assert.equal(ast.direction, 'TD');
+  assert.equal(warnings.length, 0);
+});
+
+test('BT/RL are recognized but out of V1 scope: fall back to TD with a specific warning', () => {
+  const bt = parseMermaid('graph BT\n  A --> B');
+  assert.equal(bt.ast.direction, 'TD');
+  assert.ok(bt.warnings.some((w) => w.includes('"BT"') && w.includes('not supported')));
+  assert.equal(bt.ast.edges.length, 1, 'the rest of the diagram must still parse');
+
+  const rl = parseMermaid('graph RL\n  A --> B');
+  assert.equal(rl.ast.direction, 'TD');
+  assert.ok(rl.warnings.some((w) => w.includes('"RL"') && w.includes('not supported')));
+});
+
 test('parses node shapes (spec §6.1)', () => {
   const { ast } = parseMermaid(
     'graph TD\n  A[rect]\n  B(round)\n  C([stadium])\n  D{diamond}\n  E[(cylinder)]\n  F((ellipse))',
@@ -346,6 +363,21 @@ test('warns when a class references an undefined classDef', () => {
   assert.ok(warnings.some((w) => w.includes('not defined')));
 });
 
+test('the ::: class shorthand applies on a standalone node declaration, not just at an edge endpoint', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  classDef crit fill:#f00\n  A[Start]:::crit\n  A --> B',
+  );
+  assert.equal(ast.nodes.find((n) => n.id === 'A')!.fill, 'FF0000');
+  assert.equal(warnings.length, 0);
+});
+
+test('bare (bracket-less) standalone id:::class also applies', () => {
+  const { ast } = parseMermaid('graph TD\n  classDef crit fill:#f00\n  A:::crit\n  A --> B');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.fill, 'FF0000');
+  assert.equal(a.label, 'A');
+});
+
 test('strips surrounding double quotes from a node label (Mermaid\'s recommended Unicode syntax)', () => {
   const { ast } = parseMermaid('graph TD\n  A["Hello, World"] --> B[Plain]');
   const a = ast.nodes.find((n) => n.id === 'A')!;
@@ -369,6 +401,27 @@ test('does not strip an internal, non-surrounding quote', () => {
   const { ast } = parseMermaid('graph TD\n  A[He said "hi"]');
   const a = ast.nodes.find((n) => n.id === 'A')!;
   assert.equal(a.label, 'He said "hi"');
+});
+
+test('<br/> (and variants) in a label becomes a space rather than leaking the raw tag', () => {
+  const { ast } = parseMermaid('graph TD\n  A["Line1<br/>Line2"]\n  B["Line1<br>Line2"]\n  C["Line1<br />Line2"]');
+  const byId = new Map(ast.nodes.map((n) => [n.id, n.label]));
+  assert.equal(byId.get('A'), 'Line1 Line2');
+  assert.equal(byId.get('B'), 'Line1 Line2');
+  assert.equal(byId.get('C'), 'Line1 Line2');
+});
+
+test('Mermaid entity codes are decoded (numeric and the documented named ones)', () => {
+  const { ast } = parseMermaid('graph TD\n  A["I #9829; Mermaid"]\n  B["#quot;quoted#quot;"]');
+  const byId = new Map(ast.nodes.map((n) => [n.id, n.label]));
+  assert.equal(byId.get('A'), 'I ♥ Mermaid');
+  assert.equal(byId.get('B'), '"quoted"');
+});
+
+test('a backtick-delimited Markdown string has its delimiters and emphasis markers stripped, not shown literally', () => {
+  const { ast } = parseMermaid('graph TD\n  A["`**bold** and _italic_`"]');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.label, 'bold and italic');
 });
 
 test('warns on unclosed subgraph', () => {

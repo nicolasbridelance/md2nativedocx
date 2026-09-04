@@ -1257,23 +1257,35 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       parasites ; un guillemet interne non englobant reste intact. Priorité maintenue par le
       mainteneur avant toute mise en avant publique du produit. Tests unitaires + vérification par
       rendu LibreOffice réel. `docs/smartart-compliance-table.md` §5.3 mis à jour en conséquence.
-- [ ] **Reste du durcissement du parseur Mermaid** (`packages/core/src/parser/parser.ts`) — bugs
-      trouvés en construisant `docs/smartart-compliance-table.md` (2026-09-03), tous vérifiés
-      empiriquement, bénéficiant aux **3** stratégies de sortie à la fois (pas spécifique à
-      SmartArt) :
-      - `<br/>`, les codes d'entité Mermaid (`#quot;`, `#9829;`), et les "Markdown Strings"
-        (backticks + `**gras**`) ne sont jamais interprétés, tous restent littéraux ;
-      - directions `TB` (alias documenté de `TD`), `BT`, `RL` non reconnues, retombent
-        silencieusement à `TD` ;
-      - libellé d'arête au milieu du tiret (`A-- texte -->B`) non supporté, seule la forme
-        `A-->|texte|B` l'est ;
-      - `classDef` échoue dès que `fill:` n'est pas la première propriété (`stroke:...,fill:...`),
-        ou avec plusieurs classes (`classDef a,b ...`) ;
-      - `:::` (raccourci de classe) ne fonctionne que sur une extrémité d'arête, jamais sur une
-        déclaration de nœud isolée (`A[Texte]:::foo` seul sur sa ligne) ;
-      - arêtes multidirectionnelles (`o--o`, `x--x`, `<-->`), liens invisibles (`~~~`),
-        modificateurs de longueur (`---->`), chaînage sur une ligne (`A-->B-->C`), opérateur `&`
-        (`a --> b & c`), `style`/`linkStyle` : aucun n'est reconnu.
+- [x] **Durcissement du parseur Mermaid — dernier lot, tout est traité (2026-09-04)**
+      (`packages/core/src/parser/parser.ts`) — bugs trouvés en construisant
+      `docs/smartart-compliance-table.md` (2026-09-03), tous vérifiés empiriquement, bénéficiant
+      aux **3** stratégies de sortie à la fois (pas spécifique à SmartArt). Le libellé mi-chaîne,
+      les arêtes multidirectionnelles/invisibles/chaînage/`&`, et `classDef`/`style`/`linkStyle`
+      avaient déjà été traités dans les sessions précédentes (voir plus haut dans ce fichier) ;
+      restaient trois trous, tous corrigés aujourd'hui :
+      - **`<br/>`, codes d'entité Mermaid, "Markdown Strings"** : `normalizeLabelText()`, un
+        nouveau point de passage unique appliqué partout où un libellé quitte `stripQuotedLabel()`
+        (nœud, arête, `@{shape: ..., label: ...}`) — `<br/>`/`<br>`/`<br />` devient un espace (pas
+        de support multi-ligne côté runs OOXML, donc pas de vrai retour à la ligne possible, mais
+        laisser fuir la balise brute n'était pas acceptable non plus) ; les codes d'entité
+        (`#9829;` numérique, `#quot;`/`#amp;`/`#lt;`/`#gt;`/`#nbsp;`/`#apos;` nommés) sont décodés
+        en le caractère réel ; une chaîne délimitée par des backticks a ses délimiteurs et ses
+        marqueurs d'emphase (`**`, `__`, `*`, `_`) retirés plutôt qu'affichés littéralement — pas de
+        support de runs riches pour un vrai gras/italique, donc dégradation en texte plat plutôt
+        que markup brut.
+      - **Directions `TB`/`BT`/`RL`** : `TB` (alias documenté de `TD`) mappe directement ; `BT`/`RL`
+        restent hors du scope V1 (spec §5.1, TD/LR seulement) mais produisent désormais un
+        avertissement explicite ("not supported in V1") et retombent sur `TD`, au lieu de tomber
+        dans le message générique "Unsupported line ignored" qui n'expliquait rien.
+      - **`:::` sur une déclaration de nœud isolée** : `parseNodeStatement()` reconnaît maintenant
+        l'`:::` inline comme `parseNodeRef()` le faisait déjà côté arête. Bug **connexe** découvert
+        au passage et corrigé dans les deux fonctions : la regex `(.+?):::` exigeait un préfixe non
+        vide, donc `A:::crit` (id nu, sans forme) échouait même à une extrémité d'arête malgré le
+        commentaire de code prétendant le supporter — `(.*?):::` corrige les deux chemins.
+      Vérifié : 7 nouveaux tests unitaires (`parser.test.ts`), suite `core` complète 184/184 (×3
+      exécutions, propriétés `fast-check` incluses), `typecheck`/`lint` propres, suite monorepo
+      complète 250/250.
       Détail complet avec preuves empiriques dans `docs/smartart-compliance-table.md` §5.
 - [ ] **Profondeur d'arbre adaptative (> 2)** pour `tree.ts` — le partage de hauteur fixe (35 %
       nœud / 55 % rangée d'enfants) ne peut pas simplement se répéter à un niveau supplémentaire

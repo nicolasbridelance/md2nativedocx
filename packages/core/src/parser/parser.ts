@@ -212,7 +212,7 @@ function parseAtShapeSyntax(rest: string): { shape: NodeShape; label: string | n
   if (!rest.startsWith('@{') || !rest.endsWith('}')) return null;
   const props = parseAtShapeProps(rest.slice(2, -1));
   const shape = props.has('shape') ? normalizeShapeAlias(props.get('shape')!) : 'rect';
-  const label = props.has('label') ? stripQuotedLabel(props.get('label')!.trim()) : null;
+  const label = props.has('label') ? normalizeLabelText(stripQuotedLabel(props.get('label')!.trim())) : null;
   return { shape, label };
 }
 
@@ -314,6 +314,46 @@ function stripQuotedLabel(text: string): string {
     return text.slice(1, -1);
   }
   return text;
+}
+
+/** Mermaid's named HTML-derived entity codes (written without the leading
+ * `&`, e.g. `#quot;`), the ones Mermaid's own docs call out explicitly. */
+const NAMED_ENTITIES: ReadonlyArray<readonly [string, string]> = [
+  ['quot', '"'],
+  ['amp', '&'],
+  ['lt', '<'],
+  ['gt', '>'],
+  ['nbsp', ' '],
+  ['apos', "'"],
+];
+
+/**
+ * Decode the small set of inline-text conveniences Mermaid supports that this
+ * parser otherwise passed through as literal characters (found via
+ * `docs/smartart-compliance-table.md` §5, logged in `TODO.md`):
+ *  - `<br/>` (and `<br>`, `<br />`, case-insensitive) becomes a space — there
+ *    is no multi-line text-run support in the OOXML/DrawingML output this
+ *    parser feeds, so a real line break isn't achievable, but leaking the
+ *    raw tag into the rendered label isn't acceptable either (V1 tolerance).
+ *  - Mermaid's entity codes (`#quot;`, `#9829;`, ...) are decoded to their
+ *    character — the numeric form via its Unicode code point, plus the
+ *    handful of named entities Mermaid documents.
+ *  - A "Markdown string" (a label wrapped in backticks) has its delimiters
+ *    and emphasis markers (`**`, `__`, `*`, `_`) stripped rather than shown
+ *    literally — there's no rich-text run support to actually bold/italicize
+ *    a fragment, so this degrades to plain text instead of raw markup
+ *    characters leaking into the label.
+ */
+function normalizeLabelText(text: string): string {
+  let result = text.replace(/<br\s*\/?>/gi, ' ');
+  result = result.replace(/#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)));
+  for (const [name, char] of NAMED_ENTITIES) {
+    result = result.split(`#${name};`).join(char);
+  }
+  if (result.length >= 2 && result.startsWith('`') && result.endsWith('`')) {
+    result = result.slice(1, -1).replace(/\*\*|__|\*|_/g, '');
+  }
+  return result;
 }
 
 /**
@@ -437,10 +477,20 @@ function joinBracketContinuations(lines: string[]): string[] {
   return result;
 }
 
-/** Net count of `[`/`(`/`{` minus `]`/`)`/`}` in a line. */
+/**
+ * Net count of `[`/`(`/`{` minus `]`/`)`/`}` in a line, ignoring anything
+ * inside a double-quoted label (a literal bracket character in quoted text,
+ * e.g. `n["["]`, must not be mistaken for an unterminated statement).
+ */
 function bracketDelta(line: string): number {
   let delta = 0;
+  let inQuotes = false;
   for (const ch of line) {
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (inQuotes) continue;
     if (ch === '[' || ch === '(' || ch === '{') delta++;
     else if (ch === ']' || ch === ')' || ch === '}') delta--;
   }
@@ -486,10 +536,22 @@ export function parseMermaid(text: string): ParseResult {
     const line = rawLine.trim();
     if (line.length === 0) continue;
 
-    // Header line: graph TD / flowchart LR
-    const header = line.match(/^(?:graph|flowchart)\s+(TD|LR)\b/i);
+    // Header line: graph TD / flowchart LR. `TB` is Mermaid's own documented
+    // alias for `TD` (top-to-bottom either way) and maps straight through;
+    // `BT`/`RL` are real Mermaid directions this parser's V1 scope doesn't
+    // lay out (spec §5.1, TD/LR only), so they're called out with a specific
+    // warning and fall back to TD rather than silently defaulting to it via
+    // the generic "Unsupported line ignored" catch-all below (found via
+    // `docs/smartart-compliance-table.md` §5, logged in `TODO.md`).
+    const header = line.match(/^(?:graph|flowchart)\s+(TD|TB|LR|BT|RL)\b/i);
     if (header) {
-      direction = header[1]!.toUpperCase() as 'TD' | 'LR';
+      const requested = header[1]!.toUpperCase();
+      if (requested === 'BT' || requested === 'RL') {
+        warnings.push(`Direction "${requested}" is not supported in V1 (only TD/LR); using TD.`);
+        direction = 'TD';
+      } else {
+        direction = requested === 'TB' ? 'TD' : (requested as 'TD' | 'LR');
+      }
       continue;
     }
     // Allow a bare "graph"/"flowchart" with no direction.
@@ -622,6 +684,7 @@ export function parseMermaid(text: string): ParseResult {
       if (!registerNode(nodes, node.id, node.label, node.shape)) {
         warnings.push(`Node id "${node.id}" is reserved and was ignored.`);
       }
+      applyClassToNode(nodes, pendingStyles, classDefs, node.id, node.className, warnings);
       attachToCurrentSubgraph(subgraphStack, node.id, subgraphAttached);
       continue;
     }
@@ -768,27 +831,43 @@ function applyClassToNode(
   applyNodeStyle(nodes, pendingStyles, nodeId, patch);
 }
 
-/** Parse a node statement like `A[Text]`, `B{Decision}`, or bare `C`. */
-function parseNodeStatement(line: string): FlowNode | null {
+/**
+ * Parse a node statement like `A[Text]`, `B{Decision}`, or bare `C` —
+ * including an optional inline class shorthand (`A[Text]:::crit` or bare
+ * `A:::crit`), which {@link parseNodeRef} already handled at edge endpoints
+ * but this standalone-declaration path did not (found via
+ * `docs/smartart-compliance-table.md` §5, logged in `TODO.md`).
+ */
+function parseNodeStatement(
+  line: string,
+): { id: string; label: string; shape: NodeShape; className: string | null } | null {
   const idMatch = line.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);
   if (!idMatch) return null;
   const id = idMatch[1]!;
-  const rest = idMatch[2]!.trim();
+  let rest = idMatch[2]!.trim();
+
+  // Optional inline class: `A[Text]:::crit` or `A:::crit`.
+  let className: string | null = null;
+  const classMatch = rest.match(/^(.*?):::\s*([A-Za-z0-9_-]+)\s*$/);
+  if (classMatch) {
+    className = classMatch[2]!;
+    rest = classMatch[1]!.trim();
+  }
 
   if (rest.length === 0) {
-    return { id, label: id, shape: 'rect' };
+    return { id, label: id, shape: 'rect', className };
   }
 
   const atShape = parseAtShapeSyntax(rest);
   if (atShape) {
-    return { id, label: atShape.label ?? id, shape: atShape.shape };
+    return { id, label: atShape.label ?? id, shape: atShape.shape, className };
   }
 
   for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
     // Longest patterns first to avoid `(` matching `((`.
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: stripQuotedLabel(inner), shape };
+      return { id, label: normalizeLabelText(stripQuotedLabel(inner)), shape, className };
     }
   }
 
@@ -807,7 +886,7 @@ function parseNodeRef(
 
   // Optional inline class: `A[Text]:::crit` or `A:::crit`.
   let className: string | null = null;
-  const classMatch = rest.match(/^(.+?):::\s*([A-Za-z0-9_-]+)\s*$/);
+  const classMatch = rest.match(/^(.*?):::\s*([A-Za-z0-9_-]+)\s*$/);
   if (classMatch) {
     className = classMatch[2]!;
     rest = classMatch[1]!.trim();
@@ -823,7 +902,7 @@ function parseNodeRef(
   for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: stripQuotedLabel(inner), shape, className };
+      return { id, label: normalizeLabelText(stripQuotedLabel(inner)), shape, className };
     }
   }
   return null;
@@ -862,7 +941,7 @@ function matchMidLabelEdge(
     if (depth === 0) {
       const closing = family.closings.find((c) => line.startsWith(c.token, j));
       if (closing) {
-        const label = stripQuotedLabel(line.slice(start + family.open.length, j).trim());
+        const label = normalizeLabelText(stripQuotedLabel(line.slice(start + family.open.length, j).trim()));
         return { type: closing.type, end: j + closing.token.length, label };
       }
     }
@@ -898,7 +977,7 @@ function parseEdgeChain(line: string): ChainEdge[] | null {
         let label: string | null = null;
         const labelMatch = line.slice(end).match(/^\|([^|]*)\|/);
         if (labelMatch) {
-          label = stripQuotedLabel(labelMatch[1]!.trim());
+          label = normalizeLabelText(stripQuotedLabel(labelMatch[1]!.trim()));
           end += labelMatch[0].length;
         }
         matches.push({ type: op.type, start: i, end, label });

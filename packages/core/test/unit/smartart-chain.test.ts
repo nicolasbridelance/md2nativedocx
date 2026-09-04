@@ -171,7 +171,11 @@ test('a node with no classDef gets an empty spPr (no fill override)', () => {
 });
 
 test('property: output is always well-formed XML for arbitrary hostile chain labels', () => {
-  const hostileText = fc.string({ maxLength: 30 });
+  // Excludes `"`: this text is embedded in a quoted Mermaid label
+  // (`id["text"]`), and Mermaid's quoted-label syntax has no escape for a
+  // literal quote -- that's a source-level Mermaid limitation, not a case
+  // this test's escaping guarantee is meant to cover.
+  const hostileText = fc.string({ maxLength: 30 }).filter((s) => !s.includes('"'));
   fc.assert(
     fc.property(
       fc.array(hostileText, { minLength: 1, maxLength: 10 }),
