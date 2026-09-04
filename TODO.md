@@ -5,6 +5,9 @@
 > Cochez les cases au fur et à mesure. Toute tâche qui touche à l'API publique de
 > `packages/core`, ajoute une dépendance, ou assouplit une règle de sécurité doit être
 > **escaladée à un humain** avant d'être considérée faite (voir `AGENTS.md` → "Escalate to a human").
+>
+> Pour une synthèse courte de l'état actuel + prochaines actions (pas le détail complet
+> ci-dessous) : `HANDOVER.md`.
 
 ---
 

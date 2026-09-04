@@ -90,9 +90,10 @@ validate, to isolate whether the discrepancy comes from us or from the rendering
 
 ## 6. Manual Word acceptance checklist
 
-`test-corpus/word-verification/` — a small hand-picked set of generated `.docx` files
-(`minimal`, `medium-realistic`, `nested-3-levels`, `order-flow`, `crossing-stress-bipartite`) plus
-`CHECKLIST.md`, curated from `test-corpus/visual/fixtures/` specifically to re-probe known
+`test-corpus/word-verification/` — a small hand-picked set of generated `.docx` files (6 flowchart:
+`minimal`, `medium-realistic`, `nested-3-levels`, `order-flow`, `crossing-stress-bipartite`,
+`direction-and-asymmetric-shape`; 3 non-flowchart, added 2026-09-04: `quadrant`, `venn`, `mindmap`)
+plus `CHECKLIST.md`, curated from `test-corpus/visual/fixtures/` specifically to re-probe known
 LibreOffice-only-verified defects and the one documented adversarial crossing case in actual
 desktop Word. This is the evidence for MVP acceptance item 2 in `docs/specs/cahier_des_charges.md`
 §9 ("manual test in real Word before each release") — see `docs/mvp-acceptance-report.md` for the

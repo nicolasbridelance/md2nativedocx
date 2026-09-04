@@ -35,14 +35,28 @@ Markdown + ```mermaid  ──►  Pandoc (MD parsing, tables, styling, ZIP)
                               │
                               └─►  md2nativedocx Lua filter
                                       │
-                                      └─►  core (parser → Dagre layout → OOXML translator)
+                                      └─►  core (per-type parser → layout → OOXML translator)
                                               │
-                                              └─►  native wpg:wgp fragment injected into the .docx
+                                              └─►  native shapes (or SmartArt) injected into the .docx
 ```
 
 The architecture delegates everything that isn't a diagram (Markdown parsing, tables, styling, ZIP
 manipulation) to Pandoc, and builds only the missing piece: layout + OOXML translation of a
 diagram. See `docs/specs/cahier_des_charges.md` (French) for the full detail.
+
+## Supported diagram types
+
+**Flowchart** (`graph`/`flowchart`) is the primary, most complete target — see
+`docs/markdown-mermaid-compliance-table.md` for its full syntax coverage. A chain/tree/cycle-shaped
+flowchart exports as a native, editable Word **SmartArt** graphic instead of plain shapes when
+possible (toggle: `md2nativedocx.smartArt.enabled`); everything else still gets individually
+selectable/editable OOXML shapes with dynamic connectors.
+
+Three more diagram types export as native OOXML shapes: **`quadrantChart`**, **`venn-beta`** (2-3
+sets, true overlapping-circle geometry), and **`mindmap`** (radial layout, all 6 node shapes). Any
+other Mermaid diagram type is recognized and gets a clear in-document note rather than a silently
+wrong flowchart-shaped guess — see `docs/smartart-full-catalog-cross-mermaid.md` and
+`docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` for the roadmap covering the rest.
 
 ## Installation
 
@@ -60,8 +74,9 @@ npm run build
 npx md2nativedocx report.md -o report.docx
 ```
 
-Every ```` ```mermaid ```` block in the document is converted into a native Word drawing group
-(`wpg:wgp`): editable vector shapes, dynamic connectors, native text.
+Every ```` ```mermaid ```` block in the document is converted into a native Word drawing
+(individually selectable/editable vector shapes, dynamic connectors, native text — or a SmartArt
+graphic for an eligible flowchart) — see "Supported diagram types" above.
 
 ## Development
 
@@ -76,10 +91,11 @@ npm run test:visual  # headless LibreOffice render + pixel-diff (CI)
 
 ## Documentation
 
+- `HANDOVER.md` — latest session handover note: what shipped, what's verified, what's next.
 - `docs/specs/cahier_des_charges.md` (French) — the **what** and **why** (spec, phases, scope).
 - `AGENTS.md` — the **how** (conventions, non-negotiable security rules).
 - `docs/adr/` — architecture decisions (layout engine, Pandoc integration).
-- `TESTING.md` — the six testing chapters, what each one guarantees, where it lives.
+- `TESTING.md` — the seven testing chapters, what each one guarantees, where it lives.
 - `docs/compliance/` — license, dependencies, IT risk analysis, non-technical guide.
 - `CONTRIBUTING.md` — how to contribute.
 

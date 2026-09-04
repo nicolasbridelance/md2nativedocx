@@ -3,6 +3,16 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Three new Mermaid diagram types export as native, editable OOXML shapes: `quadrantChart`,
+  `venn-beta` (2-3 sets, true overlapping-circle geometry), and `mindmap` (radial layout, all 6
+  node shapes). No extension-side changes were needed — the same `` ```mermaid `` block detection
+  and export path already worked for any diagram type, only `packages/core`'s translator gained
+  the new modules. Any other still-unsupported Mermaid diagram type continues to get a clear
+  in-document note instead of a silently wrong flowchart-shaped guess.
+
 ## [0.3.0] — 2026-09-03
 
 ### Added

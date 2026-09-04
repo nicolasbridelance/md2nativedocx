@@ -5,7 +5,8 @@ it requires opening these files in **real Microsoft Word** (any recent desktop v
 or macOS. Everything else (crossing-detector report, golden/unit/fuzz/visual-diff tests) is already
 automated — see `docs/mvp-acceptance-report.md`.
 
-6 files, ~3 minutes each. For each one, open it in Word and check:
+9 files, ~3 minutes each (6 flowchart, 3 new non-flowchart types added 2026-09-04). For each one,
+open it in Word and check:
 
 ## 1. `minimal.docx` — baseline sanity
 - [ ] Each shape is individually clickable/selectable (not one merged picture).
@@ -65,6 +66,31 @@ automated — see `docs/mvp-acceptance-report.md`.
       shape correspondence, see `docs/markdown-mermaid-compliance-table.md` §5.2), with its 2-line
       label fully inside the shape, not overflowing.
 - [ ] Same 3 baseline checks as #1 (shapes selectable, connector follows a drag, no text overflow).
+
+## 7. `quadrant.docx` — new (2026-09-04): `quadrantChart`, first non-flowchart diagram type
+- [ ] The 4 quadrant cells render with distinct fill colors and their shared borders form a clean
+      dividing cross (no gap or overlap at the center).
+- [ ] All 4 points (Campaign A-D) are inside their correct quadrant, with a colored dot + a fully
+      legible label (Campaign C's dot should be red, from its `color:` override — the other 3 are
+      the default blue).
+- [ ] Axis labels (Low/High Reach, Low/High Engagement) and the title are legible, not clipped.
+
+## 8. `venn.docx` — new (2026-09-04): `venn-beta`, 3-set overlapping-circle geometry
+- [ ] 3 circles (Design/Code/Writing) render with visible color blending in every overlap region —
+      2-way lenses a distinguishable blend, the center (all 3) a third, darker blend.
+- [ ] All 4 labels (the 3 set names + the 3 pairwise + 1 triple overlap labels — 7 total) are inside
+      their correct region and fully legible, not clipped by a circle's own edge.
+
+## 9. `mindmap.docx` — new (2026-09-04): `mindmap`, radial layout + branch lines
+- [ ] Branch lines (root → each node) are visible, correctly colored per branch, and connect the
+      right pairs of shapes — this is the specific real-render bug found and fixed this session
+      (a schema-valid DrawingML connector element that silently didn't render under LibreOffice;
+      confirming it renders in real Word too closes the loop on that fix).
+- [ ] All 6 node shapes are visually distinct: square (Wireframes), rounded (Backend), circle
+      (root, "Project Plan"), starburst/bang (Marketing), cloud (Moodboard), hexagon (Engineering).
+- [ ] Every label is fully legible, not clipped by its own shape — the other real bug found and
+      fixed this session (font size and cloud/hexagon/bang label width weren't accounting for the
+      diagram's overall scale-to-fit-page factor).
 
 ## Recording the result
 

@@ -1,17 +1,26 @@
 # FUTURE — couverture 100 % des types de diagrammes Mermaid (spec de cadrage)
 
-> Statut (créé 2026-09-04) : **document de planification, zéro implémentation à ce stade** —
-> demande explicite du mainteneur ("pour l'instant on ne fait rien en implémentation"). V1
-> (flowchart uniquement, `docs/markdown-mermaid-compliance-table.md`) est considéré largement
-> terminé ; ce document cadre ce qui reste pour couvrir les 28 autres types de diagrammes que
-> Mermaid supporte aujourd'hui, dans quel ordre, et ce que ça implique pour l'architecture de
-> `packages/core`.
+> Statut (créé 2026-09-04, mis à jour 2026-09-04 même jour, session 4) : **implémentation
+> démarrée** — le cadrage "zéro implémentation" ci-dessous décrivait l'état au moment de l'écriture
+> de ce document ; depuis, le mainteneur a demandé de repartir de l'angle SmartArt (voir
+> `docs/smartart-full-catalog-cross-mermaid.md`) et 3 des 28 types ont été livrés le même jour :
+> `quadrantChart`, `venn-beta`, `mindmap` (voir `TODO.md` Phase 5+ pour le détail de chacun). Le
+> reste de ce document (taxonomie, Phase 0, priorisation) garde sa valeur de référence pour les
+> types encore non traités.
 >
-> Positionnement vis-à-vis des autres specs `FUTURE_*.md` : `FUTURE_mmd2smartart_SPEC.md` couvre
-> une **stratégie de sortie alternative** (SmartArt) pour un sous-ensemble de flowcharts déjà
-> supportés ; ce document couvre des **types de diagrammes Mermaid entièrement différents**, dont
-> la plupart n'ont même pas de notion de nœud/arête. Les deux sont orthogonaux : rien ici ne
-> dépend de l'état de SmartArt, et réciproquement.
+> **La ligne ci-dessous ("les deux sont orthogonaux") est dépassée** : `docs/
+> smartart-full-catalog-cross-mermaid.md` a justement montré que SmartArt et couverture des 28
+> types ne sont PAS orthogonaux pour tous les cas — plusieurs types (dont `quadrantChart`/
+> `venn-beta`/`mindmap`, déjà livrés) correspondent directement à un archétype SmartArt une fois
+> qu'on part de la forme plutôt que du type Mermaid. Gardé ci-dessous pour l'historique du
+> raisonnement, pas comme vérité actuelle.
+>
+> Positionnement vis-à-vis des autres specs `FUTURE_*.md` (texte original, voir le correctif
+> ci-dessus) : `FUTURE_mmd2smartart_SPEC.md` couvre une **stratégie de sortie alternative**
+> (SmartArt) pour un sous-ensemble de flowcharts déjà supportés ; ce document couvre des **types de
+> diagrammes Mermaid entièrement différents**, dont la plupart n'ont même pas de notion de
+> nœud/arête. Les deux sont orthogonaux : rien ici ne dépend de l'état de SmartArt, et
+> réciproquement.
 >
 > Source de vérité pour la liste des types et leurs mots-clés : `mermaid.js.org` (interrogé
 > 2026-09-04, voir §2 pour le tableau complet). Plusieurs types ci-dessous sont marqués "New 🔥"

@@ -52,8 +52,9 @@ plutôt que de laisser la substitution redevenir non déterministe.
 
 ## Limites actuelles
 
-- 12 fixtures acceptées ; la spec §9 en demande 20-30. Écart documenté dans `TODO.md`, pas cette
-  page (qui décrit le mécanisme, pas son état d'avancement).
+- 35 fixtures acceptées (32 flowchart + `quadrant`/`venn`/`mindmap`, ajoutées 2026-09-04 lors du
+  handover des 3 premiers types non-flowchart — voir `TODO.md`) ; la spec §9 en demande 20-30 pour
+  le flowchart seul, déjà couvert.
 - Le corpus réel (`../corpus/source/`, 24-318 nœuds) n'est délibérément pas inclus ici — chaque
   fixture demande une revue visuelle individuelle, ce qui ne passe pas à l'échelle sans une passe
   dédiée.
