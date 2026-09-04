@@ -306,7 +306,7 @@ function isSafeId(id: string): boolean {
  * syntax Mermaid itself recommends for Unicode/special characters
  * (`id["Hello, World"]`). Without this the quotes were kept literally in
  * the rendered text — found empirically while building
- * `docs/smartart-compliance-table.md` (2026-09-03), logged in `TODO.md`.
+ * `docs/markdown-mermaid-compliance-table.md` (2026-09-03), logged in `TODO.md`.
  * Unquoted text (`id[Hello World]`) is returned unchanged.
  */
 function stripQuotedLabel(text: string): string {
@@ -330,7 +330,7 @@ const NAMED_ENTITIES: ReadonlyArray<readonly [string, string]> = [
 /**
  * Decode the small set of inline-text conveniences Mermaid supports that this
  * parser otherwise passed through as literal characters (found via
- * `docs/smartart-compliance-table.md` §5, logged in `TODO.md`):
+ * `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`):
  *  - `<br/>` (and `<br>`, `<br />`, case-insensitive) becomes a space — there
  *    is no multi-line text-run support in the OOXML/DrawingML output this
  *    parser feeds, so a real line break isn't achievable, but leaking the
@@ -542,7 +542,7 @@ export function parseMermaid(text: string): ParseResult {
     // lay out (spec §5.1, TD/LR only), so they're called out with a specific
     // warning and fall back to TD rather than silently defaulting to it via
     // the generic "Unsupported line ignored" catch-all below (found via
-    // `docs/smartart-compliance-table.md` §5, logged in `TODO.md`).
+    // `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`).
     const header = line.match(/^(?:graph|flowchart)\s+(TD|TB|LR|BT|RL)\b/i);
     if (header) {
       const requested = header[1]!.toUpperCase();
@@ -836,7 +836,7 @@ function applyClassToNode(
  * including an optional inline class shorthand (`A[Text]:::crit` or bare
  * `A:::crit`), which {@link parseNodeRef} already handled at edge endpoints
  * but this standalone-declaration path did not (found via
- * `docs/smartart-compliance-table.md` §5, logged in `TODO.md`).
+ * `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`).
  */
 function parseNodeStatement(
   line: string,

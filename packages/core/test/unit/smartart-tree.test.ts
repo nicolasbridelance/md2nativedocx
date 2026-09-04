@@ -68,7 +68,7 @@ test('layout/colors/style are the fixed, diagram-independent constants', () => {
 test('flowchart.direction picks the vertical (root-on-top) or horizontal (root-on-left) variant', () => {
   // Before this, tree.ts never read flowchart.direction at all -- every tree
   // rendered root-on-top regardless of the Mermaid source's TD/LR
-  // (docs/smartart-compliance-table.md). Verified by rendering the
+  // (docs/markdown-mermaid-compliance-table.md). Verified by rendering the
   // substituted XML under headless LibreOffice this session, not just this
   // structural assertion.
   const td = generateTree(treeFlowchart('graph TD\n  A --> B\n  A --> C'));

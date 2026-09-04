@@ -156,7 +156,7 @@ async function main() {
   // failed to open at all ("erreur lors de l'ouverture du fichier") —
   // `chain`/`tree`/`cycle` had only ever been verified under headless
   // LibreOffice, which is known (TODO.md's `mc:Ignorable` incident) not to
-  // imply Word can open the file. See `docs/smartart-compliance-table.md`
+  // imply Word can open the file. See `docs/markdown-mermaid-compliance-table.md`
   // §2 point 5. MD2NATIVEDOCX_ENABLE_SMARTART is the opt-in for the VS Code
   // extension's `md2nativedocx.smartArt.enabled` setting (also now
   // default-off) or standalone experimentation.

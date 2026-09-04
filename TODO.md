@@ -115,7 +115,7 @@ est levé.
         déjà plus à d'anciennes baselines pour une raison antérieure à cette session).
 - ✅ **`style`/`linkStyle`, ajoutés — et 3 lacunes `classDef` corrigées au passage (2026-09-04)** :
       dernier item de la liste "reste" avant le `dsp:drawing` SmartArt. `style`/`linkStyle` n'étaient
-      pas reconnus du tout (`docs/smartart-compliance-table.md` §5.3 les listait "None" depuis le
+      pas reconnus du tout (`docs/markdown-mermaid-compliance-table.md` §5.3 les listait "None" depuis le
       début de ce chantier de durcissement) ; `classDef` avait 2 lacunes documentées dans la même
       section (propriété `fill:` devant être la première, une seule classe par définition).
       - `parser.ts` : `parseCssStyleProps()` (parseur générique `prop:valeur,prop:valeur`, ordre
@@ -160,7 +160,7 @@ est levé.
         via `classDef`/`class` (bleu clair + bordure marine), arête stylée par `linkStyle default`
         (verte) et par indice avec épaisseur (rouge, trait épais) — les 4 rendus simultanément sur un
         seul diagramme, tous corrects.
-      - `docs/specs/cahier_des_charges.md` §6.2/§6.3 et `docs/smartart-compliance-table.md` §5.3 mis
+      - `docs/specs/cahier_des_charges.md` §6.2/§6.3 et `docs/markdown-mermaid-compliance-table.md` §5.3 mis
         à jour (les 2 sous-cas `classDef`, `style`, `linkStyle` passent de "None" à leur statut réel).
 - ✅ **Syntaxe générique de forme `id@{ shape: nom, label: "..." }` (v11.3+), ajoutée (2026-09-04)** :
       dernier "gros morceau" restant de la liste "reste" ci-dessous après le label mi-chaîne. Avant
@@ -204,7 +204,7 @@ est levé.
         peu près carrée — l'apparence de simple ligne observée d'abord sur un libellé long était un
         effet d'aplatissement de la boîte par la largeur du texte, pas une forme manquante, confirmé
         en isolant chaque forme sur un libellé court).
-      - `docs/specs/cahier_des_charges.md` §6.1 et `docs/smartart-compliance-table.md` §5.2/§5.6 mis
+      - `docs/specs/cahier_des_charges.md` §6.1 et `docs/markdown-mermaid-compliance-table.md` §5.2/§5.6 mis
         à jour (la ligne "30 formes étendues : None" devient Partial/Full comme les 11 formes bracket
         existantes — même dégradation SmartArt puisque `chain.ts`/`tree.ts` ne lisent `NodeShape`
         d'aucune forme, cf. la ligne "Rectangle").
@@ -267,7 +267,7 @@ est levé.
     confirmés par `git stash` sur `main` avant ces changements). `tsc --noEmit` propre sur tout le
     workspace, suite CLI 30/30 (corpus complet régénéré sans erreur).
   - **Docs synchronisées** : `docs/specs/cahier_des_charges.md` §6.1/§6.2 (matrices de
-    correspondance étendues aux nouvelles formes/arêtes) et `docs/smartart-compliance-table.md`
+    correspondance étendues aux nouvelles formes/arêtes) et `docs/markdown-mermaid-compliance-table.md`
     §5.2/§5.4 (statut par ligne mis à jour : topologie désormais correcte dans les 3 stratégies
     pour chaînage/`&`/invisible, style visuel toujours perdu côté SmartArt pur pour les têtes
     multidirectionnelles puisque `chain.ts`/`tree.ts` ne dessinent aucun connecteur).
@@ -1204,7 +1204,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       gating (2026-09-03)** : `chain` et `tree` sont désormais tous deux validés bout-en-bout (XML
       + rendu LibreOffice réel, pas seulement tests unitaires) ; `cycle` reste à faire — condition
       pas encore entièrement remplie.
-- [x] **Tableau de compliance livré (2026-09-03)** — `docs/smartart-compliance-table.md`, sur
+- [x] **Tableau de compliance livré (2026-09-03)** — `docs/markdown-mermaid-compliance-table.md`, sur
       demande explicite du mainteneur, **avant** que la condition de gating ci-dessus soit
       entièrement remplie (`cycle` toujours pas fait) — priorité mainteneur qui prime sur l'ordre
       initialement prévu. Sources téléchargées et citées : CommonMark 0.31.2, GFM 0.29, doc Mermaid
@@ -1242,7 +1242,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
          bug de géométrie qui avait bloqué `tree.ts` — bonne surprise de la session. Les 3 topologies
          du classifieur (chain/tree/cycle) ont donc désormais chacune leur générateur validé.
       18 nouveaux tests unitaires au total (110 → 128 dans `packages/core`) : `smartart-cycle.test.ts`
-      (9) + ajouts aux suites chain/tree existantes. `docs/smartart-compliance-table.md` mis à jour
+      (9) + ajouts aux suites chain/tree existantes. `docs/markdown-mermaid-compliance-table.md` mis à jour
       en conséquence. Monorepo entier
       revérifié vert (build/typecheck/lint/128 tests core + 5 pandoc-filter + 23 vscode-extension).
       **Volontairement pas tenté** : override de forme par nœud (confirmé sans effet, voir point 2) ;
@@ -1256,10 +1256,10 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       recommandée par Mermaid pour l'Unicode) produit désormais un label propre, sans les guillemets
       parasites ; un guillemet interne non englobant reste intact. Priorité maintenue par le
       mainteneur avant toute mise en avant publique du produit. Tests unitaires + vérification par
-      rendu LibreOffice réel. `docs/smartart-compliance-table.md` §5.3 mis à jour en conséquence.
+      rendu LibreOffice réel. `docs/markdown-mermaid-compliance-table.md` §5.3 mis à jour en conséquence.
 - [x] **Durcissement du parseur Mermaid — dernier lot, tout est traité (2026-09-04)**
       (`packages/core/src/parser/parser.ts`) — bugs trouvés en construisant
-      `docs/smartart-compliance-table.md` (2026-09-03), tous vérifiés empiriquement, bénéficiant
+      `docs/markdown-mermaid-compliance-table.md` (2026-09-03), tous vérifiés empiriquement, bénéficiant
       aux **3** stratégies de sortie à la fois (pas spécifique à SmartArt). Le libellé mi-chaîne,
       les arêtes multidirectionnelles/invisibles/chaînage/`&`, et `classDef`/`style`/`linkStyle`
       avaient déjà été traités dans les sessions précédentes (voir plus haut dans ce fichier) ;
@@ -1286,7 +1286,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       Vérifié : 7 nouveaux tests unitaires (`parser.test.ts`), suite `core` complète 184/184 (×3
       exécutions, propriétés `fast-check` incluses), `typecheck`/`lint` propres, suite monorepo
       complète 250/250.
-      Détail complet avec preuves empiriques dans `docs/smartart-compliance-table.md` §5.
+      Détail complet avec preuves empiriques dans `docs/markdown-mermaid-compliance-table.md` §5.
 - [ ] **Profondeur d'arbre adaptative (> 2)** pour `tree.ts` — le partage de hauteur fixe (35 %
       nœud / 55 % rangée d'enfants) ne peut pas simplement se répéter à un niveau supplémentaire
       sans léser tout nœud sans petit-enfant (voir le commentaire de doc de `MAX_TREE_DEPTH` dans
@@ -1393,7 +1393,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 Un cycle à 3 nœuds (`A-->B-->C-->A`), le cas le plus simple possible, produisait un `.docx` que
 Word refuse d'ouvrir ("erreur lors de l'ouverture du fichier"). `cycle.ts` (comme `chain.ts`/
 `tree.ts`) n'avait jamais été testé en Word réel, seulement sous LibreOffice headless — la table de
-compliance (`docs/smartart-compliance-table.md`) affichait "✅ Full" sur cette seule base, corrigée
+compliance (`docs/markdown-mermaid-compliance-table.md`) affichait "✅ Full" sur cette seule base, corrigée
 depuis (§2 point 5 ajouté). Comme `smartArt.enabled` valait `true` par défaut (CLI et extension déjà
 publiée 0.3.0), c'était un bug de corruption par défaut pour tout flowchart utilisateur en boucle
 fermée, pas un cas de labo.

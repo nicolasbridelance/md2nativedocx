@@ -386,7 +386,7 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
  * ({@link TREE_LAYOUT_XML_LR}, root-on-left) layout variant from
  * `flowchart.direction` — before this, the generator always emitted the
  * vertical layout regardless of the Mermaid source's own `TD`/`LR` (see
- * `docs/smartart-compliance-table.md`).
+ * `docs/markdown-mermaid-compliance-table.md`).
  */
 export function generateTree(flowchart: Flowchart): SmartArtTreeOutput {
   const { root, children } = rootAndChildren(flowchart);

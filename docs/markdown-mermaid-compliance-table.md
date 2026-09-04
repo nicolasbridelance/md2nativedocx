@@ -1,13 +1,21 @@
-# Tableau de compliance — Mermaid flowchart → Word, 3 stratégies de sortie
+# Tableau de compliance — Markdown + Mermaid flowchart → Word natif
 
+> Document en deux parties, pas une spec normative. **§4** couvre la fidélité Markdown/GFM autour
+> du diagramme (titres, gras/italique, tableaux, listes, etc.) — traitement volontairement court
+> car cette fidélité est la même quelle que soit la stratégie choisie pour le diagramme lui-même,
+> déjà couverte par sa propre suite de tests. **§5, le cœur du document**, évalue la syntaxe
+> Mermaid flowchart elle-même sur les **3 stratégies de sortie** possibles pour un diagramme donné
+> (SmartArt natif, hybride SmartArt+OOXML, OOXML pur) — c'est cette partie, pas SmartArt en tant
+> que tel, qui donne son sujet au document : SmartArt n'est qu'une des trois colonnes évaluées à
+> chaque ligne.
+>
 > Statut (mis à jour 2026-09-03, après la version initiale de ce document) : `chain.ts`, `tree.ts`
 > **et `cycle.ts`** sont désormais tous les trois livrés et validés par rendu LibreOffice réel — la
 > direction (`TD`/`LR`), les couleurs par nœud (`classDef`) et les libellés d'arête sont également
-> pris en compte depuis cette mise à jour (voir §2.3/§2.4, corrigés). Document de référence, pas une
-> spec normative. Objectif explicite (demandé par le
-> mainteneur, cf. `TODO.md` "Phase 6/7") : permettre à quiconque reprend ce chantier de décider,
-> en connaissance de cause, s'il faut changer de stratégie de représentation, pousser vers 100 %
-> de couverture SmartArt avec de nouvelles techniques, ou garder l'approche hybride actuelle.
+> pris en compte depuis cette mise à jour (voir §2.3/§2.4, corrigés). Objectif explicite (demandé
+> par le mainteneur, cf. `TODO.md` "Phase 6/7") : permettre à quiconque reprend ce chantier de
+> décider, en connaissance de cause, s'il faut changer de stratégie de représentation, pousser vers
+> 100 % de couverture SmartArt avec de nouvelles techniques, ou garder l'approche hybride actuelle.
 > Toute case du tableau ci-dessous doit se lire avec son "comment" et ses limites, jamais comme
 > un simple ✅/❌ — voir les avertissements de portée en §2 avant de tirer une conclusion d'une ligne
 > isolée.

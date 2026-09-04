@@ -13,7 +13,7 @@
  * needs no manual spacer nodes between items.
  *
  * Verified this session by rendering the actual output under headless
- * LibreOffice (session that built `docs/smartart-compliance-table.md`):
+ * LibreOffice (session that built `docs/markdown-mermaid-compliance-table.md`):
  * a 4-node cycle rendered as 4 correctly-styled boxes at top/right/bottom/
  * left, in the right order, first try — no geometry bug like `tree.ts` hit.
  * Same known limitation as `chain`/`tree`: no connector line is drawn

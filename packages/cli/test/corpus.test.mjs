@@ -222,7 +222,7 @@ test('simple: markdown with a mermaid A --> B dispatches to SmartArt when MD2NAT
   // A --> B is the simplest possible chain -- classifyTopology accepts it.
   // SmartArt defaults to OFF as of 2026-09-03 (a real-Word test of
   // cycle.ts's output failed to open at all on the simplest possible input
-  // -- see docs/smartart-compliance-table.md §2 point 5 -- and chain/tree
+  // -- see docs/markdown-mermaid-compliance-table.md §2 point 5 -- and chain/tree
   // had no real-Word signal either, only headless LibreOffice), so this test
   // now opts in explicitly to keep covering the dispatch path itself. The
   // new default (SmartArt off unless opted in) is covered by the next test;

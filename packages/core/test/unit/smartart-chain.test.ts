@@ -73,7 +73,7 @@ test('colors/style are fixed, diagram-independent constants; layout is fixed per
 test('flowchart.direction picks the horizontal or vertical layout variant', () => {
   // Before this, chain.ts never read flowchart.direction at all -- every
   // chain rendered horizontally regardless of the Mermaid source's TD/LR
-  // (docs/smartart-compliance-table.md). Verified by rendering the
+  // (docs/markdown-mermaid-compliance-table.md). Verified by rendering the
   // substituted XML under headless LibreOffice this session, not just this
   // structural assertion.
   const lr = generateChain(chainFlowchart('graph LR\n  A --> B'));

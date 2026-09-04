@@ -6,7 +6,7 @@
 > vérification a justement révélé un bug de rendu bloquant sur `chain.ts`, corrigé le même jour,
 > voir §3.1 point 4). Direction (`TD`/`LR`), couleur par nœud (`classDef`) et libellés d'arête
 > (convention §5.2) sont également implémentés dans les 3 générateurs (2026-09-03, en poussant vers
-> le 100% de la colonne SmartArt de `docs/smartart-compliance-table.md`). Le dispatch classifieur →
+> le 100% de la colonne SmartArt de `docs/markdown-mermaid-compliance-table.md`). Le dispatch classifieur →
 > générateur dans le vrai pipeline (§7 étape 5) est désormais câblé et testé de bout en bout —
 > voir `TODO.md` "Phase 6/7" pour le détail à jour.
 > Plusieurs décisions de cette section datent d'avant les spikes Round 3-5
@@ -306,7 +306,7 @@ tout code de production) :
    > `dgm:spPr` du point de **contenu**, pas un point de présentation — confirmé sans effet sur ces
    > derniers, contrairement au point de contenu, jamais testé jusqu'ici) ; `chain.ts`/`tree.ts`
    > respectent aussi `flowchart.direction` (deux variantes de `layoutDef` chacun). Détail complet
-   > dans `docs/smartart-compliance-table.md` et `TODO.md`.
+   > dans `docs/markdown-mermaid-compliance-table.md` et `TODO.md`.
 5. **Dispatch** dans le filtre Lua / CLI : `classifyTopology()` en premier ; `unsupported` →
    chemin `wpg:wgp` existant inchangé ; sinon → chemin SmartArt. **Livré (2026-09-03)** — validé
    avant code (règle n°7 AGENTS.md, §8 ci-dessous) puis implémenté. Pandoc n'ayant aucun mécanisme

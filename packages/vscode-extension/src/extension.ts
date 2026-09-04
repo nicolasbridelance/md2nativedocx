@@ -65,7 +65,7 @@ function referenceDocumentSetting(): string | undefined {
 
 /** `md2nativedocx.smartArt.enabled` — `false` (default, flipped 2026-09-03:
  * a real-Word test of `cycle.ts`'s output failed to open at all on the
- * simplest possible input, see `docs/smartart-compliance-table.md` §2 point
+ * simplest possible input, see `docs/markdown-mermaid-compliance-table.md` §2 point
  * 5) uses the OOXML canvas fallback for everything. `true` opts into an
  * eligible diagram (chain/tree/cycle shape) becoming a native SmartArt
  * graphic instead — until chain/tree/cycle are confirmed to open reliably in

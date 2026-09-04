@@ -111,7 +111,7 @@ export const CHAIN_LAYOUT_XML =
  * Before this, neither `chain.ts` nor `tree.ts` (below) read
  * `flowchart.direction` at all — every chain rendered horizontally
  * regardless of the Mermaid source's `TD`/`LR`, a gap first written up in
- * `docs/smartart-compliance-table.md`.
+ * `docs/markdown-mermaid-compliance-table.md`.
  */
 export const CHAIN_LAYOUT_XML_TD = CHAIN_LAYOUT_XML.replace(
   `uniqueId="${CHAIN_LAYOUT_URN}"`,
@@ -249,7 +249,7 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
  *
  * Two more things folded in here, both verified by rendering the actual
  * output under headless LibreOffice rather than by XML-structure tests
- * alone (session that built `docs/smartart-compliance-table.md`):
+ * alone (session that built `docs/markdown-mermaid-compliance-table.md`):
  *  - `edge.label` (spec §5.2 convention): prefixed as `"label : "` onto the
  *    destination node's own text, since SmartArt has no connector text box
  *    and we don't control connector geometry to place a floating one.
@@ -340,7 +340,7 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
  * ({@link CHAIN_LAYOUT_XML_TD}) layout variant from `flowchart.direction` —
  * before this, the generator always emitted the horizontal layout,
  * regardless of the Mermaid source's own `TD`/`LR` (see
- * `docs/smartart-compliance-table.md`).
+ * `docs/markdown-mermaid-compliance-table.md`).
  */
 export function generateChain(flowchart: Flowchart): SmartArtChainOutput {
   const nodes = orderedChainNodes(flowchart);
