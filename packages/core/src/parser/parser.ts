@@ -735,6 +735,26 @@ export function parseMermaid(text: string): ParseResult {
       continue;
     }
 
+    // A subgraph's own nested `direction` statement (spec §6.1 follow-up):
+    // parsed into Subgraph.direction (types.ts) rather than falling through
+    // to the generic "Unsupported line ignored" warning below, but not yet
+    // applied to layout — see Subgraph.direction's doc comment for why
+    // (Dagre has no per-cluster rankdir). Only recognized inside an open
+    // subgraph block; elsewhere it's not valid Mermaid syntax at all, so it
+    // still falls through to the generic warning.
+    if (subgraphStack.length > 0) {
+      const subgraphDirection = line.match(/^direction\s+(TD|TB|LR|BT|RL)\b/i);
+      if (subgraphDirection) {
+        const requested = subgraphDirection[1]!.toUpperCase();
+        const current = subgraphStack[subgraphStack.length - 1]!;
+        current.direction = requested === 'TB' ? 'TD' : (requested as 'TD' | 'LR' | 'BT' | 'RL');
+        warnings.push(
+          `Subgraph "${current.id}" direction (${current.direction}) is not yet applied to its layout (V1 limitation) -- it renders using the flowchart's own direction instead.`,
+        );
+        continue;
+      }
+    }
+
     // Edge statement(s): A --> B, A -->|label| B, A --- B, chained
     // A --> B --> C, and fan-out/fan-in via `&` (A --> B & C, A & B --> C).
     const chainEdges = parseEdgeChain(line);

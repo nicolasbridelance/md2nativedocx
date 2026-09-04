@@ -131,6 +131,26 @@ export interface Subgraph {
   nodeIds: string[];
   /** Child subgraph ids contained directly in this subgraph. */
   subgraphIds: string[];
+  /**
+   * This subgraph's own nested `direction <TD|LR|BT|RL>` statement, if any
+   * — independent of the flowchart's own top-level `direction`. `undefined`
+   * when the subgraph doesn't declare one (the common case), in which case
+   * it renders using the flowchart's own direction.
+   *
+   * Parsed (`parser.ts`), but **not yet applied to layout**: Dagre (the
+   * layout engine this project wraps, `layout.ts`) lays out an entire graph
+   * — including every compound cluster inside it — under a single global
+   * `rankdir`; it has no notion of one cluster ranking its own members in a
+   * different direction than its ancestor graph. Giving a subgraph a truly
+   * independent internal layout would need a genuinely separate, recursive
+   * layout pass per differently-directioned subgraph (lay it out on its own,
+   * then place the result as a fixed-size block in the parent's pass) — a
+   * real architectural undertaking, not a Dagre option to flip. Kept in the
+   * AST (rather than dropped like before this field existed) so a caller at
+   * least has the information, and so this is a known, explicit limitation
+   * (surfaced as a parser warning) instead of a silently-ignored line.
+   */
+  direction?: 'TD' | 'LR' | 'BT' | 'RL';
 }
 
 /** The full intermediate AST for one flowchart. */

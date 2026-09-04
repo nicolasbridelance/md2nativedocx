@@ -53,6 +53,17 @@
 > donc pas une limite de parseur commune aux 3 colonnes (🔧), mais une limite du traducteur OOXML
 > spécifiquement — `chain.ts`/`tree.ts` (colonnes SmartArt/Hybride) restent inchangés, toujours sur
 > le texte aplati. Rendu réel LibreOffice vérifié.
+>
+> **[Mise à jour 2026-09-04, encore plus tard le même jour]** La ligne "Direction de sous-graphe"
+> (§5.1) n'est plus une limite de **parseur** (🔧, silencieusement ignorée) mais une limite
+> documentée du **traducteur OOXML/Dagre** : `parser.ts` reconnaît maintenant
+> `direction <TD|TB|LR|BT|RL>` à l'intérieur d'un `subgraph` (`Subgraph.direction`, `types.ts`) et
+> avertit explicitement plutôt que de tomber dans le générique `"Unsupported line ignored"` — mais
+> Dagre met en page tout un graphe sous un seul `rankdir` global, sans notion de direction par
+> cluster, donc la direction demandée n'est toujours pas appliquée à la géométrie (le sous-graphe
+> s'affiche dans la direction du flowchart parent). Un vrai support demanderait une passe de layout
+> récursive indépendante par sous-graphe — chantier d'architecture distinct, pas fait ici. Voir
+> `types.ts`'s `Subgraph.direction` pour le détail technique complet.
 
 ## 1. Sources consultées
 
@@ -166,7 +177,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 | Direction `LR` | `graph LR` | ✅ Full (corrigé 2026-09-03) — `chain.ts` émet `CHAIN_LAYOUT_XML` (horizontal, déjà son comportement par défaut), `tree.ts` émet `TREE_LAYOUT_XML_LR` (racine à gauche, enfants empilés verticalement) ; rendu réel vérifié | ✅ Full | ✅ Full |
 | Direction `BT` | `graph BT` | ✅ Full (corrigé 2026-09-04) — `BT` est désormais une direction à part entière, laid out par Dagre (`rankdir: 'BT'`) et par SmartArt (`chain.ts`/`tree.ts` émettent `linDir="fromB"`) ; rendu réel vérifié (chain et tree) | ✅ Full | ✅ Full — Dagre gère `BT` nativement |
 | Direction `RL` | `graph RL` | ✅ Full (corrigé 2026-09-04) — même traitement que `BT` (`rankdir: 'RL'`, SmartArt `linDir="fromR"`), rendu réel vérifié | ✅ Full | ✅ Full |
-| Direction de sous-graphe (`direction TB` imbriqué) | `subgraph X\n direction RL\n...end` | ❌ None — tout `subgraph` disqualifie SmartArt avant même d'évaluer ce point (§5.6) | 🔧 ❌ None même en fallback — vérifié empiriquement : la ligne `direction TB` à l'intérieur d'un `subgraph` est ignorée par le parseur (`"Unsupported line ignored: direction TB"`), le sous-graphe est bien créé mais sans mémoriser de direction propre ; limite de parseur en amont du fallback, pas du traducteur OOXML | 🔧 même limite — voir cellule Hybride |
+| Direction de sous-graphe (`direction TB` imbriqué) | `subgraph X\n direction RL\n...end` | ❌ None — tout `subgraph` disqualifie SmartArt avant même d'évaluer ce point (§5.6) | 🟡 Partial (amélioré 2026-09-04, punch list OOXML item 4) — la ligne `direction RL` n'est plus silencieusement ignorée : `parser.ts` la reconnaît désormais (`Subgraph.direction`, `types.ts`) et émet un avertissement explicite et actionnable au lieu du générique `"Unsupported line ignored"`. Toujours **pas appliquée au layout** : Dagre (`layout.ts`) met en page tout un graphe — chaque cluster compound compris — sous un seul `rankdir` global, sans notion de direction propre par cluster ; un vrai support demanderait une passe de layout récursive et indépendante par sous-graphe à direction propre, un chantier d'architecture à part entière, pas une option Dagre à activer (voir `types.ts`'s `Subgraph.direction` pour le détail). Le sous-graphe s'affiche donc dans la direction du flowchart parent, comme avant, mais l'information est désormais dans l'AST et le renoncement est explicite plutôt que silencieux | 🟡 même statut — voir cellule Hybride |
 
 ### 5.2 Formes de nœud
 
@@ -238,7 +249,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 | Arêtes vers/depuis un sous-graphe | `one --> two` (sous-graphes) | ❌ None (même disqualification) | ✅ Full (fallback) — **note** : le parseur V1 actuel supprime explicitement toute arête référençant un id de sous-graphe comme extrémité (`edgesWithoutSubgraphs`, `parser.ts` ligne 214-220) ; c'est donc une limite de parseur qui s'ajoute, indépendante de la stratégie | 🔧 même limite de parseur — l'arête inter-sous-graphes est de toute façon supprimée avant translation, peu importe la stratégie |
 | Imbrication de sous-graphes | `subgraph A\n subgraph B...end\nend` | ❌ None (disqualification) | ✅ Full (fallback, testé) | ✅ Full |
 | `subgraph` = "hiérarchie SmartArt libellée" (piste, §5 de la spec) | — | ⏳ **Non implémenté** — idée documentée (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §5, et le layout `Labeled Hierarchy` identifié dans `docs/smartart-layout-catalog.md`) : le titre du sous-graphe deviendrait un nœud parent supplémentaire dans `dgm:dataModel`, à un seul niveau, uniquement si le sous-graphe est lui-même `tree`/`chain` avec un point d'entrée unique. Aucun code écrit à ce jour. | ⏳ même statut — si implémenté un jour, changerait cette ligne et la précédente pour les sous-graphes remplissant ces conditions | ✅ Full (comportement actuel, inchangé par cette piste) |
-| Direction de sous-graphe + limitation d'héritage | `direction TB` dans un `subgraph` lié à l'extérieur | ❌ None (disqualification) | ✅ Full si fallback (sous réserve de la limite 🔧 signalée en §5.1 : direction par sous-graphe non extraite distinctement par le parseur V1) | 🔧 limite de parseur, voir §5.1 |
+| Direction de sous-graphe + limitation d'héritage | `direction TB` dans un `subgraph` lié à l'extérieur | ❌ None (disqualification) | 🟡 Partial si fallback (sous réserve de la limite signalée en §5.1 : direction par sous-graphe parsée mais pas appliquée au layout — limite de Dagre, pas du parseur, depuis 2026-09-04) | 🟡 limite du traducteur OOXML/Dagre, voir §5.1 |
 | Sous-graphe repliable (`view: collapsed`, v11.17+) | `id@{ view: collapsed }` | 🔧 ❌ None — `parseAtShapeSyntax()` (§5.2, corrigé 2026-09-04) ne s'applique qu'à une déclaration de **nœud** (`shape:`/`label:`), pas à un `subgraph` ; sa propriété `view:` n'a de toute façon aucune contrepartie côté parseur de sous-graphe ; **et** sans objet pour une sortie statique — "replié/déplié" est un état d'interaction, pas un état représentable dans un `.docx` figé | 🔧 idem — sans objet dans un document statique | 🔧 idem — sans objet |
 
 ### 5.7 Topologies globales (chaîne / arbre / cycle / irrégulier)

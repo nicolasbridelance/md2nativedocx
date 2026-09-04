@@ -59,6 +59,35 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ✅ **Direction de sous-graphe — plus une limite de parseur silencieuse, mais toujours une
+      limite de Dagre, désormais explicite (2026-09-04, punch list OOXML item 4)** : `direction
+      RL` à l'intérieur d'un `subgraph...end` tombait jusqu'ici dans le message générique
+      `"Unsupported line ignored: direction RL"`, sans jamais atteindre l'AST. Ajouté
+      `types.ts`'s `Subgraph.direction?` ; `parser.ts` reconnaît maintenant la ligne (même
+      normalisation `TB`→`TD` que l'en-tête du flowchart), la mémorise sur le sous-graphe courant
+      (`subgraphStack`), et émet un avertissement spécifique et actionnable au lieu du générique.
+      **Recherché mais délibérément pas implémenté** : appliquer réellement cette direction au
+      layout. Root-cause architecturale, pas un oubli — Dagre (bibliothèque non maintenue en
+      amont que ce projet enveloppe, `layout.ts`) met en page tout un graphe, clusters compound
+      compris, sous un **seul** `rankdir` global ; aucune API Dagre ne permet à un cluster de
+      ranker ses propres membres dans une direction différente de celle du graphe parent. Un vrai
+      support demanderait une passe de layout récursive indépendante par sous-graphe à direction
+      propre (le mettre en page seul, puis placer le résultat comme un bloc de taille fixe dans la
+      passe du parent, avec le routage des arêtes traversant la frontière comme problème ouvert
+      supplémentaire) — un chantier d'architecture à part entière, pas une option à activer, jugé
+      disproportionné pour cette session au vu du risque (le pipeline de clusters Dagre a déjà un
+      contournement de bug documenté plus bas) par rapport au bénéfice (mêmes garde-fous déjà en
+      place pour `BT`/`RL` avant leur implémentation complète — précédent direct dans ce même
+      fichier). `docs/markdown-mermaid-compliance-table.md` §5.1/§5.7 mis à jour : la case passe de
+      🔧 (limite de parseur, silencieuse) à 🟡 Partial (limite de traducteur/Dagre, documentée et
+      avertie). 5 nouveaux tests unitaires (`parser.test.ts`) — parsing simple, alias `TB`→`TD`,
+      absence de `direction` (reste `undefined`), sous-graphes imbriqués avec directions
+      indépendantes chacune, et non-régression du cas `direction` hors `subgraph` (toujours le
+      générique). Suite complète verte (221 core / 31 cli / 11 pandoc-filter / 25
+      vscode-extension) ; `node scripts/test-visual.mjs` toujours 11/31 échecs (les mêmes
+      pré-existants) — aucun changement de géométrie, seul le parseur et l'AST sont concernés,
+      confirmé par diff `document.xml` byte-à-byte sur les 2 fixtures du corpus officiel qui
+      utilisent `direction` (`large2.mmd`, `medium3.mmd`).
 - ✅ **Rich-text runs — `<br/>`/gras/italique côté OOXML seul (2026-09-04, punch list OOXML item
       3)** : `<br/>` et les "Markdown strings" (`` id["`**gras**`"] ``) s'aplatissaient jusqu'ici en
       texte plein (`normalizeLabelText()`) — pas de vrai retour à la ligne, pas de run gras/italique

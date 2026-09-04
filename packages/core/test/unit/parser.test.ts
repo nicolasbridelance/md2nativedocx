@@ -554,6 +554,41 @@ test('records nested subgraph relationships in subgraphIds', () => {
   assert.deepEqual(inner.subgraphIds, []);
 });
 
+test('a subgraph\'s own nested direction statement is parsed into Subgraph.direction, not silently dropped', () => {
+  // Regression (rich-text runs follow-up, punch list item 4, 2026-09-04):
+  // `direction LR` inside a subgraph used to fall through to the generic
+  // "Unsupported line ignored" warning. It's now recognized (though still
+  // not applied to layout — see types.ts's Subgraph.direction doc comment).
+  const { ast, warnings } = parseMermaid('graph TD\n  subgraph S1\n    direction LR\n    A --> B\n  end');
+  const sg = ast.subgraphs.find((s) => s.id === 'S1')!;
+  assert.equal(sg.direction, 'LR');
+  assert.ok(!warnings.some((w) => w.includes('Unsupported line ignored')));
+  assert.ok(warnings.some((w) => w.includes('S1') && w.includes('LR')));
+});
+
+test('a subgraph direction of TB normalizes to TD, same alias as the top-level header', () => {
+  const { ast } = parseMermaid('graph TD\n  subgraph S1\n    direction TB\n    A --> B\n  end');
+  assert.equal(ast.subgraphs.find((s) => s.id === 'S1')!.direction, 'TD');
+});
+
+test('a subgraph with no direction statement leaves Subgraph.direction undefined', () => {
+  const { ast } = parseMermaid('graph TD\n  subgraph S1\n    A --> B\n  end');
+  assert.equal(ast.subgraphs.find((s) => s.id === 'S1')!.direction, undefined);
+});
+
+test('nested subgraphs can each declare their own independent direction', () => {
+  const { ast } = parseMermaid(
+    'graph TD\n  subgraph Outer\n    direction RL\n    A --> B\n    subgraph Inner\n      direction BT\n      C --> D\n    end\n  end',
+  );
+  assert.equal(ast.subgraphs.find((s) => s.id === 'Outer')!.direction, 'RL');
+  assert.equal(ast.subgraphs.find((s) => s.id === 'Inner')!.direction, 'BT');
+});
+
+test('a bare "direction LR" outside any subgraph is not valid syntax and still warns generically', () => {
+  const { warnings } = parseMermaid('graph TD\n  direction LR\n  A --> B');
+  assert.ok(warnings.some((w) => w.includes('Unsupported line ignored: direction LR')));
+});
+
 test('a node stays attached to the subgraph where it was first declared, not a later enclosing one', () => {
   // Regression: `B --> C` here runs AFTER Inner's `end`, back inside Outer.
   // C was already declared inside Inner and must not be re-attached to
