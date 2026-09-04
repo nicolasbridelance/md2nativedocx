@@ -48,26 +48,37 @@ checked directly in desktop Word by the maintainer.
   closed and the Lua filter never saw a valid mermaid code block). Not a `packages/core` or
   `pandoc-filter` bug. Fixed and regenerated — **re-verification of these two in real Word is still
   pending**.
-- `nested-3-levels.docx`: renders, but the nested subgraphs show **no visible container box** —
-  only a small floating title label ("Niveau 1/2/3"), no border or background around the member
-  nodes. Confirmed this is **not** a Word-vs-LibreOffice divergence: the checked-in LibreOffice
-  baseline (`test-corpus/visual/baseline/nested-3-levels.png`) shows the identical gap, and has
-  since the fixture was accepted — visual-diff testing never caught it because it only diffs
-  against a previously-accepted baseline that already had the gap. **Confirmed as deliberate, not
-  accidental**: `ooxml-translator.ts`'s `renderSubgraph()` explicitly sets `<a:noFill/>` and
-  `<a:ln w="0"><a:noFill/></a:ln>` on the subgraph shape — only the title bar is drawn, the cluster
-  body was never meant to get a border/fill. This is a real fidelity gap against the README's
-  "Fidelity to the Mermaid preview: ✅" claim (Mermaid's own renderer draws a visible box around a
-  subgraph's members) — worth disclosing before any public claim, not blocking for nodes/edges
-  themselves which remain individually selectable and correctly positioned.
+- `nested-3-levels.docx` (first round): rendered, but the nested subgraphs showed **no visible
+  container box** — only a small floating title label. Since resolved, unrelated to this report:
+  `ooxml-translator.ts`'s `renderSubgraph()` now draws a filled/bordered box for the whole cluster
+  (`SUBGRAPH_FILL`/`SUBGRAPH_LINE`, dashed border) rather than only the title, landed the same day
+  as this report's first round (`TODO.md`, "Boîte de conteneur de sous-graphe — corrigé"). No
+  longer an open finding.
+
+**Result (2026-09-04, second round)**:
+
+- `medium-realistic.docx`: **confirmed** — renders correctly in real Word, all 3 baseline checks
+  pass, fill colors (blue/yellow/green) match `classDef`, the loop-back arrow (`Retenter` →
+  `Donnees-ok?`) is legible.
+- `minimal.docx`: **failed to open at all** — "Word a rencontré une erreur lors de l'ouverture du
+  fichier". Root cause found and is unrelated to the harness bug above: this fixture's diagram
+  (`A-->B-->C-->A`, a 3-node cycle) is SmartArt-eligible, and the committed `minimal.docx` had been
+  generated with SmartArt forced on rather than the CLI's actual default (off since 2026-09-03,
+  see "Incident SmartArt cycle" in `TODO.md`) — so it hit that exact, already-documented, still-
+  unfixed corruption bug (`cycle.ts`'s output is missing a `dsp:drawing` fallback part real Word
+  requires). All 5 `test-corpus/word-verification/` fixtures regenerated with default settings
+  (`CHECKLIST.md` §1 has the full detail); `minimal.docx` is the only one whose generation mode
+  actually changed, since none of the other 4 source diagrams happens to be SmartArt-eligible.
+  **Re-verification of the regenerated file is still pending.**
+- New fixture added this round: `direction-and-asymmetric-shape.docx` (`RL` direction + the
+  `id>Text]` asymmetric/flag shape, both new this session) — not yet checked in real Word.
 
 **Outstanding before this item can be checked off in `TODO.md`**:
-- [ ] Re-verify `minimal.docx` / `medium-realistic.docx` in real Word after the harness fix.
-- [ ] Decide/document: is "no visible subgraph container box" an acceptable V1 gap (documented
-      known-limitation) or does it block release? Recommendation: document it — it doesn't affect
-      the §9 crossing criterion (which is about edges, not subgraph decoration) or shape
-      selectability, but should not be silently discovered by a user or a LinkedIn commenter.
+- [ ] Re-verify the regenerated `minimal.docx` in real Word (default-settings wpc:wpc output, no
+      longer SmartArt).
+- [ ] Check `direction-and-asymmetric-shape.docx` (`CHECKLIST.md` §6): `RL` flow direction and the
+      `homePlate`-preset asymmetric shape, both first-time real-Word signal.
 - [ ] The drag-a-box-and-connector-stays-attached check (§9, third manual criterion) not yet
-      explicitly confirmed in this round.
+      explicitly confirmed in either round.
 
 Word version / OS used for this round: *(fill in)*.

@@ -1428,6 +1428,16 @@ fermée, pas un cas de labo.
       réel sur `chain`/`tree`/`cycle` tous les trois (aucun des trois n'a de signal Word réel positif
       sur la sortie de production — `chain` a seulement un échantillon isolé fait main, ADR 0004
       "Round 5").
+- [x] **Deuxième reproduction, involontaire, du même bug (2026-09-04)** — le `minimal.docx` de
+      `test-corpus/word-verification/` (diagramme `A-->B-->C-->A`, un cycle à 3 nœuds, éligible
+      SmartArt) refusait lui aussi de s'ouvrir dans Word réel avec le même message d'erreur. Cause :
+      ce fichier avait été généré avec SmartArt forcé (`MD2NATIVEDOCX_ENABLE_SMARTART=1`) au lieu du
+      défaut réel de la CLI (off), donc dispatché directement dans ce bug non corrigé — pas un
+      nouveau bug, juste le même touché par accident via un fixture mal généré. Corrigé en
+      régénérant les 5 fixtures `word-verification/` avec les réglages par défaut (voir
+      `docs/mvp-acceptance-report.md` §2 et `test-corpus/word-verification/CHECKLIST.md` §1) ; ne
+      change rien à l'état de ce chantier (toujours non corrigé, `smartArt.enabled` reste `false`
+      par défaut) mais confirme le bug sur un deuxième échantillon indépendant du premier.
 
 ---
 

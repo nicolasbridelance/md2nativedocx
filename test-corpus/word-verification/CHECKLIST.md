@@ -5,12 +5,27 @@ it requires opening these files in **real Microsoft Word** (any recent desktop v
 or macOS. Everything else (crossing-detector report, golden/unit/fuzz/visual-diff tests) is already
 automated — see `docs/mvp-acceptance-report.md`.
 
-5 files, ~3 minutes each. For each one, open it in Word and check:
+6 files, ~3 minutes each. For each one, open it in Word and check:
 
 ## 1. `minimal.docx` — baseline sanity
 - [ ] Each shape is individually clickable/selectable (not one merged picture).
 - [ ] Click a shape, drag it — the connected arrow follows and stays attached.
 - [ ] No text overflow outside any shape.
+
+  **Regenerated 2026-09-04**: the previously-committed `minimal.docx` (2026-09-03) failed to open
+  in Word at all ("Word a rencontré une erreur lors de l'ouverture du fichier"), reported during
+  this file's first real-Word pass. Root cause: this fixture's diagram (`A-->B-->C-->A`, a 3-node
+  cycle) is SmartArt-eligible, and it turns out the file was generated with SmartArt forced on
+  (`MD2NATIVEDOCX_ENABLE_SMARTART=1`) rather than the CLI's actual default — dispatching it straight
+  into the exact, already-documented "Incident SmartArt cycle cassé en Word réel" (`TODO.md`,
+  2026-09-03: `cycle.ts`'s output is missing a `dsp:drawing` fallback part real Word requires, not
+  yet fixed). All 5 fixtures here have been regenerated with the CLI's default settings (no
+  SmartArt env var) so what gets tested matches what a real user's export looks like; none of the 5
+  source diagrams happens to be SmartArt-eligible except this one, so `minimal.docx` is now the only
+  file whose generation mode actually changed (confirmed via `unzip -l`: no more `word/diagrams/`
+  parts, it uses the plain `wpc:wpc` shapes path like every other fixture here already did).
+  **Re-verification of this specific file in real Word is what's pending now** — the other 4 were
+  already unaffected (no SmartArt parts before or after).
 
 ## 2. `medium-realistic.docx` — colors, gate diamonds, a loop (Retry → Check)
 - [ ] Same 3 checks as above.
@@ -37,6 +52,19 @@ automated — see `docs/mvp-acceptance-report.md`.
       the only fixture out of 24 that fails the 0-crossing check. Confirm it's visually messy but
       still *usable* (shapes selectable, no silent render failure) — this is expected to look
       busy, that's not a bug, just note whether it's "busy but readable" or "actually broken".
+
+## 6. `direction-and-asymmetric-shape.docx` — new this session (2026-09-04): `RL` direction + asymmetric shape
+- [ ] The flow visibly runs **right to left** (`Debut` on the right, `Fin` on the left) — `RL` was
+      unsupported before this session (parser rejected it entirely); this is the first real-Word
+      signal on Dagre's `RL` rankdir specifically (`BT` also shipped this session, but is the
+      vertical mirror of the already-well-tested `TD` — this file exercises `RL`/asymmetric instead,
+      the two changes that touch genuinely new rendering surface: a new node preset and a Dagre
+      rankdir value that was never fed to Word before).
+- [ ] The `Etape asymetrique` shape (from Mermaid's `id>Text]` flag syntax, new this session) renders
+      as a flag/pentagon shape (OOXML preset `homePlate` — the closest built-in match, not an exact
+      shape correspondence, see `docs/markdown-mermaid-compliance-table.md` §5.2), with its 2-line
+      label fully inside the shape, not overflowing.
+- [ ] Same 3 baseline checks as #1 (shapes selectable, connector follows a drag, no text overflow).
 
 ## Recording the result
 
