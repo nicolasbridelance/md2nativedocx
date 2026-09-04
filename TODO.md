@@ -59,6 +59,50 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ✅ **Auto-boucle (`A --> A`) — audit terminé, vrai bug de rendu trouvé et corrigé, deux bugs en
+      réalité (2026-09-04, punch list OOXML item 5 — dernier item de la liste)** : signalé plus tôt
+      cette session comme "jamais audité, pas de verdict" (`docs/markdown-mermaid-compliance-table.md`
+      §5.7). Vérification par rendu LibreOffice réel : une auto-boucle se dessinait comme une **ligne
+      droite traversant l'intérieur du nœud**, flèche comprise dans le remplissage — pas une boucle
+      du tout.
+      - **Bug 1 — `chooseSides()` dégénère pour deux boîtes identiques** : cette fonction choisit un
+        côté de connexion à partir de la position relative de deux boîtes ; pour une auto-boucle,
+        `from`/`to` sont la même boîte, donc `dx=dy=0`, ce qui résout toujours en "haut → bas" — une
+        ligne verticale plein milieu du nœud. Dagre calcule pourtant déjà une vraie boucle qui
+        déborde du nœud (vérifié empiriquement en TD/LR/BT/RL — la boucle change de côté selon la
+        direction, mais déborde toujours dans le même sens, jamais dans le sens négatif observé).
+        Corrigé : `connectorGeometry()` (`ooxml-translator.ts`) détecte l'auto-boucle (`from === to`,
+        une comparaison de référence fiable ici — les deux viennent du même `layout.nodes[id]`,
+        jamais clonées) et utilise le tracé de Dagre tel quel, avec un nouveau `nearestSite()` pour
+        déterminer `stCxn`/`endCxn` par distance perpendiculaire aux 4 côtés plutôt que par la
+        logique pensée pour deux boîtes différentes.
+      - **Bug 2, trouvé en corrigeant le premier — LibreOffice réécrit le tracé d'un connecteur
+        auto-référent** : une fois la géométrie corrigée (vraie boucle multi-points), toujours
+        invisible. Cause : une forme `wps:cNvCnPr` (connecteur) dont `stCxn`/`endCxn` visent la
+        **même** forme voit son `a:custGeom`/`a:xfrm` purement et simplement ignoré et remplacé par
+        un tracé recalculé par le moteur de rendu — un point unique (invisible, longueur nulle) si
+        les deux index sont identiques, une forme sans rapport avec la géométrie fournie si les
+        index diffèrent (testé les deux cas). Un `wps:cNvSpPr` (forme simple, pas connecteur) avec le
+        même `a:custGeom` s'affiche correctement — vérifié en TD, LR, et avec un libellé d'arête.
+        Renoncement délibéré et documenté : l'auto-boucle ne bénéficie plus de l'attachement
+        magnétique (`stCxn`/`endCxn`) et ne suivra donc pas son nœud si celui-ci est déplacé dans
+        Word — largement préférable à une boucle invisible ou visuellement fausse.
+      - **Effet de bord trouvé au passage** : `computeBoundingBox()` (`ooxml-translator.ts`) et
+        `boundsOrigin()` (`layout.ts`) ne considéraient jamais les tracés d'arête, seulement les
+        boîtes de nœud/sous-graphe — inoffensif pour une arête normale (toujours contenue dans
+        l'union des boîtes de ses deux extrémités) mais une auto-boucle déborde **par construction**
+        de la boîte de son unique nœud, donc `wp:extent`/le canevas déclaré était trop petit et la
+        boucle tronquée même une fois sa géométrie corrigée. Les deux fonctions incluent désormais
+        aussi les points de chaque route d'arête — même précédent que le correctif "sous-graphe à
+        origine négative" déjà documenté plus bas dans ce fichier pour `boundsOrigin()`, appliqué ici
+        à une deuxième source de débordement.
+      8 nouveaux tests unitaires (6 `translator.test.ts` + 2 `layout.test.ts`) + 1 nouvelle fixture
+      visuelle (`self-loop.mmd`, 0,000% de diff). Suite complète verte (227 core / 31 cli / 11
+      pandoc-filter / 25 vscode-extension) ; `node scripts/test-visual.mjs` toujours les mêmes 11
+      échecs pré-existants, aucun nouveau. Confirmé corriger un **vrai bug déjà présent** dans le
+      corpus officiel Mermaid (`large2.mmd` contient une auto-boucle) — diff `document.xml` avant/
+      après : la forme 44 passe de `wps:cNvCnPr`/ligne droite `cx="0"` à `wps:cNvSpPr`/`custGeom`
+      multi-points, tout le reste du document strictement identique.
 - ✅ **Direction de sous-graphe — plus une limite de parseur silencieuse, mais toujours une
       limite de Dagre, désormais explicite (2026-09-04, punch list OOXML item 4)** : `direction
       RL` à l'intérieur d'un `subgraph...end` tombait jusqu'ici dans le message générique

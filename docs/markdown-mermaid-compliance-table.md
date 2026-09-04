@@ -64,6 +64,17 @@
 > s'affiche dans la direction du flowchart parent). Un vrai support demanderait une passe de layout
 > récursive indépendante par sous-graphe — chantier d'architecture distinct, pas fait ici. Voir
 > `types.ts`'s `Subgraph.direction` pour le détail technique complet.
+>
+> **[Mise à jour 2026-09-04, encore plus tard le même jour]** La ligne "Auto-boucle" (§5.7) passe de
+> "non audité, pas de verdict" à ✅ Full côté OOXML : un vrai bug de rendu a été trouvé (ligne droite
+> traversant le nœud, pas une boucle) et corrigé, en deux temps — `connectorGeometry()`
+> (`ooxml-translator.ts`) utilise désormais la vraie boucle déjà calculée par Dagre au lieu de la
+> dégénérescence de `chooseSides()` pour deux boîtes identiques, puis la forme est déclarée
+> `wps:cNvSpPr` plutôt que `wps:cNvCnPr` une fois découvert que LibreOffice réécrit purement et
+> simplement le tracé d'un connecteur qui se référence lui-même. `computeBoundingBox()`/
+> `boundsOrigin()` incluent désormais aussi les tracés d'arête (une auto-boucle déborde par
+> construction de la boîte de son propre nœud). Confirmé corriger un vrai bug déjà présent dans
+> `large2.mmd` (corpus officiel Mermaid), pas seulement un cas synthétique.
 
 ## 1. Sources consultées
 
@@ -268,7 +279,7 @@ utilement les sections précédentes qui listent des *constructions syntaxiques*
 | Fusion après branchement (décision → Oui/Non → merge) | `merge-after-branch` | ❌ None — disqualifié explicitement ; c'est, selon la spec elle-même, **le pattern le plus fréquent dans un flowchart réel** (§6, §10.1) — la limitation la plus citée de tout ce chantier | ✅ Full (fallback automatique — c'est précisément la raison d'être du dispatch hybride) | ✅ Full |
 | Topologie irrégulière (multi-racines, etc.) | `irregular-topology` | ❌ None | ✅ Full (fallback) | ✅ Full |
 | Diagramme déconnecté (composantes multiples) | `disconnected` | ❌ None | ✅ Full (fallback) | ✅ Full |
-| Auto-boucle (`A --> A`) | `self-loop` | ❌ None — disqualifié par `classify.ts` | ✅ Full (fallback) | 🟡 Partial probable — vérifié empiriquement que le **parseur** accepte `A --> A` sans broncher (nœud + arête créés normalement, zéro warning) ; seul `classify.ts` le rejette pour la voie SmartArt. Le rendu visuel exact d'une auto-boucle par le traducteur OOXML/Dagre n'a pas été audité dans cette session — signalé pour vérification séparée, pas un verdict définitif |
+| Auto-boucle (`A --> A`) | `self-loop` | ❌ None — disqualifié par `classify.ts` | ✅ Full (fallback) | ✅ Full (corrigé 2026-09-04, punch list OOXML item 5, audit terminé — vrai bug trouvé et corrigé) — le parseur acceptait déjà `A --> A` sans broncher, mais le **traducteur** était cassé : `connectorGeometry()` suppose deux boîtes *différentes* pour choisir un côté de connexion (`chooseSides()`), ce qui dégénère (dx=dy=0) en une ligne droite traversant l'intérieur du nœud, flèche comprise — confirmé par rendu LibreOffice réel. Dagre calcule pourtant déjà une vraie boucle qui déborde du nœud (vérifié TD/LR/BT/RL) ; `connectorGeometry()` l'utilise désormais telle quelle pour toute auto-boucle. Deuxième bug trouvé en corrigeant le premier : une fois la géométrie corrigée, LibreOffice l'ignorait quand même — une forme `wps:cNvCnPr` (connecteur) dont `stCxn`/`endCxn` visent la **même** forme voit son `a:custGeom` purement et simplement remplacé par un tracé recalculé par le moteur de rendu (invisible si même index des deux côtés, forme non liée à la géométrie fournie sinon) ; corrigé en déclarant l'auto-boucle `wps:cNvSpPr` (forme simple) plutôt que `wps:cNvCnPr` — un renoncement délibéré et documenté à l'attachement magnétique (l'auto-boucle ne suit pas son nœud si celui-ci est déplacé dans Word), largement préférable à une boucle invisible ou fausse. Effet de bord découvert au passage : `computeBoundingBox()`/`boundsOrigin()` (`ooxml-translator.ts`/`layout.ts`) ne considéraient jamais les tracés d'arête, seulement les boîtes de nœud/sous-graphe — inoffensif pour une arête normale (toujours dans l'union des boîtes de ses deux extrémités) mais une auto-boucle déborde **par construction**, donc le canevas déclaré (`wp:extent`) était trop petit et la boucle tronquée même une fois sa géométrie corrigée ; les deux fonctions incluent désormais aussi les points d'arête. Vérifié en TD/LR, avec libellé d'arête, et confirmé corriger un vrai bug déjà présent dans le corpus officiel Mermaid (`large2.mmd`) |
 
 ### 5.8 Interaction / configuration du rendu Mermaid
 

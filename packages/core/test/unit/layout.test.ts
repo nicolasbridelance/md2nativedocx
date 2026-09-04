@@ -156,6 +156,25 @@ test('subgraph boxes never go negative even when the cluster margin extends past
   }
 });
 
+test('edge routes never go negative either — same normalization-origin bug the subgraph case above already hit once', () => {
+  // Self-loop audit (2026-09-04, punch list item 5): a self-loop's route
+  // bulges past its own node's box by construction (ooxml-translator.ts's
+  // connectorGeometry doc comment). Every case exercised so far bulges
+  // toward positive x/y, but boundsOrigin() now folds edge points into the
+  // same normalization offset as nodes/subgraphs regardless, so a route
+  // that ever bulged the other way couldn't produce an un-accounted-for
+  // negative coordinate — the same total-rendering-failure mode the
+  // subgraph-only version of this bug already caused once (see the
+  // previous test's comment).
+  const result = layout(parseMermaid('graph TD\n  A --> A\n  A --> B').ast);
+  for (const points of result.edges) {
+    for (const point of points) {
+      assert.ok(point.x >= 0, `edge point has negative x=${point.x}`);
+      assert.ok(point.y >= 0, `edge point has negative y=${point.y}`);
+    }
+  }
+});
+
 // --- Text-driven node sizing (found 2026-09-02: every node used to get the
 // same fixed NODE_WIDTHxNODE_HEIGHT box regardless of its label — short
 // labels sat lost in an oversized box, long ones wrapped badly, and a

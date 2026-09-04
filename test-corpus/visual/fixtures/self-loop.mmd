@@ -1,0 +1,4 @@
+flowchart TD
+    A[Depart] --> B[En cours]
+    B -->|retry| B
+    B --> C[Fin]

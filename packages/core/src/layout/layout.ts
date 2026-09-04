@@ -421,8 +421,8 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   });
 
   // Normalize so the top-left of the diagram is at (0,0), using ONE offset
-  // derived from nodes AND subgraph boxes and applied consistently to both
-  // (plus edges). A subgraph's cluster box is not just the tight bbox of its
+  // derived from nodes, subgraph boxes, AND edge routes, applied consistently
+  // to all three. A subgraph's cluster box is not just the tight bbox of its
   // children — Dagre pads it with its own cluster margin — so it can extend
   // further left/up than every node combined; computing the offset from
   // nodes alone (an earlier version of this function did, matching the
@@ -434,7 +434,16 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   // *already-normalized* nodes' minX/minY, i.e. always 0, so they were never
   // actually shifted at all — invisible only because Dagre's raw subgraph
   // origin happened to already be non-negative in every shape tried so far.)
-  const [minX, minY] = boundsOrigin(nodes, subgraphs);
+  // Edge routes joined the offset for the same reason (self-loop audit,
+  // 2026-09-04, punch list item 5): a self-loop's route bulges out past its
+  // own node's perimeter by construction (`ooxml-translator.ts`'s
+  // `connectorGeometry` doc comment) — every case actually exercised so far
+  // bulges toward positive x/y (away from the origin), but there is no
+  // guarantee from Dagre that some rankdir/position combination couldn't
+  // bulge the other way, and the failure mode if one ever did (an
+  // un-accounted-for negative coordinate) is the same total rendering
+  // failure the subgraph case above already hit once.
+  const [minX, minY] = boundsOrigin(nodes, subgraphs, edges);
   const normalizedNodes = shiftLayout(nodes, minX, minY);
   const normalizedSubgraphs = shiftSubgraphs(subgraphs, minX, minY);
   const normalizedEdges = edges.map((points) => points.map((p) => ({ x: p.x - minX, y: p.y - minY })));
@@ -453,10 +462,15 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
 }
 
 /**
- * The (minX, minY) across every node's AND every subgraph's top-left corner,
- * or (0, 0) if there are none. Must include subgraphs — see the caller.
+ * The (minX, minY) across every node's top-left corner, every subgraph's
+ * top-left corner, AND every edge route point, or (0, 0) if there are none.
+ * Must include subgraphs and edges — see the caller.
  */
-function boundsOrigin(nodes: Layout, subgraphs: Record<string, SubgraphBox>): [number, number] {
+function boundsOrigin(
+  nodes: Layout,
+  subgraphs: Record<string, SubgraphBox>,
+  edges: LayoutPoint[][],
+): [number, number] {
   let minX = Infinity;
   let minY = Infinity;
   for (const box of Object.values(nodes)) {
@@ -466,6 +480,12 @@ function boundsOrigin(nodes: Layout, subgraphs: Record<string, SubgraphBox>): [n
   for (const box of Object.values(subgraphs)) {
     minX = Math.min(minX, box.x);
     minY = Math.min(minY, box.y);
+  }
+  for (const points of edges) {
+    for (const point of points) {
+      minX = Math.min(minX, point.x);
+      minY = Math.min(minY, point.y);
+    }
   }
   return minX === Infinity ? [0, 0] : [minX, minY];
 }

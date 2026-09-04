@@ -565,3 +565,83 @@ test('a routed connector still declares stCxn/endCxn for magnetic attachment', (
   assert.ok(/<a:stCxn id="\d+" idx="\d"\/>/.test(custGeomBlock![0]));
   assert.ok(/<a:endCxn id="\d+" idx="\d"\/>/.test(custGeomBlock![0]));
 });
+
+// --- Self-loop (`A --> A`) audit, punch list item 5 (2026-09-04) ---
+//
+// Real-render finding: chooseSides()/sitePoint() assume two *different*
+// boxes and pick a connection site from their relative position; for a
+// self-loop (from === to) that degenerates to dx=dy=0, always resolving to
+// "top -> bottom" — a straight line drawn through the node's own interior,
+// with the arrowhead landing inside the fill, not a loop at all. Separately
+// (found while fixing the above), declaring a self-loop's shape as
+// `wps:cNvCnPr` at all — even with the correct multi-point loop geometry —
+// gets LibreOffice to discard the supplied `a:custGeom` and substitute its
+// own computed path once `stCxn`/`endCxn` name the same shape id (invisible
+// when both ends share an index, an unrelated auto-routed shape when they
+// don't). Fixed by using Dagre's own self-loop route verbatim
+// (connectorGeometry) and declaring the shape `wps:cNvSpPr` instead of
+// `wps:cNvCnPr` (renderEdge) — verified against a real LibreOffice render.
+
+test('a self-loop is declared wps:cNvSpPr, not wps:cNvCnPr (LibreOffice discards custGeom on a same-shape connector)', () => {
+  const xml = translate('graph TD\n  A --> A\n  A --> B');
+  const selfLoopShape = /<wps:cNvPr id="\d+" name="A--A"\/>\s*(<wps:cNvSpPr\/>|<wps:cNvCnPr>)/.exec(xml);
+  assert.ok(selfLoopShape, 'expected to find the A--A shape');
+  assert.equal(selfLoopShape![1], '<wps:cNvSpPr/>');
+  // The normal A->B edge must still be a real connector, unaffected.
+  const normalEdge = /<wps:cNvPr id="\d+" name="A--B"\/>\s*(<wps:cNvSpPr\/>|<wps:cNvCnPr>)/.exec(xml);
+  assert.ok(normalEdge);
+  assert.equal(normalEdge![1], '<wps:cNvCnPr>');
+});
+
+test('a self-loop uses Dagre\'s own multi-point loop route, not a 2-point line through the node', () => {
+  const xml = translate('graph TD\n  A --> A');
+  const shape = /<wps:cNvPr id="\d+" name="A--A"\/>[\s\S]*?<a:pathLst>([\s\S]*?)<\/a:pathLst>/.exec(xml);
+  assert.ok(shape, 'expected a custGeom path for the self-loop');
+  const pointCount = (shape![1]!.match(/<a:(?:moveTo|lnTo)>/g) ?? []).length;
+  assert.ok(pointCount > 2, `expected a real multi-point loop, got ${pointCount} point(s)`);
+});
+
+test('a self-loop\'s geometry bulges outside its own node\'s box (a real loop, not a line collapsed onto the node)', () => {
+  const xml = translate('graph TD\n  A --> A');
+  const nodeBox = /<wps:cNvPr id="\d+" name="A" descr="A"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
+    xml,
+  );
+  assert.ok(nodeBox);
+  const [, nx, , nw] = nodeBox!.map(Number);
+  const loopBox = /<wps:cNvPr id="\d+" name="A--A"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
+    xml,
+  );
+  assert.ok(loopBox);
+  const [, lx, , lw] = loopBox!.map(Number);
+  assert.ok(
+    lx! + lw! > nx! + nw!,
+    `self-loop bounding box (x=${lx}, w=${lw}) does not extend past the node's right edge (x=${nx}, w=${nw})`,
+  );
+});
+
+test('the diagram extent grows to fit a self-loop\'s bulge, instead of clipping it (computeBoundingBox must include edge routes)', () => {
+  // Regression: computeBoundingBox() only ever considered node/subgraph
+  // boxes, never edge routes -- harmless for a straight edge (always within
+  // the union of its two nodes' boxes) but a self-loop's bulge, by
+  // definition, extends past its own (only) node's box, so leaving it out
+  // undersizes wp:extent/the wpc:wpc canvas and the loop gets clipped by the
+  // drawing frame even though its own XML geometry is entirely correct.
+  const withLoop = translate('graph TD\n  A --> A');
+  const withoutLoop = translate('graph TD\n  A[A]');
+  const extent = (xml: string) => {
+    const m = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
+    assert.ok(m);
+    return { cx: Number(m![1]), cy: Number(m![2]) };
+  };
+  assert.ok(
+    extent(withLoop).cx > extent(withoutLoop).cx,
+    'the self-loop diagram\'s extent should be wider than the same node with no loop',
+  );
+});
+
+test('a labeled self-loop still positions its edge label near the loop, not at the diagram origin', () => {
+  const xml = translate('graph TD\n  A -->|retry| A');
+  const label = /<wps:cNvPr id="\d+" name="EdgeLabel"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>/.exec(xml);
+  assert.ok(label, 'expected to find the "retry" edge label');
+  assert.ok(xml.includes('>retry<'));
+});

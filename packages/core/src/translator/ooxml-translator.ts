@@ -915,6 +915,24 @@ function chooseSides(from: Box, to: Box): { stSide: number; endSide: number } {
   return dx > 0 ? { stSide: SITE.right, endSide: SITE.left } : { stSide: SITE.left, endSide: SITE.right };
 }
 
+/**
+ * Which connection site a point sits closest to, by perpendicular distance
+ * to each of the box's 4 sides (extended as infinite lines, not clamped to
+ * the segment) — used for a self-loop's connection sites, where the point
+ * isn't the sitePoint()-computed midpoint of a side but one of Dagre's own
+ * loop-route endpoints (still on the box's perimeter, just not centered).
+ */
+function nearestSite(box: Box, point: { x: number; y: number }): number {
+  const distances: Array<[number, number]> = [
+    [SITE.top, Math.abs(point.y - box.y)],
+    [SITE.bottom, Math.abs(point.y - (box.y + box.height))],
+    [SITE.left, Math.abs(point.x - box.x)],
+    [SITE.right, Math.abs(point.x - (box.x + box.width))],
+  ];
+  distances.sort((a, b) => a[1] - b[1]);
+  return distances[0]![0];
+}
+
 /** A connector's full route, in pixel space. */
 interface ConnectorGeometry {
   stSide: number;
@@ -987,6 +1005,29 @@ function connectorGeometry(
   dagrePoints: LayoutPoint[],
   otherBoxes: Box[],
 ): ConnectorGeometry {
+  // A self-loop (`A --> A`): `from`/`to` are the exact same Box object here
+  // (both looked up as `layout.nodes[edge.from]`/`layout.nodes[edge.to]` from
+  // the same id in renderContent, never cloned) — a reliable proxy for
+  // "same node" without threading the Mermaid id through this function too.
+  // chooseSides()/sitePoint() below assume two *different* boxes and pick a
+  // side from their relative position; for identical boxes that degenerates
+  // to dx=dy=0, always resolving to "top -> bottom" — a straight line
+  // through the node's own interior, not a loop, found by real-render audit
+  // (2026-09-04, punch list item 5). Dagre already computes a real loop
+  // bulging away from the node for a self-edge (verified across TD/LR/BT/RL
+  // -- the bulge direction rotates with rankdir, but both ends always land
+  // on the node's own perimeter), so a self-loop uses those points verbatim
+  // instead of ever calling chooseSides()/sitePoint().
+  if (from === to) {
+    const start = dagrePoints[0]!;
+    const end = dagrePoints[dagrePoints.length - 1]!;
+    return {
+      stSide: nearestSite(from, start),
+      endSide: nearestSite(to, end),
+      points: dagrePoints.map((p) => ({ x: p.x, y: p.y })),
+    };
+  }
+
   const { stSide, endSide } = chooseSides(from, to);
   const start = sitePoint(from, stSide);
   const end = sitePoint(to, endSide);
@@ -1109,6 +1150,25 @@ function bentConnectorGeometry(points: { x: number; y: number }[]): string {
  * generic label (spec follow-up, `docs/specs/FUTURE_docx2mermaid_SPEC.md` §4) — no
  * downside here, unlike node `name`: connectors don't currently carry a
  * friendlier alternative Word would otherwise show in its Selection Pane.
+ *
+ * A self-loop (`A --> A`) is declared `wps:cNvSpPr` (a plain shape) instead
+ * of `wps:cNvCnPr` (a connector), even though its geometry (custom, from
+ * {@link connectorGeometry}'s dedicated self-loop branch) is identical
+ * either way — found by real-render audit (2026-09-04, punch list item 5):
+ * LibreOffice **discards** a `wps:cNvCnPr` shape's own `a:custGeom`/`a:xfrm`
+ * entirely and substitutes its own computed path once `stCxn`/`endCxn` name
+ * the *same* shape id, whether at the same connection index (collapses to
+ * an invisible zero-length line — the original bug) or two different ones
+ * (a visible but unrelated auto-routed shape, ignoring the real Dagre loop
+ * geometry). A plain shape's `a:custGeom` is never second-guessed this way
+ * — same rendering path already trusted for a routed edge between two
+ * *different* shapes (`bentConnectorGeometry`'s own doc comment) — so a
+ * self-loop uses it too, verified end to end against a real LibreOffice
+ * render (the "audit" — no prior attempt existed to compare against). The
+ * accepted tradeoff: a self-loop won't visually follow its node if the node
+ * is later dragged in Word (no real `stCxn`/`endCxn` magnetic attachment,
+ * since there is nothing meaningfully different to attach the two ends
+ * *to* on the very same shape) — far better than the alternatives above.
  */
 function renderEdge(
   fromId: number,
@@ -1152,14 +1212,20 @@ function renderEdge(
       ? `        <a:tailEnd type="${lineStyle.tailEnd}" w="${markerSize}" len="${markerSize}"/>`
       : '';
   const safeName = escapeXml(`${mermaidFromId}--${mermaidToId}`);
+  const isSelfLoop = fromId === toId;
+  const connectionProps = isSelfLoop
+    ? '    <wps:cNvSpPr/>'
+    : [
+        '    <wps:cNvCnPr>',
+        `      <a:stCxn id="${fromId}" idx="${stSide}"/>`,
+        `      <a:endCxn id="${toId}" idx="${endSide}"/>`,
+        '    </wps:cNvCnPr>',
+      ].join('\n');
 
   return [
     '  <wps:wsp>',
     `    <wps:cNvPr id="${nextId()}" name="${safeName}"/>`,
-    '    <wps:cNvCnPr>',
-    `      <a:stCxn id="${fromId}" idx="${stSide}"/>`,
-    `      <a:endCxn id="${toId}" idx="${endSide}"/>`,
-    '    </wps:cNvCnPr>',
+    connectionProps,
     '    <wps:spPr>',
     geometry,
     `      <a:ln w="${scaledLineWidth(baseWidthEmu, scale)}" cap="flat" cmpd="sng" algn="ctr">`,
@@ -1320,6 +1386,22 @@ function computeBoundingBox(layout: LayoutResult): { width: number; height: numb
     minY = Math.min(minY, box.y);
     maxX = Math.max(maxX, box.x + box.width);
     maxY = Math.max(maxY, box.y + box.height);
+  }
+  // An edge route can extend past every node/subgraph box: found via a
+  // self-loop audit (2026-09-04, punch list item 5) — a self-loop's route
+  // (connectorGeometry's doc comment) always bulges out past its own node's
+  // perimeter, so the diagram's declared canvas size (this function) has to
+  // include it too, or the loop is clipped by the canvas frame even though
+  // its own XML geometry is entirely correct. The same could in principle
+  // happen for a normal edge routed wide around an obstacle, just less
+  // reliably than a self-loop's guaranteed bulge — included here for both.
+  for (const points of layout.edges) {
+    for (const point of points) {
+      minX = Math.min(minX, point.x);
+      minY = Math.min(minY, point.y);
+      maxX = Math.max(maxX, point.x);
+      maxY = Math.max(maxY, point.y);
+    }
   }
   if (minX === Infinity) return { width: 0, height: 0 };
   return { width: maxX - minX, height: maxY - minY };
