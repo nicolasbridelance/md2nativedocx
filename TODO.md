@@ -1098,6 +1098,32 @@ est levé.
       Vérifié par export CLI réel + rendu LibreOffice headless pour 2, 3 et 4+ ensembles — les
       trois rendent correctement dès la première tentative, aucun bug de géométrie trouvé cette
       fois (contrairement à `quadrantChart`).
+- [x] **`mindmap` shippé (2026-09-04)** — troisième type non-flowchart livré, archétype #5
+      "Radial" de `docs/smartart-full-catalog-cross-mermaid.md`. Corrige le bug exact qui a motivé
+      `FUTURE_full_mermaid_coverage_SPEC.md` §1 : `root((mindmap))` se mal-parsait silencieusement
+      en faux nœud flowchart (`((...))` coïncide avec la syntaxe cercle). Formes OOXML pures, pas
+      de `dgm:layoutDef` : `chain.ts`/`tree.ts`/`cycle.ts` ne savent explicitement pas dessiner de
+      trait de connexion entre formes (limitation documentée) — or les branches d'un mindmap sont
+      précisément le point. Layout : arbre radial/ballon calculé (angle = secteur du sous-arbre,
+      rayon = palier fixe par profondeur), pas de plafond de profondeur (contrairement à `tree.ts`
+      SmartArt, plafonné à 2 par un `layoutDef` à répartition de hauteur fixe). Une topologie
+      "étoile" équivalente pour flowchart a été délibérément **pas** ajoutée à `classify.ts` — le
+      cas fan-in rend déjà correctement via le pipeline OOXML existant, avec de vrais traits de
+      connexion que `chain`/`tree`/`cycle` ne peuvent pas offrir ; voir la note dédiée dans
+      `docs/smartart-full-catalog-cross-mermaid.md`.
+      **3 vrais bugs trouvés et corrigés par le rendu LibreOffice réel** (pas juste les tests
+      unitaires) : (1) connecteurs invisibles — `wps:cxnSp` (élément DrawingML valide) ne rend
+      simplement rien dans ce canevas `wpc:wpc` sous LibreOffice ; remplacé par `wps:wsp`+
+      `wps:cNvCnPr`, le seul motif de connecteur confirmé fonctionner dans ce projet
+      (`ooxml-translator.ts`). (2) Texte tronqué — la taille de police n'était scalée nulle part
+      dans `quadrant`/`venn`/`mindmap` une fois le facteur `scale` de `scaledExtent()` < 1
+      (`quadrant`/`venn` n'avaient simplement jamais atteint ce cas en test ; le canevas mindmap,
+      plus grand, si) : `translator/canvas.ts` gagne `scaledFontSizeHalfPt`/`scaledLineWidthEmu`
+      (miroir de l'équivalent déjà correct dans `ooxml-translator.ts`), appliqués aux 3 modules.
+      (3) Troncature résiduelle sur les formes non rectangulaires (hexagone/cercle/bang/nuage) —
+      leur largeur utile réelle est inférieure à leur boîte englobante ; facteur de marge
+      supplémentaire par forme ajouté à `boxSizeFor()`. Les trois corrections vérifiées par un
+      second (puis un troisième) rendu réel, pas juste relues dans le code.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

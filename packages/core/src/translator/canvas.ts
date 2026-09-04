@@ -38,6 +38,40 @@ export function createIdAllocator(): () => number {
   return () => next++;
 }
 
+/** Never scale a run below this — matches `ooxml-translator.ts`'s
+ * `MIN_FONT_SIZE_HALFPT` (same rationale: this only prevents an invalid/zero
+ * `w:sz`, a diagram scaled this far down already has other legibility
+ * problems). */
+const MIN_FONT_SIZE_HALFPT = 4;
+
+/**
+ * Scale a base `w:sz` (half-points) by {@link scaledExtent}'s `scale`.
+ * Every text size passed to a `wps:txbx` run **must** go through this (or be
+ * scaled some other way) once the canvas can exceed the page-fit size — found
+ * missing from `diagrams/quadrant/translator.ts` and `diagrams/venn/translator.ts`
+ * by a real-render audit of `diagrams/mindmap/translator.ts` (2026-09-04): box
+ * *dimensions* shrink with `scale` (every `scalePt` call already applies it),
+ * but an unscaled font size does not shrink to match, so a large diagram
+ * renders its labels visibly overflowing/clipped past their own box — exactly
+ * `ooxml-translator.ts`'s `scaledFontSizeHalfPt` already solves for flowchart.
+ * Quadrant/venn happened to never hit `scale < 1` in testing so the bug
+ * stayed latent there; fixed in all three call sites once found.
+ */
+export function scaledFontSizeHalfPt(baseHalfPt: number, scale: number): number {
+  return Math.max(MIN_FONT_SIZE_HALFPT, Math.round(baseHalfPt * scale));
+}
+
+/** Never scale a stroke below this (EMU) — matches `ooxml-translator.ts`'s
+ * `MIN_LINE_WIDTH_EMU` (0.25pt; a hairline that would otherwise round to 0
+ * and disappear once `scale` is small enough). */
+const MIN_LINE_WIDTH_EMU = 3175;
+
+/** Scale a base `a:ln` stroke width (EMU) by {@link scaledExtent}'s `scale`,
+ * same rationale and floor as {@link scaledFontSizeHalfPt} above. */
+export function scaledLineWidthEmu(baseEmu: number, scale: number): number {
+  return Math.max(MIN_LINE_WIDTH_EMU, Math.round(baseEmu * scale));
+}
+
 /** See `ooxml-translator.ts`'s `MAX_DRAWING_CX`/`MAX_DRAWING_CY` doc comment
  * — usable page area in EMU for Pandoc's default reference document. */
 const MAX_DRAWING_CX = 5943600;

@@ -18,7 +18,13 @@
 import type { QuadrantChart, QuadrantPoint } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml, validateHexColor } from '../../translator/xml-escape.js';
-import { EMU_PER_PX, createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  EMU_PER_PX,
+  createIdAllocator,
+  scaledExtent,
+  scaledFontSizeHalfPt,
+  wrapDrawingCanvas,
+} from '../../translator/canvas.js';
 
 const GRID_SIZE = 480;
 // Wide enough for a two-word y-axis label ("High Engagement") at 8pt to fit
@@ -98,9 +104,30 @@ interface TextOptions {
   align?: 'l' | 'ctr' | 'r';
 }
 
-function textBox(id: number, x: number, y: number, w: number, h: number, text: string, opts: TextOptions): string {
+/**
+ * `opts.sizeHalfPt` is the *base* (unscaled) size — always run through
+ * {@link scaledFontSizeHalfPt} here, never emitted raw. `x`/`y`/`w`/`h` are
+ * the caller's responsibility to have already scaled (via `scale()` below):
+ * only the font size was found missing this step (real-render audit via
+ * `../mindmap/translator.ts`, 2026-09-04 — see `canvas.ts`'s doc comment on
+ * `scaledFontSizeHalfPt` for the full story). This diagram's own canvas
+ * happens to always fit under the page-size cap in practice, so `scale` is
+ * always 1 here today — fixed anyway since nothing guarantees that stays
+ * true as chart content grows.
+ */
+function textBox(
+  id: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  text: string,
+  opts: TextOptions,
+  scaleFactor: number,
+): string {
   const boldAttr = opts.bold ? ' <w:b/>' : '';
   const italicAttr = opts.italic ? ' <w:i/>' : '';
+  const sizeHalfPt = scaledFontSizeHalfPt(opts.sizeHalfPt, scaleFactor);
   return [
     '<wps:wsp>',
     `  <wps:cNvPr id="${id}" name="Text ${id}"/>`,
@@ -115,7 +142,7 @@ function textBox(id: number, x: number, y: number, w: number, h: number, text: s
     '    <w:txbxContent>',
     `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${opts.align ?? 'l'}"/></w:pPr>` +
       `<w:r><w:rPr>${boldAttr}${italicAttr} <w:color w:val="${opts.color}"/>` +
-      `<w:sz w:val="${opts.sizeHalfPt}"/></w:rPr>` +
+      `<w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,
     '    </w:txbxContent>',
     '  </wps:txbx>',
@@ -158,12 +185,16 @@ export function translateQuadrantToOoxml(chart: QuadrantChart): string {
 
   if (chart.title) {
     parts.push(
-      textBox(nextId(), scale(0, s), scale(0, s), scale(canvasW, s), scale(topMargin, s), chart.title, {
-        sizeHalfPt: 28,
-        color: '000000',
-        bold: true,
-        align: 'ctr',
-      }),
+      textBox(
+        nextId(),
+        scale(0, s),
+        scale(0, s),
+        scale(canvasW, s),
+        scale(topMargin, s),
+        chart.title,
+        { sizeHalfPt: 28, color: '000000', bold: true, align: 'ctr' },
+        s,
+      ),
     );
   }
 
@@ -177,11 +208,16 @@ export function translateQuadrantToOoxml(chart: QuadrantChart): string {
     const label = chart.quadrants[index];
     if (label) {
       parts.push(
-        textBox(nextId(), scale(x + 6, s), scale(y + 4, s), scale(half - 12, s), scale(20, s), label, {
-          sizeHalfPt: 18,
-          color: '595959',
-          italic: true,
-        }),
+        textBox(
+          nextId(),
+          scale(x + 6, s),
+          scale(y + 4, s),
+          scale(half - 12, s),
+          scale(20, s),
+          label,
+          { sizeHalfPt: 18, color: '595959', italic: true },
+          s,
+        ),
       );
     }
   }
@@ -192,10 +228,16 @@ export function translateQuadrantToOoxml(chart: QuadrantChart): string {
   // canvas size and avoids `a:xfrm/@rot` text-box quirks entirely.
   if (chart.xAxis) {
     parts.push(
-      textBox(nextId(), scale(gridX0, s), scale(gridY0 + GRID_SIZE + 6, s), scale(half, s), scale(20, s), chart.xAxis.low, {
-        sizeHalfPt: 16,
-        color: '595959',
-      }),
+      textBox(
+        nextId(),
+        scale(gridX0, s),
+        scale(gridY0 + GRID_SIZE + 6, s),
+        scale(half, s),
+        scale(20, s),
+        chart.xAxis.low,
+        { sizeHalfPt: 16, color: '595959' },
+        s,
+      ),
     );
     if (chart.xAxis.high) {
       parts.push(
@@ -207,25 +249,36 @@ export function translateQuadrantToOoxml(chart: QuadrantChart): string {
           scale(20, s),
           chart.xAxis.high,
           { sizeHalfPt: 16, color: '595959', align: 'r' },
+          s,
         ),
       );
     }
   }
   if (chart.yAxis) {
     parts.push(
-      textBox(nextId(), scale(0, s), scale(gridY0 + GRID_SIZE - 20, s), scale(MARGIN_LEFT - 6, s), scale(20, s), chart.yAxis.low, {
-        sizeHalfPt: 16,
-        color: '595959',
-        align: 'r',
-      }),
+      textBox(
+        nextId(),
+        scale(0, s),
+        scale(gridY0 + GRID_SIZE - 20, s),
+        scale(MARGIN_LEFT - 6, s),
+        scale(20, s),
+        chart.yAxis.low,
+        { sizeHalfPt: 16, color: '595959', align: 'r' },
+        s,
+      ),
     );
     if (chart.yAxis.high) {
       parts.push(
-        textBox(nextId(), scale(0, s), scale(gridY0, s), scale(MARGIN_LEFT - 6, s), scale(20, s), chart.yAxis.high, {
-          sizeHalfPt: 16,
-          color: '595959',
-          align: 'r',
-        }),
+        textBox(
+          nextId(),
+          scale(0, s),
+          scale(gridY0, s),
+          scale(MARGIN_LEFT - 6, s),
+          scale(20, s),
+          chart.yAxis.high,
+          { sizeHalfPt: 16, color: '595959', align: 'r' },
+          s,
+        ),
       );
     }
   }
@@ -273,6 +326,7 @@ function renderPoint(
     scale(18, s),
     point.name,
     { sizeHalfPt: 16, color: '000000' },
+    s,
   );
 
   return [dot, label];

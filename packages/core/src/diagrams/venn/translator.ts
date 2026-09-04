@@ -22,7 +22,13 @@
 import type { VennChart, VennSet, VennUnion } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml, validateHexColor } from '../../translator/xml-escape.js';
-import { EMU_PER_PX, createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  EMU_PER_PX,
+  createIdAllocator,
+  scaledExtent,
+  scaledFontSizeHalfPt,
+  wrapDrawingCanvas,
+} from '../../translator/canvas.js';
 
 const CIRCLE_R = 130;
 const SEPARATION_2 = 140;
@@ -96,9 +102,22 @@ interface TextOptions {
   italic?: boolean;
 }
 
-function textBox(id: number, x: number, y: number, w: number, h: number, text: string, opts: TextOptions): string {
+/** `opts.sizeHalfPt` is the *base* (unscaled) size — see the matching doc
+ * comment on `../quadrant/translator.ts`'s `textBox` for why `scaleFactor`
+ * is a required, separate parameter rather than folded into `opts`. */
+function textBox(
+  id: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  text: string,
+  opts: TextOptions,
+  scaleFactor: number,
+): string {
   const boldAttr = opts.bold ? ' <w:b/>' : '';
   const italicAttr = opts.italic ? ' <w:i/>' : '';
+  const sizeHalfPt = scaledFontSizeHalfPt(opts.sizeHalfPt, scaleFactor);
   return [
     '<wps:wsp>',
     `  <wps:cNvPr id="${id}" name="Text ${id}"/>`,
@@ -113,7 +132,7 @@ function textBox(id: number, x: number, y: number, w: number, h: number, text: s
     '    <w:txbxContent>',
     `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="ctr"/></w:pPr>` +
       `<w:r><w:rPr>${boldAttr}${italicAttr} <w:color w:val="${opts.color}"/>` +
-      `<w:sz w:val="${opts.sizeHalfPt}"/></w:rPr>` +
+      `<w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,
     '    </w:txbxContent>',
     '  </wps:txbx>',
@@ -167,11 +186,16 @@ export function translateVennToOoxml(chart: VennChart): string {
 
   if (chart.title) {
     parts.push(
-      textBox(nextId(), scalePt(0, s), scalePt(0, s), scalePt(canvasW, s), scalePt(topMargin, s), chart.title, {
-        sizeHalfPt: 28,
-        color: '000000',
-        bold: true,
-      }),
+      textBox(
+        nextId(),
+        scalePt(0, s),
+        scalePt(0, s),
+        scalePt(canvasW, s),
+        scalePt(topMargin, s),
+        chart.title,
+        { sizeHalfPt: 28, color: '000000', bold: true },
+        s,
+      ),
     );
   }
 
@@ -209,6 +233,7 @@ export function translateVennToOoxml(chart: VennChart): string {
         scalePt(18, s),
         set.label,
         { sizeHalfPt: 17, color: '000000', bold: true },
+        s,
       ),
     );
   });
@@ -228,6 +253,7 @@ export function translateVennToOoxml(chart: VennChart): string {
           scalePt(16, s),
           union.label,
           { sizeHalfPt: 15, color: '000000', italic: true },
+          s,
         ),
       );
     }

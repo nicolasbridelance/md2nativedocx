@@ -29,7 +29,7 @@
 | 2 | **Chronologie datée** (chaîne + étiquette secondaire par étape) | Basic Timeline, Circle Accent Timeline, Timeline Pipe | ⚠️ variante mineure de #1 | `timeline`, `journey` (tâche + score), petit `gantt` | Extension de `chain.ts` : ajouter un second champ texte (`pres`) par point pour la date/le score — pas un nouvel algorithme |
 | 3 | **Entonnoir / convergence / divergence** | Funnel, Converging Arrows, Converging Text, Random to Result Process, Diverging Arrows | ❌ **écarté avec preuve** (voir `smartart-layout-catalog.md` "layouts convergents") | flowchart merge-after-branch — **aucun mapping fiable** | Bloqué : `presParOf` n'autorise qu'un seul parent par point de présentation (testé empiriquement) ; `Funnel` seul reste non vérifié individuellement, à ne rouvrir que sur contre-exemple |
 | 4 | **Cycle fermé** (boucle, dernier → premier) | Basic/Block/Continuous Cycle, Text Cycle, Segmented Cycle, Nondirectional/Multidirectional Cycle, Basic Pie, Gear (variante cycle) | ✅ construit (`cycle.ts`) | flowchart cycle (fait), petit `stateDiagram` cyclique, boucle `gitGraph` | Déjà résolu, reskin uniquement |
-| 5 | **Radial / étoile** (un hub + satellites reliés au centre, pas entre eux) | Basic/Diverging Radial, Radial Cycle, Radial Cluster, Circle Relationship, Converging Radial, Radial List, Cycle Matrix, Hexagon Radial (Office.com) | ❌ nouveau, non construit | topologie étoile Mermaid (aujourd'hui non classifiée — tombe en `unsupported` dans `classify.ts`, voir note ci-dessous), petit `mindmap` (racine + 1er niveau), `architecture-beta` (hub de services) | Nouveau mais réutilise les maths polaires déjà écrites pour `cycle.ts` (placement circulaire) ; différence : chaque satellite se relie au **centre**, pas à son voisin. Ajouter une 4ᵉ topologie `star` à `classify.ts` |
+| 5 | **Radial / étoile** (un hub + satellites reliés au centre, pas entre eux) | Basic/Diverging Radial, Radial Cycle, Radial Cluster, Circle Relationship, Converging Radial, Radial List, Cycle Matrix, Hexagon Radial (Office.com) | ✅ **construit et livré (2026-09-04)** — `packages/core/src/diagrams/mindmap/`, pour `mindmap` uniquement | **`mindmap`** shippé — corrige le bug motivant `FUTURE_full_mermaid_coverage_SPEC.md` §1 (`root((mindmap))` mal-parsé silencieusement en flowchart). `architecture-beta` pas encore fait (nouveau type à part, pas engagé cette session). Topologie flowchart "étoile" délibérément pas ajoutée à `classify.ts` — voir note ci-dessous | Livré en formes OOXML pures (arbre radial/ballon : angle = secteur proportionnel à la taille du sous-arbre, rayon = palier fixe par profondeur), pas en `dgm:layoutDef` : les générateurs SmartArt existants (`chain`/`tree`/`cycle`) ne savent PAS dessiner de trait de connexion entre les formes (limitation documentée) — or les branches d'un mindmap sont précisément le point. Connecteurs en `wps:wsp`+`wps:cNvCnPr` (jamais `wps:cxnSp`, testé et invisible sous LibreOffice dans ce canevas). Bug réel trouvé et corrigé par le rendu LibreOffice : la taille de police n'était scalée nulle part dans `quadrant`/`venn`/`mindmap` une fois `scale &lt; 1` déclenché (jamais atteint avant, canevas mindmap le premier assez grand) — `canvas.ts` gagne `scaledFontSizeHalfPt`/`scaledLineWidthEmu`, appliqués aux 3 modules |
 | 6 | **Hiérarchie / arbre** | Hierarchy, Horizontal Hierarchy, Horizontal Multi-Level Hierarchy, Organization/Horizontal Organization/Half Circle Organization/Name and Title Organization Chart, Architecture Layout, Table Hierarchy, Hierarchy List | ✅ construit, profondeur ≤ 2 (`tree.ts`) | flowchart arbre (fait), `classDiagram` héritage, `requirementDiagram` derive/satisfy, `treeView-beta`, containment C4 | Généralisation profondeur > 2 déjà identifiée comme chantier séparé dans `TODO.md` — même mécanique, imbrication récursive de `composite` en plus |
 | 7 | **Hiérarchie libellée par niveau** | Labeled Hierarchy, Horizontal Labeled Hierarchy | ❌ **écarté avec preuve** (échantillon Word réel : étiquette par profondeur, pas par branche) | aucun bon candidat au-delà du cas `subgraph` déjà restreint et écarté | N/A |
 | 8 | **Containment (anneaux imbriqués)** | Nested Target, Basic Target, Circle Picture Hierarchy (variante image, écartée) | 🔍 piste active, non spické | `subgraph` (conteneur, pas un nœud), regroupement `erDiagram`, frontières de conteneur C4 | Pas encore spické — prochaine étape déjà notée : demander un échantillon Word réel (`smartart-samples-wishlist.md`) avant d'écrire un `layoutDef` |
@@ -44,14 +44,22 @@ Total couvert : 14 archétypes pour ~150 noms Microsoft ; aucun nom de la liste 
 d'une des lignes ci-dessus (les Picture/Office.com résiduels sont regroupés en #14/dans les lignes
 correspondantes plutôt que listés un par un, mécanique identique).
 
-## Note — topologie "étoile" absente du classificateur actuel
+## Note — topologie "étoile" délibérément pas ajoutée à `classify.ts` (2026-09-04)
 
 Ligne #5 ci-dessus dépend d'un point déjà signalé dans `smartart-layout-catalog.md` (§ catégories
 écartées) : un flowchart Mermaid réellement en étoile (un nœud central relié vers/depuis tous les
 autres, sans hiérarchie ni boucle) n'a **aujourd'hui aucune catégorie** dans `classify.ts` — il
 tombe en `merge-after-branch` (si le hub a plusieurs arêtes entrantes) ou `irregular-topology`
-sinon. Construire l'archétype radial suppose d'ajouter cette 4ᵉ topologie au classificateur, pas
-seulement d'écrire un nouveau `layoutDef`.
+sinon.
+
+**Décision prise en construisant l'archétype radial** : ne pas ajouter cette 4ᵉ topologie. Un hub
+fan-in flowchart (`A --> Hub; B --> Hub; C --> Hub`) rend déjà correctement via le pipeline OOXML
+existant (`merge-after-branch` retombe sur `ooxml-translator.ts`), **avec de vrais traits de
+connexion** — ce que `chain`/`tree`/`cycle` ne savent justement pas dessiner (limitation
+documentée dans `cycle.ts`). Ajouter un archétype SmartArt `star` pour ce cas n'aurait donc
+apporté aucun gain réel, seulement de la complexité. La vraie valeur de l'archétype radial était
+ailleurs : `mindmap`, un type Mermaid **jusque-là non supporté du tout** (et source d'un vrai bug
+de mauvais-aiguillage silencieux, voir la ligne #5 ci-dessus) — c'est là qu'il a été livré.
 
 ## Deux exceptions à la règle "toujours du SmartArt self-authored"
 

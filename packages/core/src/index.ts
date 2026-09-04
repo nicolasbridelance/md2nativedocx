@@ -60,6 +60,16 @@ export type { VennParseResult } from './diagrams/venn/parser.js';
 export { translateVennToOoxml } from './diagrams/venn/translator.js';
 export type { VennChart, VennSet, VennUnion } from './diagrams/venn/types.js';
 
+// Mindmap diagram module (docs/smartart-full-catalog-cross-mermaid.md
+// archetype #5 "Radial") — fixes the exact silent-misparse bug that
+// motivated FUTURE_full_mermaid_coverage_SPEC.md §1 (`root((mindmap))`
+// coincidentally valid as flowchart circle syntax). Same independent-module,
+// plain-OOXML-shapes convention as quadrant/venn above.
+export { parseMindmap } from './diagrams/mindmap/parser.js';
+export type { MindmapParseResult } from './diagrams/mindmap/parser.js';
+export { translateMindmapToOoxml } from './diagrams/mindmap/translator.js';
+export type { MindmapChart, MindmapNode, MindmapShape } from './diagrams/mindmap/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
