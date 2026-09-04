@@ -51,6 +51,15 @@ export type { QuadrantParseResult } from './diagrams/quadrant/parser.js';
 export { translateQuadrantToOoxml } from './diagrams/quadrant/translator.js';
 export type { QuadrantChart, QuadrantAxis, QuadrantLabels, QuadrantPoint } from './diagrams/quadrant/types.js';
 
+// Venn diagram module (docs/smartart-full-catalog-cross-mermaid.md archetype
+// #11 "Venn"). Same independent-module convention and "plain OOXML shapes,
+// not SmartArt dgm:" strategy as the quadrant chart above — see
+// diagrams/venn/translator.ts's module doc comment.
+export { parseVennChart } from './diagrams/venn/parser.js';
+export type { VennParseResult } from './diagrams/venn/parser.js';
+export { translateVennToOoxml } from './diagrams/venn/translator.js';
+export type { VennChart, VennSet, VennUnion } from './diagrams/venn/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

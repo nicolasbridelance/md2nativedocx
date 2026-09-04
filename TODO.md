@@ -1082,6 +1082,22 @@ est levé.
       (pas de perte silencieuse), aucun n'affecte la position. Vérifié par un export CLI réel +
       rendu LibreOffice headless (pas juste les tests unitaires) — a trouvé et corrigé un vrai
       défaut cosmétique (étiquette d'axe Y repliée sur 2 lignes, marge trop étroite).
+- [x] **`venn-beta` shippé (2026-09-04)** — deuxième type non-flowchart livré, même stratégie que
+      `quadrantChart` (archétype #11 "Venn" de `docs/smartart-full-catalog-cross-mermaid.md`) :
+      formes OOXML pures, pas de `dgm:layoutDef`. Rendu en ellipses `wps:wsp` semi-transparentes
+      (alpha 60%) — la couleur des zones de recouvrement vient gratuitement du mélange des cercles
+      empilés, aucune géométrie de lentille booléenne calculée à la main. Portée : géométrie de
+      recouvrement réelle pour 2 et 3 ensembles (les deux layouts symétriques classiques) ; 4+
+      dégrade en rangée sans recouvrement avec une note visible (un vrai Venn N-way proportionnel
+      reste un problème géométrique ouvert même pour des outils dédiés). `style` sur une *union*
+      (par opposition à un seul `set`) reconnu et averti, pas silencieusement perdu — la couleur de
+      recouvrement dérive du mélange des `set` eux-mêmes, pas d'un override indépendant.
+      `venn-beta` est un type "New 🔥" Mermaid (grammaire vérifiée superficiellement seulement,
+      voir l'avertissement en tête de `FUTURE_full_mermaid_coverage_SPEC.md`) — portée v1 restreinte
+      en conséquence : `set`/`union`/`text`/`style fill:`/`title`, `:N` (taille) reconnu et ignoré.
+      Vérifié par export CLI réel + rendu LibreOffice headless pour 2, 3 et 4+ ensembles — les
+      trois rendent correctement dès la première tentative, aucun bug de géométrie trouvé cette
+      fois (contrairement à `quadrantChart`).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
