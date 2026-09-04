@@ -11,6 +11,20 @@
  *
  * Usage: md2nativedocx-core.mjs <diagram.mmd> > diagram.xml
  *
+ * ## Diagram-type guard-rail (docs/specs/FUTURE_full_mermaid_coverage_SPEC.md
+ * §4 "Phase 0", item 1)
+ *
+ * Before any of the below, `detectDiagramType()` checks the first
+ * significant line of the input. If it's a *recognized* non-flowchart
+ * Mermaid diagram type (`gitGraph`, `mindmap`, `sequenceDiagram`, ...), the
+ * flowchart pipeline is never invoked — such text can coincidentally look
+ * enough like flowchart syntax to "parse" into a silently-wrong diagram
+ * rather than failing cleanly. Instead, a visible gray-italic note
+ * (`buildUnsupportedDiagramTypeNoteXml`) is emitted and a warning written to
+ * stderr. Unrecognized headers (including a missing one entirely) fall
+ * through to the flowchart pipeline unchanged, matching `parseMermaid()`'s
+ * existing behavior of accepting arbitrary text without a required header.
+ *
  * ## SmartArt dispatch (spec §7 step 5)
  *
  * When `MD2NATIVEDOCX_SMARTART_DIR` is set, this script first tries
@@ -55,6 +69,8 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import {
+  detectDiagramType,
+  buildUnsupportedDiagramTypeNoteXml,
   parseMermaid,
   layout,
   translateToOoxml,
@@ -102,33 +118,48 @@ function trySmartArt(ast, smartArtDir) {
 }
 
 try {
-  const { ast, warnings } = parseMermaid(input);
-  for (const warning of warnings) {
-    process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-  }
-
-  const smartArtDir = process.env.MD2NATIVEDOCX_SMARTART_DIR;
-  const smartArtXml = trySmartArt(ast, smartArtDir);
-  if (smartArtXml) {
-    process.stdout.write(smartArtXml);
+  // Diagram-type guard-rail (spec §4 "Phase 0", item 1): a recognized
+  // non-flowchart diagram (gitGraph, mindmap, sequenceDiagram, ...) must
+  // never reach parseMermaid() — its flowchart-shaped grammar can happen to
+  // "parse" such text into a silently-wrong diagram (bare words, `((...))`
+  // bullets, etc. coincidentally look like valid node syntax) rather than
+  // failing cleanly. 'unknown' is deliberately treated the same as
+  // 'flowchart' here — see detectDiagramType's doc comment for why.
+  const diagramType = detectDiagramType(input);
+  if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
+    process.stderr.write(
+      `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,
+    );
+    process.stdout.write(buildUnsupportedDiagramTypeNoteXml(diagramType));
   } else {
-    const result = layout(ast);
-    for (const warning of result.warnings) {
+    const { ast, warnings } = parseMermaid(input);
+    for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    let output = translateToOoxml(ast, result);
-    // Only note the fallback when SmartArt was actually attempted for this
-    // diagram (smartArtDir set) and rejected for one of classifyTopology's
-    // structured reasons — never for an unexpected generation error (already
-    // logged by trySmartArt above) and never when SmartArt wasn't attempted
-    // at all (spec §10.3: "jamais ... sur le pipeline wpg:wgp").
-    if (smartArtDir) {
-      const classification = classifyTopology(ast);
-      if (!classification.eligible) {
-        output += '\n' + buildSmartArtFallbackNoteXml(classification);
+
+    const smartArtDir = process.env.MD2NATIVEDOCX_SMARTART_DIR;
+    const smartArtXml = trySmartArt(ast, smartArtDir);
+    if (smartArtXml) {
+      process.stdout.write(smartArtXml);
+    } else {
+      const result = layout(ast);
+      for (const warning of result.warnings) {
+        process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
       }
+      let output = translateToOoxml(ast, result);
+      // Only note the fallback when SmartArt was actually attempted for this
+      // diagram (smartArtDir set) and rejected for one of classifyTopology's
+      // structured reasons — never for an unexpected generation error (already
+      // logged by trySmartArt above) and never when SmartArt wasn't attempted
+      // at all (spec §10.3: "jamais ... sur le pipeline wpg:wgp").
+      if (smartArtDir) {
+        const classification = classifyTopology(ast);
+        if (!classification.eligible) {
+          output += '\n' + buildSmartArtFallbackNoteXml(classification);
+        }
+      }
+      process.stdout.write(output);
     }
-    process.stdout.write(output);
   }
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);

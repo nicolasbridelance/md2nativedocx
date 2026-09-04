@@ -15,12 +15,26 @@
 export { parseMermaid, MermaidParseError } from './parser/index.js';
 export type { ParseResult } from './parser/index.js';
 
+// Diagram-type guard-rail (docs/specs/FUTURE_full_mermaid_coverage_SPEC.md §4
+// "Phase 0", item 1): classify the first significant line of raw Mermaid
+// text before ever calling parseMermaid(), so a recognized non-flowchart
+// diagram (gitGraph, mindmap, sequenceDiagram, ...) gets a clean rejection
+// instead of a silently-wrong flowchart-shaped parse.
+export { detectDiagramType } from './parser/diagram-type.js';
+export type { DiagramType, DiagramTypeInfo } from './parser/diagram-type.js';
+
 // Layout: AST -> pixel coordinates (Dagre, ADR 0001)
 export { layout, boundingBox, NODE_WIDTH, NODE_HEIGHT } from './layout/layout.js';
 export type { LayoutOptions } from './layout/layout.js';
 
 // Translator: AST + layout -> OOXML/DrawingML XML string
 export { translateToOoxml } from './translator/ooxml-translator.js';
+
+// Note shown in place of a diagram whose type is recognized but not yet
+// implemented (see detectDiagramType above). Mirrors
+// buildSmartArtFallbackNoteXml's "visible note, never a silent blank canvas"
+// rule for this different guard-rail.
+export { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
 export type { TranslateOptions } from './translator/ooxml-translator.js';
 
 // XML escaping for user-controlled text (rule #2)

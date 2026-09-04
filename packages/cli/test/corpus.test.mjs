@@ -227,6 +227,26 @@ test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', (
   }
 });
 
+test('diagram-type guard-rail: a gitGraph block gets a clean note, not a silently-wrong flowchart parse', () => {
+  // Regression test for the exact bug logged in the roadmap: gitGraph's bare
+  // "commit"/"branch" words happen to look enough like flowchart node syntax
+  // that, without the guard-rail, this would silently produce a nonsense
+  // wpg:wgp diagram instead of a clean rejection.
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
+  try {
+    const markdown = '# Test\n\n```mermaid\ngitGraph\n  commit\n  commit\n```\n';
+    const docx = convertTo(markdown, dir, 'gitgraph');
+    execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
+    const xml = readDocumentXml(docx);
+    assert.ok(!xml.includes('<wpg:wgp'), 'must not produce shapes for an unsupported diagram type');
+    assert.ok(!xml.includes('<dgm:relIds'), 'must not produce SmartArt for an unsupported diagram type');
+    assert.ok(xml.includes('GitGraph diagrams are not yet supported'), 'clean note missing');
+    assert.ok(xml.includes('Test'), 'surrounding markdown heading must still convert normally');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('simple: markdown with a mermaid A --> B dispatches to SmartArt when MD2NATIVEDOCX_ENABLE_SMARTART=1', () => {
   // A --> B is the simplest possible chain -- classifyTopology accepts it.
   // SmartArt defaults to OFF as of 2026-09-03 (a real-Word test of
