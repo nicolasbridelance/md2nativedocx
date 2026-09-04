@@ -7,6 +7,8 @@ import {
   generateTree,
   TREE_LAYOUT_XML,
   TREE_LAYOUT_XML_LR,
+  TREE_LAYOUT_XML_BT,
+  TREE_LAYOUT_XML_RL,
   TREE_COLORS_XML,
   TREE_STYLE_XML,
 } from '../../src/smartart/tree.js';
@@ -78,6 +80,19 @@ test('flowchart.direction picks the vertical (root-on-top) or horizontal (root-o
   assert.ok(!td.layoutXml.includes('linDir'), 'vertical variant uses the format default, no explicit linDir');
   assert.ok(lr.layoutXml.includes('<dgm:param type="linDir" val="fromT"/>'));
   assert.ok(lr.dataXml.includes(TREE_LAYOUT_XML_LR.match(/uniqueId="([^"]+)"/)![1]!), 'data must reference the LR layout URN, not the TD one');
+});
+
+test('flowchart.direction also picks the BT (root-on-bottom) / RL (root-on-right) variants', () => {
+  const bt = generateTree(treeFlowchart('graph BT\n  A --> B\n  A --> C'));
+  const rl = generateTree(treeFlowchart('graph RL\n  A --> B\n  A --> C'));
+  assert.equal(bt.layoutXml, TREE_LAYOUT_XML_BT);
+  assert.equal(rl.layoutXml, TREE_LAYOUT_XML_RL);
+  assert.ok(!bt.layoutXml.includes('linDir'), 'BT only flips the vertical split, no explicit linDir needed');
+  assert.ok(rl.layoutXml.includes('<dgm:param type="linDir" val="fromT"/>'), 'RL inherits LR\'s vertical child stacking');
+  assert.ok(bt.dataXml.includes(TREE_LAYOUT_XML_BT.match(/uniqueId="([^"]+)"/)![1]!));
+  assert.ok(rl.dataXml.includes(TREE_LAYOUT_XML_RL.match(/uniqueId="([^"]+)"/)![1]!));
+  assertWellFormedXml(bt.layoutXml);
+  assertWellFormedXml(rl.layoutXml);
 });
 
 test('none of the fixed parts reference any Microsoft URN or real diagram content', () => {

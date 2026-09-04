@@ -43,6 +43,10 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 export const CHAIN_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/chain1';
 /** `layoutDef` URN for the vertical (Mermaid `TD`) chain variant (§ below). */
 export const CHAIN_LAYOUT_TD_URN = 'urn:md2nativedocx/smartart-layout/chain1-td';
+/** `layoutDef` URN for the bottom-to-top (Mermaid `BT`) chain variant (§ below). */
+export const CHAIN_LAYOUT_BT_URN = 'urn:md2nativedocx/smartart-layout/chain1-bt';
+/** `layoutDef` URN for the right-to-left (Mermaid `RL`) chain variant (§ below). */
+export const CHAIN_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/chain1-rl';
 
 /**
  * Original `dgm:layoutDef` for a horizontal chain of boxes (`lin` algorithm,
@@ -117,6 +121,30 @@ export const CHAIN_LAYOUT_XML_TD = CHAIN_LAYOUT_XML.replace(
   `uniqueId="${CHAIN_LAYOUT_URN}"`,
   `uniqueId="${CHAIN_LAYOUT_TD_URN}"`
 ).replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromT"/></dgm:alg>');
+
+/**
+ * The bottom-to-top (Mermaid `BT`) variant: same vertical stacking as
+ * {@link CHAIN_LAYOUT_XML_TD}, `linDir="fromB"` instead of `"fromT"` — the
+ * `lin` algorithm's four documented directions are `fromL` (the format's own
+ * default, used by {@link CHAIN_LAYOUT_XML}), `fromR`, `fromT`, `fromB`
+ * (ECMA-376 §5.9). Derived by substitution from the `TD` variant rather than
+ * `CHAIN_LAYOUT_XML` directly, so it only ever differs from `TD` by this one
+ * parameter.
+ */
+export const CHAIN_LAYOUT_XML_BT = CHAIN_LAYOUT_XML_TD.replace(
+  `uniqueId="${CHAIN_LAYOUT_TD_URN}"`,
+  `uniqueId="${CHAIN_LAYOUT_BT_URN}"`
+).replace('val="fromT"', 'val="fromB"');
+
+/**
+ * The right-to-left (Mermaid `RL`) variant: same horizontal stacking as
+ * {@link CHAIN_LAYOUT_XML}, `linDir="fromR"` instead of the format's implicit
+ * `fromL` default.
+ */
+export const CHAIN_LAYOUT_XML_RL = CHAIN_LAYOUT_XML.replace(
+  `uniqueId="${CHAIN_LAYOUT_URN}"`,
+  `uniqueId="${CHAIN_LAYOUT_RL_URN}"`
+).replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromR"/></dgm:alg>');
 
 /**
  * Original `dgm:colorsDef` — two `styleLbl`s (`node0`/`node1`, both used by
@@ -327,6 +355,14 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
   );
 }
 
+/** Maps `flowchart.direction` to the matching layout XML/URN pair. */
+const CHAIN_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: string; layoutUrn: string }> = {
+  LR: { layoutXml: CHAIN_LAYOUT_XML, layoutUrn: CHAIN_LAYOUT_URN },
+  TD: { layoutXml: CHAIN_LAYOUT_XML_TD, layoutUrn: CHAIN_LAYOUT_TD_URN },
+  BT: { layoutXml: CHAIN_LAYOUT_XML_BT, layoutUrn: CHAIN_LAYOUT_BT_URN },
+  RL: { layoutXml: CHAIN_LAYOUT_XML_RL, layoutUrn: CHAIN_LAYOUT_RL_URN },
+};
+
 /**
  * Generate a `chain` SmartArt's four diagram parts for `flowchart`.
  *
@@ -336,17 +372,16 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
  * {@link orderedChainNodes}) on a flowchart that isn't actually a simple
  * path.
  *
- * Picks the horizontal ({@link CHAIN_LAYOUT_XML}) or vertical
- * ({@link CHAIN_LAYOUT_XML_TD}) layout variant from `flowchart.direction` —
- * before this, the generator always emitted the horizontal layout,
- * regardless of the Mermaid source's own `TD`/`LR` (see
+ * Picks one of the four layout variants ({@link CHAIN_LAYOUT_XML} for `LR`,
+ * {@link CHAIN_LAYOUT_XML_TD} for `TD`, {@link CHAIN_LAYOUT_XML_BT} for `BT`,
+ * {@link CHAIN_LAYOUT_XML_RL} for `RL`) from `flowchart.direction` — before
+ * this, the generator always emitted the horizontal layout, regardless of
+ * the Mermaid source's own direction (see
  * `docs/markdown-mermaid-compliance-table.md`).
  */
 export function generateChain(flowchart: Flowchart): SmartArtChainOutput {
   const nodes = orderedChainNodes(flowchart);
-  const isVertical = flowchart.direction === 'TD';
-  const layoutXml = isVertical ? CHAIN_LAYOUT_XML_TD : CHAIN_LAYOUT_XML;
-  const layoutUrn = isVertical ? CHAIN_LAYOUT_TD_URN : CHAIN_LAYOUT_URN;
+  const { layoutXml, layoutUrn } = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
   return {
     dataXml: buildChainDataXml(flowchart, nodes, layoutUrn),
     layoutXml,

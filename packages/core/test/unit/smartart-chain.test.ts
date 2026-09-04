@@ -7,6 +7,8 @@ import {
   generateChain,
   CHAIN_LAYOUT_XML,
   CHAIN_LAYOUT_XML_TD,
+  CHAIN_LAYOUT_XML_BT,
+  CHAIN_LAYOUT_XML_RL,
   CHAIN_COLORS_XML,
   CHAIN_STYLE_XML,
 } from '../../src/smartart/chain.js';
@@ -83,6 +85,19 @@ test('flowchart.direction picks the horizontal or vertical layout variant', () =
   assert.ok(!lr.layoutXml.includes('linDir'), 'horizontal variant uses the format default, no explicit linDir');
   assert.ok(td.layoutXml.includes('<dgm:param type="linDir" val="fromT"/>'));
   assert.ok(td.dataXml.includes(CHAIN_LAYOUT_XML_TD.match(/uniqueId="([^"]+)"/)![1]!), 'data must reference the TD layout URN, not the LR one');
+});
+
+test('flowchart.direction also picks the BT/RL layout variants', () => {
+  const bt = generateChain(chainFlowchart('graph BT\n  A --> B'));
+  const rl = generateChain(chainFlowchart('graph RL\n  A --> B'));
+  assert.equal(bt.layoutXml, CHAIN_LAYOUT_XML_BT);
+  assert.equal(rl.layoutXml, CHAIN_LAYOUT_XML_RL);
+  assert.ok(bt.layoutXml.includes('<dgm:param type="linDir" val="fromB"/>'));
+  assert.ok(rl.layoutXml.includes('<dgm:param type="linDir" val="fromR"/>'));
+  assert.ok(bt.dataXml.includes(CHAIN_LAYOUT_XML_BT.match(/uniqueId="([^"]+)"/)![1]!));
+  assert.ok(rl.dataXml.includes(CHAIN_LAYOUT_XML_RL.match(/uniqueId="([^"]+)"/)![1]!));
+  assertWellFormedXml(bt.layoutXml);
+  assertWellFormedXml(rl.layoutXml);
 });
 
 test('none of the fixed parts reference any Microsoft URN or real diagram content', () => {

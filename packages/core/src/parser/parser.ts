@@ -36,6 +36,7 @@ const SHAPE_BY_SYNTAX: ReadonlyArray<{ open: string; close: string; shape: NodeS
   { open: '[', close: ']', shape: 'rect' },
   { open: '(', close: ')', shape: 'roundRect' },
   { open: '{', close: '}', shape: 'diamond' },
+  { open: '>', close: ']', shape: 'asymmetric' },
 ];
 
 /**
@@ -217,24 +218,61 @@ function parseAtShapeSyntax(rest: string): { shape: NodeShape; label: string | n
 }
 
 /**
- * Edge operator token -> EdgeType (spec §6.2). Order matters: `-.-` is a
- * literal prefix of `-.->`, so the longer/more specific token must be tried
- * first or the scanner in {@link parseEdgeChain} would match `-.-` and leave
- * a stray `>` glued onto the next node reference.
+ * Edge operator token -> EdgeType (spec §6.2), extended to Mermaid's
+ * documented "extra length" convention (flowchart.md's "Minimum length of a
+ * link" table, verified 2026-09-04): repeating the line/dot/equals character
+ * extends a link's rank distance without changing its type — `-->` (length
+ * 1) / `--->` (length 2) / `---->` (length 3), same for the headless line
+ * (`---`/`----`/`-----`), thick (`==>`/`===>`/`====>`, `===`/`====`/`=====`),
+ * and dotted (`-.->`/`-..->`/`-...->`, `-.-`/`-..-`/`-...-` — note the
+ * *dot* count grows, not the dash count) families. Mermaid's docs do not
+ * extend this to `--o`/`--x`/`o--o`/`x--x`/`<-->`, so those stay fixed-width
+ * tokens. The extra length itself has no representation in the AST/Dagre
+ * (§5.4 of `docs/markdown-mermaid-compliance-table.md`) — this only stops
+ * the whole node/edge from being lost, same as `normalizeShapeAlias`'s
+ * fallback-to-`rect` for an unrecognized `@{shape}` name.
+ *
+ * `line`/`thickLine` require a minimum of 3 repeated characters — not 2 —
+ * even though their arrow siblings need only 2 before the `>`. This isn't
+ * arbitrary: it's what keeps the 2-character mid-label open marker
+ * (`--`/`==`, {@link MID_LABEL_FAMILIES}) from being swallowed here as a
+ * headless edge, since the scanner in {@link parseEdgeChain} tries this
+ * table first at every position and only falls back to
+ * {@link matchMidLabelEdge} when nothing here matches.
  */
-const EDGE_OPERATORS: ReadonlyArray<{ token: string; type: EdgeType }> = [
-  { token: '<-->', type: 'bidirectional' },
-  { token: 'o--o', type: 'circleBoth' },
-  { token: 'x--x', type: 'crossBoth' },
-  { token: '-.->', type: 'dotted' },
-  { token: '-.-', type: 'dottedLine' },
-  { token: '==>', type: 'thick' },
-  { token: '===', type: 'thickLine' },
-  { token: '-->', type: 'arrow' },
-  { token: '--o', type: 'circle' },
-  { token: '--x', type: 'cross' },
-  { token: '~~~', type: 'invisible' },
-  { token: '---', type: 'line' },
+interface EdgeOperatorMatcher {
+  type: EdgeType;
+  /** Returns the matched length at `line[at..]`, or `null` if it doesn't match here. */
+  match(line: string, at: number): number | null;
+}
+
+function fixedOp(token: string, type: EdgeType): EdgeOperatorMatcher {
+  return { type, match: (line, at) => (line.startsWith(token, at) ? token.length : null) };
+}
+
+function regexOp(regex: RegExp, type: EdgeType): EdgeOperatorMatcher {
+  return {
+    type,
+    match: (line, at) => {
+      const m = regex.exec(line.slice(at));
+      return m ? m[0].length : null;
+    },
+  };
+}
+
+const EDGE_OPERATORS: ReadonlyArray<EdgeOperatorMatcher> = [
+  fixedOp('<-->', 'bidirectional'),
+  fixedOp('o--o', 'circleBoth'),
+  fixedOp('x--x', 'crossBoth'),
+  regexOp(/^-\.+->/, 'dotted'), // -.-> / -..-> / -...->
+  regexOp(/^-\.+-(?![>ox])/, 'dottedLine'), // -.- / -..- / -...-
+  regexOp(/^={2,}>/, 'thick'), // ==> / ===> / ====>
+  regexOp(/^-{2,}>/, 'arrow'), // --> / ---> / ---->
+  fixedOp('--o', 'circle'),
+  fixedOp('--x', 'cross'),
+  fixedOp('~~~', 'invisible'),
+  regexOp(/^={3,}(?!>)/, 'thickLine'), // === / ==== / =====
+  regexOp(/^-{3,}(?![>ox])/, 'line'), // --- / ---- / -----
 ];
 
 /**
@@ -520,6 +558,13 @@ export function parseMermaid(text: string): ParseResult {
   const classDefs = new Map<string, NodeStylePatch>();
   // node id -> style patch, for nodes styled (via class/`:::`/`style`) before they are defined.
   const pendingStyles = new Map<string, NodeStylePatch>();
+  // Deferred `class`/`:::` assignments whose `classDef` hadn't been seen yet
+  // at the point the assignment was parsed — `classDef` conventionally comes
+  // first in a diagram but nothing requires it to; resolved once the whole
+  // document (and therefore every `classDef`) is known, mirroring how
+  // `pendingStyles` above already handles the opposite ordering (a class
+  // applied to a node declared later in the source).
+  const pendingClassAssignments: Array<{ nodeIds: string[]; className: string }> = [];
   // Deferred `linkStyle` statements (spec §6.3): applied after the full edge
   // list is known, since an index can refer to an edge declared later in the
   // source (the common case — `linkStyle` conventionally comes last).
@@ -528,7 +573,7 @@ export function parseMermaid(text: string): ParseResult {
     patch: { stroke?: string; strokeWidth?: number };
   }> = [];
 
-  let direction: 'TD' | 'LR' = 'TD';
+  let direction: 'TD' | 'LR' | 'BT' | 'RL' = 'TD';
 
   const lines = joinBracketContinuations(text.split(/\r?\n/));
 
@@ -536,22 +581,14 @@ export function parseMermaid(text: string): ParseResult {
     const line = rawLine.trim();
     if (line.length === 0) continue;
 
-    // Header line: graph TD / flowchart LR. `TB` is Mermaid's own documented
-    // alias for `TD` (top-to-bottom either way) and maps straight through;
-    // `BT`/`RL` are real Mermaid directions this parser's V1 scope doesn't
-    // lay out (spec §5.1, TD/LR only), so they're called out with a specific
-    // warning and fall back to TD rather than silently defaulting to it via
-    // the generic "Unsupported line ignored" catch-all below (found via
-    // `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`).
+    // Header line: graph TD / flowchart LR/BT/RL. `TB` is Mermaid's own
+    // documented alias for `TD` (top-to-bottom either way) and maps straight
+    // through to it; the other three are distinct directions, all laid out by
+    // Dagre (`layout.ts`) and by SmartArt's `linDir` param (`chain.ts`/`tree.ts`).
     const header = line.match(/^(?:graph|flowchart)\s+(TD|TB|LR|BT|RL)\b/i);
     if (header) {
       const requested = header[1]!.toUpperCase();
-      if (requested === 'BT' || requested === 'RL') {
-        warnings.push(`Direction "${requested}" is not supported in V1 (only TD/LR); using TD.`);
-        direction = 'TD';
-      } else {
-        direction = requested === 'TB' ? 'TD' : (requested as 'TD' | 'LR');
-      }
+      direction = requested === 'TB' ? 'TD' : (requested as 'TD' | 'LR' | 'BT' | 'RL');
       continue;
     }
     // Allow a bare "graph"/"flowchart" with no direction.
@@ -579,14 +616,15 @@ export function parseMermaid(text: string): ParseResult {
     const classAssign = line.match(/^class\s+([A-Za-z0-9_,\s-]+)\s+([A-Za-z0-9_-]+)\s*$/i);
     if (classAssign) {
       const className = classAssign[2]!;
+      const ids = classAssign[1]!
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
       const patch = classDefs.get(className);
       if (patch) {
-        for (const id of classAssign[1]!.split(',')) {
-          const trimmed = id.trim();
-          if (trimmed.length > 0) applyNodeStyle(nodes, pendingStyles, trimmed, patch);
-        }
+        for (const id of ids) applyNodeStyle(nodes, pendingStyles, id, patch);
       } else {
-        warnings.push(`classDef "${className}" referenced but not defined.`);
+        pendingClassAssignments.push({ nodeIds: ids, className });
       }
       continue;
     }
@@ -670,8 +708,8 @@ export function parseMermaid(text: string): ParseResult {
           warnings.push(`Node id "${edge.to}" is reserved and was ignored.`);
         }
         // Apply inline class styles (`A:::crit`) to the edge endpoints.
-        applyClassToNode(nodes, pendingStyles, classDefs, edge.from, edge.fromClass, warnings);
-        applyClassToNode(nodes, pendingStyles, classDefs, edge.to, edge.toClass, warnings);
+        applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, edge.from, edge.fromClass);
+        applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, edge.to, edge.toClass);
         attachToCurrentSubgraph(subgraphStack, edge.from, subgraphAttached);
         attachToCurrentSubgraph(subgraphStack, edge.to, subgraphAttached);
       }
@@ -684,7 +722,7 @@ export function parseMermaid(text: string): ParseResult {
       if (!registerNode(nodes, node.id, node.label, node.shape)) {
         warnings.push(`Node id "${node.id}" is reserved and was ignored.`);
       }
-      applyClassToNode(nodes, pendingStyles, classDefs, node.id, node.className, warnings);
+      applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, node.id, node.className);
       attachToCurrentSubgraph(subgraphStack, node.id, subgraphAttached);
       continue;
     }
@@ -693,8 +731,24 @@ export function parseMermaid(text: string): ParseResult {
     warnings.push(`Unsupported line ignored: ${line}`);
   }
 
-  // Apply any pending class/style patches to nodes that were defined after
-  // the class/style statement that targets them.
+  // Resolve class/`:::` assignments whose `classDef` appeared later in the
+  // source (or never at all) — a class name still undefined at this point,
+  // once the whole document has been scanned, is a genuine typo/omission and
+  // still warns, just later than before.
+  for (const { nodeIds, className } of pendingClassAssignments) {
+    const patch = classDefs.get(className);
+    if (!patch) {
+      warnings.push(`classDef "${className}" referenced but not defined.`);
+      continue;
+    }
+    for (const id of nodeIds) {
+      applyNodeStyle(nodes, pendingStyles, id, patch);
+    }
+  }
+
+  // Apply any pending class/style patches (including ones just resolved
+  // above) to nodes that were defined after the class/style statement that
+  // targets them.
   for (const [id, patch] of pendingStyles) {
     const existing = nodes.get(id);
     if (existing) {
@@ -812,20 +866,23 @@ function registerNode(
 /**
  * Apply a class's style patch to a node (from `:::class` inline or `class`).
  * If the node is not yet defined, the patch is remembered in `pendingStyles`
- * (via {@link applyNodeStyle}).
+ * (via {@link applyNodeStyle}). If the class itself isn't defined *yet* (its
+ * `classDef` may still come later in the source), the assignment is queued in
+ * `pendingClassAssignments` for the end-of-parse sweep instead of warning
+ * immediately — see that array's doc comment in {@link parseMermaid}.
  */
 function applyClassToNode(
   nodes: Map<string, FlowNode>,
   pendingStyles: Map<string, NodeStylePatch>,
   classDefs: Map<string, NodeStylePatch>,
+  pendingClassAssignments: Array<{ nodeIds: string[]; className: string }>,
   nodeId: string,
   className: string | null,
-  warnings: string[],
 ): void {
   if (!className) return;
   const patch = classDefs.get(className);
   if (!patch) {
-    warnings.push(`classDef "${className}" referenced but not defined.`);
+    pendingClassAssignments.push({ nodeIds: [nodeId], className });
     return;
   }
   applyNodeStyle(nodes, pendingStyles, nodeId, patch);
@@ -971,9 +1028,16 @@ function parseEdgeChain(line: string): ChainEdge[] | null {
   let i = 0;
   while (i < line.length) {
     if (depth === 0) {
-      const op = EDGE_OPERATORS.find((o) => line.startsWith(o.token, i));
+      let op: { type: EdgeType; length: number } | null = null;
+      for (const matcher of EDGE_OPERATORS) {
+        const length = matcher.match(line, i);
+        if (length !== null) {
+          op = { type: matcher.type, length };
+          break;
+        }
+      }
       if (op) {
-        let end = i + op.token.length;
+        let end = i + op.length;
         let label: string | null = null;
         const labelMatch = line.slice(end).match(/^\|([^|]*)\|/);
         if (labelMatch) {

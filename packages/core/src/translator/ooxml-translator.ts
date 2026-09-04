@@ -191,6 +191,7 @@ const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   horizontalCylinder: 'flowChartMagneticDisk',
   linedCylinder: 'flowChartMagneticDrum',
   manualInput: 'flowChartManualInput',
+  asymmetric: 'homePlate', // Mermaid's asymmetric/flag shape (id>Text]); closest built-in preset
 };
 
 /**

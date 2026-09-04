@@ -24,15 +24,15 @@ test('TB is recognized as Mermaid\'s own documented alias for TD', () => {
   assert.equal(warnings.length, 0);
 });
 
-test('BT/RL are recognized but out of V1 scope: fall back to TD with a specific warning', () => {
+test('BT and RL are recognized as their own distinct directions, not folded into TD', () => {
   const bt = parseMermaid('graph BT\n  A --> B');
-  assert.equal(bt.ast.direction, 'TD');
-  assert.ok(bt.warnings.some((w) => w.includes('"BT"') && w.includes('not supported')));
+  assert.equal(bt.ast.direction, 'BT');
+  assert.equal(bt.warnings.length, 0);
   assert.equal(bt.ast.edges.length, 1, 'the rest of the diagram must still parse');
 
   const rl = parseMermaid('graph RL\n  A --> B');
-  assert.equal(rl.ast.direction, 'TD');
-  assert.ok(rl.warnings.some((w) => w.includes('"RL"') && w.includes('not supported')));
+  assert.equal(rl.ast.direction, 'RL');
+  assert.equal(rl.warnings.length, 0);
 });
 
 test('parses node shapes (spec §6.1)', () => {
@@ -113,6 +113,15 @@ test('an unrecognized @{shape: ...} name degrades to rect instead of losing the 
   assert.equal(warnings.length, 0);
 });
 
+test('parses the asymmetric/flag shape (id>Text])', () => {
+  const { ast, warnings } = parseMermaid('graph TD\n  A>Flag text]-->B');
+  assert.equal(ast.nodes.length, 2);
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.shape, 'asymmetric');
+  assert.equal(a.label, 'Flag text');
+  assert.equal(warnings.length, 0);
+});
+
 test('parses edge types (spec §6.2)', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B\n  C -.-> D\n  E ==> F\n  G --- H');
   const types = ast.edges.map((e) => e.type);
@@ -141,6 +150,38 @@ test('parses the extended edge types (multidirectional heads and invisible links
   ]);
   assert.equal(ast.nodes.length, 16);
   assert.equal(warnings.length, 0);
+});
+
+test('parses length-modified edges (extra dashes/dots/equals extend the link, spec §6.2 "extra length")', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  A---->B\n  C-----D\n  E====>F\n  G=====H\n  I-..->J\n  K-...-L',
+  );
+  const types = ast.edges.map((e) => e.type);
+  assert.deepEqual(types, ['arrow', 'line', 'thick', 'thickLine', 'dotted', 'dottedLine']);
+  assert.equal(warnings.length, 0);
+});
+
+test('a mid-chain-label edge is not swallowed by the length-modifier regexes (2-dash/2-equals opener)', () => {
+  const { ast } = parseMermaid('graph TD\n  A-- Yes -->B\n  C== Big ==>D\n  E-. Maybe .->F');
+  assert.deepEqual(
+    ast.edges.map((e) => [e.type, e.label]),
+    [
+      ['arrow', 'Yes'],
+      ['thick', 'Big'],
+      ['dotted', 'Maybe'],
+    ],
+  );
+});
+
+test('an undocumented extra-length circle/cross head (e.g. ----o) fails safely rather than creating a spurious node', () => {
+  // Mermaid's own docs only extend "extra length" to line/arrow/thick/dotted
+  // (verified against flowchart.md), not --o/--x — this must still degrade
+  // the same way the whole construct always has (whole line rejected), not
+  // regress into parsing a fragment of the operator as a bogus node id.
+  const { ast, warnings } = parseMermaid('graph TD\n  A----o B');
+  assert.equal(ast.nodes.length, 0);
+  assert.equal(ast.edges.length, 0);
+  assert.ok(warnings.some((w) => w.includes('Unsupported line ignored')));
 });
 
 test('does not mistake dashes inside a bracketed label for an edge operator', () => {
@@ -282,6 +323,29 @@ test('parses classDef fill and applies it via class statement', () => {
   );
   const a = ast.nodes.find((n) => n.id === 'A')!;
   assert.equal(a.fill, '00FF00');
+});
+
+test('class/::: resolves even when the class statement comes before its classDef', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  class A crit\n  A[Start] --> B[End]\n  classDef crit fill:#FF0000',
+  );
+  assert.equal(warnings.length, 0);
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.fill, 'FF0000');
+});
+
+test('::: shorthand also resolves when the classDef comes later, at an edge endpoint and standalone', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  A[Start]:::crit --> B[End]\n  C:::warn\n  classDef crit fill:#FF0000\n  classDef warn fill:#00FF00',
+  );
+  assert.equal(warnings.length, 0);
+  assert.equal(ast.nodes.find((n) => n.id === 'A')!.fill, 'FF0000');
+  assert.equal(ast.nodes.find((n) => n.id === 'C')!.fill, '00FF00');
+});
+
+test('a class name still undefined after the whole document is parsed still warns (deferred, not swallowed)', () => {
+  const { warnings } = parseMermaid('graph TD\n  class A neverDefined\n  A --> B');
+  assert.ok(warnings.some((w) => w.includes('classDef "neverDefined" referenced but not defined.')));
 });
 
 test('classDef no longer requires fill: to be first or the only property (spec §6.3)', () => {

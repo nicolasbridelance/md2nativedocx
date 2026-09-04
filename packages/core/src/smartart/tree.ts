@@ -41,6 +41,10 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 export const TREE_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/tree1';
 /** `layoutDef` URN for the horizontal (Mermaid `LR`: root-on-left) tree variant. */
 export const TREE_LAYOUT_LR_URN = 'urn:md2nativedocx/smartart-layout/tree1-lr';
+/** `layoutDef` URN for the vertical (Mermaid `BT`: root-on-bottom) tree variant. */
+export const TREE_LAYOUT_BT_URN = 'urn:md2nativedocx/smartart-layout/tree1-bt';
+/** `layoutDef` URN for the horizontal (Mermaid `RL`: root-on-right) tree variant. */
+export const TREE_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/tree1-rl';
 
 /**
  * Original `dgm:layoutDef` for a 2-level tree: one root box (`level1Main`,
@@ -175,6 +179,68 @@ export const TREE_LAYOUT_XML_LR = TREE_LAYOUT_XML.replace(
     '<dgm:layoutNode name="level1Children"><dgm:alg type="lin"/><dgm:shape/>',
     '<dgm:layoutNode name="level1Children"><dgm:alg type="lin"><dgm:param type="linDir" val="fromT"/></dgm:alg><dgm:shape/>'
   );
+
+/**
+ * The bottom-to-top (Mermaid `BT`: root-on-bottom) variant of
+ * {@link TREE_LAYOUT_XML}: the same top-strip/bottom-area split, with the
+ * `level1Main`/`level1Children` fractional `t`/`h` constraints swapped so the
+ * root sits in the bottom 35% and the children row occupies the top 55% —
+ * the mirror image of the vertical axis only. `level1Children`'s inner `lin`
+ * keeps the format's implicit `fromL` default (the children row is still
+ * left-to-right; only which strip is on top changed), same as
+ * {@link TREE_LAYOUT_XML} itself.
+ */
+export const TREE_LAYOUT_XML_BT = TREE_LAYOUT_XML.replace(
+  `uniqueId="${TREE_LAYOUT_URN}"`,
+  `uniqueId="${TREE_LAYOUT_BT_URN}"`
+).replace(
+  '<dgm:constr type="w" for="ch" forName="level1Main" refType="w"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Main" refType="h" fact="0.35"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Main" val="0"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Main" val="0"/>' +
+    '<dgm:constr type="w" for="ch" forName="level1Children" refType="w"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Children" refType="h" fact="0.55"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Children" refType="h" fact="0.45"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Children" val="0"/>',
+  '<dgm:constr type="w" for="ch" forName="level1Main" refType="w"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Main" refType="h" fact="0.35"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Main" refType="h" fact="0.65"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Main" val="0"/>' +
+    '<dgm:constr type="w" for="ch" forName="level1Children" refType="w"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Children" refType="h" fact="0.55"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Children" val="0"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Children" val="0"/>'
+);
+
+/**
+ * The right-to-left (Mermaid `RL`: root-on-right) variant of
+ * {@link TREE_LAYOUT_XML_LR}: the same left-strip/right-area split with
+ * `level1Main`/`level1Children` mirrored horizontally — root in the right
+ * 35%, children column in the left 55% — derived from the `LR` variant
+ * (not `TREE_LAYOUT_XML` directly) so it inherits the same `linDir="fromT"`
+ * vertical child-stacking without repeating that substitution.
+ */
+export const TREE_LAYOUT_XML_RL = TREE_LAYOUT_XML_LR.replace(
+  `uniqueId="${TREE_LAYOUT_LR_URN}"`,
+  `uniqueId="${TREE_LAYOUT_RL_URN}"`
+).replace(
+  '<dgm:constr type="w" for="ch" forName="level1Main" refType="w" fact="0.35"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Main" refType="h"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Main" val="0"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Main" val="0"/>' +
+    '<dgm:constr type="w" for="ch" forName="level1Children" refType="w" fact="0.55"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Children" refType="h"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Children" val="0"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Children" refType="w" fact="0.45"/>',
+  '<dgm:constr type="w" for="ch" forName="level1Main" refType="w" fact="0.35"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Main" refType="h"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Main" val="0"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Main" refType="w" fact="0.65"/>' +
+    '<dgm:constr type="w" for="ch" forName="level1Children" refType="w" fact="0.55"/>' +
+    '<dgm:constr type="h" for="ch" forName="level1Children" refType="h"/>' +
+    '<dgm:constr type="t" for="ch" forName="level1Children" val="0"/>' +
+    '<dgm:constr type="l" for="ch" forName="level1Children" val="0"/>'
+);
 
 /**
  * Original `dgm:colorsDef` — two `styleLbl`s (`node1` for the root,
@@ -374,6 +440,14 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
   );
 }
 
+/** Maps `flowchart.direction` to the matching layout XML/URN pair. */
+const TREE_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: string; layoutUrn: string }> = {
+  TD: { layoutXml: TREE_LAYOUT_XML, layoutUrn: TREE_LAYOUT_URN },
+  LR: { layoutXml: TREE_LAYOUT_XML_LR, layoutUrn: TREE_LAYOUT_LR_URN },
+  BT: { layoutXml: TREE_LAYOUT_XML_BT, layoutUrn: TREE_LAYOUT_BT_URN },
+  RL: { layoutXml: TREE_LAYOUT_XML_RL, layoutUrn: TREE_LAYOUT_RL_URN },
+};
+
 /**
  * Generate a `tree` SmartArt's four diagram parts for `flowchart`.
  *
@@ -382,17 +456,17 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
  * re-run that check, and produces undefined results (or throws, via
  * {@link rootAndChildren}) on a flowchart that isn't actually a depth-2 tree.
  *
- * Picks the vertical ({@link TREE_LAYOUT_XML}, root-on-top) or horizontal
- * ({@link TREE_LAYOUT_XML_LR}, root-on-left) layout variant from
+ * Picks one of the four layout variants ({@link TREE_LAYOUT_XML} root-on-top
+ * for `TD`, {@link TREE_LAYOUT_XML_LR} root-on-left for `LR`,
+ * {@link TREE_LAYOUT_XML_BT} root-on-bottom for `BT`,
+ * {@link TREE_LAYOUT_XML_RL} root-on-right for `RL`) from
  * `flowchart.direction` — before this, the generator always emitted the
- * vertical layout regardless of the Mermaid source's own `TD`/`LR` (see
+ * vertical layout regardless of the Mermaid source's own direction (see
  * `docs/markdown-mermaid-compliance-table.md`).
  */
 export function generateTree(flowchart: Flowchart): SmartArtTreeOutput {
   const { root, children } = rootAndChildren(flowchart);
-  const isHorizontal = flowchart.direction === 'LR';
-  const layoutXml = isHorizontal ? TREE_LAYOUT_XML_LR : TREE_LAYOUT_XML;
-  const layoutUrn = isHorizontal ? TREE_LAYOUT_LR_URN : TREE_LAYOUT_URN;
+  const { layoutXml, layoutUrn } = TREE_LAYOUT_BY_DIRECTION[flowchart.direction];
   return {
     dataXml: buildTreeDataXml(flowchart, root, children, layoutUrn),
     layoutXml,
