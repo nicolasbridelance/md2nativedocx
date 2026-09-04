@@ -929,7 +929,24 @@ est levé.
 
 ## Phase 5+ — Autres types de diagrammes
 
-- [ ] Diagrammes de séquence (priorité, demande la plus fréquente après flowchart).
+- [x] **Cadrage complet écrit (2026-09-04)**, zéro implémentation — voir
+      `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` : taxonomie des 28 types Mermaid restants
+      par famille de rendu (extension flowchart quasi-gratuite / graphe nœuds-arêtes / hiérarchique
+      / graphique natif / lifeline-chronologie / lanes-grille), prérequis architectural (Phase 0,
+      voir point suivant) et priorisation proposée à trancher avec le mainteneur.
+- [x] **Bug trouvé en investiguant, pas encore corrigé** : le pipeline n'a aucune notion de type
+      de diagramme — `parseMermaid()` tente de lire n'importe quel bloc `` ```mermaid `` comme un
+      flowchart. Pour la plupart des 28 autres types, ça échoue proprement (chaque ligne rejetée,
+      canevas vide). Mais pour certains (`gitGraph`, `mindmap` testés empiriquement), une syntaxe
+      coïncidant par hasard avec une déclaration de nœud flowchart valide (mot nu, `((...))`)
+      produit un **faux diagramme silencieux, zéro avertissement** — pire qu'un échec propre.
+      Correctif proposé (détection du type de diagramme + note de fallback visible, même mécanisme
+      que le fallback SmartArt) : `FUTURE_full_mermaid_coverage_SPEC.md` §4, "Phase 0" — bloquant
+      avant tout nouveau type de diagramme, mais a de la valeur dès maintenant indépendamment du
+      reste de la roadmap.
+- [ ] Diagrammes de séquence (priorité, demande la plus fréquente après flowchart — mais famille
+      de layout "lifeline", pas la moins chère techniquement ; arbitrage documenté comme
+      "angle mort n°1" dans la spec ci-dessus, pas tranché).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

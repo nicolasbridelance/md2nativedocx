@@ -300,7 +300,7 @@ Hors scope (non reconnu par le parseur) : modificateurs de longueur (`---->`) �
 | **Phase 2 — Extension VS Code** | CodeLens, packaging Marketplace | Publication publique + README avec démo animée (voir §12.2) |
 | **Phase 3 — Couleurs + sous-graphes** | Mapping `classDef` (§6.3), `subgraph` → groupes imbriqués | — |
 | **Phase 4 — Add-in Word** | Taskpane Office.js, `insertOoxml` | Publication AppSource (sideload d'abord) |
-| **Phase 5+ — Autres types de diagrammes** | Diagrammes de séquence en priorité (demande la plus fréquente après flowchart) | Piloté par les retours communauté post-launch |
+| **Phase 5+ — Autres types de diagrammes** | 28 types Mermaid restants (sequenceDiagram, classDiagram, pie, gantt, mindmap, etc.) — taxonomie par famille de rendu, prérequis architectural et priorisation proposée dans `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` (2026-09-04) | Piloté par les retours communauté post-launch |
 
 ---
 
