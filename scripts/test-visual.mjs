@@ -37,6 +37,13 @@ const cli = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 const fixturesDir = join(repoRoot, 'test-corpus', 'visual', 'fixtures');
 const baselineDir = join(repoRoot, 'test-corpus', 'visual', 'baseline');
 
+// Pin the substitution used for fonts no Linux distro ships (Word's Aptos/
+// Aptos Display, plus Calibri/Cambria) so renders don't drift across
+// environments just because ambient font availability/order differs — see
+// test-corpus/visual/fontconfig/fonts.conf for the full rationale.
+const fontconfigFile = join(repoRoot, 'test-corpus', 'visual', 'fontconfig', 'fonts.conf');
+const sofficeEnv = { ...process.env, FONTCONFIG_FILE: fontconfigFile };
+
 /** Fraction (0..1) of pixels allowed to differ before a fixture fails. */
 const DIFF_THRESHOLD = 0.01;
 
@@ -67,6 +74,7 @@ function renderFixture(sofficeBin, mmdPath, workDir) {
   execFileSync(sofficeBin, ['--headless', '--convert-to', 'png', '--outdir', workDir, docxPath], {
     stdio: 'pipe',
     timeout: 60_000,
+    env: sofficeEnv,
   });
   const pngPath = join(workDir, `${name}.png`);
   if (!existsSync(pngPath)) {

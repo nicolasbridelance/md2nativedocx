@@ -1498,8 +1498,31 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       le scénario "environnement de rendu différent" que cette tâche anticipait sans preuve jusque-là.
       Reste à trancher (pinning ou non) ; en attendant, ne pas faire confiance à un échec `test:visual`
       isolé comme preuve de régression sans comparaison visuelle directe.
-- [ ] `test:visual` : rendu LibreOffice headless → export image → pixel-diff avec seuil, corpus
-      20–30 diagrammes (du 3-nœuds au 50-nœuds avec sous-graphes).
+- [x] **Drift des baselines visuelles corrigé (2026-09-04) — pas par pinning LibreOffice, par pinning
+      des polices de substitution.** Root cause affinée : ce n'est pas la version de LibreOffice qui
+      variait mais la police de repli choisie pour les familles que `reference.docx` déclare et
+      qu'aucune distro Linux ne fournit (`Aptos`/`Aptos Display` dans le thème actuel ; `Calibri`/
+      `Cambria` dans d'anciens `reference.docx`) — cette substitution dépend de fontconfig et de
+      l'ordre d'énumération des polices installées, qui diffère d'un environnement à l'autre même à
+      version LibreOffice identique. Preuve trouvée en comparant visuellement `decision` et
+      `long-labels` : l'ancienne baseline (police de repli plus large) tronquait carrément le texte
+      dans les boîtes ("Choix" → "Choi", une ligne de `long-labels` coupée) — donc ce n'était pas
+      qu'un problème cosmétique, la police de repli non pinnée provoquait un vrai bug de rendu
+      (débordement/troncature) sur certaines fixtures. Fix : `test-corpus/visual/fontconfig/fonts.conf`
+      (nouveau fichier, commité) force `Aptos`/`Aptos Display`/`Calibri`→`Liberation Sans` et
+      `Cambria`→`Liberation Serif` via une règle fontconfig `<match>`, chargé uniquement pour le
+      sous-processus `soffice` que lance `scripts/test-visual.mjs` (`FONTCONFIG_FILE`, n'affecte pas
+      la config système). Liberation Sans/Serif est une dépendance apt automatique de
+      `libreoffice-writer` sur Debian **et** Ubuntu (vérifié) — aucune installation de police
+      supplémentaire nécessaire dans `setup.sh`/`ci.yml`, donc aucune modification en zone
+      d'escalade (`.devcontainer/`). Les 32 baselines régénérées avec `--update-baseline` (24
+      d'origine + 8 fixtures ajoutées depuis) ; `test:visual` repasse maintenant à 0,000 % de diff
+      sur les 32/32, déterministe. La tâche "pinning LibreOffice" ci-dessus reste ouverte en tant que
+      telle (aucune preuve que la *version* de LibreOffice elle-même dérive, seulement la police) —
+      mais elle n'est plus urgente : la substitution de police pinnée absorbe la cause réelle
+      observée jusqu'ici.
+- [x] `test:visual` : rendu LibreOffice headless → export image → pixel-diff avec seuil, corpus
+      20–30 diagrammes (du 3-nœuds au 50-nœuds avec sous-graphes) — 32 fixtures actuellement.
 
 ---
 

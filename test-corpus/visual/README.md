@@ -36,6 +36,20 @@ largeur/hauteur natif descend sous ~0,85-0,9. Corrigé côté traducteur
 après `--update-baseline`, c'est le premier suspect — voir `TODO.md` pour la caractérisation
 empirique complète avant de creuser ailleurs.
 
+## Polices de substitution pinnées
+
+`reference.docx` déclare des polices que Linux ne fournit pas (`Aptos`/`Aptos Display` dans le
+thème actuel, `Calibri`/`Cambria` dans d'anciens `reference.docx`). Sans intervention, la police
+de repli choisie par LibreOffice dépend de fontconfig et de l'environnement (quelles polices sont
+installées, dans quel ordre) — ça a produit une vraie dérive de baseline d'un environnement à
+l'autre (voir `TODO.md` → "Drift des baselines visuelles corrigé"), pas juste cosmétique : une
+police de repli plus large tronquait carrément du texte dans certaines boîtes. `fontconfig/
+fonts.conf` force ces familles vers `Liberation Sans`/`Liberation Serif` (dépendance apt
+automatique de `libreoffice-writer`, donc toujours présente) ; `scripts/test-visual.mjs` le charge
+via `FONTCONFIG_FILE` uniquement pour son propre appel à `soffice`, sans toucher la config système.
+Si un futur `reference.docx` change de thème/polices, ajouter les nouvelles familles à ce fichier
+plutôt que de laisser la substitution redevenir non déterministe.
+
 ## Limites actuelles
 
 - 12 fixtures acceptées ; la spec §9 en demande 20-30. Écart documenté dans `TODO.md`, pas cette
