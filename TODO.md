@@ -59,6 +59,24 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ✅ **Bug de chevauchement de têtes de flèche à l'échelle — corrigé (2026-09-04, punch list OOXML
+      item 2)** : root-cause du bug découvert plus bas ("Corpus visuel", même date) — un marqueur
+      de tête de flèche a une taille physique proportionnelle à `a:ln w` (`scaledLineWidth`), mais
+      cette largeur de trait est plafonnée à `MIN_LINE_WIDTH_EMU` alors que **toute** autre
+      coordonnée (dont l'écart entre deux nœuds adjacents) continue de rétrécir avec le facteur
+      d'échelle non plafonné (`renderContent`). Une fois le plafond de largeur atteint, le marqueur
+      arrête de rétrécir alors que l'écart continue — sur une chaîne assez longue, les deux têtes
+      d'une arête bidirectionnelle finissent par se recouvrir entièrement en un seul losange, sans
+      trait visible entre les deux. Reproduit à l'identique (chaîne 14 nœuds `flowchart LR`, rendu
+      LibreOffice réel à 600 DPI) puis corrigé par `arrowMarkerSize()` (`ooxml-translator.ts`) :
+      bascule `w`/`len` de `"med"` à `"sm"` uniquement quand la largeur de trait de cette arête
+      précise a effectivement été plafonnée (`baseWidthEmu * scale < MIN_LINE_WIDTH_EMU`) —
+      chaque diagramme non mis à l'échelle (l'immense majorité) garde `"med"` à l'identique, aucune
+      régression possible là où le plafond n'est jamais atteint. 2 nouveaux tests unitaires
+      (`translator.test.ts`) ; `node scripts/test-visual.mjs` toujours 11/30 échecs (les mêmes
+      pré-existants, aucun nouveau, aucune des 30 fixtures n'atteint ce régime de compression).
+      Vérifié visuellement avant/après (capture LibreOffice 600 DPI) sur la reproduction exacte du
+      bug signalé plus bas.
 - ✅ **Corpus visuel (`test-corpus/visual/fixtures/`) mis à jour pour couvrir les 3 chantiers du jour
       — et un bug de rendu jusque-là invisible découvert et contourné au passage (2026-09-04)** :
       les fixtures de démo/régression visuelle n'avaient pas suivi les 3 chantiers du jour (label
@@ -73,7 +91,8 @@ est levé.
       - 3 nouvelles fixtures : `edge-chaining.mmd` (chaînage sur une ligne + fan-out/fan-in `&`),
         `shapes-generic.mmd` (les 18 formes `@{shape: ...}` à preset OOXML dédié), `edge-types-extended.mmd`
         (les 8 types d'arête étendus : `-.-`/`===`/`<-->`/`--o`/`--x`/`o--o`/`x--x`/`~~~`).
-      - **Bug découvert en construisant `edge-types-extended.mmd`** : en essayant d'abord de mettre
+      - **Bug découvert en construisant `edge-types-extended.mmd` — corrigé le même jour, voir
+        l'entrée "Bug de chevauchement de têtes de flèche à l'échelle" plus haut** : en essayant d'abord de mettre
         les 8 types étendus à la suite des 6 déjà dans `edge-types.mmd` (14 nœuds, `flowchart LR`,
         une seule longue chaîne), l'arête `<-->` (bidirectionnelle) s'est rendue comme un **unique
         losange plein** au lieu de deux têtes de flèche triangulaires distinctes — reproduit de façon

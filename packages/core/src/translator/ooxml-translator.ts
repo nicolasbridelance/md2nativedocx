@@ -114,6 +114,40 @@ function scaledLineWidth(baseEmu: number, scale: number): number {
 }
 
 /**
+ * Pick `a:headEnd`/`a:tailEnd`'s `w`/`len` enum (`sm`/`med`/`lg`, no numeric
+ * value exists — see {@link scaledLineWidth}'s doc comment) for a connector
+ * whose stroke width came out floored at {@link MIN_LINE_WIDTH_EMU}.
+ *
+ * Found 2026-09-04 (`docs/specs/FUTURE_full_mermaid_coverage_SPEC.md`'s
+ * punch list item 2, root-caused via a real LibreOffice render at 600 DPI —
+ * see `test-corpus/visual/fixtures/edge-types-extended.mmd`'s history in
+ * TODO.md for the original symptom report): a marker's rendered physical
+ * size is proportional to `a:ln w` (confirmed by `scaledLineWidth`'s own
+ * 2026-09-02 fix), but every *other* coordinate in this file — including the
+ * gap between two adjacent nodes — is multiplied by the uncapped `scale`
+ * factor directly (`renderContent`'s doc comment). Once `scale` is small
+ * enough to hit the width floor, the marker stops shrinking any further
+ * while the gap it sits in keeps shrinking with the uncapped `scale`: at
+ * `'med'` (the enum this translator always used before this fix), that gap
+ * closes entirely on a long enough compressed chain. A single-headed arrow
+ * just looks oversized when that happens; a two-headed one (`<-->`/`o--o`/
+ * `x--x`) has its two markers fully overlap into what reads as one solid
+ * diamond, with the connecting line itself no longer visible at all —
+ * reproduced on a 14-node `flowchart LR` chain, confirmed fixed by this
+ * function at the same scale.
+ *
+ * `'sm'` isn't proportional to how far below the floor the *unfloored*
+ * width would have landed — OOXML only offers 3 discrete sizes — but it
+ * measurably shrinks the marker-to-gap ratio, and every diagram that never
+ * hits the floor (the vast majority — `scale` reaches 1 for anything that
+ * already fits the page) is completely unaffected, keeping `'med'` exactly
+ * as before.
+ */
+function arrowMarkerSize(baseWidthEmu: number, scale: number): 'sm' | 'med' {
+  return baseWidthEmu * scale < MIN_LINE_WIDTH_EMU ? 'sm' : 'med';
+}
+
+/**
  * Usable page area in EMU for Pandoc's default reference document (US Letter,
  * 1 inch margins => 6.5in x 9in). A drawing larger than this is scaled down
  * uniformly rather than being clipped by Word: `wp:extent` and the group's
@@ -1072,10 +1106,15 @@ function renderEdge(
     emuPoints.length === 2
       ? straightConnectorGeometry(emuPoints[0]!.x, emuPoints[0]!.y, emuPoints[1]!.x, emuPoints[1]!.y)
       : bentConnectorGeometry(emuPoints);
+  const markerSize = arrowMarkerSize(baseWidthEmu, scale);
   const headEnd =
-    lineStyle.headEnd !== 'none' ? `        <a:headEnd type="${lineStyle.headEnd}" w="med" len="med"/>` : '';
+    lineStyle.headEnd !== 'none'
+      ? `        <a:headEnd type="${lineStyle.headEnd}" w="${markerSize}" len="${markerSize}"/>`
+      : '';
   const tailEnd =
-    lineStyle.tailEnd !== 'none' ? `        <a:tailEnd type="${lineStyle.tailEnd}" w="med" len="med"/>` : '';
+    lineStyle.tailEnd !== 'none'
+      ? `        <a:tailEnd type="${lineStyle.tailEnd}" w="${markerSize}" len="${markerSize}"/>`
+      : '';
   const safeName = escapeXml(`${mermaidFromId}--${mermaidToId}`);
 
   return [

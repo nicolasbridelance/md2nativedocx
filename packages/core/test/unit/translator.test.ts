@@ -273,6 +273,33 @@ test('node border and connector line widths shrink along with geometry on a scal
   }
 });
 
+test('a bidirectional arrowhead shrinks to "sm" once its line width has been floored, so two head-to-head markers no longer merge into a diamond', () => {
+  // Regression (2026-09-04, punch list item 2 — real LibreOffice render at
+  // 600 DPI): every coordinate including the gap between adjacent nodes is
+  // multiplied by the diagram's uncapped `scale` (renderContent's doc
+  // comment), but a connector's stroke width — and with it, the marker's
+  // proportional physical size — is floored at MIN_LINE_WIDTH_EMU
+  // (scaledLineWidth). Once `scale` is small enough to hit that floor, a
+  // fixed "med" marker on each end of a bidirectional edge stops shrinking
+  // while the gap keeps shrinking, until the two markers fully overlap into
+  // one solid diamond with no visible connecting line at all — reproduced on
+  // a 14-node flowchart LR chain, same shape guaranteed here with 40 nodes.
+  const wide = ['graph LR', ...Array.from({ length: 40 }, (_, i) => `  N${i} <--> N${i + 1}`)].join('\n');
+  const xml = translate(wide);
+  const markers = [...xml.matchAll(/<a:(?:head|tail)End type="triangle" w="(\w+)" len="(\w+)"\/>/g)];
+  assert.ok(markers.length > 0, 'expected at least one triangle marker in the output');
+  for (const [, w, len] of markers) {
+    assert.equal(w, 'sm', 'a floored-width connector\'s marker must shrink to "sm"');
+    assert.equal(len, 'sm');
+  }
+});
+
+test('an unscaled diagram keeps "med" arrowheads — the floor never kicks in when scale is 1', () => {
+  const xml = translate('graph TD\n  A[Start] <--> B[End]');
+  assert.ok(xml.includes('<a:headEnd type="triangle" w="med" len="med"/>'));
+  assert.ok(xml.includes('<a:tailEnd type="triangle" w="med" len="med"/>'));
+});
+
 test('a tall, narrow diagram gets its extent widened to a safe aspect ratio', () => {
   // Regression: verified empirically (soffice --headless render) that a
   // wpc:wpc/wpg:wgp group taller than ~7.5in renders NOTHING AT ALL in
