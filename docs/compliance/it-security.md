@@ -109,7 +109,7 @@ Reproducible locally, identically to what CI runs, with:
 ## Related documents
 
 - [`SECURITY.md`](../../SECURITY.md) — vulnerability disclosure policy, scope.
-- [`TESTING.md`](../../TESTING.md) — the six test chapters and what each guarantees.
+- [`TESTING.md`](../../TESTING.md) — the seven test chapters and what each guarantees.
 - [`AGENTS.md`](../../AGENTS.md) → *Development environment* — the specific risk around
   Codespaces/external PRs (`.devcontainer/`/`.vscode/` executing on open) and its procedural
   mitigation.

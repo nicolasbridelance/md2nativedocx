@@ -50,5 +50,5 @@ These numbers aren't a snapshot copied by hand: every CI run on `main` produces 
 (Job Summary, visible in the **Actions** tab) and downloadable reports (`junit.xml`, `lcov.info`,
 `npm-audit.json`, kept 90 days, tied to the exact commit) — full detail, and where each test's
 source files live, in [`it-security.md`](it-security.md) → *Automated, dated reports*. See also
-[`TESTING.md`](../../TESTING.md) for the six test chapters and
+[`TESTING.md`](../../TESTING.md) for the seven test chapters and
 [`AGENTS.md`](../../AGENTS.md) → *Security requirements* for the complete risk table.

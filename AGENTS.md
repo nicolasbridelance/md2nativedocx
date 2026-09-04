@@ -135,7 +135,7 @@ already-working commands to assume:
 | `npm run test:fuzz -w packages/core` | property-based tests on the parser/translator boundary |
 | `npm run test:visual` | LibreOffice-headless render + pixel-diff regression (spec §9) |
 
-See `TESTING.md` for the full picture: why testing is split into six chapters, what each one
+See `TESTING.md` for the full picture: why testing is split into seven chapters, what each one
 actually catches that the others can't, and where each one lives on disk — this table is just
 the commands.
 

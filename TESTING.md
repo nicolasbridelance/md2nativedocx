@@ -3,9 +3,9 @@
 > This file exists because the test directory grew by successive additions rather than by
 > design, and that ended up being confusing — see `TODO.md` (2026-08-07) for the history of
 > that finding and the cleanup that followed. This document gives the missing overview: the
-> project's six test chapters, what each one guarantees, where it lives, and how to add a case.
+> project's seven test chapters, what each one guarantees, where it lives, and how to add a case.
 
-## The six chapters
+## The seven chapters
 
 | # | Chapter | Where | Automated | What it guarantees |
 |---|---|---|---|---|
@@ -14,7 +14,8 @@
 | 3 | [Real diagram corpus](#3-real-diagram-corpus) | `test-corpus/corpus/` | yes (regeneration + conformance) + manual Word review | real `.mmd` files from mermaid-js/mermaid go through the whole pipeline |
 | 4 | [Visual regression](#4-visual-regression) | `test-corpus/visual/`, `scripts/test-visual.mjs` | yes, on demand (LibreOffice required) | the actual render doesn't regress, not just the XML |
 | 5 | [Native Word comparison](#5-native-word-comparison) | `tools/word-reference/` | no, manual, Windows | OOXML structure compared against an authentic Word document |
-| 6 | [Historical spikes](#6-historical-spikes) | `docs/adr/spikes/` | no, archive | evidence that motivated ADR 0001/0002 |
+| 6 | [Manual Word acceptance checklist](#6-manual-word-acceptance-checklist) | `test-corpus/word-verification/` | no, manual, real Word required | spec §9 release gate: known LibreOffice-only-verified defects and a crossing-heavy adversarial case, opened and eyeballed in actual Word |
+| 7 | [Historical spikes](#7-historical-spikes) | `docs/adr/spikes/` | no, archive | evidence that motivated ADR 0001/0002 |
 
 Commands: see `AGENTS.md` → "Build, test, lint" for the `npm run ...` list.
 
@@ -35,7 +36,15 @@ Each chapter answers a question none of the others can answer alone:
 - Chapter 5 is the only one that compares against **real Word** rather than our own understanding
   of the OOXML format — irreplaceable for diagnosing a discrepancy, but manual and Windows-only,
   so not in the CI loop.
-- Chapter 6 isn't a test: it's the empirical evidence that settled two architecture decisions
+- Chapter 6 is the spec's own release gate (§9, "manual test in real Word"), and answers a
+  question chapter 5 doesn't: chapter 5 diffs *structure* against a Word-generated reference on
+  Windows CI-adjacent tooling, but nothing in chapters 1-5 ever opens a file in Word and looks —
+  LibreOffice (chapter 4's renderer) and real Word are different rendering engines, and at least
+  one defect (`nested-3-levels.docx`'s missing subgraph container box) was confirmed identical in
+  both, which chapter 4's baseline-diff mechanism could never have caught on its own since the gap
+  predates the accepted baseline. See `docs/mvp-acceptance-report.md` for the results this chapter
+  has produced so far.
+- Chapter 7 isn't a test: it's the empirical evidence that settled two architecture decisions
   (layout engine, Pandoc integration mechanism). It's archived, not maintained.
 
 ## 1. Unit
@@ -79,7 +88,28 @@ and compares its `wpg:wgp` structure to our output. See `tools/word-reference/RE
 Windows-only: use it when a real Word render diverges from what LibreOffice/our structural tests
 validate, to isolate whether the discrepancy comes from us or from the rendering engine.
 
-## 6. Historical spikes
+## 6. Manual Word acceptance checklist
+
+`test-corpus/word-verification/` — a small hand-picked set of generated `.docx` files
+(`minimal`, `medium-realistic`, `nested-3-levels`, `order-flow`, `crossing-stress-bipartite`) plus
+`CHECKLIST.md`, curated from `test-corpus/visual/fixtures/` specifically to re-probe known
+LibreOffice-only-verified defects and the one documented adversarial crossing case in actual
+desktop Word. This is the evidence for MVP acceptance item 2 in `docs/specs/cahier_des_charges.md`
+§9 ("manual test in real Word before each release") — see `docs/mvp-acceptance-report.md` for the
+recorded results.
+
+Distinct from chapter 5 (`tools/word-reference/`): chapter 5 automates a *structural* OOXML diff
+against a Word-generated reference; this chapter is a human opening each file in Word and
+eyeballing render fidelity per `CHECKLIST.md`'s checkboxes — the two catch different classes of
+defect and neither substitutes for the other.
+
+**Adding a case**: regenerate with `node scripts/generate-corpus.mjs` pointed at a fixture under
+`test-corpus/visual/fixtures/`, copy the resulting `.docx`/`.md` into
+`test-corpus/word-verification/`, and add a numbered section to `CHECKLIST.md` explaining what to
+look for and why (a known defect this probes, an MVP acceptance criterion, etc. — not just "looks
+right").
+
+## 7. Historical spikes
 
 `docs/adr/spikes/` — see its own `README.md`. Archived evidence for `docs/adr/0001-*` and
 `docs/adr/0002-*`. Nothing here runs as part of the automated tests.
