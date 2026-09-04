@@ -288,38 +288,86 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     throw new Error('Layout engine "graphviz" is not implemented yet (see ADR 0001).');
   }
 
-  const g = new dagre.graphlib.Graph({ compound: true });
-  g.setGraph({
-    rankdir: flowchart.direction === 'LR' ? 'LR' : 'TD',
-    nodesep: RANK_GAP,
-    ranksep: LEVEL_GAP,
-    marginx: 0,
-    marginy: 0,
-  });
-  g.setDefaultEdgeLabel(() => ({}));
+  // Dagre's `rankdir` values are `TB`/`BT`/`LR`/`RL` — note `TB`, not `TD`.
+  // Mermaid's `TD` (top-down) had been passed straight through as the literal
+  // string `'TD'`, which isn't a value Dagre recognizes; it silently fell
+  // back to Dagre's own default (`TB`), which happens to coincide visually
+  // with `TD`, masking the mismatch. Mapped explicitly here now that `BT`/
+  // `RL` are real, distinct directions this parser produces (`parser.ts`).
+  const RANKDIR_BY_DIRECTION: Record<Flowchart['direction'], 'TB' | 'BT' | 'LR' | 'RL'> = {
+    TD: 'TB',
+    BT: 'BT',
+    LR: 'LR',
+    RL: 'RL',
+  };
 
-  for (const node of flowchart.nodes) {
-    const { width, height } = fixedSize ?? nodeDimensions(node.label, node.shape);
-    g.setNode(node.id, { width, height });
-  }
-  for (const edge of flowchart.edges) {
-    if (g.hasNode(edge.from) && g.hasNode(edge.to)) {
-      g.setEdge(edge.from, edge.to);
-    }
-  }
+  const warnings: string[] = [];
 
-  // Register subgraphs as Dagre clusters and assign their nodes to them.
-  for (const sg of flowchart.subgraphs) {
-    g.setNode(sg.id, { width: 0, height: 0, cluster: true });
-    for (const nodeId of sg.nodeIds) {
-      if (g.hasNode(nodeId)) g.setParent(nodeId, sg.id);
-    }
-    for (const childId of sg.subgraphIds) {
-      if (g.hasNode(childId)) g.setParent(childId, sg.id);
-    }
-  }
+  const buildGraph = (useClusters: boolean) => {
+    const g = new dagre.graphlib.Graph({ compound: true });
+    g.setGraph({
+      rankdir: RANKDIR_BY_DIRECTION[flowchart.direction],
+      nodesep: RANK_GAP,
+      ranksep: LEVEL_GAP,
+      marginx: 0,
+      marginy: 0,
+    });
+    g.setDefaultEdgeLabel(() => ({}));
 
-  dagre.layout(g);
+    for (const node of flowchart.nodes) {
+      const { width, height } = fixedSize ?? nodeDimensions(node.label, node.shape);
+      g.setNode(node.id, { width, height });
+    }
+    for (const edge of flowchart.edges) {
+      if (g.hasNode(edge.from) && g.hasNode(edge.to)) {
+        g.setEdge(edge.from, edge.to);
+      }
+    }
+
+    if (useClusters) {
+      // Register subgraphs as Dagre clusters and assign their nodes to them.
+      for (const sg of flowchart.subgraphs) {
+        g.setNode(sg.id, { width: 0, height: 0, cluster: true });
+        for (const nodeId of sg.nodeIds) {
+          if (g.hasNode(nodeId)) g.setParent(nodeId, sg.id);
+        }
+        for (const childId of sg.subgraphIds) {
+          if (g.hasNode(childId)) g.setParent(childId, sg.id);
+        }
+      }
+    }
+
+    return g;
+  };
+
+  // Dagre has a long-standing, unfixed bug (dagre is unmaintained upstream)
+  // where its `order` phase crashes — `Cannot set properties of undefined
+  // (setting 'order')` — on some large graphs that combine many compound
+  // clusters (subgraphs) with cycles among their members. Found empirically
+  // (2026-09-04) on a 169-node/295-edge/36-subgraph real-world fixture
+  // (`medium3.mmd`): reproduces with clustering on, but the identical
+  // node/edge set lays out fine with clustering off, and isolating the
+  // implicated subgraph alone (or pre-breaking every cycle before handing
+  // the graph to Dagre) does not stop the crash — so this is Dagre's own
+  // cluster+order interaction, not something this parser's output can
+  // sidestep by construction. Retrying without clusters trades subgraph
+  // container boxes (silently dropped by the translator when
+  // `layout.subgraphs` has no entry for an id, see `renderSubgraph`) for a
+  // diagram that still renders, instead of the whole export falling back to
+  // ~1000 lines of raw ```mermaid text (spec §10 "surface warnings" — this
+  // degradation is reported as a warning, not hidden).
+  let g = buildGraph(true);
+  try {
+    dagre.layout(g);
+  } catch (err) {
+    if (flowchart.subgraphs.length === 0) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    warnings.push(
+      `Layout with subgraph containers failed (${message}); retried without them -- subgraph boxes are omitted from this diagram.`,
+    );
+    g = buildGraph(false);
+    dagre.layout(g);
+  }
 
   // Use a null-prototype object so hostile node ids like `__proto__` or
   // `constructor` cannot collide with Object.prototype members (prototype
@@ -388,7 +436,7 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   // gap, not a correctness one.
   reserveSubgraphTitleSpace(flowchart, normalizedNodes, normalizedSubgraphs);
 
-  return { nodes: normalizedNodes, subgraphs: normalizedSubgraphs, edges: normalizedEdges };
+  return { nodes: normalizedNodes, subgraphs: normalizedSubgraphs, edges: normalizedEdges, warnings };
 }
 
 /**

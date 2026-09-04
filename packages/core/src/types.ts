@@ -45,7 +45,8 @@ export type NodeShape =
   | 'paperTape'
   | 'horizontalCylinder'
   | 'linedCylinder'
-  | 'manualInput';
+  | 'manualInput'
+  | 'asymmetric';
 
 /**
  * Edge line/arrowhead styles supported (spec §6.2). Named after Mermaid's own
@@ -107,7 +108,7 @@ export interface Subgraph {
 
 /** The full intermediate AST for one flowchart. */
 export interface Flowchart {
-  direction: 'TD' | 'LR';
+  direction: 'TD' | 'LR' | 'BT' | 'RL';
   nodes: FlowNode[];
   edges: FlowEdge[];
   subgraphs: Subgraph[];
@@ -155,4 +156,11 @@ export interface LayoutResult {
    * renders from.
    */
   edges: LayoutPoint[][];
+  /**
+   * Non-fatal warnings from the layout pass itself (empty in the normal
+   * case) -- e.g. Dagre's cluster+order bug forcing a retry without
+   * subgraph containers, see `layout()`. Mirrors `ParseResult.warnings`
+   * (spec §10, "surface warnings").
+   */
+  warnings: string[];
 }

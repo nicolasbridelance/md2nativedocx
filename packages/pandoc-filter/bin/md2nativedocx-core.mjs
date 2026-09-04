@@ -40,8 +40,10 @@
  *
  * ## Warnings (spec §10, "surface warnings")
  *
- * Non-fatal parser warnings (`ParseResult.warnings`) and the SmartArt
- * fallback message below are both written to stderr, prefixed
+ * Non-fatal parser warnings (`ParseResult.warnings`), non-fatal layout
+ * warnings (`LayoutResult.warnings`, e.g. Dagre's cluster+order bug forcing
+ * a subgraph-boxes-omitted retry), and the SmartArt fallback message below
+ * are all written to stderr, prefixed
  * `md2nativedocx: `. Pandoc's own child-process stderr is inherited by
  * `packages/cli/bin/md2nativedocx.mjs`'s `execFile` call, which counts
  * `md2nativedocx: `-prefixed lines and surfaces them (CLI stdout summary +
@@ -111,6 +113,9 @@ try {
     process.stdout.write(smartArtXml);
   } else {
     const result = layout(ast);
+    for (const warning of result.warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
     let output = translateToOoxml(ast, result);
     // Only note the fallback when SmartArt was actually attempted for this
     // diagram (smartArtDir set) and rejected for one of classifyTopology's

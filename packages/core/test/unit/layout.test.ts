@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { parseMermaid } from '../../src/parser/index.js';
 import { layout, boundingBox, SUBGRAPH_TITLE_HEIGHT, NODE_WIDTH, NODE_HEIGHT } from '../../src/layout/layout.js';
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 test('produces a box for every node', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B\n  B --> C');
@@ -35,6 +40,20 @@ test('respects LR direction', () => {
   const result = layout(ast);
   assert.ok(result.nodes['B']!.x > result.nodes['A']!.x);
   assert.ok(result.nodes['C']!.x > result.nodes['B']!.x);
+});
+
+test('respects BT direction (bottom-to-top: source ranks below target)', () => {
+  const { ast } = parseMermaid('graph BT\n  A --> B\n  B --> C');
+  const result = layout(ast);
+  assert.ok(result.nodes['B']!.y < result.nodes['A']!.y);
+  assert.ok(result.nodes['C']!.y < result.nodes['B']!.y);
+});
+
+test('respects RL direction (right-to-left: source ranks right of target)', () => {
+  const { ast } = parseMermaid('graph RL\n  A --> B\n  B --> C');
+  const result = layout(ast);
+  assert.ok(result.nodes['B']!.x < result.nodes['A']!.x);
+  assert.ok(result.nodes['C']!.x < result.nodes['B']!.x);
 });
 
 test('boundingBox covers all nodes', () => {
@@ -187,4 +206,36 @@ test('explicit nodeWidth/nodeHeight still forces a fixed size for every node (es
   assert.equal(result.nodes['B']!.width, 120, 'the override should apply uniformly, ignoring label length');
   assert.equal(result.nodes['A']!.height, 60);
   assert.equal(result.nodes['B']!.height, 60);
+});
+
+test('a normal diagram has no layout warnings', () => {
+  const { ast } = parseMermaid('graph TD\n  A[A] --> B[B]');
+  const result = layout(ast);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('a graph combining many subgraph clusters with cycles among their members does not crash Dagre, and reports the degradation instead of throwing', () => {
+  // Regression test for a real, unfixed Dagre bug (dagre is unmaintained
+  // upstream): its `order` phase throws `Cannot set properties of
+  // undefined (setting 'order')` on some large graphs that combine many
+  // compound clusters (subgraphs) with cycles among their members. Found
+  // empirically (2026-09-04) via this exact corpus fixture -- 169
+  // nodes/295 edges/36 subgraphs -- which crashed `npm test` outright
+  // before `layout()` grew a clusters-off retry. Isolating a small
+  // synthetic repro wasn't practical (a simple chain-of-clusters-plus-one-
+  // cycle up to 40 clusters never reproduced it -- the real fixture's
+  // irregular cross-links and nesting are what triggers Dagre's bug), so
+  // this test reuses the one fixture known to trigger it rather than the
+  // corpus/ directory's normal purpose (external real-world syntax
+  // coverage, see test-corpus/README.md).
+  const fixturePath = join(here, '..', '..', '..', '..', '..', 'test-corpus', 'corpus', 'source', 'medium3.mmd');
+  const { ast } = parseMermaid(readFileSync(fixturePath, 'utf8'));
+  assert.ok(ast.subgraphs.length > 1, 'fixture should still declare multiple subgraphs');
+
+  const result = layout(ast);
+  assert.equal(Object.keys(result.nodes).length, ast.nodes.length, 'every node should still get a position');
+  assert.ok(
+    result.warnings.some((w) => w.includes('subgraph containers failed')),
+    `expected a warning about the clusters-off retry, got: ${JSON.stringify(result.warnings)}`,
+  );
 });
