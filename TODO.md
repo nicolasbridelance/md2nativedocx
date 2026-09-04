@@ -59,6 +59,35 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ✅ **Rich-text runs — `<br/>`/gras/italique côté OOXML seul (2026-09-04, punch list OOXML item
+      3)** : `<br/>` et les "Markdown strings" (`` id["`**gras**`"] ``) s'aplatissaient jusqu'ici en
+      texte plein (`normalizeLabelText()`) — pas de vrai retour à la ligne, pas de run gras/italique
+      réel, uniquement une approximation propre en texte brut (`docs/markdown-mermaid-compliance-table.md`
+      §5.3, marquées 🔧 — limite de parseur commune aux 3 colonnes). Root-cause : aucune structure
+      ne portait l'info de mise en forme au-delà du texte aplati. Ajouté `types.ts`'s `LabelToken`
+      (séquence de runs stylés + retours forcés) ; `parser.ts`'s `parseLabel()` (remplace
+      `normalizeLabelText()`) produit désormais **les deux** — le texte aplati `label` (inchangé,
+      toujours utilisé par `chain.ts`/`tree.ts`/le nom accessible de forme/`layout.ts`) **et**
+      `labelRuns` (nouveau, structuré). `ooxml-translator.ts` rend `labelRuns` en vrais `w:r`/`w:br`
+      (`renderLabelRuns()`, partagé nœud+libellé d'arête) ; `layout.ts`'s `nodeDimensions()` (via le
+      nouveau `label-runs.ts`'s `labelLines()`) réserve la hauteur pour chaque ligne forcée au lieu
+      de sous-dimensionner la boîte. Scope délibéré : seul le traducteur OOXML (`wpg:wgp`) en
+      bénéficie ; `chain.ts`/`tree.ts` (SmartArt) restent sur le texte aplati, inchangés (voir
+      compliance table, colonnes SmartArt/Hybride toujours 🟡 Partial). L'émphase n'est interprétée
+      qu'à l'intérieur d'une Markdown string entière (convention Mermaid) — un `**` littéral dans un
+      label classique reste littéral, vérifié par test et par rendu. Conception zéro-régression :
+      `FlowNode.label`/`FlowEdge.label` gardent exactement leur valeur/type d'avant (nouveau champ
+      `labelRuns` en plus, jamais un remplacement) — aucun test existant modifié. Nouveaux tests
+      (parser/layout/translator, ~10) + 1 nouvelle fixture visuelle (`rich-text.mmd`, 0,000% de
+      diff) ; `node scripts/test-visual.mjs` toujours 11/31 échecs (les mêmes pré-existants, aucun
+      nouveau). Effet de bord réel et positif : plusieurs fixtures du corpus officiel Mermaid
+      (`large1`/`large2`/`medium2`/`medium3`/`medium5`/`mermaid-official-code-flow`/
+      `large-report`/`medium-report`) utilisent déjà `<br>` dans leurs labels — leurs `.docx`
+      regénérés ont maintenant une vraie deuxième ligne et une boîte correctement agrandie au lieu
+      du texte aplati sous-dimensionné d'avant ; diff vérifié ligne par ligne (uniquement des
+      changements de géométrie de boîte, rien d'autre). Vérifié par rendu LibreOffice réel (pas
+      seulement les tests unitaires) : deux lignes visibles, gras/italique visibles, `**markup**`
+      littéral hors Markdown string confirmé inchangé.
 - ✅ **Bug de chevauchement de têtes de flèche à l'échelle — corrigé (2026-09-04, punch list OOXML
       item 2)** : root-cause du bug découvert plus bas ("Corpus visuel", même date) — un marqueur
       de tête de flèche a une taille physique proportionnelle à `a:ln w` (`scaledLineWidth`), mais
@@ -1254,7 +1283,10 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       compris, vérifié empiriquement ; `id[Hello World]` sans guillemets → label propre). Idem pour
       les codes d'entité Mermaid (`#quot;`, `#9829;`), `<br/>`, et les "Markdown Strings"
       (backticks + `**gras**`) : aucun n'est interprété, tous restent littéraux. À corriger dans
-      `parser.ts` séparément — bug de parseur, pas lié au choix SmartArt/OOXML.
+      `parser.ts` séparément — bug de parseur, pas lié au choix SmartArt/OOXML. (Guillemets et
+      codes d'entité corrigés le jour même, plus bas dans ce fichier ; `<br/>`/Markdown strings
+      d'abord dégradés en texte plat le jour même aussi, puis en vrais runs riches — voir l'entrée
+      "Rich-text runs" tout en haut de ce fichier, 2026-09-04.)
 - [x] **Poussée vers le 100% sur la colonne SmartArt seul (2026-09-03, sur demande explicite du
       mainteneur, à l'aide de `docs/smartart-layout-catalog.md`)** — quatre améliorations, chacune
       vérifiée par rendu LibreOffice réel avant d'être considérée faite (pas seulement par test XML,
@@ -1309,7 +1341,10 @@ et l'add-in Word (canal de distribution entièrement nouveau).
         en le caractère réel ; une chaîne délimitée par des backticks a ses délimiteurs et ses
         marqueurs d'emphase (`**`, `__`, `*`, `_`) retirés plutôt qu'affichés littéralement — pas de
         support de runs riches pour un vrai gras/italique, donc dégradation en texte plat plutôt
-        que markup brut.
+        que markup brut. **Le vrai retour à la ligne et les runs gras/italique, dits impossibles
+        ici faute de support OOXML, ont depuis été livrés — voir l'entrée "Rich-text runs" tout en
+        haut de ce fichier (2026-09-04, punch list item 3) : `normalizeLabelText()` a été remplacé
+        par `parseLabel()`, qui produit `labelRuns` en plus du texte aplati.**
       - **Directions `TB`/`BT`/`RL`** : `TB` (alias documenté de `TD`) mappe directement ; `BT`/`RL`
         restent hors du scope V1 (spec §5.1, TD/LR seulement) mais produisent désormais un
         avertissement explicite ("not supported in V1") et retombent sur `TD`, au lieu de tomber

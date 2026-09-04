@@ -189,6 +189,19 @@ test('a long label wraps to a taller box rather than growing arbitrarily wide', 
   assert.ok(result.nodes['B']!.width < 400, `box grew implausibly wide (${result.nodes['B']!.width}px) instead of wrapping`);
 });
 
+test('a <br/>-forced line break grows the box height, same as an auto-wrapped line', () => {
+  // Regression (rich-text runs follow-up, 2026-09-04): <br/> used to flatten
+  // to a space (normalizeLabelText), so a 2-line label never reserved height
+  // for its second line. labelRuns (types.ts) now carries a real break
+  // token, and nodeDimensions sums each forced line's own wrap estimate.
+  const oneLine = layout(parseMermaid('graph TD\n  A[A] --> B[Line1 Line2]').ast);
+  const twoLines = layout(parseMermaid('graph TD\n  A[A] --> B["Line1<br/>Line2"]').ast);
+  assert.ok(
+    twoLines.nodes['B']!.height > oneLine.nodes['B']!.height,
+    `a forced break (${twoLines.nodes['B']!.height}px) should reserve more height than the same words on one line (${oneLine.nodes['B']!.height}px)`,
+  );
+});
+
 test('a diamond gets a bigger box than a rectangle with the same label', () => {
   const rect = layout(parseMermaid('graph TD\n  A[A] --> B[Validée]').ast);
   const diamond = layout(parseMermaid('graph TD\n  A[A] --> B{Validée}').ast);

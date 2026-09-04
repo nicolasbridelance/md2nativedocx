@@ -41,7 +41,17 @@
  */
 
 import { SUBGRAPH_TITLE_HEIGHT, estimateTextWidth } from '../layout/layout.js';
-import type { EdgeType, Flowchart, Layout, LayoutPoint, LayoutResult, NodeShape, Subgraph } from '../types.js';
+import type {
+  EdgeType,
+  Flowchart,
+  Layout,
+  LabelToken,
+  LayoutPoint,
+  LayoutResult,
+  NodeShape,
+  Subgraph,
+} from '../types.js';
+import { labelLines } from '../label-runs.js';
 import { escapeXml } from './xml-escape.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -478,6 +488,7 @@ function renderContent(
         nodeIds.get(node.id)!,
         node.id,
         node.label,
+        node.labelRuns,
         node.shape,
         box,
         nodeFill,
@@ -521,10 +532,8 @@ function renderContent(
         scale,
       ),
     );
-    if (edge.label) {
-      parts.push(
-        renderEdgeLabel(edge.label, from, to, dagrePoints, otherBoxes, nextId(), scale),
-      );
+    if (edge.label && edge.labelRuns) {
+      parts.push(renderEdgeLabel(edge.labelRuns, from, to, dagrePoints, otherBoxes, nextId(), scale));
     }
   });
 
@@ -741,6 +750,7 @@ function renderNode(
   id: number,
   mermaidId: string,
   label: string,
+  labelRuns: LabelToken[],
   shape: NodeShape,
   box: Box,
   fill: string,
@@ -789,16 +799,42 @@ function renderNode(
     // one-sided rather than at least being symmetric.
     '        <w:p>',
     '          <w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
-    '          <w:r>',
-    `            <w:rPr><w:color w:val="${textColor}"/><w:sz w:val="${scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)}"/></w:rPr>`,
-    `            <w:t xml:space="preserve">${safeLabel}</w:t>`,
-    '          </w:r>',
+    renderLabelRuns(labelRuns, textColor, scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)),
     '        </w:p>',
     '      </w:txbxContent>',
     '    </wps:txbx>',
     bodyPr(scale),
     '  </wps:wsp>',
   ].join('\n');
+}
+
+/**
+ * Render a label's rich-text body (`types.ts`'s `LabelToken[]` — bold/italic
+ * runs and `<br/>` line breaks, spec follow-up "rich-text runs") as the
+ * `w:r`/`w:br` children of one `w:p`, shared by {@link renderNode} and
+ * {@link renderEdgeLabel} (identical shape, only color/size differ). A break
+ * token is its own run holding a bare `w:br` — WordprocessingML requires the
+ * break element inside a run, but that run carries no `w:rPr`/`w:t` of its
+ * own — so a `<br/>` moves to a new line within this same paragraph instead
+ * of starting a new (differently-spaced) paragraph.
+ */
+function renderLabelRuns(tokens: LabelToken[], color: string, sizeHalfPt: number): string {
+  return tokens
+    .map((token) => {
+      if ('break' in token) {
+        return ['          <w:r>', '            <w:br/>', '          </w:r>'].join('\n');
+      }
+      const rPr = [`<w:color w:val="${color}"/>`, `<w:sz w:val="${sizeHalfPt}"/>`];
+      if (token.bold) rPr.push('<w:b/>');
+      if (token.italic) rPr.push('<w:i/>');
+      return [
+        '          <w:r>',
+        `            <w:rPr>${rPr.join('')}</w:rPr>`,
+        `            <w:t xml:space="preserve">${escapeXml(token.text)}</w:t>`,
+        '          </w:r>',
+      ].join('\n');
+    })
+    .join('\n');
 }
 
 /**
@@ -1187,10 +1223,25 @@ const MIN_EDGE_LABEL_WIDTH_PX = 44;
  * being centered on the arrow even though the box's geometric center is
  * exact. Right-sizing the box makes that gap negligible.
  */
-function edgeLabelWidthEmu(label: string): number {
-  const textWidthPx = estimateTextWidth(label, EDGE_LABEL_FONT_SIZE_PX) * EDGE_LABEL_TEXT_SAFETY_MARGIN;
+function edgeLabelWidthEmu(labelRuns: LabelToken[]): number {
+  // A `<br/>` (rare in an edge label, but not disallowed) sizes the box to
+  // its widest line, not the sum of all lines — same per-line-then-combine
+  // shape as layout.ts's nodeDimensions, mirrored here since edge labels are
+  // sized independently of that function.
+  const widestLinePx = Math.max(
+    ...labelLines(labelRuns).map((line) => estimateTextWidth(line, EDGE_LABEL_FONT_SIZE_PX)),
+  );
+  const textWidthPx = widestLinePx * EDGE_LABEL_TEXT_SAFETY_MARGIN;
   const widthPx = Math.max(MIN_EDGE_LABEL_WIDTH_PX, textWidthPx + 2 * EDGE_LABEL_PAD_X_PX);
   return Math.round(widthPx * EMU_PER_PX);
+}
+
+/** An edge label's box height in EMU: `EDGE_LABEL_CY` per line, growing for
+ * a `<br/>`-forced multi-line label instead of clipping every line past the
+ * first (the box was previously a single fixed height regardless of content,
+ * back when no label could ever have more than one line). */
+function edgeLabelHeightEmu(labelRuns: LabelToken[]): number {
+  return EDGE_LABEL_CY * labelLines(labelRuns).length;
 }
 
 /**
@@ -1203,7 +1254,7 @@ function edgeLabelWidthEmu(label: string): number {
  * text along the line, which is unreadable for a diagram caption.
  */
 function renderEdgeLabel(
-  label: string,
+  labelRuns: LabelToken[],
   from: Box,
   to: Box,
   dagrePoints: LayoutPoint[],
@@ -1216,11 +1267,10 @@ function renderEdgeLabel(
   // straight line between the two ends — for a routed edge, that straight
   // line is exactly the segment the routing was drawn to avoid.
   const mid = pointAlongPath(points, 0.5);
-  const cx = Math.round(edgeLabelWidthEmu(label) * scale);
-  const cy = Math.round(EDGE_LABEL_CY * scale);
+  const cx = Math.round(edgeLabelWidthEmu(labelRuns) * scale);
+  const cy = Math.round(edgeLabelHeightEmu(labelRuns) * scale);
   const x = Math.round(mid.x * EMU_PER_PX * scale - cx / 2);
   const y = Math.round(mid.y * EMU_PER_PX * scale - cy / 2);
-  const safeLabel = escapeXml(label);
   const insetEmu = Math.round((EDGE_LABEL_PAD_X_PX / 2) * EMU_PER_PX * scale);
 
   return [
@@ -1240,10 +1290,7 @@ function renderEdgeLabel(
     '      <w:txbxContent>',
     '        <w:p>',
     '          <w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
-    '          <w:r>',
-    `            <w:rPr><w:color w:val="000000"/><w:sz w:val="${scaledFontSizeHalfPt(16, scale)}"/></w:rPr>`,
-    `            <w:t xml:space="preserve">${safeLabel}</w:t>`,
-    '          </w:r>',
+    renderLabelRuns(labelRuns, '000000', scaledFontSizeHalfPt(16, scale)),
     '        </w:p>',
     '      </w:txbxContent>',
     '    </wps:txbx>',

@@ -488,6 +488,42 @@ test('a backtick-delimited Markdown string has its delimiters and emphasis marke
   assert.equal(a.label, 'bold and italic');
 });
 
+test('<br/> also produces a real break token in labelRuns, not just a flattened space', () => {
+  const { ast } = parseMermaid('graph TD\n  A["Line1<br/>Line2"]');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.deepEqual(a.labelRuns, [{ text: 'Line1' }, { break: true }, { text: 'Line2' }]);
+});
+
+test('a Markdown string\'s bold/italic spans become real LabelRun tokens, not just stripped plain text', () => {
+  const { ast } = parseMermaid('graph TD\n  A["`**bold** and _italic_ and plain`"]');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.deepEqual(a.labelRuns, [
+    { text: 'bold', bold: true },
+    { text: ' and ' },
+    { text: 'italic', italic: true },
+    { text: ' and plain' },
+  ]);
+});
+
+test('emphasis markers are only interpreted inside a backtick Markdown string — a literal ** in an ordinary label stays literal', () => {
+  const { ast } = parseMermaid('graph TD\n  A[No **markup** here]');
+  const a = ast.nodes.find((n) => n.id === 'A')!;
+  assert.equal(a.label, 'No **markup** here');
+  assert.deepEqual(a.labelRuns, [{ text: 'No **markup** here' }]);
+});
+
+test('an edge label also gets structured labelRuns alongside its flattened plain label', () => {
+  const { ast } = parseMermaid('graph TD\n  A -->|"`**Yes**`"| B');
+  assert.equal(ast.edges[0]!.label, 'Yes');
+  assert.deepEqual(ast.edges[0]!.labelRuns, [{ text: 'Yes', bold: true }]);
+});
+
+test('an edge with no label has null labelRuns, mirroring its null label', () => {
+  const { ast } = parseMermaid('graph TD\n  A --> B');
+  assert.equal(ast.edges[0]!.label, null);
+  assert.equal(ast.edges[0]!.labelRuns, null);
+});
+
 test('warns on unclosed subgraph', () => {
   const { warnings } = parseMermaid('graph TD\n  subgraph S1\n    A --> B');
   assert.ok(warnings.some((w) => w.includes('Unclosed')));

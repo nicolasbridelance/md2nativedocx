@@ -14,6 +14,8 @@ import type {
   FlowEdge,
   FlowNode,
   Flowchart,
+  LabelRun,
+  LabelToken,
   NodeShape,
   Subgraph,
 } from '../types.js';
@@ -209,12 +211,14 @@ function parseAtShapeProps(inner: string): Map<string, string> {
  * optional (Mermaid defaults it to the node id, same as a bracket-less bare
  * node) — signaled here as `null` so the caller can apply that default.
  */
-function parseAtShapeSyntax(rest: string): { shape: NodeShape; label: string | null } | null {
+function parseAtShapeSyntax(
+  rest: string,
+): { shape: NodeShape; label: string | null; labelRuns: LabelToken[] | null } | null {
   if (!rest.startsWith('@{') || !rest.endsWith('}')) return null;
   const props = parseAtShapeProps(rest.slice(2, -1));
   const shape = props.has('shape') ? normalizeShapeAlias(props.get('shape')!) : 'rect';
-  const label = props.has('label') ? normalizeLabelText(stripQuotedLabel(props.get('label')!.trim())) : null;
-  return { shape, label };
+  const parsed = props.has('label') ? parseLabel(stripQuotedLabel(props.get('label')!.trim())) : null;
+  return { shape, label: parsed?.text ?? null, labelRuns: parsed?.runs ?? null };
 }
 
 /**
@@ -366,32 +370,73 @@ const NAMED_ENTITIES: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /**
- * Decode the small set of inline-text conveniences Mermaid supports that this
- * parser otherwise passed through as literal characters (found via
- * `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`):
- *  - `<br/>` (and `<br>`, `<br />`, case-insensitive) becomes a space — there
- *    is no multi-line text-run support in the OOXML/DrawingML output this
- *    parser feeds, so a real line break isn't achievable, but leaking the
- *    raw tag into the rendered label isn't acceptable either (V1 tolerance).
+ * Parse the small set of inline-text conveniences Mermaid supports (found via
+ * `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`) into
+ * both a flattened plain-text fallback (`text`, used for box-name attributes
+ * and `layout.ts`'s width/height estimation — neither needs to know about a
+ * bold/italic span) and a structured rich-text body (`runs`, `types.ts`'s
+ * `LabelToken[]` — what the translator actually renders):
  *  - Mermaid's entity codes (`#quot;`, `#9829;`, ...) are decoded to their
- *    character — the numeric form via its Unicode code point, plus the
- *    handful of named entities Mermaid documents.
+ *    character first — the numeric form via its Unicode code point, plus the
+ *    handful of named entities Mermaid documents — regardless of the two
+ *    cases below.
+ *  - `<br/>` (and `<br>`, `<br />`, case-insensitive) becomes a real line
+ *    break: a `{ break: true }` token in `runs` (`text` flattens it to a
+ *    single space instead, same as before this function could produce real
+ *    breaks — a fallback string has nowhere to put a second line).
  *  - A "Markdown string" (a label wrapped in backticks) has its delimiters
- *    and emphasis markers (`**`, `__`, `*`, `_`) stripped rather than shown
- *    literally — there's no rich-text run support to actually bold/italicize
- *    a fragment, so this degrades to plain text instead of raw markup
- *    characters leaking into the label.
+ *    stripped, and `**bold**`/`__bold__`/`*italic*`/`_italic_` spans become
+ *    real `LabelRun.bold`/`.italic` tokens instead of literal asterisks or a
+ *    stripped-to-plain-text approximation. Emphasis markers are only
+ *    recognized inside a Markdown string — Mermaid's classic (non-backtick)
+ *    label syntax never interprets them, so a literal `**` in an ordinary
+ *    label stays literal, unchanged from before.
  */
-function normalizeLabelText(text: string): string {
-  let result = text.replace(/<br\s*\/?>/gi, ' ');
-  result = result.replace(/#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)));
+function parseLabel(text: string): { text: string; runs: LabelToken[] } {
+  let decoded = text.replace(/#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)));
   for (const [name, char] of NAMED_ENTITIES) {
-    result = result.split(`#${name};`).join(char);
+    decoded = decoded.split(`#${name};`).join(char);
   }
-  if (result.length >= 2 && result.startsWith('`') && result.endsWith('`')) {
-    result = result.slice(1, -1).replace(/\*\*|__|\*|_/g, '');
+  const isMarkdownString = decoded.length >= 2 && decoded.startsWith('`') && decoded.endsWith('`');
+  if (isMarkdownString) decoded = decoded.slice(1, -1);
+
+  const segments = decoded.split(/<br\s*\/?>/gi);
+  const runs: LabelToken[] = [];
+  const plainSegments: string[] = [];
+  segments.forEach((segment, i) => {
+    if (i > 0) runs.push({ break: true });
+    const segmentRuns = isMarkdownString
+      ? parseEmphasis(segment)
+      : segment.length > 0
+        ? [{ text: segment }]
+        : [];
+    runs.push(...segmentRuns);
+    plainSegments.push(segmentRuns.map((r) => r.text).join(''));
+  });
+  return { text: plainSegments.join(' '), runs };
+}
+
+/**
+ * Split a Markdown-string segment (no `<br/>` in it — {@link parseLabel}
+ * already split those out) into plain/bold/italic {@link LabelRun}s.
+ * Non-nested and non-overlapping — CommonMark's full emphasis-resolution
+ * algorithm is out of scope here (V1 tolerance, same spirit as the rest of
+ * this parser); `**`/`__` (bold) is tried before `*`/`_` (italic) at each
+ * position so a bold span is never misread as two italic markers.
+ */
+function parseEmphasis(text: string): LabelRun[] {
+  const runs: LabelRun[] = [];
+  const re = /(\*\*|__)([\s\S]+?)\1|(\*|_)([\s\S]+?)\3/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) runs.push({ text: text.slice(last, m.index) });
+    if (m[1] !== undefined) runs.push({ text: m[2]!, bold: true });
+    else runs.push({ text: m[4]!, italic: true });
+    last = re.lastIndex;
   }
-  return result;
+  if (last < text.length) runs.push({ text: text.slice(last) });
+  return runs;
 }
 
 /**
@@ -700,11 +745,12 @@ export function parseMermaid(text: string): ParseResult {
           to: edge.to,
           type: edge.type,
           label: edge.label,
+          labelRuns: edge.labelRuns,
         });
-        if (!registerNode(nodes, edge.from, edge.fromLabel, edge.fromShape)) {
+        if (!registerNode(nodes, edge.from, edge.fromLabel, edge.fromLabelRuns, edge.fromShape)) {
           warnings.push(`Node id "${edge.from}" is reserved and was ignored.`);
         }
-        if (!registerNode(nodes, edge.to, edge.toLabel, edge.toShape)) {
+        if (!registerNode(nodes, edge.to, edge.toLabel, edge.toLabelRuns, edge.toShape)) {
           warnings.push(`Node id "${edge.to}" is reserved and was ignored.`);
         }
         // Apply inline class styles (`A:::crit`) to the edge endpoints.
@@ -719,7 +765,7 @@ export function parseMermaid(text: string): ParseResult {
     // Bare node definition: id[Text] or id
     const node = parseNodeStatement(line);
     if (node) {
-      if (!registerNode(nodes, node.id, node.label, node.shape)) {
+      if (!registerNode(nodes, node.id, node.label, node.labelRuns, node.shape)) {
         warnings.push(`Node id "${node.id}" is reserved and was ignored.`);
       }
       applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, node.id, node.className);
@@ -850,6 +896,7 @@ function registerNode(
   nodes: Map<string, FlowNode>,
   id: string,
   label: string,
+  labelRuns: LabelToken[],
   shape: NodeShape = 'rect',
 ): boolean {
   // Reject ids that collide with Object.prototype (Dagre breaks on them).
@@ -859,7 +906,7 @@ function registerNode(
     // Keep first-seen shape/label; later bare references don't override.
     return true;
   }
-  nodes.set(id, { id, label, shape });
+  nodes.set(id, { id, label, labelRuns, shape });
   return true;
 }
 
@@ -897,7 +944,7 @@ function applyClassToNode(
  */
 function parseNodeStatement(
   line: string,
-): { id: string; label: string; shape: NodeShape; className: string | null } | null {
+): { id: string; label: string; labelRuns: LabelToken[]; shape: NodeShape; className: string | null } | null {
   const idMatch = line.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);
   if (!idMatch) return null;
   const id = idMatch[1]!;
@@ -912,19 +959,26 @@ function parseNodeStatement(
   }
 
   if (rest.length === 0) {
-    return { id, label: id, shape: 'rect', className };
+    return { id, label: id, labelRuns: [{ text: id }], shape: 'rect', className };
   }
 
   const atShape = parseAtShapeSyntax(rest);
   if (atShape) {
-    return { id, label: atShape.label ?? id, shape: atShape.shape, className };
+    return {
+      id,
+      label: atShape.label ?? id,
+      labelRuns: atShape.labelRuns ?? [{ text: id }],
+      shape: atShape.shape,
+      className,
+    };
   }
 
   for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
     // Longest patterns first to avoid `(` matching `((`.
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: normalizeLabelText(stripQuotedLabel(inner)), shape, className };
+      const parsed = parseLabel(stripQuotedLabel(inner));
+      return { id, label: parsed.text, labelRuns: parsed.runs, shape, className };
     }
   }
 
@@ -934,7 +988,7 @@ function parseNodeStatement(
 /** Parse a node reference at an edge endpoint: bare id or id with shape. */
 function parseNodeRef(
   ref: string,
-): { id: string; label: string; shape: NodeShape; className: string | null } | null {
+): { id: string; label: string; labelRuns: LabelToken[]; shape: NodeShape; className: string | null } | null {
   const trimmed = ref.trim();
   const idMatch = trimmed.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);
   if (!idMatch) return null;
@@ -949,17 +1003,24 @@ function parseNodeRef(
     rest = classMatch[1]!.trim();
   }
 
-  if (rest.length === 0) return { id, label: id, shape: 'rect', className };
+  if (rest.length === 0) return { id, label: id, labelRuns: [{ text: id }], shape: 'rect', className };
 
   const atShape = parseAtShapeSyntax(rest);
   if (atShape) {
-    return { id, label: atShape.label ?? id, shape: atShape.shape, className };
+    return {
+      id,
+      label: atShape.label ?? id,
+      labelRuns: atShape.labelRuns ?? [{ text: id }],
+      shape: atShape.shape,
+      className,
+    };
   }
 
   for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
     if (rest.startsWith(open) && rest.endsWith(close)) {
       const inner = rest.slice(open.length, rest.length - close.length).trim();
-      return { id, label: normalizeLabelText(stripQuotedLabel(inner)), shape, className };
+      const parsed = parseLabel(stripQuotedLabel(inner));
+      return { id, label: parsed.text, labelRuns: parsed.runs, shape, className };
     }
   }
   return null;
@@ -969,13 +1030,16 @@ interface ChainEdge {
   from: string;
   to: string;
   fromLabel: string;
+  fromLabelRuns: LabelToken[];
   toLabel: string;
+  toLabelRuns: LabelToken[];
   fromShape: NodeShape;
   toShape: NodeShape;
   fromClass: string | null;
   toClass: string | null;
   type: EdgeType;
   label: string | null;
+  labelRuns: LabelToken[] | null;
 }
 
 /**
@@ -989,7 +1053,7 @@ interface ChainEdge {
 function matchMidLabelEdge(
   line: string,
   start: number,
-): { type: EdgeType; end: number; label: string } | null {
+): { type: EdgeType; end: number; label: string; labelRuns: LabelToken[] } | null {
   const family = MID_LABEL_FAMILIES.find((f) => line.startsWith(f.open, start));
   if (!family) return null;
   let depth = 0;
@@ -998,8 +1062,8 @@ function matchMidLabelEdge(
     if (depth === 0) {
       const closing = family.closings.find((c) => line.startsWith(c.token, j));
       if (closing) {
-        const label = normalizeLabelText(stripQuotedLabel(line.slice(start + family.open.length, j).trim()));
-        return { type: closing.type, end: j + closing.token.length, label };
+        const parsed = parseLabel(stripQuotedLabel(line.slice(start + family.open.length, j).trim()));
+        return { type: closing.type, end: j + closing.token.length, label: parsed.text, labelRuns: parsed.runs };
       }
     }
     const ch = line[j]!;
@@ -1023,7 +1087,13 @@ function matchMidLabelEdge(
  * {@link joinBracketContinuations} does.
  */
 function parseEdgeChain(line: string): ChainEdge[] | null {
-  const matches: Array<{ type: EdgeType; start: number; end: number; label: string | null }> = [];
+  const matches: Array<{
+    type: EdgeType;
+    start: number;
+    end: number;
+    label: string | null;
+    labelRuns: LabelToken[] | null;
+  }> = [];
   let depth = 0;
   let i = 0;
   while (i < line.length) {
@@ -1039,18 +1109,21 @@ function parseEdgeChain(line: string): ChainEdge[] | null {
       if (op) {
         let end = i + op.length;
         let label: string | null = null;
+        let labelRuns: LabelToken[] | null = null;
         const labelMatch = line.slice(end).match(/^\|([^|]*)\|/);
         if (labelMatch) {
-          label = normalizeLabelText(stripQuotedLabel(labelMatch[1]!.trim()));
+          const parsed = parseLabel(stripQuotedLabel(labelMatch[1]!.trim()));
+          label = parsed.text;
+          labelRuns = parsed.runs;
           end += labelMatch[0].length;
         }
-        matches.push({ type: op.type, start: i, end, label });
+        matches.push({ type: op.type, start: i, end, label, labelRuns });
         i = end;
         continue;
       }
       const mid = matchMidLabelEdge(line, i);
       if (mid) {
-        matches.push({ type: mid.type, start: i, end: mid.end, label: mid.label });
+        matches.push({ type: mid.type, start: i, end: mid.end, label: mid.label, labelRuns: mid.labelRuns });
         i = mid.end;
         continue;
       }
@@ -1077,20 +1150,23 @@ function parseEdgeChain(line: string): ChainEdge[] | null {
   for (let k = 0; k < matches.length; k++) {
     const leftList = nodeLists[k]!;
     const rightList = nodeLists[k + 1]!;
-    const { type, label } = matches[k]!;
+    const { type, label, labelRuns } = matches[k]!;
     for (const left of leftList) {
       for (const right of rightList) {
         edges.push({
           from: left.id,
           to: right.id,
           fromLabel: left.label,
+          fromLabelRuns: left.labelRuns,
           toLabel: right.label,
+          toLabelRuns: right.labelRuns,
           fromShape: left.shape,
           toShape: right.shape,
           fromClass: left.className,
           toClass: right.className,
           type,
           label,
+          labelRuns,
         });
       }
     }
@@ -1101,10 +1177,11 @@ function parseEdgeChain(line: string): ChainEdge[] | null {
 /** Split a node-list segment (`A & B & C`) into individual node references. */
 function parseNodeList(
   segment: string,
-): Array<{ id: string; label: string; shape: NodeShape; className: string | null }> | null {
+): Array<{ id: string; label: string; labelRuns: LabelToken[]; shape: NodeShape; className: string | null }> | null {
   const parts = splitTopLevelAmpersand(segment);
   if (parts.length === 0) return null;
-  const refs: Array<{ id: string; label: string; shape: NodeShape; className: string | null }> = [];
+  const refs: Array<{ id: string; label: string; labelRuns: LabelToken[]; shape: NodeShape; className: string | null }> =
+    [];
   for (const part of parts) {
     const ref = parseNodeRef(part);
     if (!ref) return null;

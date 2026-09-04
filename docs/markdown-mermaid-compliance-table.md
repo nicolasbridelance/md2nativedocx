@@ -42,6 +42,17 @@
 > et extension), précisément à cause du bug documenté sur cette même ligne ; SmartArt reste
 > disponible en opt-in (`MD2NATIVEDOCX_ENABLE_SMARTART=1` / réglage de l'extension) pour qui veut
 > expérimenter ou reprendre ce chantier.
+>
+> **[Mise à jour 2026-09-04, plus tard le même jour]** Les deux limites 🔧 "Retours à la ligne" et
+> "Markdown Strings" (§5.3) sont levées **côté OOXML seul** (rich-text runs) : `parser.ts`'s
+> `parseLabel()` produit désormais, en plus du texte aplati déjà utilisé par `chain.ts`/`tree.ts`,
+> une structure `labelRuns` (`types.ts`'s `LabelToken[]`) que `ooxml-translator.ts` rend en runs
+> `w:r`/`w:br` réels — un vrai retour à la ligne (`<br/>`) et de vrais runs `w:b`/`w:i` (Markdown
+> string) au lieu d'un aplatissement en texte plein. `layout.ts`'s `nodeDimensions()` réserve
+> désormais la hauteur pour chaque ligne forcée. Cette structure n'existait pas avant : ce n'était
+> donc pas une limite de parseur commune aux 3 colonnes (🔧), mais une limite du traducteur OOXML
+> spécifiquement — `chain.ts`/`tree.ts` (colonnes SmartArt/Hybride) restent inchangés, toujours sur
+> le texte aplati. Rendu réel LibreOffice vérifié.
 
 ## 1. Sources consultées
 
@@ -182,8 +193,8 @@ Mermaid, pas une fonctionnalité Markdown générale.
 | Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
 | Texte Unicode | `id["This ❤ Unicode"]` | ✅ Full (corrigé 2026-09-03) — le bug logué ici (guillemets englobants gardés littéralement dans `label`) est corrigé : `stripQuotedLabel()` dans `parser.ts` retire une paire de guillemets englobants sur un texte de nœud **et** sur un libellé d'arête (`id["Hello World"]` → label `Hello World` ; `-->|"Oui"|` → libellé `Oui`), vérifié par tests unitaires et par rendu LibreOffice réel. Un guillemet interne non englobant (`id[He said "hi"]`) est laissé intact, comme attendu | ✅ idem | ✅ idem |
-| Retours à la ligne (`<br/>`) | `id["Ligne1<br/>Ligne2"]` | 🔧 🟡 Partial (corrigé 2026-09-04) — `normalizeLabelText()` reconnaît désormais `<br/>`/`<br>`/`<br />` et le remplace par un espace au lieu de laisser fuir la balise brute ; toujours pas de vrai retour à la ligne dans Word, faute de support de runs multi-lignes côté OOXML/DrawingML dans ce générateur | 🔧 idem | 🔧 idem |
-| Markdown Strings (`` "`**gras**`" ``) | `` id["`**gras**`"] `` | 🔧 🟡 Partial (corrigé 2026-09-04) — `normalizeLabelText()` retire désormais les délimiteurs backtick et les marqueurs d'emphase (`**`, `__`, `*`, `_`) plutôt que de les laisser littéraux ; le texte rendu est propre (`This is Markdown`) mais toujours sans la mise en forme réelle (pas de run gras/italique — pas de support de runs riches dans ce générateur) | 🔧 idem | 🔧 idem |
+| Retours à la ligne (`<br/>`) | `id["Ligne1<br/>Ligne2"]` | 🟡 Partial (inchangé) — `chain.ts`/`tree.ts` lisent toujours `node.label`, la version aplatie (`<br/>` → espace, `parser.ts`'s `parseLabel()`) ; pas de runs multi-lignes côté `dgm:t` | 🟡 idem / ✅ Full si fallback OOXML | ✅ Full (corrigé 2026-09-04, rich-text runs) — `parseLabel()` produit désormais aussi `labelRuns` (`types.ts`'s `LabelToken[]`), un vrai `<w:br/>` au lieu d'un espace aplati ; `layout.ts`'s `nodeDimensions()` réserve la hauteur pour chaque ligne forcée. Rendu réel LibreOffice vérifié (deux lignes visibles, boîte agrandie en conséquence) |
+| Markdown Strings (`` "`**gras**`" ``) | `` id["`**gras**`"] `` | 🟡 Partial (inchangé) — même limite : `chain.ts`/`tree.ts` lisent `node.label` (marqueurs d'emphase retirés, texte aplati), pas de run gras/italique dans `dgm:t` | 🟡 idem / ✅ Full si fallback OOXML | ✅ Full (corrigé 2026-09-04, rich-text runs) — `**gras**`/`__gras__`/`*italique*`/`_italique_` à l'intérieur d'une "Markdown string" deviennent de vrais runs `<w:b/>`/`<w:i/>` (non imbriqué, non chevauchant — V1). Les mêmes marqueurs restent littéraux dans un label classique non-backtick, comme avant. Même mécanisme sur les libellés d'arête. Rendu réel LibreOffice vérifié |
 | Codes d'entité (`#quot;`, `#9829;`) | `id["#quot;"]` | ✅ Full (corrigé 2026-09-04) — `normalizeLabelText()` décode la forme numérique (`#9829;` → point de code Unicode) et les entités nommées documentées par Mermaid (`#quot;`, `#amp;`, `#lt;`, `#gt;`, `#nbsp;`, `#apos;`) en leur caractère réel | ✅ idem | ✅ idem |
 | `classDef`/`class`/`:::` — couleur de remplissage | `classDef foo fill:#f9f` puis `class A foo` ou `A:::foo` | ✅ Full (corrigé 2026-09-03) — `node.fill` écrit en `a:solidFill` sur le `dgm:spPr` du point de **contenu** (pas un point de présentation, où ADR 0004 "Round 5" l'avait trouvé sans effet) ; rendu réel vérifié dans `chain.ts` et `tree.ts`. La **forme** du nœud reste, elle, toujours `roundRect` (§5.2 ci-dessus) — un override `a:prstGeom` au même endroit a été testé et confirmé sans effet | ✅ Full | ✅ Full — `nodeFill = hexColor(node.fill, fill)` appliqué par nœud |
 | — sous-cas : `classDef` avec plusieurs propriétés (`fill:...,stroke:...`) | `classDef foo stroke:#333,fill:#f9f` | 🟡 Partial (corrigé 2026-09-04) — `parseCssStyleProps()` remplace la regex figée par un parseur clé:valeur générique, ordre indifférent ; `node.fill` toujours propagé (Full, ligne "couleur de remplissage" ci-dessus), `node.stroke` en revanche **jamais lu** par `chain.ts`/`tree.ts` (seul `node.fill` l'est, cf. `spPrFor()`) | 🟡 idem / ✅ Full si fallback | ✅ Full — `node.stroke` → `<a:ln><a:solidFill>` du nœud, rendu réel vérifié |

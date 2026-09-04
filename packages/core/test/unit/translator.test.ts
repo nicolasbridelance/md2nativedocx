@@ -93,6 +93,43 @@ test('escapes XML-significant characters in labels (rule #2)', () => {
   assert.ok(!/c > d/.test(xml));
 });
 
+test('a <br/> in a node label renders as a real w:br, not a flattened space, and still escapes surrounding text (rule #2)', () => {
+  const xml = translate('graph TD\n  A["a & b<br/>c < d"]');
+  assert.ok(xml.includes('<w:br/>'), 'expected a real line break run');
+  assert.ok(xml.includes('&amp;'));
+  assert.ok(xml.includes('&lt;'));
+});
+
+test('a backtick Markdown string\'s bold/italic spans render as real w:b/w:i runs, not flattened plain text', () => {
+  const xml = translate('graph TD\n  A["`**bold** and _italic_`"]');
+  assert.ok(xml.includes('<w:b/>'), 'expected a bold run');
+  assert.ok(xml.includes('<w:i/>'), 'expected an italic run');
+  // Both spans must appear as their own w:t text content, not merged.
+  assert.ok(xml.includes('<w:t xml:space="preserve">bold</w:t>'));
+  assert.ok(xml.includes('<w:t xml:space="preserve">italic</w:t>'));
+});
+
+test('a literal ** outside a backtick Markdown string never becomes a bold run', () => {
+  const xml = translate('graph TD\n  A[No **markup** here]');
+  assert.ok(!xml.includes('<w:b/>'));
+  assert.ok(xml.includes('<w:t xml:space="preserve">No **markup** here</w:t>'));
+});
+
+test('an edge label\'s bold/italic spans also render as real runs', () => {
+  const xml = translate('graph TD\n  A -->|"`**Yes**`"| B');
+  assert.ok(xml.includes('<w:b/>'));
+  assert.ok(xml.includes('<w:t xml:space="preserve">Yes</w:t>'));
+});
+
+test('a plain label with no markup still renders as exactly one text run (no regression from the rich-text refactor)', () => {
+  const xml = translate('graph TD\n  A[Plain] --> B[End]');
+  // One <w:r><w:rPr> text run per node label (2 nodes here) — not counting
+  // the schema-required outer <w:r><w:drawing> wrapper (wrapInParagraph),
+  // which isn't a label run at all.
+  const labelRunCount = (xml.match(/<w:r>\s*<w:rPr>/g) ?? []).length;
+  assert.equal(labelRunCount, 2);
+});
+
 test('never emits an external OOXML relationship (rule #3)', () => {
   const xml = translate('graph TD\n  A --> B');
   // No external relationship target, no remote reference. The `http://` URIs

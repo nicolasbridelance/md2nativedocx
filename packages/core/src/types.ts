@@ -72,10 +72,35 @@ export type EdgeType =
   | 'crossBoth'
   | 'invisible';
 
+/**
+ * One inline-styled text segment within a node/edge label's rich-text body
+ * (Mermaid's backtick-delimited "Markdown string" convention — `**bold**`/
+ * `_italic_` inside `` id["`...`"] ``).
+ */
+export interface LabelRun {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+}
+
+/**
+ * A label's structured body: a flat sequence of styled runs and explicit
+ * line breaks (Mermaid's `<br/>`/`<br>`/`<br />`), rendered by the
+ * translator as one text body with a real run/line-break per token instead
+ * of flattening everything to plain text. `label`/`FlowEdge.label` (below)
+ * stay the flattened plain-text fallback — used for box-name attributes and
+ * anywhere only a flat display string is needed, e.g. `label-runs.ts`'s
+ * `labelLines()` for width/height estimation, which doesn't need to know
+ * about a bold/italic span.
+ */
+export type LabelToken = LabelRun | { break: true };
+
 /** A single flowchart node. */
 export interface FlowNode {
   id: string;
   label: string;
+  /** Structured rich-text body for `label` — see {@link LabelToken}. */
+  labelRuns: LabelToken[];
   shape: NodeShape;
   /** Fill color (hex, no `#`) from `classDef`/`style`/`:::` `fill:#XXXXXX` (spec §6.3). */
   fill?: string;
@@ -89,6 +114,8 @@ export interface FlowEdge {
   to: string;
   type: EdgeType;
   label: string | null;
+  /** Structured rich-text body for `label` — see {@link LabelToken}. `null` iff `label` is `null`. */
+  labelRuns: LabelToken[] | null;
   /** Line color (hex, no `#`) from `linkStyle N stroke:#XXXXXX` (spec §6.3). */
   stroke?: string;
   /** Line width in px (Mermaid's own unit) from `linkStyle N stroke-width:Npx`;

@@ -18,10 +18,12 @@ import type {
   LayoutBox,
   LayoutPoint,
   LayoutResult,
+  LabelToken,
   NodeShape,
   Subgraph,
   SubgraphBox,
 } from '../types.js';
+import { labelLines } from '../label-runs.js';
 
 /**
  * Minimum node dimensions in logical pixels — a floor under
@@ -213,11 +215,22 @@ function wrapEstimate(label: string): { lines: number; textWidth: number } {
  * corruption from a diamond sized too close to the edge, not a diamond a
  * few pixels larger than ideal.
  */
-function nodeDimensions(label: string, shape: NodeShape): { width: number; height: number } {
+function nodeDimensions(labelRuns: LabelToken[], shape: NodeShape): { width: number; height: number } {
+  // A `<br/>` (types.ts's `LabelToken` `{ break: true }`) is a forced line
+  // break, not something wrapEstimate's own greedy word-wrap should ever
+  // reflow across — each forced line is wrapped independently and their line
+  // counts summed, so a 2-line label that also wraps once still reports 3
+  // lines rather than either line bleeding into the other's word-wrap.
   // wrapEstimate's textWidth already has SCALE_SAFETY_MARGIN baked in (it
   // needs it before the 1-vs-2-line decision, see its own doc comment); only
   // height still needs it applied here.
-  const { lines, textWidth } = wrapEstimate(label);
+  let lines = 0;
+  let textWidth = 1;
+  for (const line of labelLines(labelRuns)) {
+    const estimate = wrapEstimate(line);
+    lines += estimate.lines;
+    textWidth = Math.max(textWidth, estimate.textWidth);
+  }
   // A small fractional buffer, not a whole extra line: wrapEstimate's greedy
   // word-packing (with the same SCALE_SAFETY_MARGIN already folded into its
   // own packing decisions) is the thing actually responsible for predicting
@@ -315,7 +328,7 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     g.setDefaultEdgeLabel(() => ({}));
 
     for (const node of flowchart.nodes) {
-      const { width, height } = fixedSize ?? nodeDimensions(node.label, node.shape);
+      const { width, height } = fixedSize ?? nodeDimensions(node.labelRuns, node.shape);
       g.setNode(node.id, { width, height });
     }
     for (const edge of flowchart.edges) {
