@@ -144,61 +144,70 @@ test('corpus: every source diagram regenerates a conformant .docx in corpus/gene
 
 test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   + 'footnote, link, bold/italic) survives alongside two mermaid diagrams', () => {
-  mkdirSync(corpusDir, { recursive: true });
   const source = readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8');
   // SmartArt explicitly enabled (off by default since 2026-09-03, see
   // md2nativedocx.mjs's doc comment on smartArtEnabled): this test wants the
-  // mixed-dispatch scenario below, not the plain-fallback default.
-  const docx = convert('mixed-content', source, { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '1' });
-  assertConformantDocx(docx, 'mixed-content');
-  const xml = readDocumentXml(docx);
+  // mixed-dispatch scenario below, not the plain-fallback default. Written to
+  // an ephemeral temp dir, NOT corpusDir -- unlike the previous test, this
+  // run's output isn't the corpus's checked-in `mixed-content.docx` (that one
+  // must stay the default-config render, see TESTING.md chapter 3): writing
+  // here into corpusDir used to silently overwrite the committed
+  // default-config file with this SmartArt-on variant on every `npm test`.
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-mixed-content-'));
+  try {
+    const docx = convertTo(source, dir, 'mixed-content', { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '1' });
+    assertConformantDocx(docx, 'mixed-content');
+    const xml = readDocumentXml(docx);
 
-  // Headings (H1/H2/H3) came through as heading paragraph styles, not as
-  // literal text with no structure.
-  assert.ok(xml.includes('w:val="Heading1"'), 'missing Heading1 style');
-  assert.ok(xml.includes('w:val="Heading2"'), 'missing Heading2 style');
-  assert.ok(xml.includes('w:val="Heading3"'), 'missing Heading3 style');
+    // Headings (H1/H2/H3) came through as heading paragraph styles, not as
+    // literal text with no structure.
+    assert.ok(xml.includes('w:val="Heading1"'), 'missing Heading1 style');
+    assert.ok(xml.includes('w:val="Heading2"'), 'missing Heading2 style');
+    assert.ok(xml.includes('w:val="Heading3"'), 'missing Heading3 style');
 
-  // Bold / italic runs.
-  assert.ok(/<w:rPr>[^<]*<w:bCs\s*\/>[^<]*<w:b\s*\/>/.test(xml) || xml.includes('<w:b/>') || xml.includes('<w:b '),
-    'missing bold run');
-  assert.ok(xml.includes('<w:i/>') || xml.includes('<w:i '), 'missing italic run');
+    // Bold / italic runs.
+    assert.ok(/<w:rPr>[^<]*<w:bCs\s*\/>[^<]*<w:b\s*\/>/.test(xml) || xml.includes('<w:b/>') || xml.includes('<w:b '),
+      'missing bold run');
+    assert.ok(xml.includes('<w:i/>') || xml.includes('<w:i '), 'missing italic run');
 
-  // Ordered list numbering (numPr), table, and blockquote.
-  assert.ok(xml.includes('<w:numPr>'), 'missing ordered list numbering');
-  assert.ok(xml.includes('<w:tbl>'), 'missing table');
-  assert.ok(xml.includes('Dead-letter queue'), 'table cell text missing');
-  assert.ok(xml.includes('BlockText') || xml.includes('Quote'), 'missing blockquote style');
+    // Ordered list numbering (numPr), table, and blockquote.
+    assert.ok(xml.includes('<w:numPr>'), 'missing ordered list numbering');
+    assert.ok(xml.includes('<w:tbl>'), 'missing table');
+    assert.ok(xml.includes('Dead-letter queue'), 'table cell text missing');
+    assert.ok(xml.includes('BlockText') || xml.includes('Quote'), 'missing blockquote style');
 
-  // Footnote and external link survive as real OOXML constructs, not flattened text.
-  assert.ok(xml.includes('<w:footnoteReference'), 'missing footnote reference');
-  assert.ok(xml.includes('doc interne'), 'link text missing');
+    // Footnote and external link survive as real OOXML constructs, not flattened text.
+    assert.ok(xml.includes('<w:footnoteReference'), 'missing footnote reference');
+    assert.ok(xml.includes('doc interne'), 'link text missing');
 
-  // Fenced code block: Pandoc's built-in skylighting highlighter tags each
-  // token with a character style (KeywordTok, CommentTok, ...); the actual
-  // colours/font live in styles.xml (checked separately below), so here we
-  // only assert the tokenisation happened, not flattened to a single run.
-  assert.ok(xml.includes('w:val="SourceCode"'), 'missing SourceCode paragraph style');
-  assert.ok(xml.includes('w:val="KeywordTok"'), 'missing KeywordTok run (Python keyword)');
-  assert.ok(xml.includes('w:val="CommentTok"'), 'missing CommentTok run (Python comment)');
-  // styles.xml must actually define these styles with real formatting —
-  // referencing a styleId Word doesn't know renders as plain, uncoloured text.
-  const styles = execFileSync('unzip', ['-p', docx, 'word/styles.xml'], { encoding: 'utf8' });
-  assert.ok(/w:styleId="KeywordTok"[\s\S]{0,200}?<w:color /.test(styles), 'KeywordTok has no colour defined');
-  assert.ok(/w:styleId="VerbatimChar"[\s\S]{0,200}?<w:rFonts /.test(styles), 'VerbatimChar has no monospace font defined');
+    // Fenced code block: Pandoc's built-in skylighting highlighter tags each
+    // token with a character style (KeywordTok, CommentTok, ...); the actual
+    // colours/font live in styles.xml (checked separately below), so here we
+    // only assert the tokenisation happened, not flattened to a single run.
+    assert.ok(xml.includes('w:val="SourceCode"'), 'missing SourceCode paragraph style');
+    assert.ok(xml.includes('w:val="KeywordTok"'), 'missing KeywordTok run (Python keyword)');
+    assert.ok(xml.includes('w:val="CommentTok"'), 'missing CommentTok run (Python comment)');
+    // styles.xml must actually define these styles with real formatting —
+    // referencing a styleId Word doesn't know renders as plain, uncoloured text.
+    const styles = execFileSync('unzip', ['-p', docx, 'word/styles.xml'], { encoding: 'utf8' });
+    assert.ok(/w:styleId="KeywordTok"[\s\S]{0,200}?<w:color /.test(styles), 'KeywordTok has no colour defined');
+    assert.ok(/w:styleId="VerbatimChar"[\s\S]{0,200}?<w:rFonts /.test(styles), 'VerbatimChar has no monospace font defined');
 
-  // Both diagrams converted, no id collisions across the whole document (the
-  // corpus loop's assertConformantDocx already checks this per-file, but
-  // re-asserted here since this file specifically exercises two diagrams
-  // interleaved with text, the scenario most likely to produce id reuse).
-  // Only *one* wpc:wpc canvas, not two: the first diagram (Collecteur ->
-  // File d'attente -> Worker -> Base de données, a plain 4-node chain) is
-  // SmartArt-eligible and dispatches to a `dgm:relIds` diagram instead
-  // (see md2nativedocx-core.mjs's SmartArt dispatch); the second (same
-  // chain plus a branch to a dead-letter queue) is not -- classifyTopology
-  // rejects it as `tree-too-deep` -- and still renders via the wpc:wpc path.
-  assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the tree-too-deep diagram)');
-  assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 1, 'expected exactly one SmartArt diagram (the plain chain)');
+    // Both diagrams converted, no id collisions across the whole document (the
+    // corpus loop's assertConformantDocx already checks this per-file, but
+    // re-asserted here since this file specifically exercises two diagrams
+    // interleaved with text, the scenario most likely to produce id reuse).
+    // Only *one* wpc:wpc canvas, not two: the first diagram (Collecteur ->
+    // File d'attente -> Worker -> Base de données, a plain 4-node chain) is
+    // SmartArt-eligible and dispatches to a `dgm:relIds` diagram instead
+    // (see md2nativedocx-core.mjs's SmartArt dispatch); the second (same
+    // chain plus a branch to a dead-letter queue) is not -- classifyTopology
+    // rejects it as `tree-too-deep` -- and still renders via the wpc:wpc path.
+    assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the tree-too-deep diagram)');
+    assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 1, 'expected exactly one SmartArt diagram (the plain chain)');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', () => {
