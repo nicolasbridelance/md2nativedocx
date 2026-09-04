@@ -78,6 +78,8 @@ import {
   buildSmartArtDrawingXml,
   classifyTopology,
   buildSmartArtFallbackNoteXml,
+  parseQuadrantChart,
+  translateQuadrantToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -126,7 +128,16 @@ try {
   // failing cleanly. 'unknown' is deliberately treated the same as
   // 'flowchart' here — see detectDiagramType's doc comment for why.
   const diagramType = detectDiagramType(input);
-  if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
+  if (diagramType.type === 'quadrant') {
+    // First non-flowchart diagram type shipped (docs/specs/
+    // FUTURE_full_mermaid_coverage_SPEC.md §4 item 2 module convention) —
+    // no Dagre layout step, no SmartArt dispatch, straight AST -> OOXML.
+    const { ast, warnings } = parseQuadrantChart(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateQuadrantToOoxml(ast));
+  } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,
     );

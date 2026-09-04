@@ -1068,6 +1068,20 @@ est levé.
 - [ ] Diagrammes de séquence (priorité, demande la plus fréquente après flowchart — mais famille
       de layout "lifeline", pas la moins chère techniquement ; arbitrage documenté comme
       "angle mort n°1" dans la spec ci-dessus, pas tranché).
+- [x] **`quadrantChart` shippé (2026-09-04)** — premier type non-flowchart livré, et premier
+      module sous `packages/core/src/diagrams/<type>/` (convention §4 item 2 de la spec, appliquée
+      pour la première fois plutôt que juste proposée). Voir `docs/smartart-full-catalog-cross-mermaid.md`
+      archétype #9 "Matrice" pour le raisonnement : un `quadrantChart` correspond quasiment mot pour
+      mot à la catégorie SmartArt Matrix, mais le moteur `dgm:` natif n'apporte rien qu'un simple
+      découpage de canevas en 4 rectangles ne fasse déjà — rendu en formes OOXML pures
+      (`packages/core/src/translator/canvas.ts`, extrait de `ooxml-translator.ts` pour être
+      réutilisable par ce module et les prochains), pas en SmartArt `dgm:layoutDef`. Pas de passe
+      Dagre : position calculée directement depuis les `[x, y]` Mermaid. Portée v1 : `title`,
+      `x-axis`/`y-axis` (une ou deux étiquettes), `quadrant-1..4`, points avec `color:` optionnel ;
+      `radius:`/`stroke-color:`/`stroke-width:`/`classDef` reconnus et ignorés avec avertissement
+      (pas de perte silencieuse), aucun n'affecte la position. Vérifié par un export CLI réel +
+      rendu LibreOffice headless (pas juste les tests unitaires) — a trouvé et corrigé un vrai
+      défaut cosmétique (étiquette d'axe Y repliée sur 2 lignes, marge trop étroite).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

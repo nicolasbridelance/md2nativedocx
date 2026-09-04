@@ -40,6 +40,17 @@ export type { TranslateOptions } from './translator/ooxml-translator.js';
 // XML escaping for user-controlled text (rule #2)
 export { escapeXml } from './translator/xml-escape.js';
 
+// Quadrant chart diagram module (docs/smartart-full-catalog-cross-mermaid.md
+// archetype #9 "Matrice", docs/specs/FUTURE_full_mermaid_coverage_SPEC.md §4
+// item 2 naming convention: packages/core/src/diagrams/<type>/). Independent
+// AST/parser/translator, no Dagre layout step — see
+// diagrams/quadrant/translator.ts's module doc comment for why this renders
+// as plain OOXML shapes rather than a SmartArt dgm:layoutDef.
+export { parseQuadrantChart } from './diagrams/quadrant/parser.js';
+export type { QuadrantParseResult } from './diagrams/quadrant/parser.js';
+export { translateQuadrantToOoxml } from './diagrams/quadrant/translator.js';
+export type { QuadrantChart, QuadrantAxis, QuadrantLabels, QuadrantPoint } from './diagrams/quadrant/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
