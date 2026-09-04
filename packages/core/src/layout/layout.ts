@@ -239,11 +239,34 @@ function nodeDimensions(label: string, shape: NodeShape): { width: number; heigh
       height: Math.max(NODE_HEIGHT, 2 * rectHeight),
     };
   }
+  if (SLANTED_SHAPES.has(shape)) {
+    // Like diamond above, but milder: a hexagon/parallelogram/trapezoid's
+    // slanted sides eat into the corners of its bounding box, just less
+    // aggressively than a rhombus does. The text box itself isn't clipped by
+    // the shape outline (it's an independent overlay), but without this the
+    // label visibly overhangs the slant near a corner.
+    return {
+      width: Math.max(NODE_WIDTH, SLANTED_WIDTH_MARGIN * rectWidth),
+      height: Math.max(NODE_HEIGHT, rectHeight),
+    };
+  }
   return {
     width: Math.max(NODE_WIDTH, rectWidth),
     height: Math.max(NODE_HEIGHT, rectHeight),
   };
 }
+
+/** Node shapes whose sides slant inward, needing extra width so a label clears the corners. */
+const SLANTED_SHAPES: ReadonlySet<NodeShape> = new Set([
+  'hexagon',
+  'parallelogram',
+  'parallelogramAlt',
+  'trapezoid',
+  'trapezoidAlt',
+]);
+
+/** Extra width factor for {@link SLANTED_SHAPES}, well under diamond's 2x since the loss is milder. */
+const SLANTED_WIDTH_MARGIN = 1.35;
 
 /**
  * Compute pixel coordinates for every node and subgraph in the flowchart.

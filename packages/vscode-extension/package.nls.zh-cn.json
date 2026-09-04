@@ -6,7 +6,7 @@
   "command.exportBlock.shortTitle": "仅导出此代码块",
   "configuration.outputDirectory.markdownDescription": "生成的 `.docx` 文件的输出文件夹。留空（默认）= 与源 `.md` 文件相同的文件夹 —— 首次使用前无需任何配置。",
   "configuration.referenceDocument.markdownDescription": "用作每次导出时 Word 模板的 `.docx` 文件路径（相当于 Pandoc 的 `--reference-doc` 选项）—— 指向你公司的模板即可套用其字体、颜色和样式。留空（默认）= 扩展内置的模板。相对路径相对于工作区文件夹解析。",
-  "configuration.smartArt.enabled.markdownDescription": "默认开启：结构简单的图表（链式、树形或环形）会生成原生可编辑的 SmartArt 图形，而不是常规的 OOXML 形状。关闭此选项可始终使用 OOXML 形状，例如为了让整个文档的渲染效果保持一致。",
+  "configuration.smartArt.enabled.markdownDescription": "默认关闭（2026-09-03 在真实 Word 中的测试发现生成的图表根本无法打开——详见合规说明）。开启后，结构简单的图表（链式、树形或环形）会生成原生可编辑的 SmartArt 图形，而不是常规的 OOXML 形状；在 Word 中的可靠性得到确认之前，请视为实验性功能。",
   "walkthrough.title": "md2nativedocx —— 将 Mermaid 图表转换为 Word",
   "walkthrough.description": "将 Mermaid 图表导出为原生可编辑的 Word 图形 —— 而非扁平化的 PNG 图片。",
   "walkthrough.step1.title": "打开一个 Markdown 文档",

@@ -1,0 +1,17 @@
+# Word verification — nested-3-levels
+
+```mermaid
+flowchart TD
+    subgraph L1[Niveau 1]
+        A[Un] --> B[Deux]
+        subgraph L2[Niveau 2]
+            C[Trois] --> D[Quatre]
+            subgraph L3[Niveau 3]
+                E[Cinq] --> F[Six]
+            end
+            D --> E
+        end
+        B --> C
+    end
+    F --> G[Sept]
+```

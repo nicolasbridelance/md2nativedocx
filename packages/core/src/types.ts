@@ -6,25 +6,80 @@
  * They carry NO knowledge of Pandoc, VS Code, or Office.js.
  */
 
-/** Node shapes supported in V1 (spec §6.1). */
+/**
+ * Node shapes supported in V1 (spec §6.1): the original bracket-syntax set
+ * plus a curated subset of the v11.3+ `@{ shape: ... }` expanded shape
+ * catalog (`SHAPE_ALIAS_MAP` in `parser.ts`) — only names with a faithful
+ * single-preset DrawingML match; see that map's doc comment for the ones
+ * intentionally left unsupported (they degrade to `rect` rather than being
+ * lost, per spec §10).
+ */
 export type NodeShape =
   | 'rect'
   | 'roundRect'
   | 'stadium'
   | 'diamond'
   | 'cylinder'
-  | 'ellipse';
+  | 'ellipse'
+  | 'hexagon'
+  | 'parallelogram'
+  | 'parallelogramAlt'
+  | 'trapezoid'
+  | 'trapezoidAlt'
+  | 'subroutine'
+  | 'doubleCircle'
+  | 'document'
+  | 'card'
+  | 'delay'
+  | 'triangle'
+  | 'triangleInverted'
+  | 'windowPane'
+  | 'hourglass'
+  | 'curvedTrapezoid'
+  | 'bolt'
+  | 'braceLeft'
+  | 'braceRight'
+  | 'bracePair'
+  | 'crossedCircle'
+  | 'filledCircle'
+  | 'paperTape'
+  | 'horizontalCylinder'
+  | 'linedCylinder'
+  | 'manualInput';
 
-/** Edge arrow-head types supported in V1 (spec §6.2). */
-export type EdgeType = 'arrow' | 'line' | 'dotted' | 'thick';
+/**
+ * Edge line/arrowhead styles supported (spec §6.2). Named after Mermaid's own
+ * operator syntax rather than a generic "style + arrow" pair, to keep the
+ * parser's operator table a simple 1:1 lookup:
+ *   arrow `-->` / line `---` / dotted `-.->` / dottedLine `-.-` /
+ *   thick `==>` / thickLine `===` / bidirectional `<-->` /
+ *   circle `--o` / cross `--x` / circleBoth `o--o` / crossBoth `x--x` /
+ *   invisible `~~~` (no visible line; kept in the AST so layout still ranks
+ *   on it, matching Mermaid's own behavior).
+ */
+export type EdgeType =
+  | 'arrow'
+  | 'line'
+  | 'dotted'
+  | 'dottedLine'
+  | 'thick'
+  | 'thickLine'
+  | 'bidirectional'
+  | 'circle'
+  | 'cross'
+  | 'circleBoth'
+  | 'crossBoth'
+  | 'invisible';
 
 /** A single flowchart node. */
 export interface FlowNode {
   id: string;
   label: string;
   shape: NodeShape;
-  /** Fill color (hex, no `#`) from `classDef fill:#XXXXXX` (spec §6.3). */
+  /** Fill color (hex, no `#`) from `classDef`/`style`/`:::` `fill:#XXXXXX` (spec §6.3). */
   fill?: string;
+  /** Border color (hex, no `#`) from `classDef`/`style`/`:::` `stroke:#XXXXXX` (spec §6.3). */
+  stroke?: string;
 }
 
 /** A single directed edge between two nodes. */
@@ -33,6 +88,11 @@ export interface FlowEdge {
   to: string;
   type: EdgeType;
   label: string | null;
+  /** Line color (hex, no `#`) from `linkStyle N stroke:#XXXXXX` (spec §6.3). */
+  stroke?: string;
+  /** Line width in px (Mermaid's own unit) from `linkStyle N stroke-width:Npx`;
+   * converted to EMU by the translator, same as every other px value in the AST. */
+  strokeWidth?: number;
 }
 
 /** A subgraph container (spec §6.1). */

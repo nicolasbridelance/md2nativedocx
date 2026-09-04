@@ -1,0 +1,18 @@
+flowchart TD
+    Start([Start]) --> Gate1{Gate 1}
+    Gate1 -->|a| N1[N1]
+    Gate1 -->|b| N2[N2]
+    Gate1 -->|c| N3[N3]
+    N1 --> Merge1[Merge 1]
+    N2 --> Merge1
+    N2 --> N4[N4]
+    N3 --> N4
+    N3 --> Skip[Skip target]
+    Merge1 --> Gate2{Gate 2}
+    N4 --> Gate2
+    Gate2 -->|x| N5[N5]
+    Gate2 -->|y| N6[N6]
+    N5 --> Merge2[Merge 2]
+    N6 --> Merge2
+    Skip --> Merge2
+    Merge2 --> End([End])

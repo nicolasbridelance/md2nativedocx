@@ -168,22 +168,65 @@ Usage final (§8) : `npx md2nativedocx rapport.md -o rapport.docx` — le CLI em
 | `id{Texte}` | Losange (décision) | `diamond` |
 | `id[(Texte)]` | Base de données | `cylinder` |
 | `id((Texte))` | Cercle | `ellipse` |
+| `id{{Texte}}` | Hexagone | `hexagon` |
+| `id[/Texte/]` | Parallélogramme | `parallelogram` |
+| `id[\Texte\]` | Parallélogramme (miroir) | `parallelogram` + `flipH="1"` (pas de second preset dédié) |
+| `id[/Texte\]` | Trapèze | `trapezoid` |
+| `id[\Texte/]` | Trapèze (miroir) | `trapezoid` + `flipV="1"` |
+| `id[[Texte]]` | Sous-routine | `flowChartPredefinedProcess` |
+| `id(((Texte)))` | Cercle double | `ellipse` (pas de preset à double anneau en OOXML — approximation assumée) |
+| `id@{shape: nom, label: "Texte"}` | Syntaxe générique v11.3+ (§6.1 addendum) — 18 formes nouvelles avec un `prstGeom` dédié, reconnues via `SHAPE_ALIAS_MAP` (`parser.ts`) : `document`(`doc`/`document`), `card`(`card`/`notched-rectangle`), `delay`(`delay`/`half-rounded-rectangle`), `triangle`(`extract`/`tri`/`triangle`), `triangleInverted`(`flipped-triangle`/`manual-file`/`flip-tri`), `windowPane`(`internal-storage`/`win-pane`/`window-pane`), `hourglass`(`collate`/`hourglass`), `curvedTrapezoid`(`curved-trapezoid`/`curv-trap`/`display`), `bolt`(`com-link`/`lightning-bolt`), `braceLeft`(`brace`/`brace-l`/`comment`), `braceRight`(`brace-r`), `bracePair`(`braces`), `crossedCircle`(`cross-circ`/`crossed-circle`/`summary`), `filledCircle`(`f-circ`/`filled-circle`/`junction`), `paperTape`(`flag`/`paper-tape`), `horizontalCylinder`(`das`/`h-cyl`/`horizontal-cylinder`), `linedCylinder`(`disk`/`lin-cyl`/`lined-cylinder`), `manualInput`(`manual-input`/`sl-rect`/`sloped-rectangle`) — plus ~30 autres alias qui retombent sur une forme déjà listée ci-dessus (ex. `rounded`→`roundRect`, `decision`→`diamond`, `cyl`/`database`→`cylinder`) | `document`→`flowChartDocument`, `card`→`flowChartPunchedCard`, `delay`→`flowChartDelay`, `triangle`/`triangleInverted`→`flowChartExtract` (+`flipV` pour l'inversée), `windowPane`→`flowChartInternalStorage`, `hourglass`→`flowChartCollate`, `curvedTrapezoid`→`flowChartDisplay`, `bolt`→`lightningBolt`, `braceLeft`/`braceRight`/`bracePair`→`leftBrace`/`rightBrace`/`bracePair`, `crossedCircle`→`flowChartOr`, `filledCircle`→`flowChartSummingJunction` (pas de preset "point plein" — approximation assumée), `paperTape`→`flowChartPunchedTape`, `horizontalCylinder`→`flowChartMagneticDisk`, `linedCylinder`→`flowChartMagneticDrum`, `manualInput`→`flowChartManualInput` |
 | `subgraph ... end` | Sous-groupe | `<wpg:wgp>` imbriqué avec libellé en `<wps:txbx>` |
+
+Hors scope (non reconnu par le parseur) : forme asymétrique (`id>Texte]`), et 16 formes du catalogue `@{shape: ...}` sans équivalent `prstGeom` fidèle sans forme composée/vectorielle custom (`bang`, `browser`, `bucket`, `cloud`, `console`, `data-store`, `divided-process`, `folder`, `fork`/`join`, `lined-document`, `lined-process`, `loop-limit`, `multi-document`, `multi-process`, `person`, `tagged-document`, `tagged-process`) — un nom de forme non reconnu (dans cette liste ou une faute de frappe) retombe sur `rect` plutôt que de faire perdre le nœud, cf. §10. Voir `docs/smartart-compliance-table.md` §5.2 pour le détail à jour.
 
 ### 6.2 Liens (arêtes)
 
 | Syntaxe Mermaid | Description | `headEnd`/`tailEnd` Word |
 |---|---|---|
-| `-->` | Flèche standard | `triangle` |
-| `---` | Ligne simple | `none` |
-| `-.->` | Flèche pointillée | `triangle` + `<a:prstDash val="dash"/>` |
-| `==>` | Flèche épaisse | `triangle` + largeur de trait augmentée |
+| `-->` | Flèche standard | `none` / `triangle` |
+| `---` | Ligne simple | `none` / `none` |
+| `-.->` | Flèche pointillée | `none` / `triangle` + `<a:prstDash val="dash"/>` |
+| `-.-` | Ligne pointillée sans flèche | `none` / `none` + `<a:prstDash val="dash"/>` |
+| `==>` | Flèche épaisse | `none` / `triangle` + largeur de trait augmentée |
+| `===` | Ligne épaisse sans flèche | `none` / `none` + largeur de trait augmentée |
+| `<-->` | Flèche bidirectionnelle | `triangle` / `triangle` |
+| `--o` | Tête cercle (une extrémité) | `none` / `oval` |
+| `--x` | Tête croix (une extrémité) | `none` / `diamond` (pas de marqueur croix natif en OOXML — approximation assumée) |
+| `o--o` | Tête cercle (deux extrémités) | `oval` / `oval` |
+| `x--x` | Tête croix (deux extrémités) | `diamond` / `diamond` |
+| `~~~` | Lien invisible | connecteur présent (`<a:noFill/>`, pas de trait) — reste dans l'AST pour que Dagre continue à s'en servir pour le rang, comme Mermaid lui-même |
 | `-->|Texte|` | Flèche avec label | ajout d'un `<wps:txbx>` positionné au milieu du connecteur |
+| `A-- Texte -->B` | Label en syntaxe médiane (alternative recommandée par Mermaid à `-->|Texte|`), couvre aussi `-.  .->`, `== ==>`, `-- ---`, `-- --o`, `-- --x` | identique à `-->|Texte|` — même `<wps:txbx>` |
+| `A-->B-->C` | Chaînage sur une ligne | une arête indépendante par maillon |
+| `A --> B & C`, `A & B --> C` | Fan-out / fan-in (`&`) | une arête indépendante par combinaison source×destination |
 
-### 6.3 Couleurs et styles (`classDef`, `style`)
+Hors scope (non reconnu par le parseur) : modificateurs de longueur (`---->`) — voir
+`docs/smartart-compliance-table.md` §5.4 pour le détail à jour.
+
+### 6.3 Couleurs et styles (`classDef`, `style`, `linkStyle`)
 
 - **V1 :** ignorés, comme dans le canvas d'origine — rendu en style Word par défaut (thème du document).
-- **V1.1 (amélioration low-cost à haute valeur perçue) :** mapping simplifié `classDef fill:#XXXXXX` → couleur de remplissage OOXML (`<a:solidFill><a:srgbClr val="XXXXXX"/></a:solidFill>`), sans tenter de reproduire les dégradés ou styles CSS avancés de Mermaid. Ce mapping partiel couvre déjà le cas d'usage le plus fréquent (mise en évidence d'un nœud critique) pour un coût de développement faible.
+- **V1.1 (implémenté, mis à jour 2026-09-04) :** mapping `fill`/`stroke` → couleur de remplissage/bordure
+  OOXML (`<a:solidFill><a:srgbClr val="XXXXXX"/></a:solidFill>`, `<a:ln><a:solidFill>...`), sans tenter
+  de reproduire les dégradés ou styles CSS avancés de Mermaid. Toutes les syntaxes qui portent une
+  propriété `fill`/`stroke`/`stroke-width` partagent le même parseur de liste `prop:valeur,prop:valeur`
+  (`parseCssStyleProps()`, `parser.ts`), ordre des propriétés indifférent :
+  - `classDef Nom1,Nom2 fill:#XXX,stroke:#XXX` — définit un style nommé, réutilisable par plusieurs
+    noms de classe (`Nom1,Nom2`) ; `class A,B Nom` ou `A:::Nom` l'applique aux nœuds ciblés (avant ou
+    après leur déclaration — appliqué en différé sinon, comme le mécanisme `pendingFills` existant).
+  - `style A fill:#XXX,stroke:#XXX` — style direct sur un nœud, sans indirection `classDef`.
+  - `linkStyle N stroke:#XXX,stroke-width:Npx` — style direct sur l'arête d'indice `N` (ordre de
+    déclaration dans le source), ou `linkStyle default ...` pour toutes les arêtes, ou
+    `linkStyle 0,2,4 ...` pour une liste d'indices ; résolu après la passe complète du document
+    (l'ordre `linkStyle` après les arêtes qu'il cible est la convention Mermaid courante).
+  - Couleur acceptée : hex 6 chiffres (`#RRGGBB`) ou raccourci 3 chiffres (`#RGB`, étendu
+    automatiquement) ; une couleur nommée CSS (`red`, `transparent`, ...) ou une fonction (`rgb(...)`)
+    est hors scope et simplement ignorée (la propriété est abandonnée, pas la ligne entière).
+  - Un nom de classe/index d'arête invalide ou hors limites est ignoré silencieusement (V1 tolerance,
+    §10), sauf `classDef` référencée mais non définie qui reste un avertissement (comportement inchangé).
+  - `FlowNode.stroke` et `FlowEdge.stroke`/`FlowEdge.strokeWidth` (px, converti en EMU par le
+    traducteur) sont les nouveaux champs AST portant ces propriétés (`types.ts`).
 
 ---
 

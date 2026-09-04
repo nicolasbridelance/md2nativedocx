@@ -1,0 +1,16 @@
+# Word verification — order-flow
+
+```mermaid
+flowchart TD
+    A[Commande recue] --> B{Stock disponible?}
+    B -->|oui| C[Reserver stock]
+    B -->|non| D[Notifier rupture]
+    C --> E[Preparer colis]
+    E --> F{Adresse valide?}
+    F -->|oui| G[Expedier]
+    F -->|non| H[Corriger adresse]
+    H --> F
+    G --> I[Notifier client]
+    D --> J[Fin]
+    I --> J
+```

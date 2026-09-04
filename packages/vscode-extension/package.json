@@ -89,7 +89,7 @@
         },
         "md2nativedocx.smartArt.enabled": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%"
         }
       }

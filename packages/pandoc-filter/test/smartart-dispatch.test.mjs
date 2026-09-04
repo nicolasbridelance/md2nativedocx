@@ -84,7 +84,7 @@ test('without MD2NATIVEDOCX_SMARTART_DIR, a merge-after-branch diagram gets no f
 test('parser warnings are written to stderr, prefixed for the CLI to surface (spec §10)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-core-'));
   const mmd = join(dir, 'diagram.mmd');
-  writeFileSync(mmd, 'graph TD\n  A --> B\n  style X fill:#fff\n');
+  writeFileSync(mmd, 'graph TD\n  A --> B\n  click A "https://example.com"\n');
   try {
     const result = spawnSync('node', [coreBin, mmd], { encoding: 'utf8' });
     assert.equal(result.status, 0);

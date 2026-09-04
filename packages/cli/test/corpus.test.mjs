@@ -36,22 +36,22 @@ function toMarkdown(file, diagram) {
  * .md envelope and the .docx into dir (an ephemeral temp dir for the simple
  * tests — the assertions below are on the generated XML, not something a
  * human needs to revisit later, so nothing here is meant to persist). */
-function convertTo(markdown, dir, name) {
+function convertTo(markdown, dir, name, env = process.env) {
   const mdPath = join(dir, `${name}.md`);
   const docxPath = join(dir, `${name}.docx`);
   writeFileSync(mdPath, markdown);
-  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'] });
+  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'], env });
   return docxPath;
 }
 
 /** Convert a diagram to a .docx via the real CLI. The .md envelope is a
  * transient input derived from the .mmd source, so it is written to a temp dir
  * (not persisted); only the .docx artifact is kept in corpusDir. */
-function convert(name, markdown) {
+function convert(name, markdown, env = process.env) {
   const mdPath = join(tmpdir(), `${name}.md`);
   const docxPath = join(corpusDir, `${name}.docx`);
   writeFileSync(mdPath, markdown);
-  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'] });
+  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'], env });
   return docxPath;
 }
 
@@ -146,7 +146,10 @@ test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   + 'footnote, link, bold/italic) survives alongside two mermaid diagrams', () => {
   mkdirSync(corpusDir, { recursive: true });
   const source = readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8');
-  const docx = convert('mixed-content', source);
+  // SmartArt explicitly enabled (off by default since 2026-09-03, see
+  // md2nativedocx.mjs's doc comment on smartArtEnabled): this test wants the
+  // mixed-dispatch scenario below, not the plain-fallback default.
+  const docx = convert('mixed-content', source, { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '1' });
   assertConformantDocx(docx, 'mixed-content');
   const xml = readDocumentXml(docx);
 
@@ -215,16 +218,22 @@ test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', (
   }
 });
 
-test('simple: markdown with a mermaid A --> B dispatches to SmartArt (chain-eligible)', () => {
-  // A --> B is the simplest possible chain -- classifyTopology accepts it,
-  // so the CLI now produces a native SmartArt diagram here, not wpc:wpc
-  // shapes (see md2nativedocx-core.mjs's SmartArt dispatch). This test used
-  // to assert the opposite (wpc:wpc/wps:wsp shape counts) before that
-  // dispatch existed; the OOXML-shapes path is still covered by the next
-  // test below, using a fixture the classifier rejects.
+test('simple: markdown with a mermaid A --> B dispatches to SmartArt when MD2NATIVEDOCX_ENABLE_SMARTART=1', () => {
+  // A --> B is the simplest possible chain -- classifyTopology accepts it.
+  // SmartArt defaults to OFF as of 2026-09-03 (a real-Word test of
+  // cycle.ts's output failed to open at all on the simplest possible input
+  // -- see docs/smartart-compliance-table.md §2 point 5 -- and chain/tree
+  // had no real-Word signal either, only headless LibreOffice), so this test
+  // now opts in explicitly to keep covering the dispatch path itself. The
+  // new default (SmartArt off unless opted in) is covered by the next test;
+  // the OOXML-shapes fallback path is covered by the test after that, using
+  // a fixture the classifier rejects regardless of the setting.
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
   try {
-    const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab');
+    const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab', {
+      ...process.env,
+      MD2NATIVEDOCX_ENABLE_SMARTART: '1',
+    });
     execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
     const xml = readDocumentXml(docx);
     assert.ok(xml.includes('<dgm:relIds '), 'expected a SmartArt dgm:relIds reference');
@@ -240,6 +249,21 @@ test('simple: markdown with a mermaid A --> B dispatches to SmartArt (chain-elig
     const rels = execFileSync('unzip', ['-p', docx, 'word/_rels/document.xml.rels'], { encoding: 'utf8' });
     assert.ok(rels.includes('relationships/diagramData'), 'missing diagramData relationship');
     assert.ok(!rels.includes('SMARTART_PLACEHOLDER'), 'no placeholder relIds should survive in the rels file either');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('simple: markdown with a mermaid A --> B does NOT dispatch to SmartArt by default', () => {
+  // Same chain-eligible fixture as the opt-in test above, run with no
+  // MD2NATIVEDOCX_ENABLE_SMARTART -- confirms the 2026-09-03 default flip
+  // itself, not just the opt-in path.
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
+  try {
+    const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-default');
+    const xml = readDocumentXml(docx);
+    assert.ok(!xml.includes('<dgm:relIds'), 'SmartArt must not be used unless explicitly enabled');
+    assert.ok(xml.includes('<wpc:wpc '), 'expected the OOXML canvas fallback by default');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

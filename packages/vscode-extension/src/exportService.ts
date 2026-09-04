@@ -58,9 +58,11 @@ export interface RunCliOptions {
    * `md2nativedocx.referenceDocument` setting) — a company/corporate
    * template instead of the bundled default. */
   referenceDoc?: string;
-  /** Mirrors the `md2nativedocx.smartArt.enabled` setting. `false` forces
-   * every eligible diagram through the OOXML canvas fallback instead of
-   * native SmartArt. Omitted/`true` changes nothing (the CLI's default). */
+  /** Mirrors the `md2nativedocx.smartArt.enabled` setting. `true` opts an
+   * eligible diagram into native SmartArt instead of the OOXML canvas
+   * fallback every diagram otherwise gets. Omitted/`false` changes nothing
+   * (the CLI's default, as of the 2026-09-03 flip — see
+   * `md2nativedocx.mjs`'s doc comment on `smartArtEnabled`). */
   smartArtEnabled?: boolean;
 }
 
@@ -69,7 +71,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
   const env = { ...process.env };
   if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
-  if (options.smartArtEnabled === false) env.MD2NATIVEDOCX_DISABLE_SMARTART = '1';
+  if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
   return new Promise((resolve, reject) => {
     execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {

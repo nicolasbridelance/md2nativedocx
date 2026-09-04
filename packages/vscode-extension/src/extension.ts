@@ -63,13 +63,15 @@ function referenceDocumentSetting(): string | undefined {
   return resolved;
 }
 
-/** `md2nativedocx.smartArt.enabled` — `true` (default) lets an eligible
- * diagram (chain/tree/cycle shape) become a native SmartArt graphic instead
- * of the OOXML canvas fallback every diagram otherwise gets. `false` forces
- * the canvas fallback for everything, e.g. for a reviewer workflow that
- * expects one consistent shape rendering across all diagrams. */
+/** `md2nativedocx.smartArt.enabled` — `false` (default, flipped 2026-09-03:
+ * a real-Word test of `cycle.ts`'s output failed to open at all on the
+ * simplest possible input, see `docs/smartart-compliance-table.md` §2 point
+ * 5) uses the OOXML canvas fallback for everything. `true` opts into an
+ * eligible diagram (chain/tree/cycle shape) becoming a native SmartArt
+ * graphic instead — until chain/tree/cycle are confirmed to open reliably in
+ * real Word, treat this as experimental. */
 function smartArtEnabledSetting(): boolean {
-  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', true);
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', false);
 }
 
 function resolveAgainstWorkspace(rawPath: string): string {

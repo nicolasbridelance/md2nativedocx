@@ -59,6 +59,218 @@ est levé.
     `node scripts/generate-corpus.mjs` fonctionne en standalone avec les nouveaux chemins.
 
 **Fait :**
+- ✅ **Corpus visuel (`test-corpus/visual/fixtures/`) mis à jour pour couvrir les 3 chantiers du jour
+      — et un bug de rendu jusque-là invisible découvert et contourné au passage (2026-09-04)** :
+      les fixtures de démo/régression visuelle n'avaient pas suivi les 3 chantiers du jour (label
+      mi-chaîne, `@{shape: ...}`, `style`/`linkStyle`) ni les extensions de formes/arêtes des
+      sessions précédentes (hexagone, parallélogramme, trapèze, sous-routine, double cercle,
+      arêtes multidirectionnelles/invisible) — aucune n'était exercée par le corpus visuel avant ce
+      passage, seulement couvertes par les tests unitaires.
+      - `shapes.mmd` étendu (12 formes au lieu de 6 : + hexagone, parallélogramme ×2, trapèze ×2,
+        sous-routine, double cercle) ; `edge-labels.mmd` étendu (+ label mi-chaîne, syntaxe simple
+        et pointillée) ; `colors.mmd` étendu (+ `stroke` sur `classDef`, `classDef` multi-propriété
+        et multi-classe, `style` direct, `linkStyle` par indice avec couleur+épaisseur).
+      - 3 nouvelles fixtures : `edge-chaining.mmd` (chaînage sur une ligne + fan-out/fan-in `&`),
+        `shapes-generic.mmd` (les 18 formes `@{shape: ...}` à preset OOXML dédié), `edge-types-extended.mmd`
+        (les 8 types d'arête étendus : `-.-`/`===`/`<-->`/`--o`/`--x`/`o--o`/`x--x`/`~~~`).
+      - **Bug découvert en construisant `edge-types-extended.mmd`** : en essayant d'abord de mettre
+        les 8 types étendus à la suite des 6 déjà dans `edge-types.mmd` (14 nœuds, `flowchart LR`,
+        une seule longue chaîne), l'arête `<-->` (bidirectionnelle) s'est rendue comme un **unique
+        losange plein** au lieu de deux têtes de flèche triangulaires distinctes — reproduit de façon
+        stable (capture LibreOffice réelle à 400/600 DPI), mais **pas reproductible** sur un
+        sous-ensemble de 4 nœuds de la même chaîne, ni sur un test isolé à 2 nœuds (rendu correct
+        dans les deux cas). Hypothèse retenue (cohérente avec ce qui reproduit/pas) : le facteur
+        d'échelle globale (`scaledExtent()`, `ooxml-translator.ts` — mise à l'échelle automatique
+        d'un diagramme trop large pour la page) réduit l'écart entre nœuds proportionnellement,
+        mais l'épaisseur de trait a un plancher (`MIN_LINE_WIDTH_EMU`) qui, lui, ne réduit plus en
+        dessous d'un certain point — sur une chaîne de 14 nœuds en largeur, les deux têtes de flèche
+        d'une arête bidirectionnelle finissent par se chevaucher visuellement une fois l'écart
+        suffisamment comprimé. **Non corrigé** (hors scope de cette mise à jour du corpus, nécessite
+        d'investiguer `scaledExtent()`/`scaledLineWidth()` proprement) — juste contourné en gardant
+        `edge-types-extended.mmd` compact (`flowchart TD`, chaîne séparée de `edge-types.mmd`), ce
+        qui évite le déclenchement de la mise à l'échelle. À investiguer : le même chevauchement
+        pourrait affecter `circleBoth`/`crossBoth` (têtes doubles) sur n'importe quel diagramme
+        assez large pour être mis à l'échelle, pas seulement mes fixtures de test.
+      - **Constat séparé, empirique, confirmant un risque déjà tracké plus bas** ("Tâche de suivi —
+        pinning LibreOffice") : avant toute modification, `node scripts/test-visual.mjs` sur les 24
+        fixtures existantes de cette session donnait déjà **13 échecs** (`decision`, `cycle`,
+        `mixed`, etc., 2 à 9 % de pixels différents) contre leurs baselines *déjà commitées* — pas
+        une régression de ce chantier. Inspection visuelle de `decision` : même géométrie/mise en
+        page, mais une **police visiblement différente** entre le rendu actuel et la baseline (plus
+        épaisse/serif dans la baseline) — signe d'un rendu LibreOffice fait dans un environnement/
+        une version différente de celui-ci, exactement le risque que la tâche de suivi ci-dessous
+        anticipait sans preuve empirique jusqu'ici. Non résolu, hors scope ; les baselines des 6
+        fixtures touchées par ce chantier ont été régénérées et vérifiées visuellement une par une
+        (jamais acceptées à l'aveugle) ; les 18 autres baselines n'ont pas été touchées.
+      - **`test-corpus/corpus/source/` délibérément non touché** — ce corpus-là est sourcé du dépôt
+        Mermaid officiel (voir son propre commentaire d'en-tête), pas destiné à être complété avec
+        des exemples maison ; la couverture des nouvelles syntaxes est le rôle de
+        `test-corpus/visual/fixtures/`, pas de ce corpus-ci.
+      - Vérifié : chaque fixture nouvelle/modifiée rendue et inspectée visuellement (export CLI réel
+        + LibreOffice, certaines à 400-600 DPI pour vérifier les marqueurs de tête de flèche) avant
+        d'accepter sa baseline ; `node scripts/test-visual.mjs` confirme les 6 fixtures touchées à
+        0,000 % de différence (déterministe, aucun bruit de rendu) et aucune régression sur les 18
+        fixtures non touchées (mêmes 11 échecs préexistants avant/après, à 2 près — `shapes`/`colors`
+        étaient déjà comptés dans les 13 échecs initiaux car leur ancien contenu ne correspondait
+        déjà plus à d'anciennes baselines pour une raison antérieure à cette session).
+- ✅ **`style`/`linkStyle`, ajoutés — et 3 lacunes `classDef` corrigées au passage (2026-09-04)** :
+      dernier item de la liste "reste" avant le `dsp:drawing` SmartArt. `style`/`linkStyle` n'étaient
+      pas reconnus du tout (`docs/smartart-compliance-table.md` §5.3 les listait "None" depuis le
+      début de ce chantier de durcissement) ; `classDef` avait 2 lacunes documentées dans la même
+      section (propriété `fill:` devant être la première, une seule classe par définition).
+      - `parser.ts` : `parseCssStyleProps()` (parseur générique `prop:valeur,prop:valeur`, ordre
+        indifférent) + `parseHexColor()` (hex 6 chiffres, raccourci 3 chiffres étendu automatiquement,
+        une couleur nommée CSS ou une fonction `rgb(...)` est abandonnée proprement, pas la ligne
+        entière) + `applyNodeStyle()` (fusionne un patch `{fill?, stroke?}` sur un nœud déjà déclaré,
+        ou le mémorise dans `pendingStyles` sinon — généralise l'ancien mécanisme `pendingFills`
+        propre à `classDef`/`:::`, réutilisé tel quel par `style`).
+      - `classDef Nom1,Nom2 prop:val,...` remplace l'ancienne regex figée (qui exigeait `fill:`
+        immédiatement après le nom de classe, pas d'autre propriété, un seul nom) — corrige les 2
+        lacunes documentées comme effet de bord du partage du même parseur de propriétés.
+      - `style A prop:val,...` : nouveau statement, stylise un nœud directement sans indirection
+        `classDef`, différé comme `class` si le nœud n'est pas encore déclaré.
+      - `linkStyle N prop:val,...` : nouveau statement, stylise l'arête d'indice `N` (ordre de
+        déclaration), ou `linkStyle default ...` pour toutes les arêtes, ou une liste d'indices
+        `linkStyle 0,2,4 ...`. Résolu en différé après la passe complète du document (les indices
+        peuvent référencer des arêtes déclarées plus loin — `linkStyle` en fin de fichier est la
+        convention Mermaid courante) ; un indice hors limites est ignoré silencieusement (V1
+        tolerance, spec §10), pas une ligne perdue.
+      - `types.ts` : `FlowNode.stroke` (bordure) et `FlowEdge.stroke`/`FlowEdge.strokeWidth` (px,
+        même convention que toute autre valeur de taille dans l'AST) nouveaux champs.
+        `ooxml-translator.ts` : `nodeLine = hexColor(node.stroke, line)` (même schéma que `nodeFill`
+        déjà existant) ; `renderEdge()` prend un `strokeWidthPx` optionnel, converti en EMU
+        (`px * EMU_PER_PX`) puis passé à `scaledLineWidth()` comme le fait déjà le poids de trait par
+        défaut de chaque `EdgeType`.
+      - **Limite connue, documentée** : `node.stroke` n'est pas propagé côté SmartArt pur
+        (`chain.ts`/`tree.ts` ne lisent que `node.fill`, jamais `.stroke` — `spPrFor()`) ;
+        `linkStyle` n'a de toute façon aucun équivalent possible tant que ces générateurs ne
+        dessinent aucun connecteur (même impasse que pour les types d'arête, §5.4). Aucune régression
+        : le pipeline OOXML pur (fallback automatique, et fallback hybride) a toujours le rendu
+        complet.
+      - Vérifié : 10 nouveaux tests unitaires (propriétés multiples/non ordonnées, multi-classe,
+        `style` direct différé ou non, raccourci hex 3 chiffres, `linkStyle` par indice/`default`/
+        liste, indice hors limites, couleur nommée abandonnée) — suite parser 47/47, fuzz 3/3, suite
+        complète du monorepo 174/177 (mêmes 3 échecs SmartArt préexistants, sans lien). 3 tests
+        existants ailleurs (`cli.test.mjs`, `smartart-dispatch.test.mjs`,
+        `exportService.test.ts`) utilisaient `style X fill:#fff` comme exemple de construction
+        *non supportée* pour vérifier la remontée d'avertissements (spec §10) — cassés par ce
+        chantier puisque `style` est maintenant supporté ; remplacés par `click A "url"` (une
+        directive toujours non reconnue), suite complète repassée au vert. Export CLI réel + rendu
+        LibreOffice réel : nœud avec `style` direct (remplissage jaune + bordure rouge), nœud stylé
+        via `classDef`/`class` (bleu clair + bordure marine), arête stylée par `linkStyle default`
+        (verte) et par indice avec épaisseur (rouge, trait épais) — les 4 rendus simultanément sur un
+        seul diagramme, tous corrects.
+      - `docs/specs/cahier_des_charges.md` §6.2/§6.3 et `docs/smartart-compliance-table.md` §5.3 mis
+        à jour (les 2 sous-cas `classDef`, `style`, `linkStyle` passent de "None" à leur statut réel).
+- ✅ **Syntaxe générique de forme `id@{ shape: nom, label: "..." }` (v11.3+), ajoutée (2026-09-04)** :
+      dernier "gros morceau" restant de la liste "reste" ci-dessous après le label mi-chaîne. Avant
+      ce chantier, `A@{ shape: ... }` faisait échouer la ligne entière (`@` non géré, ni par
+      `SHAPE_BY_SYNTAX` ni ailleurs) — nœud et toute arête le référençant perdus, même classe de bug
+      que les deux précédents (label multi-ligne, arêtes exotiques).
+      - Vérifié la liste exacte des noms/alias officiels avant d'écrire quoi que ce soit (table
+        "Semantic Name"/"Shape Name Aliases" de la doc Mermaid, ~50 alias pour ~30 formes sémantiques)
+        plutôt que de deviner — un alias mal orthographié aurait dégradé silencieusement vers `rect`
+        sans jamais être détecté par les tests.
+      - `parser.ts` : `SHAPE_ALIAS_MAP` (alias en minuscule -> `NodeShape`), `parseAtShapeProps()`
+        (mini-scanner clé:valeur tolérant aux guillemets, gère `label: "Hello, World"` sans fragmenter
+        sur la virgule interne), `parseAtShapeSyntax()` — branché dans `parseNodeStatement` (déclaration
+        isolée) et `parseNodeRef` (extrémité d'arête, compatible avec `:::classe` existant). Un alias
+        reconnu mais sans forme dédiée, ou un nom totalement inconnu (faute de frappe comprise),
+        dégrade vers `rect` plutôt que de faire échouer la ligne — cohérent avec le principe spec §10.
+      - `types.ts`/`ooxml-translator.ts` : 18 nouvelles variantes `NodeShape`, chacune mappée à un
+        `prstGeom` dédié — 15 réutilisent la famille de presets `flowChart*` (galerie de formes
+        organigramme native Word/PowerPoint, donc des correspondances exactes plutôt que des
+        approximations : `flowChartDocument`, `flowChartPunchedCard`, `flowChartDelay`,
+        `flowChartExtract` ×2 (triangle + `flipV` pour l'inversée, même mécanisme que
+        `parallelogramAlt`/`trapezoidAlt`), `flowChartInternalStorage`, `flowChartCollate`,
+        `flowChartDisplay`, `flowChartOr`, `flowChartSummingJunction`, `flowChartPunchedTape`,
+        `flowChartMagneticDisk`, `flowChartMagneticDrum`, `flowChartManualInput` — plus 3 formes de
+        base hors famille organigramme (`lightningBolt`, `leftBrace`/`rightBrace`/`bracePair`). Les
+        ~30 autres alias retombent sur une forme déjà supportée par la syntaxe bracket (`rounded`→
+        `roundRect`, `decision`→`diamond`, `cyl`/`database`→`cylinder`, etc.), sans changement côté
+        traducteur. 16 formes du catalogue Mermaid sans equivalent `prstGeom` fidèle sans forme
+        composée/vectorielle custom (`bang`, `browser`, `bucket`, `cloud`, `console`, `data-store`,
+        `divided-process`, `folder`, `fork`/`join`, `lined-document`, `lined-process`, `loop-limit`,
+        `multi-document`, `multi-process`, `person`, `tagged-document`, `tagged-process`) sont
+        délibérément non couvertes — dégradent vers `rect` (voir ci-dessus), pas une lacune oubliée.
+      - Vérifié : 6 nouveaux tests unitaires (déclaration isolée, extrémité d'arête, label par défaut
+        = id, alias vers forme existante, label guillemeté avec virgule interne non fragmenté, nom
+        inconnu → `rect` sans avertissement ni perte) — suite parser 37/37, fuzz 3/3, suite complète
+        du monorepo 164/167 (mêmes 3 échecs SmartArt préexistants, sans lien). Export CLI réel +
+        inspection du XML brut dans le `.docx` généré (confirmation que chaque `prst` attendu est
+        bien émis, pas seulement que le parseur ne plante pas) + rendu LibreOffice réel sur les 18
+        formes, y compris `lightningBolt` (bâton d'éclair correctement dessiné, pas un rectangle) et
+        `flowChartOr`/`flowChartSummingJunction` (cercle barré d'une croix visible sur une boîte à
+        peu près carrée — l'apparence de simple ligne observée d'abord sur un libellé long était un
+        effet d'aplatissement de la boîte par la largeur du texte, pas une forme manquante, confirmé
+        en isolant chaque forme sur un libellé court).
+      - `docs/specs/cahier_des_charges.md` §6.1 et `docs/smartart-compliance-table.md` §5.2/§5.6 mis
+        à jour (la ligne "30 formes étendues : None" devient Partial/Full comme les 11 formes bracket
+        existantes — même dégradation SmartArt puisque `chain.ts`/`tree.ts` ne lisent `NodeShape`
+        d'aucune forme, cf. la ligne "Rectangle").
+- ✅ **Label mi-chaîne d'arête (`A-- texte -->B`), corrigé (2026-09-04)** : item suivant de la liste
+      "reste" laissée par le chantier des arêtes exotiques ci-dessous. Cette syntaxe (l'alternative
+      recommandée par Mermaid à `A-->|texte|B`) faisait échouer toute la ligne — `parseNodeRef`
+      recevait un segment gauche du type `"A-- texte "` (queue de l'opérateur non consommée),
+      invalide comme référence de nœud, donc `null` remonté jusqu'à `parseEdgeChain` et le nœud
+      **et** l'arête perdus silencieusement (retombée sur "Unsupported line ignored", spec §10).
+      Corrigé (`parser.ts`, `MID_LABEL_FAMILIES` + `matchMidLabelEdge()`) : quand le scan de
+      `parseEdgeChain` ne matche aucun token complet de `EDGE_OPERATORS` à la position courante, il
+      essaie un marqueur d'ouverture de famille (`--`, `-.`, `==`) et cherche en avant, toujours
+      hors imbrication de crochets, le marqueur de fermeture qui détermine le type d'arête exact
+      (`-->`/`--o`/`--x`/`---` pour `--` ; `.->`/`.-` pour `-.` ; `==>`/`===` pour `==`) — le texte
+      entre les deux devient le label. Couvre les 5 formes documentées (flèche, ligne, pointillé,
+      épais, cercle, croix) ; fonctionne aussi dans un chaînage sur une ligne (`A-- x -->B-- y -->C`),
+      chaque segment indépendant. Vérifié : 4 nouveaux tests unitaires (les 5 familles, chaînage,
+      non-régression sur un `--` sans fermeture qui doit rester "Unsupported line ignored" et non
+      planter) — suite parser 31/31, fuzz 3/3, suite complète du monorepo 158/161 (mêmes 3 échecs
+      SmartArt préexistants, sans lien). Export CLI réel + rendu LibreOffice sur les 6 formes : les
+      labels s'affichent tous correctement sur leur trait respectif.
+- ✅ **Trois lacunes du parseur trouvées en testant des diagrammes réels, corrigées (2026-09-04)** :
+      signalé par l'utilisateur comme prochain chantier après le désactivage SmartArt par défaut
+      (voir plus bas) — le parseur ligne-par-ligne perdait silencieusement des nœuds/arêtes entiers
+      sur des constructions Mermaid courantes, sans jamais crasher (donc sans jamais remonter
+      d'erreur à l'utilisateur).
+  - **Label multi-ligne cassant le diagramme.** Trouvé en testant `medium-realistic.mmd` : un
+    retour à la ligne physique à l'intérieur de `{}`/`[]`/`()` (`Valider{Config\n valide?}`, syntaxe
+    Mermaid valide) faisait échouer les deux moitiés de la déclaration côté parseur (`text.split`
+    ligne par ligne), perdant le nœud **et** l'arête qui le référence — diagramme déconnecté.
+    Corrigé (`parser.ts`, `joinBracketContinuations()`) : une passe fusionne les lignes tant que
+    les crochets ne sont pas rééquilibrés, avant le découpage habituel ; une ligne déjà équilibrée
+    (cas normal) repart immédiatement, comportement inchangé. Vérifié : `medium-realistic.mmd`
+    passe de diagramme cassé à 12 nœuds/13 arêtes/0 warning, export CLI réel réussi.
+  - **5 formes de nœud manquantes** (hexagone, parallélogramme ×2, trapèze ×2, sous-routine,
+    cercle double) — étaient soit mal parsées (matchées par erreur sur `diamond`/`ellipse`/`rect`
+    avec des délimiteurs résiduels visibles dans le label), soit carrément non reconnues.
+    `SHAPE_BY_SYNTAX` étendu (`parser.ts`), nouveaux presets DrawingML dédiés dont deux réutilisent
+    le même preset via `flipH`/`flipV` plutôt qu'un second preset (`ooxml-translator.ts`) ; cercle
+    double approximé en `ellipse` simple (aucun preset OOXML n'a d'anneau double). Portée du
+    parseur : 6 → 11 formes sur ~30 documentées par Mermaid. Vérifié par rendu LibreOffice réel +
+    inspection visuelle des 7 formes (voir capture dans la conversation du 2026-09-04).
+  - **Arêtes exotiques perdant tout le diagramme** — `-.-`/`===` (ligne sans flèche), `<-->`
+    (bidirectionnelle), `--o`/`--x`/`o--o`/`x--x` (têtes cercle/croix), `~~~` (lien invisible), le
+    chaînage sur une ligne (`A-->B-->C`) et le fan-out/fan-in via `&` (`A --> B & C`) faisaient
+    tous échouer la ligne entière (aucun de ces motifs n'existait dans l'ancien `EDGE_SYNTAX`, ou
+    la regex à une seule arête par ligne ne gérait pas les chaînages). Remplacé par
+    `parseEdgeChain()` : un scanner qui repère les opérateurs (`EDGE_OPERATORS`, ordonnés du plus
+    spécifique au plus court pour que `-.-` ne capture pas prématurément `-.->`) uniquement hors
+    imbrication de crochets — donc un label `A[Step 1 --- Step 2]` n'est jamais confondu avec un
+    opérateur — puis éclate chaque segment sur `&` avant de relier en produit cartésien. `EdgeType`
+    étendu de 4 à 12 variantes ; `LINE_STYLE_BY_EDGE` gère désormais `headEnd`/`tailEnd`
+    indépendamment (bidirectionnel) et un mode `invisible` (`<a:noFill/>`). `cross` (`--x`/`x--x`)
+    approximé par le marqueur `diamond` — DrawingML n'a pas de marqueur croix natif. Vérifié par
+    rendu LibreOffice réel : chaînage, fan-out, fan-in et les 8 styles de trait s'affichent
+    correctement, y compris le lien invisible (aucun trait dessiné).
+  - **Tests** : 8 nouveaux tests unitaires (multi-ligne, 5 formes, chaînage, fan-out, fan-in, label
+    mi-chaîne, 8 types d'arête étendus, non-confusion label/opérateur) — suite parser+fuzz 30/30,
+    suite complète du monorepo 154/157 (3 échecs restants préexistants, fuzz SmartArt sans lien,
+    confirmés par `git stash` sur `main` avant ces changements). `tsc --noEmit` propre sur tout le
+    workspace, suite CLI 30/30 (corpus complet régénéré sans erreur).
+  - **Docs synchronisées** : `docs/specs/cahier_des_charges.md` §6.1/§6.2 (matrices de
+    correspondance étendues aux nouvelles formes/arêtes) et `docs/smartart-compliance-table.md`
+    §5.2/§5.4 (statut par ligne mis à jour : topologie désormais correcte dans les 3 stratégies
+    pour chaînage/`&`/invisible, style visuel toujours perdu côté SmartArt pur pour les têtes
+    multidirectionnelles puisque `chain.ts`/`tree.ts` ne dessinent aucun connecteur).
 - ⚠️ **Épaisseur des connecteurs/flèches jamais mise à l'échelle — corrigé, mais limite de fond
       probablement pas entièrement résolue (2026-09-02)** : signalé par l'utilisateur sur des
       captures d'écran d'un **vrai Word** (`medium3`/`medium4`/`medium5`/`large1`, corpus décrit
@@ -570,7 +782,9 @@ est levé.
 
 #### Traducteur OOXML/DrawingML (`src/translator/`)
 - [x] `ooxml-translator.ts` : pixels → EMU (`x × 9525`), génération des formes `<a:prstGeom>`
-      selon la matrice §6.1 (rect, roundRect, stadium, diamond, cylinder, ellipse).
+      selon la matrice §6.1 (rect, roundRect, stadium, diamond, cylinder, ellipse). Étendue
+      2026-09-04 à hexagon/parallelogram(Alt)/trapezoid(Alt)/subroutine/doubleCircle — voir
+      l'entrée correspondante dans "État actuel" plus bas et `docs/specs/cahier_des_charges.md` §6.1.
 - [x] Connecteurs magnétiques `<a:cxnSp>` ancrés via `<a:stCxn>`/`<a:endCxn>` (comportement
       dynamique Word si l'utilisateur déplace une boîte).
 - [x] Encapsulation `<wpg:wgp>` (groupe de dessin) dans `<w:drawing><wp:inline>...` — le
@@ -1120,6 +1334,14 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       changement de version de moteur de rendu. À vérifier empiriquement (comparer la version
       LibreOffice résolue dans un vrai Codespace lancé depuis `devcontainer.json` face à celle de
       `ubuntu-latest` en CI) avant de considérer `test:visual` fiable d'un environnement à l'autre.
+      **Preuve empirique trouvée (2026-09-04, voir l'entrée "Corpus visuel" plus haut)** : dans
+      l'environnement de cette session, `node scripts/test-visual.mjs` échoue sur 11/24 fixtures
+      préexistantes (2 à 9 % de pixels différents) contre leurs baselines déjà commitées, alors
+      qu'aucune régression de code ne les touche ; inspection visuelle de `decision` montre la même
+      géométrie mais une police différente (plus épaisse/serif dans la baseline commitée) — exactement
+      le scénario "environnement de rendu différent" que cette tâche anticipait sans preuve jusque-là.
+      Reste à trancher (pinning ou non) ; en attendant, ne pas faire confiance à un échec `test:visual`
+      isolé comme preuve de régression sans comparaison visuelle directe.
 - [ ] `test:visual` : rendu LibreOffice headless → export image → pixel-diff avec seuil, corpus
       20–30 diagrammes (du 3-nœuds au 50-nœuds avec sous-graphes).
 
@@ -1127,10 +1349,73 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 
 ## Critère d'acceptation MVP (spec §9)
 
-- [ ] Flowchart ≤ 15 nœuds : 0 croisement de flèches nécessitant un réarrangement manuel dans
-      >90 % des cas testés.
+- [x] **Flowchart ≤ 15 nœuds : 0 croisement de flèches nécessitant un réarrangement manuel dans
+      >90 % des cas testés (2026-09-03)** — preuve géométrique objective (pas une relecture
+      visuelle), voir `docs/mvp-acceptance-report.md` §1 : 23/24 = 95,8 % sur le corpus visuel
+      étendu de 2 fixtures adversariales (`scripts/mvp-crossing-report.mjs`). La seule exception
+      (`crossing-stress-bipartite.mmd`, graphe biparti quasi-complet) est documentée comme un cas
+      pathologique non représentatif d'un flowchart typique, pas un défaut de layout.
 - [ ] Tests manuels dans Word réel avant chaque release : chaque forme individuellement
       sélectionnable, texte sans débordement, connecteurs attachés après déplacement d'une boîte.
+      **Premier passage fait le 2026-09-03** (`test-corpus/word-verification/`, détail dans
+      `docs/mvp-acceptance-report.md` §2) : 2 des 5 fichiers étaient cassés par un bug du harnais
+      de test (corrigé, re-vérification en attente), et un vrai écart de fidélité a été trouvé —
+      les sous-graphes imbriqués n'affichent aucune boîte de conteneur visible (seul le titre
+      flotte), confirmé identique dans le rendu LibreOffice déjà accepté comme baseline (donc pas
+      une régression Word, un angle mort du test visuel lui-même). Reste à faire : re-tester les 2
+      fichiers corrigés, confirmer explicitement le test "déplacer une boîte, le connecteur reste
+      attaché".
+- [x] **Boîte de conteneur de sous-graphe — corrigé (2026-09-03)**, tranché par le mainteneur : on
+      n'est pas lié au rendu de Mermaid (OOXML fait ce qu'on veut), mais viser la même ressemblance
+      topologique là où c'est gratuit. `renderSubgraph()` (`ooxml-translator.ts`) dessine maintenant
+      un rectangle plein gris (`SUBGRAPH_FILL`/`SUBGRAPH_LINE`, bordure tiretée) sur toute la boîte
+      du cluster (`box.width`/`box.height`, déjà calculée par `layout.ts`), rendu avant le titre et
+      avant les nœuds (ordre d'émission = ordre de z dans ce format) donc jamais au-dessus. Vérifié
+      visuellement sous LibreOffice sur les 4 fixtures à sous-graphes (`subgraph`, `lr-subgraphs`,
+      `multiple-subgraphs`, `nested-3-levels` — baselines mises à jour après revue). 149/149 tests
+      `packages/core` toujours verts, aucune régression.
+- [x] **SmartArt désactivé par défaut (2026-09-03)** — voir "Incident cycle" ci-dessous.
+
+## Incident SmartArt "cycle" cassé en Word réel (2026-09-03)
+
+Un cycle à 3 nœuds (`A-->B-->C-->A`), le cas le plus simple possible, produisait un `.docx` que
+Word refuse d'ouvrir ("erreur lors de l'ouverture du fichier"). `cycle.ts` (comme `chain.ts`/
+`tree.ts`) n'avait jamais été testé en Word réel, seulement sous LibreOffice headless — la table de
+compliance (`docs/smartart-compliance-table.md`) affichait "✅ Full" sur cette seule base, corrigée
+depuis (§2 point 5 ajouté). Comme `smartArt.enabled` valait `true` par défaut (CLI et extension déjà
+publiée 0.3.0), c'était un bug de corruption par défaut pour tout flowchart utilisateur en boucle
+fermée, pas un cas de labo.
+
+- [x] **Mitigation immédiate — SmartArt off par défaut (2026-09-03)** : `smartArtEnabled` dans
+      `md2nativedocx.mjs` (`MD2NATIVEDOCX_ENABLE_SMARTART` opt-in, remplace la polarité de
+      `MD2NATIVEDOCX_DISABLE_SMARTART` qui reste fonctionnel), `md2nativedocx.smartArt.enabled`
+      passé à `default: false` (`package.json` + `extension.ts` + les 6 fichiers `.nls*.json`
+      re-traduits). Tests CLI mis à jour (`corpus.test.mjs`) : nouveau test couvrant explicitement
+      le défaut off, test existant du chemin SmartArt passé en opt-in explicite. Suite complète
+      (`npm run test`) et typecheck extension verts après le changement.
+- [ ] **Cause racine probable identifiée, pas encore corrigée** : échantillon Word réel fourni par
+      le mainteneur (`handmade_samples/cycle-simple.docx`, Insertion → SmartArt → Cycle simple dans
+      Word) diffé contre notre sortie. Différence structurelle majeure : le fichier Word réel a une
+      **5e partie**, `word/diagrams/drawingN.xml` (`dsp:drawing` — un arbre de formes concrètes
+      *pré-calculées*, `dsp:sp`/`a:xfrm` avec positions absolues réelles, pas l'algorithme abstrait),
+      référencée depuis `data1.xml` via `<dgm:extLst><a:ext uri="http://schemas.microsoft.com/
+      office/drawing/2008/diagram"><dsp:dataModelExt relId="rIdX" .../></a:ext></dgm:extLst>`, plus
+      la relation `.../relationships/diagramDrawing` et l'override de content-type
+      `application/vnd.ms-office.drawingml.diagramDrawing+xml`. Notre générateur (`chain.ts`/
+      `tree.ts`/`cycle.ts`) n'émet **aucune** de ces 4 choses — c'était déjà une question ouverte
+      dans `docs/adr/spikes/spike-smartart/spike.md` ("Whether the dgm:extLst/dsp:dataModelExt
+      placement... are what real Word actually expects"), jamais tranchée faute d'échantillon.
+      Hypothèse à confirmer : Word refuse d'ouvrir un `dgm:dataModel` avec un `layoutDef` personnalisé
+      (non un des siens, référencé par URN Microsoft comme `urn:microsoft.com/office/officeart/
+      2005/8/layout/cycle2` dans l'échantillon réel) s'il n'a pas ce filet de sécurité pré-rendu à
+      afficher. Bonne nouvelle : le générateur `wpc:wpc`/`wps:wsp` existant (chemin OOXML-only)
+      calcule déjà exactement ce dont un `dsp:drawing` a besoin (mêmes coordonnées de layout,
+      logique de rendu de formes très proche du schéma `dsp:sp`) — pas besoin de réinventer un
+      moteur de rendu, juste un nouvel émetteur XML `dsp:*` alimenté par les mêmes données. Ne pas
+      réactiver `smartArt.enabled` par défaut avant que ce filet soit implémenté et re-testé en Word
+      réel sur `chain`/`tree`/`cycle` tous les trois (aucun des trois n'a de signal Word réel positif
+      sur la sortie de production — `chain` a seulement un échantillon isolé fait main, ADR 0004
+      "Round 5").
 
 ---
 

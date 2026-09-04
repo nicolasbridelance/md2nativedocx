@@ -41,7 +41,7 @@
  */
 
 import { SUBGRAPH_TITLE_HEIGHT, estimateTextWidth } from '../layout/layout.js';
-import type { Flowchart, Layout, LayoutPoint, LayoutResult, NodeShape, Subgraph } from '../types.js';
+import type { EdgeType, Flowchart, Layout, LayoutPoint, LayoutResult, NodeShape, Subgraph } from '../types.js';
 import { escapeXml } from './xml-escape.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -51,6 +51,15 @@ const EMU_PER_PX = 9525;
 /** Default shape fill/line colors (spec §6.1). */
 const DEFAULT_FILL = 'D9E2F3';
 const DEFAULT_LINE = '2F5496';
+
+/** Subgraph cluster container colors (`renderSubgraph`) -- deliberately
+ * neutral gray, not `DEFAULT_FILL`/`DEFAULT_LINE`, so a cluster box reads as
+ * "container" rather than "another node" (matches Mermaid's own subgraph
+ * convention: a gray dashed border, not a themed one). */
+const SUBGRAPH_FILL = 'E8E8E8';
+const SUBGRAPH_LINE = '999999';
+/** ~1pt at 96 DPI (`EMU_PER_PX` below), matching a typical Mermaid cluster border weight. */
+const SUBGRAPH_BORDER_WIDTH_EMU = 9525;
 
 /**
  * Node/subgraph-title text's effective size in half-points (`w:sz`'s unit):
@@ -143,7 +152,13 @@ const MAX_DRAWING_CY = 8229600;
 const TALL_RATIO_RISK_HEIGHT = 6858000; // 7.5in
 const MIN_SAFE_ASPECT_RATIO = 1.0;
 
-/** Map a node shape to its DrawingML preset geometry (spec §6.1). */
+/**
+ * Map a node shape to its DrawingML preset geometry (spec §6.1, extended to
+ * the v11.3+ `@{ shape: ... }` catalog — see `SHAPE_ALIAS_MAP` in
+ * `parser.ts` for which Mermaid shape names route here). The `flowChart*`
+ * family is Word/PowerPoint's own built-in flowchart shape gallery, so most
+ * of these are exact matches rather than approximations.
+ */
 const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   rect: 'rect',
   roundRect: 'roundRect',
@@ -151,19 +166,79 @@ const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   diamond: 'diamond',
   cylinder: 'can', // cylinder approximated by `can`
   ellipse: 'ellipse',
+  hexagon: 'hexagon',
+  parallelogram: 'parallelogram',
+  parallelogramAlt: 'parallelogram', // mirrored via flipH, see FLIP_BY_SHAPE
+  trapezoid: 'trapezoid',
+  trapezoidAlt: 'trapezoid', // mirrored via flipV, see FLIP_BY_SHAPE
+  subroutine: 'flowChartPredefinedProcess', // rect with the two inset bars Mermaid draws
+  doubleCircle: 'ellipse', // no double-ring preset exists; approximated by a single ellipse
+  document: 'flowChartDocument',
+  card: 'flowChartPunchedCard',
+  delay: 'flowChartDelay',
+  triangle: 'flowChartExtract',
+  triangleInverted: 'flowChartExtract', // mirrored via flipV, see FLIP_BY_SHAPE
+  windowPane: 'flowChartInternalStorage',
+  hourglass: 'flowChartCollate',
+  curvedTrapezoid: 'flowChartDisplay',
+  bolt: 'lightningBolt',
+  braceLeft: 'leftBrace',
+  braceRight: 'rightBrace',
+  bracePair: 'bracePair',
+  crossedCircle: 'flowChartOr',
+  filledCircle: 'flowChartSummingJunction', // no plain-filled-dot preset; closest built-in junction symbol
+  paperTape: 'flowChartPunchedTape',
+  horizontalCylinder: 'flowChartMagneticDisk',
+  linedCylinder: 'flowChartMagneticDrum',
+  manualInput: 'flowChartManualInput',
 };
 
 /**
- * Map an edge type to its connector line style (spec §6.2): arrow head, dash
- * pattern and stroke width. `line` (`---`) is the only type with no arrow head.
+ * Preset geometries are directional (e.g. `trapezoid` is narrow-top/wide-bottom
+ * by default): Mermaid's mirrored syntaxes (`[\Text\]`, `[\Text/]`) reuse the
+ * same preset and flip it on one axis instead of needing a second preset.
+ * Same idea for `triangleInverted` (Mermaid's "Manual File" shape, `@{shape:
+ * flipped-triangle}`), which is `triangle` flipped vertically.
+ */
+const FLIP_BY_SHAPE: Readonly<Partial<Record<NodeShape, 'flipH' | 'flipV'>>> = {
+  parallelogramAlt: 'flipH',
+  trapezoidAlt: 'flipV',
+  triangleInverted: 'flipV',
+};
+
+/**
+ * Arrowhead marker at one connector end (`a:headEnd`/`a:tailEnd` `@type`).
+ * `cross` (Mermaid's `--x`/`x--x`) has no built-in DrawingML marker — no enum
+ * value draws an X — so it is approximated by `diamond`, the built-in shape
+ * least likely to be confused with `triangle` (arrow) or `oval` (circle).
+ */
+type ArrowMarker = 'none' | 'triangle' | 'oval' | 'diamond';
+
+/**
+ * Map an edge type to its connector line style (spec §6.2): dash pattern,
+ * stroke width, and the marker at each end (`headEnd` = the `from` node,
+ * `tailEnd` = the `to` node — Word's connector direction always runs
+ * start-to-end regardless of Mermaid's arrow direction). `invisible` (`~~~`)
+ * still gets a real connector (so Word's Selection Pane and any future
+ * docx2mermaid reader see it) but with `<a:noFill/>` instead of a stroke —
+ * the edge stays in the AST purely for Dagre's ranking, same as Mermaid's
+ * own behavior for invisible links.
  */
 const LINE_STYLE_BY_EDGE: Readonly<
-  Record<string, { dash: string; width: number; tailEnd: boolean }>
+  Record<EdgeType, { dash: string; width: number; headEnd: ArrowMarker; tailEnd: ArrowMarker; invisible?: boolean }>
 > = {
-  arrow: { dash: 'solid', width: 12700, tailEnd: true },
-  line: { dash: 'solid', width: 12700, tailEnd: false },
-  dotted: { dash: 'dash', width: 12700, tailEnd: true },
-  thick: { dash: 'solid', width: 25400, tailEnd: true },
+  arrow: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'triangle' },
+  line: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'none' },
+  dotted: { dash: 'dash', width: 12700, headEnd: 'none', tailEnd: 'triangle' },
+  dottedLine: { dash: 'dash', width: 12700, headEnd: 'none', tailEnd: 'none' },
+  thick: { dash: 'solid', width: 25400, headEnd: 'none', tailEnd: 'triangle' },
+  thickLine: { dash: 'solid', width: 25400, headEnd: 'none', tailEnd: 'none' },
+  bidirectional: { dash: 'solid', width: 12700, headEnd: 'triangle', tailEnd: 'triangle' },
+  circle: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'oval' },
+  cross: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'diamond' },
+  circleBoth: { dash: 'solid', width: 12700, headEnd: 'oval', tailEnd: 'oval' },
+  crossBoth: { dash: 'solid', width: 12700, headEnd: 'diamond', tailEnd: 'diamond' },
+  invisible: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'none', invisible: true },
 };
 
 /** Namespaces declared inline on the root `wpg:wgp` (self-contained, rule #3). */
@@ -359,8 +434,10 @@ function renderContent(
   for (const node of flowchart.nodes) {
     const box = layout.nodes[node.id];
     if (!box) continue;
-    // Per-node fill from classDef takes priority over the global default.
+    // Per-node fill/stroke from classDef/style/`:::` take priority over the
+    // global default (spec §6.3).
     const nodeFill = hexColor(node.fill, fill);
+    const nodeLine = hexColor(node.stroke, line);
     parts.push(
       renderNode(
         nodeIds.get(node.id)!,
@@ -369,7 +446,7 @@ function renderContent(
         node.shape,
         box,
         nodeFill,
-        line,
+        nodeLine,
         scale,
       ),
     );
@@ -389,6 +466,9 @@ function renderContent(
     const otherBoxes = Object.entries(layout.nodes)
       .filter(([id]) => id !== edge.from && id !== edge.to)
       .map(([, box]) => box);
+    // Per-edge stroke color/width from `linkStyle` takes priority over the
+    // global default (spec §6.3).
+    const edgeLine = hexColor(edge.stroke, line);
     parts.push(
       renderEdge(
         fromId,
@@ -400,7 +480,8 @@ function renderContent(
         to,
         dagrePoints,
         otherBoxes,
-        line,
+        edgeLine,
+        edge.strokeWidth,
         nextId,
         scale,
       ),
@@ -536,11 +617,41 @@ function renderSubgraph(
   const x = Math.round(box.x * EMU_PER_PX * scale);
   const y = Math.round(box.y * EMU_PER_PX * scale);
   const w = Math.max(1, Math.round(box.width * EMU_PER_PX * scale));
+  const h = Math.max(1, Math.round(box.height * EMU_PER_PX * scale));
   const safeTitle = escapeXml(sg.title);
   const insX = Math.round(NODE_TEXT_INSET_X * scale);
   const insY = Math.round(NODE_TEXT_INSET_Y * scale);
 
   const parts: string[] = [];
+
+  // Cluster container: a full-size box behind the title/nodes (spec §6.1,
+  // "fidelity to the Mermaid preview" — Mermaid's own renderer draws a
+  // visible rect around a subgraph's members, this translator's box used to
+  // draw only the floating title below with `noFill`/`ln w="0"`, see git
+  // history around 2026-09-03). Neutral gray, not the node fill/line colors,
+  // matching Mermaid's own convention of a cluster border that reads as
+  // "container", not "another node" -- and dashed, also matching Mermaid's
+  // default subgraph border style. Rendered first (behind, per emission
+  // order = z-order in this format) so it never occludes member nodes/edges,
+  // which are drawn later in `renderContent`.
+  parts.push('  <wps:wsp>');
+  parts.push(`    <wps:cNvPr id="${nextId()}" name="${safeTitle} (container)"/>`);
+  parts.push('    <wps:cNvSpPr/>');
+  parts.push('    <wps:spPr>');
+  parts.push('      <a:xfrm>');
+  parts.push(`        <a:off x="${x}" y="${y}"/>`);
+  parts.push(`        <a:ext cx="${w}" cy="${h}"/>`);
+  parts.push('      </a:xfrm>');
+  parts.push('      <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
+  parts.push(`      <a:solidFill><a:srgbClr val="${SUBGRAPH_FILL}"><a:alpha val="40000"/></a:srgbClr></a:solidFill>`);
+  parts.push(
+    `      <a:ln w="${SUBGRAPH_BORDER_WIDTH_EMU}"><a:solidFill><a:srgbClr val="${SUBGRAPH_LINE}"/></a:solidFill>` +
+      '<a:prstDash val="dash"/></a:ln>',
+  );
+  parts.push('    </wps:spPr>');
+  parts.push('    <wps:bodyPr/>');
+  parts.push('  </wps:wsp>');
+
   parts.push('  <wps:wsp>');
   parts.push(`    <wps:cNvPr id="${nextId()}" name="${safeTitle}"/>`);
   parts.push('    <wps:cNvSpPr/>');
@@ -606,6 +717,8 @@ function renderNode(
   const w = Math.max(1, Math.round(box.width * EMU_PER_PX * scale));
   const h = Math.max(1, Math.round(box.height * EMU_PER_PX * scale));
   const prst = PRST_BY_SHAPE[shape] ?? 'rect';
+  const flip = FLIP_BY_SHAPE[shape];
+  const flipAttr = flip === 'flipH' ? ' flipH="1"' : flip === 'flipV' ? ' flipV="1"' : '';
   const safeLabel = escapeXml(label);
   const safeMermaidId = escapeXml(mermaidId);
   const textColor = textColorFor(fill);
@@ -615,7 +728,7 @@ function renderNode(
     `    <wps:cNvPr id="${id}" name="${safeLabel}" descr="${safeMermaidId}"/>`,
     '    <wps:cNvSpPr/>',
     '    <wps:spPr>',
-    '      <a:xfrm>',
+    `      <a:xfrm${flipAttr}>`,
     `        <a:off x="${x}" y="${y}"/>`,
     `        <a:ext cx="${w}" cy="${h}"/>`,
     '      </a:xfrm>',
@@ -931,16 +1044,23 @@ function renderEdge(
   toId: number,
   mermaidFromId: string,
   mermaidToId: string,
-  type: string,
+  type: EdgeType,
   from: Box,
   to: Box,
   dagrePoints: LayoutPoint[],
   otherBoxes: Box[],
   line: string,
+  strokeWidthPx: number | undefined,
   nextId: () => number,
   scale: number,
 ): string {
   const lineStyle = LINE_STYLE_BY_EDGE[type] ?? LINE_STYLE_BY_EDGE.arrow!;
+  // `linkStyle N stroke-width:Npx` overrides the type's default line weight
+  // (spec §6.3); px -> EMU the same way every other coordinate in the AST is
+  // converted, not pre-scaled here since `scaledLineWidth` below applies the
+  // diagram's overall `scale` uniformly to whichever width wins.
+  const baseWidthEmu =
+    strokeWidthPx !== undefined ? Math.max(1, Math.round(strokeWidthPx * EMU_PER_PX)) : lineStyle.width;
   const { stSide, endSide, points } = connectorGeometry(from, to, dagrePoints, otherBoxes);
   const emuPoints = points.map((p) => ({
     x: Math.round(p.x * EMU_PER_PX * scale),
@@ -951,7 +1071,10 @@ function renderEdge(
     emuPoints.length === 2
       ? straightConnectorGeometry(emuPoints[0]!.x, emuPoints[0]!.y, emuPoints[1]!.x, emuPoints[1]!.y)
       : bentConnectorGeometry(emuPoints);
-  const tailEnd = lineStyle.tailEnd ? '        <a:tailEnd type="triangle" w="med" len="med"/>' : '';
+  const headEnd =
+    lineStyle.headEnd !== 'none' ? `        <a:headEnd type="${lineStyle.headEnd}" w="med" len="med"/>` : '';
+  const tailEnd =
+    lineStyle.tailEnd !== 'none' ? `        <a:tailEnd type="${lineStyle.tailEnd}" w="med" len="med"/>` : '';
   const safeName = escapeXml(`${mermaidFromId}--${mermaidToId}`);
 
   return [
@@ -963,10 +1086,14 @@ function renderEdge(
     '    </wps:cNvCnPr>',
     '    <wps:spPr>',
     geometry,
-    `      <a:ln w="${scaledLineWidth(lineStyle.width, scale)}" cap="flat" cmpd="sng" algn="ctr">`,
-    `        <a:solidFill><a:srgbClr val="${line}"/></a:solidFill>`,
-    `        <a:prstDash val="${lineStyle.dash}"/>`,
-    ...(tailEnd ? [tailEnd] : []),
+    `      <a:ln w="${scaledLineWidth(baseWidthEmu, scale)}" cap="flat" cmpd="sng" algn="ctr">`,
+    lineStyle.invisible
+      ? '        <a:noFill/>'
+      : [
+          `        <a:solidFill><a:srgbClr val="${line}"/></a:solidFill>`,
+          `        <a:prstDash val="${lineStyle.dash}"/>`,
+        ].join('\n'),
+    ...(lineStyle.invisible ? [] : [headEnd, tailEnd].filter(Boolean)),
     '      </a:ln>',
     '    </wps:spPr>',
     connectorStyle(),

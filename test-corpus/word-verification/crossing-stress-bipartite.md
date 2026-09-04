@@ -1,0 +1,17 @@
+# Word verification — crossing-stress-bipartite
+
+```mermaid
+flowchart LR
+    A1[A1] --> B1[B1]
+    A1 --> B2[B2]
+    A1 --> B3[B3]
+    A2[A2] --> B1
+    A2 --> B2
+    A2 --> B4[B4]
+    A3[A3] --> B2
+    A3 --> B3
+    A3 --> B4
+    A4[A4] --> B1
+    A4 --> B3
+    A4 --> B4
+```

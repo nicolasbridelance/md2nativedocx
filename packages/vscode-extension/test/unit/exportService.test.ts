@@ -68,7 +68,7 @@ test('exportMermaidFile surfaces parser warnings via warningCount (spec §10)', 
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-mmd-export-test-'));
   try {
     const mmdPath = join(dir, 'flow.mmd');
-    writeFileSync(mmdPath, 'graph TD\n  A --> B\n  style X fill:#fff\n');
+    writeFileSync(mmdPath, 'graph TD\n  A --> B\n  click A "https://example.com"\n');
     const result = await exportMermaidFile(mmdPath, '');
     assert.equal(result.warningCount, 1);
     assert.ok(existsSync(result.logPath));

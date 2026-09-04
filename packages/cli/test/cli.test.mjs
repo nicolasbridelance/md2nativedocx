@@ -91,7 +91,7 @@ test('cli surfaces parser warnings: stdout summary + stderr + itemized in the .l
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');
   const docx = join(dir, 'doc.docx');
-  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n  style X fill:#fff\n```\n');
+  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n  click A "https://example.com"\n```\n');
   try {
     const { code, out, err } = runCli([md, '-o', docx]);
     assert.equal(code, 0, out);

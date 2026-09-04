@@ -6,7 +6,7 @@
   "command.exportBlock.shortTitle": "Exportar solo este bloque",
   "configuration.outputDirectory.markdownDescription": "Carpeta de salida para los archivos `.docx` generados. Vacío (por defecto) = misma carpeta que el archivo `.md` de origen — no requiere configuración antes del primer uso.",
   "configuration.referenceDocument.markdownDescription": "Ruta a un archivo `.docx` usado como plantilla de Word para cada exportación (equivale a la opción `--reference-doc` de Pandoc) — apunta a la plantilla de tu empresa para adoptar sus fuentes, colores y estilos. Vacío (por defecto) = la plantilla integrada en la extensión. Las rutas relativas se resuelven respecto a la carpeta del espacio de trabajo.",
-  "configuration.smartArt.enabled.markdownDescription": "Activado por defecto: un diagrama de trazado simple (cadena, árbol o ciclo) se convierte en un gráfico SmartArt nativo y editable en lugar de las formas OOXML habituales. Desactívalo para usar siempre las formas OOXML, por ejemplo para un renderizado uniforme en todo el documento.",
+  "configuration.smartArt.enabled.markdownDescription": "Desactivado por defecto (una prueba en Word real del 2026-09-03 encontró un diagrama generado que no llegaba a abrirse — ver las notas de cumplimiento). Actívalo para que un diagrama de trazado simple (cadena, árbol o ciclo) se convierta en un gráfico SmartArt nativo y editable en lugar de las formas OOXML habituales; considéralo experimental hasta confirmar su fiabilidad en Word.",
   "walkthrough.title": "md2nativedocx — Diagramas Mermaid a Word",
   "walkthrough.description": "Exporta tus diagramas Mermaid como formas nativas y editables de Word — no como imágenes PNG aplanadas.",
   "walkthrough.step1.title": "Abre un documento Markdown",
