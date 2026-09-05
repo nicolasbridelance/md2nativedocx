@@ -60,22 +60,15 @@ moving a shape and watching its connectors follow.*
 ## Where it stands out
 
 Full Markdown → `.docx` conversion (text, tables, formatting) is table stakes — several extensions
-do it. Where `md2nativedocx` differs is what happens to a Mermaid diagram along the way. Checked
-against the VS Code Marketplace (September 2026) — the most-installed Markdown-to-Word extensions
-say so themselves, in their own documentation:
+do it well. Where `md2nativedocx` differs is what happens to a Mermaid diagram along the way: most
+tools flatten it into an image (PNG/SVG) dropped into the page. `md2nativedocx` instead turns it
+into real vector Word shapes (OOXML/DrawingML) — every box and arrow stays individually selectable,
+movable, and editable once the file is open in Word, the same as if you'd drawn it by hand with
+Word's own shape tools.
 
-| Extension | Installs | Mermaid diagrams in the `.docx` |
-|---|---|---|
-| docu.md | 6,672 | High-resolution image |
-| Doculate | 5,585 | Image |
-| FusionSol Markdown Mermaid & DOCX | 892 | Image |
-| CX Markdown to Word | 561 | PNG |
-| Markdown Export Pro | 499 | SVG image |
-| **md2nativedocx** | — | **Native Word shapes, individually editable** |
-
-A sign the market already validated native editability as worth building: docu.md already turns
-LaTeX formulas into editable Word equations — just never applied that idea to diagrams. That's
-exactly the gap `md2nativedocx` fills.
+We don't claim to be the most complete Markdown-to-Word converter out there — every tool in this
+space makes its own tradeoffs. This one's bet is specifically on treating the diagram as a first-
+class, editable citizen of the document rather than a picture of one.
 
 Every export is also validated against **the exact schema Word itself enforces**, using
 Microsoft's own Open XML SDK — not a guess, not a reimplementation. A `.docx` can be well-formed
