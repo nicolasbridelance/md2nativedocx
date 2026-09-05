@@ -26,8 +26,8 @@
     "test:ci": "node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml --test-reporter=lcov --test-reporter-destination=reports/lcov.info dist-test/test/**/*.test.js"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.5.4"
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@types/dagre": "^0.7.54",

@@ -19,12 +19,12 @@
     "test:visual:update-baseline": "node scripts/test-visual.mjs --update-baseline"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-security": "^3.0.1",
-    "typescript": "^5.5.4"
+    "@types/node": "^26.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "eslint": "^10.9.1",
+    "eslint-plugin-security": "^4.0.1",
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"
