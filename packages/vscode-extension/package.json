@@ -198,6 +198,11 @@
           "minimum": 2,
           "maximum": 4,
           "markdownDescription": "%configuration.toc.depth.markdownDescription%"
+        },
+        "md2nativedocx.emoji.forceColorFont": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%configuration.emoji.forceColorFont.markdownDescription%"
         }
       }
     },

@@ -281,6 +281,28 @@ test('Lot 3: TOC auto-update still works with a custom reference document (setti
   }
 });
 
+test('Lot 2: emoji color font is forced by default, opt-out via MD2NATIVEDOCX_EMOJI_FONT=0', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docxDefault = join(dir, 'default.docx');
+  const docxOptOut = join(dir, 'opt-out.docx');
+  writeFileSync(md, '# T\n\nStatut : **✅ fait**, texte normal.\n');
+  try {
+    assert.equal(runCli([md, '-o', docxDefault]).code, 0);
+    const defaultXml = execFileSync('unzip', ['-p', docxDefault, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(defaultXml.includes('Segoe UI Emoji'), 'default (no env var) must force the emoji font');
+    assert.ok(defaultXml.includes('<w:t xml:space="preserve">✅</w:t>'), 'the emoji must be split into its own run');
+    assert.ok(defaultXml.includes('fait'), 'the surrounding bold text must survive unchanged');
+
+    const { code } = runCli([md, '-o', docxOptOut], { env: { ...process.env, MD2NATIVEDOCX_EMOJI_FONT: '0' } });
+    assert.equal(code, 0);
+    const optOutXml = execFileSync('unzip', ['-p', docxOptOut, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(!optOutXml.includes('Segoe UI Emoji'), 'MD2NATIVEDOCX_EMOJI_FONT=0 must skip the font-forcing patch');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('Lot 1: layout/typography options are ignored (with an info note, not a counted warning) when a custom reference doc is set', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');

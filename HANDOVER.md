@@ -1,16 +1,16 @@
 # Handover — 2026-09-05
 
 One entry point for picking this project back up. Written at the end of a session that shipped the
-first two slices of Phase 8 (export customization). Supersedes the 2026-09-04 handover — check the
-git log / `TODO.md` for anything newer than this file's date.
+first three slices of Phase 8 (export customization). Supersedes the 2026-09-04 handover — check
+the git log / `TODO.md` for anything newer than this file's date.
 
 ## What shipped this session
 
-Lot 1 (subset) and Lot 3 of `docs/specs/export_customization_SPEC.md` — page/typography
-customization plus an automatic TOC, via a dynamically-generated `reference.docx` and a couple of
-final-`.docx` patches, instead of the single static reference file the project shipped with until
-now. Full detail (root-cause, empirical validation, design decisions) in `TODO.md`'s Phase 8 entry;
-short version:
+Lots 1 (subset), 2, and 3 of `docs/specs/export_customization_SPEC.md` — page/typography
+customization, colored emoji rendering, and an automatic TOC, via a dynamically-generated
+`reference.docx` and a few final-`.docx` patches, instead of the single static reference file the
+project shipped with until now. Full detail (root-cause, empirical validation, design decisions) in
+`TODO.md`'s Phase 8 entry; short version:
 
 - New module `packages/cli/src/referenceDocBuilder.mjs` patches `theme1.xml`/`styles.xml`/
   `document.xml` (fonts, accent color, base size, line spacing, justification, page size/
@@ -47,6 +47,24 @@ short version:
   render (PNG + PDF): TOC now sits after the title, but its entries render empty — LibreOffice
   doesn't evaluate TOC fields on headless export, so whether Word actually auto-populates them on
   open (which `updateFields` is supposed to trigger) is **not verified in a real Word**.
+- **Lot 2 (colored emoji)**, `md2nativedocx.emoji.forceColorFont`/`MD2NATIVEDOCX_EMOJI_FONT`
+  (default on). Confirmed empirically that a naive "force the font on the whole run" approach
+  (closer to the spec's own wording) would have been wrong: Pandoc puts an entire mixed sentence
+  in one `<w:r>`, so forcing the emoji font there would also change the font of the surrounding
+  prose. Implemented instead as grapheme-cluster splitting (`Intl.Segmenter`, no new dependency),
+  classified via `\p{Extended_Pictographic}` plus a regional-indicator (flag) special case —
+  answers the spec's own open question ("a precise list to establish"). Bold/italic preserved on
+  both the text and emoji segments; only the emoji segment's `<w:rPr>` gets `w:rFonts` forced
+  (prepended, not appended — `CT_RPr` requires it first). Validated in three steps: (1) this
+  Codespace has no emoji font installed at all, so tofu boxes appeared identically with or without
+  the patch — not a regression, just this sandbox's baseline; (2) installed
+  `fonts-noto-color-emoji` ad hoc (same precedent as LibreOffice/Xvfb) plus a throwaway fontconfig
+  alias (`Segoe UI Emoji` → `Noto Color Emoji`, same mechanism as `test-corpus/visual/fontconfig/
+  fonts.conf`) and re-rendered: ✅/⚠️/❌ came out in full color, surrounding text/bold untouched —
+  confirms the OOXML mechanism itself is correct; (3) `test:visual` 35/35 unchanged, confirming
+  diagram text (DrawingML `a:t`/`a:r`, a different namespace) is never touched by this patch. What
+  is still **not** verified: real Word/macOS rendering (the actual "à tester" the spec asked for)
+  — this session's evidence is as far as it goes without a real Word install.
 
 **Deliberately out of scope this pass** (confirmed with the maintainer up front, not a silent cut):
 1.9 (dedicated landscape section for tables — new Lua filter territory, its own spike), 1.11
@@ -60,15 +78,19 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
 - `git status`: everything in this session's diff described above is staged/committable; nothing
   else pending. (Check `git log --oneline -5` for the actual latest hash once time has passed.)
 - `npm run lint && npm run typecheck`: clean across every workspace.
-- `npm test`: 401 tests, all workspaces (74 cli + 291 core + 11 pandoc-filter + 25
+- `npm test`: 410 tests, all workspaces (83 cli + 291 core + 11 pandoc-filter + 25
   vscode-extension) — up from 361 at the last handover.
 - `npm run test:visual`: 35/35 fixtures, 0.000% pixel diff on every one — proves the default
-  (no Lot 1/3 settings touched) behavior is byte-for-byte unchanged.
+  (no Lot 1/2/3 settings touched) behavior is byte-for-byte unchanged.
 - Manually rendered (LibreOffice headless) a document combining Lot 1 settings (A4, moderate
   margins, custom heading/body fonts, 1.5 line spacing, justified, accent color) with a real
   flowchart diagram — justification/margins/fonts/spacing all visibly correct, diagram still fits
   and renders cleanly. Separately rendered a TOC + diagram + custom-reference-doc combination
-  (PNG and PDF) to confirm placement and the settings.xml carry-over finding above.
+  (PNG and PDF) to confirm placement and the settings.xml carry-over finding above, and an
+  emoji-in-prose document (with and without a font-substitution alias) for the Lot 2 finding above.
+- `fonts-noto-color-emoji` is now installed in this Codespace session (ad hoc, like LibreOffice/
+  Xvfb before it) — not persisted to `.devcontainer/`, so a fresh Codespace won't have it; only
+  relevant if someone wants to re-run the Lot 2 color verification manually.
 - Known, pre-existing, unrelated to this session (already flagged at the last handover): `npm test`
   at the root regenerates `test-corpus/corpus/generated/*.docx` and leaves them git-dirty on every
   run. Discarded again this session (`git checkout -- test-corpus/corpus/generated/`) before
@@ -77,9 +99,9 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
 ## Not done / explicitly deferred (not forgotten, just not this session)
 
 - Lot 1's own 1.11/1.13 fast-follow (see above).
-- Lot 2 (colored emoji/badge rendering, spec §1.15/§2.5) — independent of Lot 1/3, not started.
-- Real-Word verification that a TOC actually auto-populates on open (see the Lot 3 note above) —
-  not verifiable via LibreOffice headless, needs a human with real Word.
+- Real-Word verification that a TOC actually auto-populates on open (see the Lot 3 note above), and
+  that Lot 2's colored emoji actually render in color on Windows/macOS Word (see the Lot 2 note
+  above) — neither is verifiable via LibreOffice headless, both need a human with real Word.
 - Lot 4 (Activity Bar/Sidebar configuration panel, spec §3) — depends on Lots 1-3. One concrete
   requirement already known for whenever it's built: grey out the Lot 1 layout/typography controls
   when `md2nativedocx.referenceDocument` is set (the maintainer asked for this explicitly while
@@ -106,3 +128,5 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
   function's behavior in isolation (pure functions, no Pandoc/zip involved for most of them).
 - `packages/cli/src/postprocess.mjs`'s `repositionTocAfterTitle`/`postProcessDocx` — the TOC
   placement fix and where the `settings.xml` patch actually lives now.
+- `packages/cli/src/postprocess.mjs`'s `forceEmojiColorFont` — the grapheme-splitting logic and its
+  doc comment's explanation of the `Extended_Pictographic`/regional-indicator classification.

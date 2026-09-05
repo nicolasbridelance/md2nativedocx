@@ -4,7 +4,14 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { injectNamespaces, renumberDrawingIds, injectSmartArtParts, repositionTocAfterTitle, postProcessDocx } from '../src/postprocess.mjs';
+import {
+  injectNamespaces,
+  renumberDrawingIds,
+  injectSmartArtParts,
+  repositionTocAfterTitle,
+  forceEmojiColorFont,
+  postProcessDocx,
+} from '../src/postprocess.mjs';
 
 /** A `w:document` root as Pandoc emits it: no wpc/wpg/wps declarations. */
 const PANDOC_ROOT =
@@ -344,5 +351,72 @@ test('postProcessDocx: with toc, settings.xml gets w:updateFields and the TOC fi
 
     const document = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
     assert.ok(document.indexOf('Heading1') < document.indexOf('docPartGallery'));
+  });
+});
+
+// --- forceEmojiColorFont (spec §1.15/§2.5, "Lot 2") ---
+//
+// Fixtures below are Pandoc's own real output shape (confirmed against an
+// actual `pandoc` run — see TODO.md), not invented: a whole sentence in one
+// `<w:r>`, bold/italic as `<w:rPr><w:b/></w:rPr>`.
+
+test('forceEmojiColorFont: a run with no pictographic character is untouched', () => {
+  const run = '<w:r><w:t xml:space="preserve">Texte normal, rien a faire.</w:t></w:r>';
+  assert.equal(forceEmojiColorFont(run), run);
+});
+
+test('forceEmojiColorFont: splits a mixed run at grapheme boundaries, forcing the font only on the emoji segment', () => {
+  const run = '<w:r><w:t xml:space="preserve">Statut : ✅ fait</w:t></w:r>';
+  const out = forceEmojiColorFont(run);
+  assert.equal(out, [
+    '<w:r><w:t xml:space="preserve">Statut : </w:t></w:r>',
+    '<w:r><w:rPr><w:rFonts w:ascii="Segoe UI Emoji" w:hAnsi="Segoe UI Emoji" w:eastAsia="Segoe UI Emoji" w:cs="Segoe UI Emoji"/></w:rPr><w:t xml:space="preserve">✅</w:t></w:r>',
+    '<w:r><w:t xml:space="preserve"> fait</w:t></w:r>',
+  ].join(''));
+});
+
+test('forceEmojiColorFont: preserves an existing rPr (e.g. bold) on both the plain and the emoji segment', () => {
+  const run = '<w:r><w:rPr><w:bCs /><w:b /></w:rPr><w:t xml:space="preserve">✅ fait</w:t></w:r>';
+  const out = forceEmojiColorFont(run);
+  assert.match(out, /^<w:r><w:rPr><w:rFonts[^>]*\/><w:bCs \/><w:b \/><\/w:rPr><w:t xml:space="preserve">✅<\/w:t><\/w:r>/);
+  assert.match(out, /<w:r><w:rPr><w:bCs \/><w:b \/><\/w:rPr><w:t xml:space="preserve"> fait<\/w:t><\/w:r>$/);
+});
+
+test('forceEmojiColorFont: a multi-codepoint emoji (variation selector) is not split from its base character', () => {
+  const run = '<w:r><w:t xml:space="preserve">⚠️ attention</w:t></w:r>';
+  const out = forceEmojiColorFont(run);
+  assert.ok(out.includes('>⚠️<'), 'the base + variation selector must stay in the same <w:t>');
+});
+
+test('forceEmojiColorFont: a regional-indicator flag pair is classified as emoji even though neither half is Extended_Pictographic alone', () => {
+  const run = '<w:r><w:t xml:space="preserve">🇫🇷 drapeau</w:t></w:r>';
+  const out = forceEmojiColorFont(run);
+  assert.ok(out.includes('>🇫🇷<'));
+  assert.ok(out.includes('Segoe UI Emoji'));
+});
+
+test('forceEmojiColorFont: a run wrapping a drawing (not plain text) is left untouched', () => {
+  const run = '<w:r><w:drawing><wp:inline><wp:docPr id="1" name="✅"/></wp:inline></w:drawing></w:r>';
+  assert.equal(forceEmojiColorFont(run), run, 'must not touch attribute values or non-w:t content');
+});
+
+test('postProcessDocx: emojiFont defaults to true — a checkmark run gets the font forced without an explicit option', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'doc.docx');
+    buildMinimalDocx(docx, '<w:document><w:body><w:p><w:r><w:t xml:space="preserve">✅ fait</w:t></w:r></w:p></w:body></w:document>');
+    postProcessDocx(docx);
+    const document = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(document.includes('Segoe UI Emoji'));
+  });
+});
+
+test('postProcessDocx: emojiFont: false opts out entirely', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'doc.docx');
+    buildMinimalDocx(docx, '<w:document><w:body><w:p><w:r><w:t xml:space="preserve">✅ fait</w:t></w:r></w:p></w:body></w:document>');
+    postProcessDocx(docx, { emojiFont: false });
+    const document = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(!document.includes('Segoe UI Emoji'), 'emojiFont: false must not force any font');
+    assert.ok(document.includes('✅ fait'), 'the emoji run must stay a single, unsplit run');
   });
 });

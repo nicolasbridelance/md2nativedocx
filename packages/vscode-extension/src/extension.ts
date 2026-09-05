@@ -88,6 +88,14 @@ function tocDepthSetting(): number {
   return vscode.workspace.getConfiguration('md2nativedocx').get<number>('toc.depth', 3);
 }
 
+/** `md2nativedocx.emoji.forceColorFont` (spec §1.15/§2.5, "Lot 2") — default
+ * `true`, same safe-to-`.get()` reasoning as {@link tocEnabledSetting}: the
+ * schema default matches the CLI's own default, so forwarding it changes
+ * nothing for an untouched install. */
+function emojiFontEnabledSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('emoji.forceColorFont', true);
+}
+
 /** Value the user actually configured for `md2nativedocx.<key>` at some
  * scope (workspace folder / workspace / user), or `undefined` if they never
  * touched it — as opposed to `.get()`, which always returns the
@@ -168,9 +176,10 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
     warnIfLayoutOptionsIgnored(referenceDoc, layout);
     const toc = tocEnabledSetting();
     const tocDepth = tocDepthSetting();
+    const emojiFont = emojiFontEnabledSetting();
     return isMermaidFilePath(uri.fsPath)
-      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth })
-      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth });
+      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont })
+      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont });
   });
 }
 
@@ -217,6 +226,7 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     warnIfLayoutOptionsIgnored(referenceDoc, layout);
     const toc = tocEnabledSetting();
     const tocDepth = tocDepthSetting();
+    const emojiFont = emojiFontEnabledSetting();
     return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), {
       pandocBin,
       referenceDoc,
@@ -224,6 +234,7 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
       layout,
       toc,
       tocDepth,
+      emojiFont,
     });
   });
 }

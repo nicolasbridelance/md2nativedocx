@@ -13,6 +13,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 - Automatic table of contents via `md2nativedocx.toc.enabled`/`md2nativedocx.toc.depth`, placed
   after the document's title and set to refresh automatically when Word opens the file. Works
   even alongside a custom `md2nativedocx.referenceDocument`.
+- Colored emoji/badge rendering (✅/⚠️/❌ and others) via `md2nativedocx.emoji.forceColorFont`
+  (default: on) — forces the emoji color font on pictographic characters without affecting the
+  surrounding text's own font, bold, or italic. Depends on local font substitution on
+  macOS/Linux/LibreOffice; turn off if it renders worse there than doing nothing.
 - Three new Mermaid diagram types export as native, editable OOXML shapes: `quadrantChart`,
   `venn-beta` (2-3 sets, true overlapping-circle geometry), and `mindmap` (radial layout, all 6
   node shapes). No extension-side changes were needed — the same `` ```mermaid `` block detection

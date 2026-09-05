@@ -486,12 +486,42 @@ de la spec, §5.
         `packages/cli/assets/README.md`) : les valeurs twips des presets de marges (`normal`
         notamment, 2,5cm/1417 twips — la valeur que la spec elle-même énonce, pas forcément celle
         qu'un vrai Word en locale métrique écrit pour son propre preset "Normales").
-- [ ] **Lot 2 — rendu couleur des emoji/badges** (spec §1.15, §2.5) : post-traitement dans
-      `postprocess.mjs`, force `w:rFonts` "Segoe UI Emoji" sur les runs contenant un emoji.
-      Réglage `md2nativedocx.emoji.forceColorFont` (défaut `true`). **À valider empiriquement
-      multi-plateforme avant de considérer le lot terminé** (option 1 retenue par le mainteneur,
-      "à tester" — filet de secours "pastilles `w:shd` custom" documenté dans la spec si ça
-      échoue sur une plateforme donnée).
+- [x] **Lot 2 — rendu couleur des emoji/badges, mécanique livrée (2026-09-05)** (spec §1.15,
+      §2.5) : `postprocess.mjs` gagne `forceEmojiColorFont()`, appliquée par défaut dans
+      `postProcessDocx()` (réglage `md2nativedocx.emoji.forceColorFont`/`MD2NATIVEDOCX_EMOJI_FONT`,
+      défaut actif, `=0`/`false` désactive).
+      - **Écart avec la description initiale de la spec, trouvé en vérifiant contre un vrai
+        `pandoc`** : Pandoc met une phrase entière mélangeant texte et emoji dans un **seul**
+        `<w:r>` (pas un run par caractère) — forcer la police sur le run entier aurait aussi changé
+        la police du texte normal environnant. Implémenté à la place : découpage aux frontières de
+        *graphème* (`Intl.Segmenter`, ES2018+, aucune dépendance ajoutée) — pas caractère par
+        caractère, un emoji est souvent plusieurs points de code (base + sélecteur de variation
+        `⚠️`, ou séquence ZWJ) qu'il ne faut pas séparer. Classification par
+        `\p{Extended_Pictographic}` (répond à la question "liste précise à établir" que la spec
+        laissait ouverte) + cas spécial pour les paires d'indicateurs régionaux (drapeaux, aucune
+        des deux moitiés n'est `Extended_Pictographic` seule). Gras/italique du run d'origine
+        préservés sur les deux segments (texte et emoji) ; seul le segment emoji reçoit
+        `w:rFonts`, inséré en premier enfant de `w:rPr` (ordre exigé par le schéma `CT_RPr`) plutôt
+        qu'ajouté en fin. Portée volontairement limitée aux runs de forme exacte `<w:r>(<w:rPr>...)?
+        <w:t>texte</w:t></w:r>` (celle que Pandoc émet réellement, vérifié) — tout le reste (run
+        avec `<w:drawing>`, plusieurs `<w:t>`, etc.) laissé intact plutôt que deviné.
+      - **Validation empirique multi-étapes, pas juste unitaire** : ①  d'abord testé dans ce
+        Codespace (aucune police emoji installée par défaut) → tofu (glyphes manquants) identique
+        avec et sans le patch — pas une régression du patch, juste l'absence totale de police emoji
+        dans ce sandbox. ② `fonts-noto-color-emoji` installé ad hoc dans la session (comme
+        LibreOffice/Xvfb en leur temps, voir plus bas dans ce fichier) + alias fontconfig temporaire
+        `Segoe UI Emoji` → `Noto Color Emoji` (mécanisme identique à
+        `test-corpus/visual/fontconfig/fonts.conf`) : rendu réel confirmé — ✅/⚠️/❌ en couleur,
+        texte environnant et gras intacts. Confirme que le levier OOXML (forcer `rFonts`) est le
+        bon ; ne remplace pas un vrai test **Word** (toujours "à tester", voir décision du
+        mainteneur ci-dessus) puisque la substitution de police y est différente (Windows a
+        nativement Segoe UI Emoji, macOS/Linux dépendent d'une substitution non garantie).
+      - Confirmé sans impact sur le rendu des diagrammes Mermoid eux-mêmes : le texte des formes
+        DrawingML utilise `a:t`/`a:r` (pas `w:t`/`w:r`), hors du scope du regex — `test:visual`
+        35/35 à 0,000 % de diff après ce changement.
+      - Tests : 8 nouveaux `postprocess.test.mjs` (fonction pure + intégration
+        `postProcessDocx({emojiFont})`), 1 `cli.test.mjs` bout-en-bout (défaut actif + opt-out).
+        410 tests au total, tous verts.
 - [x] **Lot 3 — sommaire automatique (TOC), livré (2026-09-05)** (spec §1.10, §2.2) :
       `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` → `--toc`/`--toc-depth=N` Pandoc, plus
       `<w:updateFields w:val="true" />` dans `settings.xml` (sinon TOC visible vide jusqu'à F9).

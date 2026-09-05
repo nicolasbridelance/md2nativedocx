@@ -109,6 +109,13 @@ const tocEnabled = process.env.MD2NATIVEDOCX_TOC === '1';
 const tocDepthRaw = Number(process.env.MD2NATIVEDOCX_TOC_DEPTH);
 const tocDepth = Number.isFinite(tocDepthRaw) ? Math.min(4, Math.max(2, Math.round(tocDepthRaw))) : 3;
 
+// MD2NATIVEDOCX_EMOJI_FONT (spec §1.15/§2.5, "Lot 2") — on by default (the
+// spec's own default for `md2nativedocx.emoji.forceColorFont`); '0' opts
+// out, e.g. if the "à tester" Segoe UI Emoji substitution turns out to
+// misbehave on some platform (fallback documented in the spec: custom
+// `w:shd` badges, not implemented — not needed unless this is found to fail).
+const emojiFontEnabled = process.env.MD2NATIVEDOCX_EMOJI_FONT !== '0';
+
 const rawLayoutOptions = readLayoutOptionsFromEnv();
 
 // Conflict resolution (spec §2.1/§5, option (a) — confirmed with the
@@ -286,7 +293,7 @@ async function main() {
         // without this, Word does not recognize the drawing and drops it
         // (compatibility mode). Must run before injectSmartArtParts, which
         // reads the namespace-fixed/id-renumbered document.xml this writes.
-        postProcessDocx(output, { toc: tocEnabled });
+        postProcessDocx(output, { toc: tocEnabled, emojiFont: emojiFontEnabled });
         // Complete the SmartArt wiring for any diagram the core bridge
         // dispatched to it (no-op if none did, and skipped entirely when
         // SmartArt is disabled — nothing could have been dispatched).

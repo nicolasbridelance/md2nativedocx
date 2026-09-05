@@ -144,6 +144,101 @@ export function renumberDrawingIds(documentXml) {
 }
 
 /**
+ * Emoji/badge color rendering (spec §1.15/§2.5, "Lot 2") — Word substitutes a
+ * fallback font for ✅/⚠️/❌ and friends unless a run is explicitly set to an
+ * emoji-capable font ("Segoe UI Emoji"), otherwise flattening them to
+ * indistinguishable grey glyphs.
+ *
+ * Splits at grapheme-cluster boundaries (`Intl.Segmenter`, not naive
+ * per-character scanning) rather than forcing the whole run's font: Pandoc
+ * puts an entire mixed sentence in one `<w:r>` (confirmed empirically — see
+ * `TODO.md`), so forcing "Segoe UI Emoji" on the whole run would also
+ * change the font of the surrounding prose, not just the emoji. Grapheme
+ * clusters matter because an emoji is frequently more than one Unicode code
+ * point (a base character plus a variation selector, skin-tone modifier, or
+ * ZWJ sequence, e.g. "⚠️" = U+26A0 + U+FE0F) — splitting on raw code points
+ * would separate a modifier from its base and could detach it visually.
+ *
+ * `\p{Extended_Pictographic}` (a standard Unicode property, ES2018+, no new
+ * dependency) is the classification the spec itself left as "a precise list
+ * to establish" — this covers essentially every emoji in one regex; the one
+ * confirmed gap is keycap sequences (`1️⃣`, `#️⃣`), whose base characters
+ * (digits, `#`, `*`) aren't pictographic themselves. Regional-indicator
+ * flag pairs (e.g. "🇫🇷") need a second explicit check: `Intl.Segmenter`
+ * correctly groups the pair into one grapheme cluster, but neither half
+ * matches `Extended_Pictographic` on its own.
+ *
+ * Only transforms a run shaped exactly `<w:r>(<w:rPr>...</w:rPr>)?<w:t ...>
+ * text</w:t></w:r>` — the shape Pandoc actually emits for plain and
+ * bold/italic text alike (confirmed empirically, both with and without
+ * emoji). Anything else (a run wrapping a `<w:drawing>`, multiple `<w:t>`
+ * elements, a `<w:br/>`, ...) is left untouched rather than guessed at,
+ * same conservative-regex-scope reasoning as `renumberDrawingIds` above.
+ */
+const EXTENDED_PICTOGRAPHIC_RE = /\p{Extended_Pictographic}/u;
+// A single grapheme cluster made entirely of regional-indicator symbols (a
+// flag, e.g. "🇫🇷") — used to classify one already-segmented cluster.
+const REGIONAL_INDICATOR_CLUSTER_RE = /^[\u{1F1E6}-\u{1F1FF}]+$/u;
+// Existence check (not anchored) — used only to decide whether a whole run's
+// text is worth segmenting at all.
+const REGIONAL_INDICATOR_ANYWHERE_RE = /[\u{1F1E6}-\u{1F1FF}]/u;
+const EMOJI_FONT = 'Segoe UI Emoji';
+const GRAPHEME_SEGMENTER = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+function isEmojiGrapheme(cluster) {
+  if (REGIONAL_INDICATOR_CLUSTER_RE.test(cluster)) return true;
+  for (const ch of cluster) {
+    if (EXTENDED_PICTOGRAPHIC_RE.test(ch)) return true;
+  }
+  return false;
+}
+
+/** Split `text` into consecutive `{ text, emoji }` segments, merging adjacent
+ * grapheme clusters of the same classification. */
+function segmentEmoji(text) {
+  const segments = [];
+  for (const { segment } of GRAPHEME_SEGMENTER.segment(text)) {
+    const emoji = isEmojiGrapheme(segment);
+    const last = segments[segments.length - 1];
+    if (last && last.emoji === emoji) {
+      last.text += segment;
+    } else {
+      segments.push({ text: segment, emoji });
+    }
+  }
+  return segments;
+}
+
+/** Force the emoji font into `rPrInner` (a run's `<w:rPr>` inner XML, or `''`
+ * if it had none) — replaces an existing `<w:rFonts/>` in place, or prepends
+ * a new one (CT_RPr's schema requires `rFonts` to be its first child, when
+ * present, so a naive append could produce an invalid element order). */
+function withEmojiFont(rPrInner) {
+  const rFonts = `<w:rFonts w:ascii="${EMOJI_FONT}" w:hAnsi="${EMOJI_FONT}" w:eastAsia="${EMOJI_FONT}" w:cs="${EMOJI_FONT}"/>`;
+  return /<w:rFonts\b[^>]*\/>/.test(rPrInner) ? rPrInner.replace(/<w:rFonts\b[^>]*\/>/, rFonts) : rFonts + rPrInner;
+}
+
+const EMOJI_RUN_RE = /<w:r>(?:<w:rPr>([\s\S]*?)<\/w:rPr>)?<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t><\/w:r>/g;
+
+export function forceEmojiColorFont(documentXml) {
+  return documentXml.replace(EMOJI_RUN_RE, (whole, rPrInner, text) => {
+    if (!EXTENDED_PICTOGRAPHIC_RE.test(text) && !REGIONAL_INDICATOR_ANYWHERE_RE.test(text)) return whole;
+    const segments = segmentEmoji(text);
+    if (!segments.some((s) => s.emoji)) return whole;
+    return segments
+      .map(({ text: segText, emoji }) => {
+        const rPr = emoji
+          ? `<w:rPr>${withEmojiFont(rPrInner ?? '')}</w:rPr>`
+          : rPrInner !== undefined
+            ? `<w:rPr>${rPrInner}</w:rPr>`
+            : '';
+        return `<w:r>${rPr}<w:t xml:space="preserve">${segText}</w:t></w:r>`;
+      })
+      .join('');
+  });
+}
+
+/**
  * Move a Pandoc-generated TOC field (spec §1.10/§2.2, "Lot 3", `--toc`) from
  * where Pandoc always puts it — the very top of the body, before any
  * heading — to right after the document's first Heading1 paragraph, per the
@@ -178,11 +273,14 @@ export function repositionTocAfterTitle(documentXml) {
  * reference doc (`referenceDocBuilder.mjs`'s `buildReferenceDoc`): Pandoc
  * synthesizes its own `word/settings.xml` from scratch and does not carry
  * over the reference document's, unlike `sectPr`/`theme1.xml`/`styles.xml`.
+ * When `emojiFont` is true (default — spec §1.15/§2.5, "Lot 2"), also forces
+ * the emoji color font onto any run containing a pictographic character.
  *
  * @param docxPath - Path to the .docx to patch.
  * @param options.toc - Whether a TOC was requested for this export.
+ * @param options.emojiFont - Whether to force the emoji color font (default `true`).
  */
-export function postProcessDocx(docxPath, { toc = false } = {}) {
+export function postProcessDocx(docxPath, { toc = false, emojiFont = true } = {}) {
   const archive = resolve(docxPath);
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-post-'));
   try {
@@ -193,7 +291,8 @@ export function postProcessDocx(docxPath, { toc = false } = {}) {
 
     const documentPath = join(dir, 'word', 'document.xml');
     const originalDocument = readFileSync(documentPath, 'utf8');
-    const patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
+    let patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
+    if (emojiFont) patchedDocument = forceEmojiColorFont(patchedDocument);
     let changed = false;
     if (patchedDocument !== originalDocument) {
       writeFileSync(documentPath, patchedDocument, 'utf8');

@@ -97,6 +97,9 @@ export interface RunCliOptions {
   /** Mirrors `md2nativedocx.toc.depth` (2-4). Only meaningful when `toc` is
    * `true`. */
   tocDepth?: number;
+  /** Mirrors `md2nativedocx.emoji.forceColorFont` (default `true` — only
+   * `false` needs forwarding; the CLI's own default already matches `true`). */
+  emojiFont?: boolean;
 }
 
 function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
@@ -125,6 +128,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     env.MD2NATIVEDOCX_TOC = '1';
     if (options.tocDepth !== undefined) env.MD2NATIVEDOCX_TOC_DEPTH = String(options.tocDepth);
   }
+  if (options.emojiFont === false) env.MD2NATIVEDOCX_EMOJI_FONT = '0';
   return new Promise((resolve, reject) => {
     execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {
