@@ -22,6 +22,7 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     tocEnabled: false,
     tocDepth: 3,
     emojiForceColorFont: true,
+    wordCompatibilityCheckEnabled: true,
     referenceDocument: '',
     scope: 'user',
     ...overrides,

@@ -231,6 +231,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%configuration.emoji.forceColorFont.markdownDescription%"
+        },
+        "md2nativedocx.wordCompatibilityCheck.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%configuration.wordCompatibilityCheck.enabled.markdownDescription%"
         }
       }
     },
@@ -277,7 +282,7 @@
     "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/unit/*.test.js",
     "pretest:extension-host": "tsc -p tsconfig.test.json",
     "test:extension-host": "node scripts/run-extension-host-tests.mjs",
-    "bundle": "node scripts/bundle-cli.mjs",
+    "bundle": "node scripts/bundle-cli.mjs && node scripts/bundle-oxml-validator.mjs",
     "prepackage": "npm run build && npm run bundle",
     "package": "vsce package --no-dependencies -o md2nativedocx.vsix --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/",
     "publish": "npm run build && npm run bundle && vsce publish --no-dependencies --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/"

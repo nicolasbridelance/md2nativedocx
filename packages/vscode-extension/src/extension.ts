@@ -9,6 +9,7 @@ import {
   exportBlock,
   exportMermaidFile,
   resolveBlockForCursor,
+  resolveOxmlValidatorDll,
   PandocMissingError,
   BlockNotFoundError,
   ExportFailedError,
@@ -16,6 +17,7 @@ import {
   type LayoutOptions,
 } from './exportService';
 import { ensurePandoc } from './pandocProvisioner';
+import { ensureDotnet } from './dotnetProvisioner';
 import { ConfigPanelProvider, CONFIG_VIEW_ID } from './configPanel';
 
 let outputChannel: vscode.OutputChannel;
@@ -96,6 +98,14 @@ function tocDepthSetting(): number {
  * nothing for an untouched install. */
 function emojiFontEnabledSetting(): boolean {
   return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('emoji.forceColorFont', true);
+}
+
+/** `md2nativedocx.wordCompatibilityCheck.enabled` (ADR 0007 part D) — on by
+ * default, costs one extra `dotnet` subprocess per export (auto-provisioned
+ * on first use, same as Pandoc) in exchange for a schema-conformance report
+ * in the `.log`; opt-out for anyone who'd rather skip that cost. */
+function wordCompatibilityCheckEnabledSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('wordCompatibilityCheck.enabled', true);
 }
 
 /** Value the user actually configured for `md2nativedocx.<key>` at some
@@ -181,9 +191,11 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
     const toc = tocEnabledSetting();
     const tocDepth = tocDepthSetting();
     const emojiFont = emojiFontEnabledSetting();
+    const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
+    const options = { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
     return isMermaidFilePath(uri.fsPath)
-      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont })
-      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont });
+      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
+      : exportDocument(uri.fsPath, outputDirectorySetting(), options);
   });
 }
 
@@ -231,6 +243,7 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     const toc = tocEnabledSetting();
     const tocDepth = tocDepthSetting();
     const emojiFont = emojiFontEnabledSetting();
+    const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
     return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), {
       pandocBin,
       referenceDoc,
@@ -239,6 +252,7 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
       toc,
       tocDepth,
       emojiFont,
+      ...wordCompatibilityCheck,
     });
   });
 }
@@ -264,6 +278,37 @@ async function resolvePandocBin(progress: vscode.Progress<{ message?: string }>)
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     outputChannel.appendLine(`Automatic Pandoc setup failed, falling back to PATH: ${detail}`);
+    return undefined;
+  }
+}
+
+/** Resolve `{ dotnetBin, oxmlValidatorDll }` for the Word-compatibility
+ * check (ADR 0007 part D), or `undefined` when the setting is off, the
+ * vendored DLL isn't present (e.g. a monorepo dev build that never ran
+ * `npm run bundle`), or provisioning `dotnet` fails — same
+ * "never leave the user worse off than before it existed" rule as
+ * {@link resolvePandocBin}: any failure here just means the `.log`'s
+ * compatibility section says "not checked", never a failed export. */
+async function resolveWordCompatibilityCheck(
+  progress: vscode.Progress<{ message?: string }>,
+): Promise<{ dotnetBin: string; oxmlValidatorDll: string } | undefined> {
+  if (!wordCompatibilityCheckEnabledSetting()) return undefined;
+  const oxmlValidatorDll = resolveOxmlValidatorDll();
+  if (!oxmlValidatorDll) return undefined;
+  try {
+    const dotnetBin = await ensureDotnet(extensionContext.globalStorageUri.fsPath, (event) => {
+      if (event.phase === 'downloading') {
+        progress.report({
+          message: vscode.l10n.t('Setting up .NET for the Word compatibility check (one-time download): {0}%', Math.round(event.fraction * 100)),
+        });
+      } else {
+        progress.report({ message: vscode.l10n.t('Setting up .NET for the Word compatibility check (one-time download)…') });
+      }
+    });
+    return { dotnetBin, oxmlValidatorDll };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    outputChannel.appendLine(`Word compatibility check unavailable this export: ${detail}`);
     return undefined;
   }
 }

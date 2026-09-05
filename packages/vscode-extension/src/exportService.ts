@@ -52,6 +52,20 @@ function resolveCliBin(): string {
   return join(dirname(pkgJsonPath), 'bin', 'md2nativedocx.mjs');
 }
 
+/** Resolve the vendored Word-compatibility validator DLL (ADR 0007 part D,
+ * `scripts/bundle-oxml-validator.mjs`) — same dist/vendor-vs-monorepo
+ * fallback shape as {@link resolveCliBin}. Returns `undefined` (not a
+ * thrown error) when neither exists: the monorepo dev tree only has it
+ * after running `npm run bundle` in `packages/vscode-extension` by hand
+ * (unlike the CLI, which resolves straight to the workspace package without
+ * needing a build step first) — callers must treat this the same as "the
+ * check is unavailable right now" as any other provisioning failure, never
+ * a hard error. */
+export function resolveOxmlValidatorDll(): string | undefined {
+  const vendored = join(__dirname, 'vendor', 'oxml-validator', 'oxmlvalidator.dll');
+  return existsSync(vendored) ? vendored : undefined;
+}
+
 /** Page/typography options (`export_customization_SPEC.md` §1.1-1.8/1.14,
  * "Lot 1") mirroring the `md2nativedocx.layout.*`/`md2nativedocx.typography.*`
  * settings. Every field optional — an absent one leaves the corresponding
@@ -106,6 +120,15 @@ export interface RunCliOptions {
   /** Mirrors `md2nativedocx.emoji.forceColorFont` (default `true` — only
    * `false` needs forwarding; the CLI's own default already matches `true`). */
   emojiFont?: boolean;
+  /** `dotnet` executable to run the Word-compatibility check with (ADR 0007
+   * part D) — resolved by `dotnetProvisioner.ts`, mirroring `pandocBin`
+   * above. Omitted when `md2nativedocx.wordCompatibilityCheck.enabled` is
+   * off or provisioning failed; the CLI simply skips the check then. */
+  dotnetBin?: string;
+  /** Path to the vendored `oxmlvalidator.dll` (see
+   * `scripts/bundle-oxml-validator.mjs`) — the *presence* of this option is
+   * what turns the check on at all, not just which `dotnet` runs it. */
+  oxmlValidatorDll?: string;
 }
 
 function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
@@ -137,6 +160,10 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (options.tocDepth !== undefined) env.MD2NATIVEDOCX_TOC_DEPTH = String(options.tocDepth);
   }
   if (options.emojiFont === false) env.MD2NATIVEDOCX_EMOJI_FONT = '0';
+  if (options.oxmlValidatorDll) {
+    env.MD2NATIVEDOCX_OXML_VALIDATOR_DLL = options.oxmlValidatorDll;
+    if (options.dotnetBin) env.MD2NATIVEDOCX_DOTNET_BIN = options.dotnetBin;
+  }
   return new Promise((resolve, reject) => {
     execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {

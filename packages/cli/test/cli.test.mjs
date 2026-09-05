@@ -433,3 +433,74 @@ test('Lot 1: layout/typography options are ignored (with an info note, not a cou
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// --- Word compatibility check (ADR 0007 part D, MD2NATIVEDOCX_OXML_VALIDATOR_DLL) ---
+
+test('Word compatibility check: not run (and not counted as a failure) when MD2NATIVEDOCX_OXML_VALIDATOR_DLL is unset', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n```\n');
+  try {
+    const { code, out } = runCli([md, '-o', docx]);
+    assert.equal(code, 0, out);
+    const log = readFileSync(join(dir, 'doc.log'), 'utf8');
+    assert.match(log, /--- Word compatibility check ---\nNot checked \(md2nativedocx\.wordCompatibilityCheck is off/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Word compatibility check: an unreachable MD2NATIVEDOCX_DOTNET_BIN degrades gracefully, never fails the export', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n```\n');
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: {
+        ...process.env,
+        MD2NATIVEDOCX_DOTNET_BIN: join(dir, 'no-such-dotnet-binary'),
+        MD2NATIVEDOCX_OXML_VALIDATOR_DLL: join(dir, 'no-such-validator.dll'),
+      },
+    });
+    assert.equal(code, 0, out);
+    const log = readFileSync(join(dir, 'doc.log'), 'utf8');
+    assert.match(log, /--- Word compatibility check ---\nNot checked \(could not run:/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Word compatibility check: reports 0 errors for a clean export when dotnet + the validator DLL are available', (t) => {
+  try {
+    execFileSync('dotnet', ['--version'], { stdio: 'pipe' });
+  } catch {
+    t.skip('dotnet SDK not found on PATH — see AGENTS.md → "Diagnosing \'Word won\'t open the file\'"');
+    return;
+  }
+
+  const validatorProject = join(here, '..', '..', '..', 'scripts', 'oxml-validator');
+  const buildDir = mkdtempSync(join(tmpdir(), 'md2nativedocx-oxmlvalidator-build-'));
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  try {
+    execFileSync('dotnet', ['publish', validatorProject, '--no-self-contained', '-c', 'Release', '-o', buildDir, '-p:UseAppHost=false'], {
+      stdio: 'pipe',
+    });
+    const dllPath = join(buildDir, 'oxmlvalidator.dll');
+    assert.ok(existsSync(dllPath), 'expected dotnet publish to produce oxmlvalidator.dll');
+
+    const md = join(dir, 'doc.md');
+    const docx = join(dir, 'doc.docx');
+    writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B --> C --> A\n```\n');
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '1', MD2NATIVEDOCX_OXML_VALIDATOR_DLL: dllPath },
+    });
+    assert.equal(code, 0, out);
+    const log = readFileSync(join(dir, 'doc.log'), 'utf8');
+    assert.match(log, /--- Word compatibility check ---\n0 error\(s\)/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(buildDir, { recursive: true, force: true });
+  }
+});

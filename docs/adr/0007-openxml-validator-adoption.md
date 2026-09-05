@@ -1,8 +1,14 @@
 # ADR 0007 — Adopter le validateur Open XML SDK comme pratique standard du projet
 
-- **Statut :** Accepté (mainteneur, 2026-09-05). Parties A/B (documentation + test opt-in)
-  implémentées ; partie C (devcontainer/CI) préparée dans une PR séparée, non fusionnée ; partie D
-  (auto-provisioning en production) planifiée, séquencée par étapes.
+- **Statut :** Accepté et implémenté en entier (mainteneur, 2026-09-05). Parties A/B (documentation
+  + test opt-in) faites. Partie C (devcontainer/CI) préparée dans une PR séparée
+  (`devcontainer/add-dotnet-sdk`, PR #7 sur GitHub), non fusionnée. **Partie D (auto-provisioning
+  en production) implémentée et vérifiée** : `dotnetProvisioner.ts`, `bundle-oxml-validator.mjs`,
+  câblage `.log` dans `md2nativedocx.mjs`, réglage `wordCompatibilityCheck.enabled` (y compris dans
+  le panneau Lot 4). Vérifié bout en bout dans un environnement totalement dépourvu de `.NET`
+  (`env -i`) : téléchargement + vérification SHA-512 + exécution du DLL réel, succès. **Reste à
+  faire par le mainteneur** : confirmation finale en conditions réelles (une vraie machine qui n'a
+  jamais eu `.NET`, via l'extension packagée).
 - **Date :** 2026-09-05
 - **Décideur :** Nicolas Bridelance (mainteneur).
 
@@ -74,6 +80,28 @@ suit l'architecture de Pandoc, pas seulement son esprit** :
 - Ne doit jamais transformer un export réussi en échec rapporté — un validateur indisponible ou en
   erreur produit une note "non vérifié" dans le `.log`, jamais un crash (même philosophie que
   `readWarningCount()` déjà existant côté extension VS Code).
+
+**Implémenté tel que décrit ci-dessus (2026-09-05)** :
+- `packages/vscode-extension/src/dotnetProvisioner.ts` — manifeste `DOTNET_RUNTIME_MANIFEST`
+  construit à partir des métadonnées de release **officielles** de Microsoft
+  (`dotnet/core`'s `release-notes/10.0/releases.json`, lues directement — jamais inventées),
+  runtime `10.0.4` (correspondant au SDK `10.0.200` pinné dans la PR C). Différence trouvée en
+  inspectant un vrai téléchargement : Microsoft publie des empreintes **SHA-512**, pas SHA-256
+  comme Pandoc — `sha512File()` ajouté en conséquence. `win32-arm64` a un vrai binaire natif
+  (contrairement à Pandoc, qui retombe sur `win32-x64`).
+- `packages/vscode-extension/scripts/bundle-oxml-validator.mjs` — `dotnet publish
+  --no-self-contained -p:UseAppHost=false` (~8,3 Mo, pas de lanceur natif spécifique à une
+  plateforme, inutile puisqu'on invoque toujours `dotnet oxmlvalidator.dll` explicitement).
+- `packages/cli/bin/md2nativedocx.mjs` — `runWordCompatibilityCheck()`/`formatWordCompatibility()`,
+  section dédiée dans le `.log`, opt-in via `MD2NATIVEDOCX_OXML_VALIDATOR_DLL` (absent = non
+  vérifié, jamais un échec).
+- `md2nativedocx.wordCompatibilityCheck.enabled` (défaut `true`), exposé aussi dans le panneau
+  Lot 4 (groupe "Avancé").
+- **Vérifié bout en bout dans un environnement sans aucun `.NET`** (`env -i`, seul `HOME` présent) :
+  téléchargement réel (~37 Mo, 2 s) + vérification SHA-512 + extraction + exécution du DLL
+  framework-dependent réel contre `handmade_samples/cycle-simple.docx`, résultat `errorCount: 0`
+  correct. Confirme que l'architecture "runtime officiel + DLL managé" fonctionne réellement de
+  bout en bout, pas seulement sur le papier.
 
 ## Conséquences
 

@@ -39,6 +39,10 @@ export interface ConfigState {
   tocEnabled: boolean;
   tocDepth: number;
   emojiForceColorFont: boolean;
+  /** ADR 0007 part D — validates the generated `.docx` against Word's own
+   * schema and reports the result in the export's `.log`. Never greyed by
+   * a custom reference doc (works regardless, same category as TOC/emoji). */
+  wordCompatibilityCheckEnabled: boolean;
   /** The effective `md2nativedocx.referenceDocument` value, `''` if unset.
    * Non-empty greys out every Lot 1 layout/typography control (spec §2.1/
    * §3.2 "Avancé" — confirmed with the maintainer alongside option (a)). */
@@ -274,7 +278,16 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef
         ? 'Un gabarit personnalisé est actif (md2nativedocx.referenceDocument) — les réglages de mise en page et typographie ci-dessus sont ignorés et grisés ; le sommaire et le rendu emoji restent actifs.'
         : "Renseignez md2nativedocx.referenceDocument (paramètres VS Code) pour utiliser votre propre gabarit Word au lieu des réglages ci-dessus.",
-    )}</p>` + `<p class="advanced-value">${escapeHtmlText(state.referenceDocument || '(aucun)')}</p>`;
+    )}</p>` +
+    `<p class="advanced-value">${escapeHtmlText(state.referenceDocument || '(aucun)')}</p>` +
+    row({
+      label: 'Vérification de conformité Word',
+      settingPath: 'wordCompatibilityCheck.enabled',
+      control: checkbox('wordCompatibilityCheck.enabled', state.wordCompatibilityCheckEnabled, false),
+      describe,
+      greyWhenCustomRef: ng,
+      hasCustomRef,
+    });
 
   const scopeSelector =
     `<div class="scope-toggle">` +

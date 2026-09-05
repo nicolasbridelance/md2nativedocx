@@ -88,6 +88,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       tocEnabled: config.get<boolean>('toc.enabled', false),
       tocDepth: config.get<number>('toc.depth', 3),
       emojiForceColorFont: config.get<boolean>('emoji.forceColorFont', true),
+      wordCompatibilityCheckEnabled: config.get<boolean>('wordCompatibilityCheck.enabled', true),
       referenceDocument: config.get<string>('referenceDocument', ''),
       scope: this.scope,
     };

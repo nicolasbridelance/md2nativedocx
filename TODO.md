@@ -718,20 +718,29 @@ de la spec, §5.
       schéma) — pas urgent, mais maintenant qu'on a l'outil pour les voir, à nettoyer un jour pour
       que `test:oxml-validate` puisse un jour rapporter un vrai "0 erreur" total, pas seulement
       "0 sous `/word/diagrams/`".
-- [ ] **Suivi — PR séparée `.devcontainer/`/`ci.yml` pour le SDK `.NET`** (ADR 0007 partie C,
-      confirmée avec le mainteneur, non fusionnée automatiquement) : ajouter `.NET` à
-      `.devcontainer/setup.sh` + `actions/setup-dotnet@v4` (version pinnée) dans `ci.yml`, et
-      câbler `npm run test:oxml-validate` dans le job principal (rapide, pas besoin de le réserver
-      au planning/releases comme `test:visual`).
-- [ ] **Suivi — auto-provisioning `.NET` en production** (ADR 0007 partie D, le plus gros
-      chantier) : `packages/vscode-extension/src/dotnetProvisioner.ts` (miroir de
-      `pandocProvisioner.ts` — runtime `.NET` officiel, pas des binaires natifs maison, voir la
-      nuance architecturale de l'ADR), `scripts/bundle-oxml-validator.mjs` (empaquette notre DLL
-      validateur *framework-dependent* dans le `.vsix`), câblage dans
-      `packages/cli/bin/md2nativedocx.mjs` (rapport de conformité dans le `.log` via
-      `writeExportLog()`, jamais un échec si le validateur est indisponible), réglage
-      `md2nativedocx.wordCompatibilityCheck.enabled`. Dépend de la PR `.NET` ci-dessus pour
-      construire le DLL au moment du `npm run package`.
+- [ ] **Suivi — PR séparée `.devcontainer/`/`ci.yml` pour le SDK `.NET`, ouverte** (ADR 0007 partie
+      C, confirmée avec le mainteneur, non fusionnée automatiquement) : branche
+      `devcontainer/add-dotnet-sdk`, **PR #7** sur GitHub, en attente de revue humaine. `.NET
+      10.0.200` (pinné) ajouté à `.devcontainer/setup.sh` via `dotnet-install.sh` officiel (même
+      approche tarball OS-indépendante que Pandoc, pas un paquet apt comme LibreOffice) +
+      `actions/setup-dotnet@v4` dans `ci.yml` + `npm run test:oxml-validate` câblé dans le job
+      principal.
+- [x] **Auto-provisioning `.NET` en production, implémenté et vérifié (2026-09-05)** (ADR 0007
+      partie D) : `packages/vscode-extension/src/dotnetProvisioner.ts` (miroir de
+      `pandocProvisioner.ts`, manifeste construit à partir des métadonnées de release
+      **officielles** de Microsoft, jamais inventées — empreintes SHA-512, pas SHA-256 comme
+      Pandoc, trouvaille faite en inspectant un vrai téléchargement), `scripts/
+      bundle-oxml-validator.mjs` (empaquette notre DLL validateur *framework-dependent*, ~8,3 Mo,
+      dans le `.vsix`), câblage dans `packages/cli/bin/md2nativedocx.mjs`
+      (`runWordCompatibilityCheck()`, section dédiée du `.log`, opt-in via
+      `MD2NATIVEDOCX_OXML_VALIDATOR_DLL`, jamais un échec d'export si indisponible), réglage
+      `md2nativedocx.wordCompatibilityCheck.enabled` (défaut `true`, exposé aussi dans le panneau
+      Lot 4). **Vérifié bout en bout dans un environnement sans aucun `.NET`** (`env -i`) :
+      téléchargement + vérification SHA-512 + exécution réelle du DLL, `errorCount: 0` correct.
+      458 tests du monorepo verts, lint/typecheck propres, `test:visual` 35/35 inchangé. Reste à
+      faire par le mainteneur : confirmation finale sur une vraie machine sans `.NET` via
+      l'extension packagée, une fois la PR `.NET` (ci-dessus) fusionnée pour pouvoir construire le
+      DLL au moment du `npm run package`.
 - [ ] **Tâche de suivi — pinning LibreOffice** : décider si on épingle la version de LibreOffice
       dans `setup.sh` (via un repo/pinning apt dédié) ou si on garde la version du repo apt.
       Actuellement non pinné (limitation documentée dans `setup.sh`). À trancher avant de
