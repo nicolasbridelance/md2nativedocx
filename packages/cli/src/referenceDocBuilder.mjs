@@ -23,15 +23,21 @@
  * down from `w:docDefaults` unless a run/paragraph in the Markdown source
  * overrides them explicitly.
  *
- * Only 3 of the 10 Lot 1 catalog entries are *not* a simple patch here and
- * are deliberately out of scope for this module (tracked separately in
- * TODO.md): 1.9 (dedicated landscape section for tables — a new Lua filter
- * concern, spec §2.3), 1.10 (TOC — a Pandoc flag + `settings.xml` patch),
- * 1.11 (table style presets — underspecified in the spec, no concrete
- * preset names to switch between yet), 1.13 (footer page numbers — needs a
+ * Two of the 10 Lot 1 catalog entries are *not* a simple patch here and are
+ * deliberately out of scope for this module (tracked separately in
+ * TODO.md): 1.10 (TOC — a Pandoc flag + `settings.xml` patch) and 1.11
+ * (table style presets — underspecified in the spec, no concrete preset
+ * names to switch between yet). 1.9 (dedicated landscape section for
+ * tables, "Lot 5") is mostly a new Lua filter concern (spec §2.3,
+ * `md2nativedocx.lua`) but this module still has one narrow stake in it:
+ * {@link buildReferenceDoc}'s `landscapeTables` option forces an explicit
+ * `sectPr` even with no other page option set, so the Lua filter's "return
+ * to portrait" paragraphs have a concrete page size/margins to agree with
+ * (see its own doc comment for why). 1.13 (footer page numbers) needed a
  * brand-new `word/footer*.xml` part + relationship + content-type override,
- * closer in shape to `postprocess.mjs`'s `injectSmartArtParts` than to a
- * same-path patch).
+ * closer in shape to `postprocess.mjs`'s `injectSmartArtParts` — implemented
+ * here anyway (`patchRelsForFooter`/`patchContentTypesForFooter` below)
+ * since {@link buildReferenceDoc} was already the right place to assemble it.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -317,11 +323,27 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
   const {
     pageSize, orientation, margins, marginsCustomCm,
     headingFont, bodyFont, fontSizePt, lineSpacing, justify, accentColor,
-    footerPageNumber,
+    footerPageNumber, landscapeTables,
   } = rawOptions;
 
   const needsFooter = footerPageNumber === true;
-  const needsSectPr = pageSize !== undefined || orientation !== undefined || margins !== undefined || needsFooter;
+  // Lot 5 (spec §1.9/§2.3) also forces an explicit sectPr, even with no
+  // pageSize/orientation/margins of its own: the Lua filter's "return to
+  // portrait" paragraphs need a concrete, known page size/margins to write
+  // — Pandoc's own unpatched default (an empty `<w:sectPr/>`, which resolves
+  // to whatever Letter/A4 default the local Pandoc/LibreOffice install
+  // falls back to) is not something this process can introspect, and a
+  // mismatch between that and this module's own A4/normal fallback would
+  // make the non-table sections of the document silently switch page size
+  // the moment landscape tables are turned on (found manually testing this
+  // lot end to end). So enabling landscapeTables alone pins the whole
+  // document to the same A4/normal-margins default `resolvePageSize`/
+  // `resolveMargins` already use elsewhere — a real, deliberate behavior
+  // change flagged in TODO.md, not a silent one: a user who wants a
+  // different page size must combine this toggle with the Lot 1 page size
+  // setting, same as any other Lot 1 option already requires today.
+  const needsSectPr =
+    pageSize !== undefined || orientation !== undefined || margins !== undefined || needsFooter || landscapeTables === true;
   const needsTheme = headingFont !== undefined || bodyFont !== undefined || accentColor !== undefined;
   const resolvedLineSpacing = resolveLineSpacing(lineSpacing);
   const needsStyles = fontSizePt !== undefined || resolvedLineSpacing !== null || justify === 'both';
@@ -379,8 +401,11 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
 
     if (needsSectPr) {
       const p = join(dir, 'word', 'document.xml');
-      const pgSize = pageSize !== undefined || orientation !== undefined ? resolvePageSize(pageSize, orientation) : null;
-      const mar = margins !== undefined ? resolveMargins(margins, marginsCustomCm) : null;
+      const pgSize =
+        pageSize !== undefined || orientation !== undefined || landscapeTables === true
+          ? resolvePageSize(pageSize, orientation)
+          : null;
+      const mar = margins !== undefined || landscapeTables === true ? resolveMargins(margins, marginsCustomCm) : null;
       writeFileSync(p, patchSectPr(readFileSync(p, 'utf8'), { pgSize, margins: mar, footerRId }), 'utf8');
     }
 

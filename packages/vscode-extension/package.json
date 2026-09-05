@@ -210,6 +210,11 @@
           "default": false,
           "markdownDescription": "%configuration.layout.footerPageNumber.markdownDescription%"
         },
+        "md2nativedocx.layout.landscapeTables": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%configuration.layout.landscapeTables.markdownDescription%"
+        },
         "md2nativedocx.toc.enabled": {
           "type": "boolean",
           "default": false,

@@ -633,36 +633,56 @@ de la spec, §5.
         grisage conditionnel, cohérence `describe()`), 2 nouveaux `test/suite/extension.test.ts`
         (réels). 430 tests unitaires + 7 tests Extension Development Host au total, tous verts ;
         `test:visual` 35/35 inchangé.
-- [ ] **Lot 5 — tableaux en section paysage dédiée** (spec §1.9, §2.3) : le saut de section
-      s'insère avant le **titre** qui précède le tableau, pas avant le tableau. Nouveau filtre
-      Lua (`Pandoc(doc)` avec lookahead `Header`→`Table`, en plus du seul `CodeBlock` mermaid
-      traité aujourd'hui) — piège OOXML documenté dans la spec (le `sectPr` de fin de section se
-      code dans le dernier paragraphe de la section qui se termine, pas en tête de la suivante).
-      **Spike dédié réalisé (2026-09-05)** — `docs/adr/0005-landscape-table-section-spike.md`,
-      décision d'implémentation en attente du mainteneur :
+- [x] **Lot 5 — tableaux en section paysage dédiée, livré (2026-09-05)** (spec §1.9, §2.3) :
+      spike dédié réalisé d'abord (`docs/adr/0005-landscape-table-section-spike.md`), puis option
+      (a) de ce spike implémentée en entier (solution complète, pas le périmètre réduit (b)).
       - Piège documenté par la spec **confirmé et précisé par rendu réel** (pas juste lu) : le
-        paragraphe inséré avant le `Header` doit porter les réglages **portrait** (ceux de la
-        section qui se termine là), celui inséré après le `Table` doit porter les réglages
-        **paysage** (ceux de la section qui vient de s'ouvrir) — l'inverse d'une lecture littérale
-        naïve de "bascule avant le Header".
-      - **Piège supplémentaire trouvé par le spike, absent de la spec** : une section
-        complètement vide (zéro paragraphe de contenu entre deux bascules) rend une **page
-        blanche supplémentaire** sous LibreOffice. Deux cas concrets confirmés par rendu réel : (1)
-        deux paires `Header`→`Table` adjacentes sans contenu entre elles, (2) un tableau paysage
-        qui est le **dernier bloc du document** — ce n'est pas un cas rare, reproduit sur
-        l'exemple le plus simple possible (un seul tableau en fin de document).
-      - Conséquence sur le découpage : le cas "fin de document" ne peut **pas** se corriger dans le
-        filtre Lua seul (le `sectPr` final de `<w:body>` est un artefact du writer Pandoc/
-        `reference.docx`, confirmé repris tel quel du gabarit quand non vide — même mécanique que
-        Lot 1 — mais pas exposé dans `doc.blocks`) : il faudra une chirurgie XML dans
-        `postprocess.mjs` en plus du filtre Lua (même catégorie que le déplacement du patch
-        `updateFields` du TOC au Lot 3). Le paragraphe "retour au portrait" doit aussi être
-        paramétré par le `pgSz`/`pgMar` réellement actif (Lot 1), pas une constante Letter figée.
-      - Deux options pour la suite, non tranchées : (a) implémenter la solution complète (fusion
-        des paires `Header`→`Table` contiguës + chirurgie `postprocess.mjs` fin-de-document +
-        paramétrage dynamique), ou (b) réduire le périmètre v1 en avertissant explicitement sur
-        les tableaux contigus/en fin de document plutôt que les supporter tout de suite.
-      Lot le plus risqué du chantier, dépend du Lot 1.
+        paragraphe inséré avant le `Header` porte les réglages **portrait** (ceux de la section qui
+        se termine là), celui inséré après le `Table` porte les réglages **paysage** (ceux de la
+        section qui vient de s'ouvrir) — l'inverse d'une lecture littérale naïve de "bascule avant
+        le Header". Nouveau filtre Lua `Pandoc(doc)` (lookahead direct `Header`→`Table`, blocs non
+        adjacents = hors scope assumé) — `md2nativedocx.lua` doit maintenant retourner **une liste
+        de deux filtres** (`{mermaid_filter, landscape_table_filter}`) plutôt qu'un seul jeu de
+        fonctions globales : un `Pandoc(doc)` défini dans la même table qu'un `CodeBlock` ferait
+        ignorer ce dernier par Pandoc (comportement documenté de l'API Lua, pas un bug) — piège non
+        prévu par le spike, trouvé en écrivant l'implémentation réelle.
+      - **Piège supplémentaire du spike (section vide = page blanche) corrigé sans logique de
+        fusion côté Lua** : le filtre émet la paire portrait/paysage indépendamment pour chaque
+        `Header`→`Table` trouvé, sans essayer de fusionner les paires contiguës ni de détecter la
+        fin de document — deux nouvelles fonctions pures dans `postprocess.mjs`
+        (`collapseAdjacentSectionBreaks`/`collapseTrailingLandscapeSection`) nettoient les deux cas
+        généralement, après coup, sur le XML final. Un paragraphe ne portant qu'un `sectPr` est une
+        forme que Pandoc lui-même n'émet jamais (confirmé), donc reconnaissable sans ambiguïté.
+        **Bug trouvé et corrigé pendant l'implémentation (pas anticipé par le spike)** : la première
+        version de ces regex utilisait une capture `[\s\S]*?` non bornée pour le contenu du
+        `sectPr`, qui a **avalé un `Header`+`Table` entier** en cherchant la *prochaine* occurrence
+        du motif de fermeture au lieu de la sienne propre — `.docx` corrompu, trouvé en testant
+        vraiment le pipeline CLI de bout en bout (pas juste en lisant le XML). Corrigé en restreignant
+        la capture aux seuls enfants auto-fermants (`<w:pgSz/>`/`<w:pgMar/>`), qui ne peuvent
+        structurellement jamais contenir un `<w:p>`/`<w:tbl>` imbriqué.
+      - **Dépendance cachée trouvée en testant le pipeline réel (pas dans le spike)** : le paragraphe
+        "retour au portrait" a besoin de connaître le format de page *réellement* actif — le laisser
+        par défaut (aucun réglage Lot 1 touché) exposait un vrai bug : le filtre suppose A4 (le
+        défaut de ce projet) alors que le `reference.docx` non patché de Pandoc retombe sur son
+        propre défaut Letter/A4 dépendant de l'environnement, désynchronisant silencieusement les
+        sections portrait du reste du document. Corrigé : activer `landscapeTables` seul (sans
+        toucher page/marges) force maintenant un `sectPr` explicite A4/marges normales dans le
+        `reference.docx` généré (`referenceDocBuilder.mjs`, `buildReferenceDoc`) — **changement de
+        comportement réel et assumé, pas silencieux** : un utilisateur voulant un autre format doit
+        combiner ce réglage avec ceux du Lot 1, comme n'importe quel autre réglage de ce lot déjà.
+      - Câblage : `MD2NATIVEDOCX_LANDSCAPE_TABLES` + 6 variables d'env de géométrie (page/marges en
+        twips, même convention que `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY`) transmises au filtre Lua ;
+        réglage VS Code `md2nativedocx.layout.landscapeTables` (groupé avec le reste du Lot 1 pour
+        la règle de conflit `referenceDocument`, pas avec TOC/emoji), exposé dans le panneau Lot 4
+        (groupe "Mise en page") — la doc-comment de `configPanelHtml.ts` qui excluait spécifiquement
+        1.9 de ce panneau ("pas de contrôle pour un réglage qui n'existe pas encore") mise à jour en
+        conséquence.
+      - Tests : 9 nouveaux `postprocess.test.mjs` (incluant un test de non-régression sur le bug de
+        capture ci-dessus), 4 nouveaux `filter.test.mjs` (bout-en-bout via un vrai `pandoc`), 1
+        `reference-doc-builder.test.mjs`, 4 `cli.test.mjs` (les 3 scénarios du spike + le défaut
+        off), 2 `configPanelHtml.test.ts`. 449 tests unitaires + 7 tests Extension Development Host
+        au total, tous verts ; `test:visual` 35/35 à 0,000 % de diff (comportement par défaut prouvé
+        strictement inchangé) ; lint + typecheck propres partout.
 - [ ] Lot 6 (optionnel, non demandé explicitement) — numérotation automatique des titres (1.12),
       raffinements de style de tableau (1.11).
 

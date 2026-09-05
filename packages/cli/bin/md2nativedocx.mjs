@@ -23,7 +23,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
-import { buildReferenceDoc, resolveMaxDrawingExtentEmu } from '../src/referenceDocBuilder.mjs';
+import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from '../src/referenceDocBuilder.mjs';
 
 // The pandoc-filter package may be hoisted to the repo root node_modules (npm
 // workspaces) or nested under packages/cli/node_modules. Resolve whichever
@@ -94,6 +94,14 @@ function readLayoutOptionsFromEnv() {
     // unlike settings.xml. See referenceDocBuilder.mjs's patchRelsForFooter
     // doc comment for the empirical confirmation.
     footerPageNumber: process.env.MD2NATIVEDOCX_FOOTER_PAGE_NUMBER === '1' ? true : undefined,
+    // Lot 5 (spec §1.9/§2.3): dedicated landscape section for a title+table
+    // pair. Grouped with the rest of Lot 1 (not treated like TOC/emoji,
+    // which work regardless of the reference doc): the Lua filter needs to
+    // know the document's actual page geometry (see landscapeTablesGeometry
+    // below) to build a correct "return to portrait" section, which we
+    // don't have for a custom `referenceDocument` — same silent-ignore rule
+    // as the rest of this function's fields (spec §2.1, option (a)).
+    landscapeTables: process.env.MD2NATIVEDOCX_LANDSCAPE_TABLES === '1' ? true : undefined,
   };
 }
 
@@ -149,6 +157,18 @@ const EFFECTIVE_REFERENCE_DOC_PATH = hasCustomReferenceDoc
 // font changed, not the page): a page size/orientation/margins choice must
 // still reach the translator so it doesn't keep assuming Letter portrait.
 const maxDrawingExtentEmu = hasCustomReferenceDoc ? null : resolveMaxDrawingExtentEmu(layoutOptions);
+
+// Lot 5 (spec §1.9/§2.3): the Lua filter's "return to portrait" section
+// needs the document's *actual* page geometry (whatever Lot 1 resolved, or
+// A4/normal-margins by default) — same resolution `buildReferenceDoc` uses
+// for `word/document.xml`'s own `sectPr`, computed independently here since
+// this needs to reach the Lua filter (an env var) rather than patch a file.
+const landscapeTablesGeometry = layoutOptions.landscapeTables
+  ? {
+      pgSize: resolvePageSize(layoutOptions.pageSize, layoutOptions.orientation),
+      margins: resolveMargins(layoutOptions.margins, layoutOptions.marginsCustomCm),
+    }
+  : null;
 
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx> [options]
 
@@ -285,6 +305,15 @@ async function main() {
   if (maxDrawingExtentEmu) {
     pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CX = String(Math.round(maxDrawingExtentEmu.cx));
     pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CY = String(Math.round(maxDrawingExtentEmu.cy));
+  }
+  if (landscapeTablesGeometry) {
+    pandocEnv.MD2NATIVEDOCX_LANDSCAPE_TABLES = '1';
+    pandocEnv.MD2NATIVEDOCX_PAGE_W_TWIPS = String(landscapeTablesGeometry.pgSize.w);
+    pandocEnv.MD2NATIVEDOCX_PAGE_H_TWIPS = String(landscapeTablesGeometry.pgSize.h);
+    pandocEnv.MD2NATIVEDOCX_MARGIN_TOP_TWIPS = String(landscapeTablesGeometry.margins.top);
+    pandocEnv.MD2NATIVEDOCX_MARGIN_RIGHT_TWIPS = String(landscapeTablesGeometry.margins.right);
+    pandocEnv.MD2NATIVEDOCX_MARGIN_BOTTOM_TWIPS = String(landscapeTablesGeometry.margins.bottom);
+    pandocEnv.MD2NATIVEDOCX_MARGIN_LEFT_TWIPS = String(landscapeTablesGeometry.margins.left);
   }
 
   execFile(pandocBin, pandocArgs, { cwd, env: pandocEnv }, (err, stdout, stderr) => {

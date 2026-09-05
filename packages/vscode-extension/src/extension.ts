@@ -136,6 +136,7 @@ function layoutOptionsSetting(): LayoutOptions | undefined {
     justify: explicitSetting<string>(config, 'typography.justify'),
     accentColor: trimmedOrUndefined(explicitSetting<string>(config, 'typography.accentColor')),
     footerPageNumber: explicitSetting<boolean>(config, 'layout.footerPageNumber'),
+    landscapeTables: explicitSetting<boolean>(config, 'layout.landscapeTables'),
   };
   return Object.values(options).some((v) => v !== undefined) ? options : undefined;
 }

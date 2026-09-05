@@ -10,6 +10,8 @@ import {
   injectSmartArtParts,
   repositionTocAfterTitle,
   forceEmojiColorFont,
+  collapseAdjacentSectionBreaks,
+  collapseTrailingLandscapeSection,
   postProcessDocx,
 } from '../src/postprocess.mjs';
 
@@ -418,5 +420,106 @@ test('postProcessDocx: emojiFont: false opts out entirely', () => {
     const document = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
     assert.ok(!document.includes('Segoe UI Emoji'), 'emojiFont: false must not force any font');
     assert.ok(document.includes('✅ fait'), 'the emoji run must stay a single, unsplit run');
+  });
+});
+
+// --- collapseAdjacentSectionBreaks / collapseTrailingLandscapeSection
+// (spec §1.9/§2.3, "Lot 5" — ADR 0005's blank-page trap) ---
+//
+// Fixtures are the exact shape `md2nativedocx.lua` emits: a `<w:p>` whose
+// only content is `<w:pPr><w:sectPr>...</w:sectPr></w:pPr>` — Pandoc itself
+// never produces this shape (confirmed empirically, see the doc comment on
+// these functions), so it is safe to treat it as unambiguously ours.
+
+const PORTRAIT_SECTPR_PARA =
+  '<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/>' +
+  '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/>' +
+  '</w:sectPr></w:pPr></w:p>';
+const LANDSCAPE_SECTPR_PARA =
+  '<w:p><w:pPr><w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' +
+  '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/>' +
+  '</w:sectPr></w:pPr></w:p>';
+const HEADER_AND_TABLE =
+  '<w:p><w:pPr><w:pStyle w:val="Heading2" /></w:pPr><w:r><w:t>Table one</w:t></w:r></w:p>' +
+  '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>a</w:t></w:r></w:p></w:tc></w:tr></w:tbl>';
+const BOOKMARK_PAIR = '<w:bookmarkStart w:id="1" w:name="x" /><w:bookmarkEnd w:id="1" />';
+
+test('collapseAdjacentSectionBreaks: no-op on a document with no sectPr-only paragraph', () => {
+  const xml = `<w:document><w:body>${HEADER_AND_TABLE}<w:sectPr /></w:body></w:document>`;
+  assert.equal(collapseAdjacentSectionBreaks(xml), xml);
+});
+
+test('collapseAdjacentSectionBreaks: deletes two directly-adjacent sectPr-only paragraphs, keeping the gap', () => {
+  const xml =
+    `<w:document><w:body>${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}${BOOKMARK_PAIR}${PORTRAIT_SECTPR_PARA}` +
+    `${HEADER_AND_TABLE}<w:sectPr /></w:body></w:document>`;
+  const out = collapseAdjacentSectionBreaks(xml);
+  assert.ok(!out.includes('<w:sectPr>'), 'both synthetic sectPr paragraphs must be gone');
+  assert.ok(out.includes(BOOKMARK_PAIR), 'the bookmark gap between them must be preserved');
+  assert.equal((out.match(/Table one/g) ?? []).length, 2, 'both real Header+Table blocks must survive untouched');
+});
+
+test('collapseAdjacentSectionBreaks: does not touch a Header+Table sitting between two matches (regression: must not swallow real content)', () => {
+  // Reproduces the bug found empirically: an early version's lazy capture
+  // matched clear across an entire Header+Table block to reach a *later*
+  // occurrence of the closing sequence, corrupting the document. Real
+  // content between two sectPr-only paragraphs must block the collapse.
+  const xml =
+    `<w:document><w:body>${PORTRAIT_SECTPR_PARA}${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}` +
+    `<w:sectPr /></w:body></w:document>`;
+  const out = collapseAdjacentSectionBreaks(xml);
+  assert.equal(out, xml, 'a real Header+Table between two sectPr paragraphs must prevent collapsing');
+});
+
+test('collapseAdjacentSectionBreaks: collapses a run of 3 contiguous pairs completely, not just pairwise', () => {
+  const xml =
+    `<w:document><w:body>${HEADER_AND_TABLE}` +
+    `${LANDSCAPE_SECTPR_PARA}${PORTRAIT_SECTPR_PARA}${HEADER_AND_TABLE}` +
+    `${LANDSCAPE_SECTPR_PARA}${PORTRAIT_SECTPR_PARA}${HEADER_AND_TABLE}` +
+    `${LANDSCAPE_SECTPR_PARA}<w:sectPr /></w:body></w:document>`;
+  const out = collapseAdjacentSectionBreaks(xml);
+  assert.equal((out.match(/<w:sectPr>/g) ?? []).length, 1, 'only the final closing paragraph should remain');
+  assert.equal((out.match(/Table one/g) ?? []).length, 3, 'all three real Header+Table blocks must survive');
+});
+
+test('collapseTrailingLandscapeSection: merges into a self-closed body-final sectPr and drops the paragraph', () => {
+  const xml = `<w:document><w:body>${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}<w:sectPr /></w:body></w:document>`;
+  const out = collapseTrailingLandscapeSection(xml);
+  assert.equal((out.match(/<w:sectPr/g) ?? []).length, 1, 'only one sectPr should remain');
+  assert.match(out, /<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"\/>[\s\S]*<\/w:sectPr><\/w:body>/);
+});
+
+test('collapseTrailingLandscapeSection: merges into an already-populated body-final sectPr (Lot 1 page settings), overwriting it', () => {
+  const xml =
+    `<w:document><w:body>${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}` +
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>';
+  const out = collapseTrailingLandscapeSection(xml);
+  assert.ok(!out.includes('12240'), 'the old (now-superseded) body-final page size must be replaced, not kept alongside');
+  assert.match(out, /orient="landscape"/);
+});
+
+test('collapseTrailingLandscapeSection: tolerates bookmark tags between the paragraph and the body-final sectPr', () => {
+  const xml = `<w:document><w:body>${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}${BOOKMARK_PAIR}<w:sectPr /></w:body></w:document>`;
+  const out = collapseTrailingLandscapeSection(xml);
+  assert.ok(out.includes(BOOKMARK_PAIR));
+  assert.match(out, /orient="landscape"/);
+});
+
+test('collapseTrailingLandscapeSection: no-op when real content follows the landscape section', () => {
+  const xml =
+    `<w:document><w:body>${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}` +
+    `<w:p><w:r><w:t>After</w:t></w:r></w:p><w:sectPr /></w:body></w:document>`;
+  assert.equal(collapseTrailingLandscapeSection(xml), xml);
+});
+
+test('postProcessDocx: collapses a trailing landscape table section end to end (no separate opt-in flag — always safe to run)', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'doc.docx');
+    const documentXml = `<w:document><w:body>${HEADER_AND_TABLE}${LANDSCAPE_SECTPR_PARA}<w:sectPr /></w:body></w:document>`;
+    buildMinimalDocx(docx, documentXml);
+    postProcessDocx(docx);
+    const document = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.equal((document.match(/<w:sectPr/g) ?? []).length, 1);
+    assert.match(document, /orient="landscape"/);
   });
 });

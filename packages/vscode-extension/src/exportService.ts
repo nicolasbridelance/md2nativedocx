@@ -73,6 +73,11 @@ export interface LayoutOptions {
   justify?: string;
   accentColor?: string;
   footerPageNumber?: boolean;
+  /** Mirrors `md2nativedocx.layout.landscapeTables` (spec §1.9/§2.3, "Lot 5").
+   * Grouped with the rest of Lot 1 (not TOC/emoji): the CLI needs the
+   * document's actual page geometry to build a correct "return to portrait"
+   * section, which isn't known for a custom `referenceDocument` either. */
+  landscapeTables?: boolean;
 }
 
 export interface RunCliOptions {
@@ -125,6 +130,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (layout.justify) env.MD2NATIVEDOCX_JUSTIFY = layout.justify;
     if (layout.accentColor) env.MD2NATIVEDOCX_ACCENT_COLOR = layout.accentColor;
     if (layout.footerPageNumber === true) env.MD2NATIVEDOCX_FOOTER_PAGE_NUMBER = '1';
+    if (layout.landscapeTables === true) env.MD2NATIVEDOCX_LANDSCAPE_TABLES = '1';
   }
   if (options.toc === true) {
     env.MD2NATIVEDOCX_TOC = '1';

@@ -265,6 +265,90 @@ export function repositionTocAfterTitle(documentXml) {
 }
 
 /**
+ * Landscape table sections (spec §1.9/§2.3, "Lot 5") — cleanup for a trap
+ * found empirically (ADR 0005), not documented by the spec itself: the Lua
+ * filter (`md2nativedocx.lua`) emits one `<w:sectPr>`-only paragraph before
+ * every matched `Header` and one after its `Table`, independently for each
+ * match. Two situations leave one of those paragraphs closing a section with
+ * literally no other content in it, which Word/LibreOffice both render as an
+ * extra blank page:
+ *
+ *  1. Two matches directly adjacent in the source (no content between one
+ *     Table and the next Header) — the "close" paragraph after the first
+ *     Table ends up immediately next to the "open" paragraph before the
+ *     second Header, with nothing real between them.
+ *  2. A matched Table is the very last content in the document — its
+ *     "close" (landscape) paragraph ends up immediately before the body's
+ *     own final `<w:sectPr>`, with nothing between them either.
+ *
+ * Both are fixed by a single shared building block: a `<w:sectPr>`-only
+ * paragraph (`<w:p><w:pPr><w:sectPr>...</w:sectPr></w:pPr></w:p>`) is a
+ * shape Pandoc itself never emits (confirmed empirically — its own section
+ * marker is always a bare `<w:sectPr>` directly under `<w:body>`, never
+ * wrapped in a paragraph), so matching it structurally is unambiguous: it
+ * can only be one of ours. Both functions tolerate `<w:bookmarkStart/End>`
+ * tags in the gap (Pandoc auto-brackets headers with these; confirmed by the
+ * spike that they can land between two of our synthetic paragraphs) without
+ * treating that gap as real content.
+ */
+
+// The captured group must only ever match `<w:pgSz/>`/`<w:pgMar/>`-shaped
+// self-closing children (what `md2nativedocx.lua` actually emits) — NOT
+// `[\s\S]*?`. A lazy dot-all group has no way to know it should stop at the
+// paragraph's own `</w:sectPr></w:pPr></w:p>` rather than a later one
+// further down the document; found the hard way (a real corrupted .docx)
+// when it silently swallowed an entire Header+Table in between two of our
+// paragraphs, matching this pattern's *later* occurrence instead of the
+// intended one. A self-closing-only child element can never contain a
+// nested `<w:p>`/`<w:tbl>`, which is what keeps the match from crossing into
+// real content.
+const SECTPR_INNER = '(?:<w:[A-Za-z]+(?:\\s[^>]*)?\\/>)*';
+const SECTPR_ONLY_PARA = `<w:p><w:pPr><w:sectPr>(${SECTPR_INNER})<\\/w:sectPr><\\/w:pPr><\\/w:p>`;
+const BOOKMARK_GAP = '((?:\\s*<w:bookmark(?:Start|End)\\b[^>]*\\/>)*\\s*)';
+
+/**
+ * Case 1 above: collapse two `<w:sectPr>`-only paragraphs that end up
+ * directly adjacent (only bookmark tags/whitespace between them) into
+ * nothing, keeping the gap. Deleting both removes the empty section they
+ * would otherwise bracket, merging the sections on either side of the pair
+ * into one continuous section — closed by whatever real `<w:sectPr>`
+ * eventually follows (another one of ours, or the document's own final
+ * one). Looped (not a single global replace) so a run of 3+ adjacent
+ * matches (e.g. three consecutive landscape tables) collapses completely,
+ * not just pairwise.
+ */
+export function collapseAdjacentSectionBreaks(documentXml) {
+  const re = new RegExp(SECTPR_ONLY_PARA + BOOKMARK_GAP + SECTPR_ONLY_PARA, 'g');
+  let out = documentXml;
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(re, '$2');
+  } while (out !== prev);
+  return out;
+}
+
+/**
+ * Case 2 above: when a `<w:sectPr>`-only paragraph is the last thing before
+ * the body's own final `<w:sectPr>` (self-closed or not — a custom
+ * `reference.docx`/Lot 1 page settings can leave it populated), merge that
+ * paragraph's settings into the body-final `<w:sectPr>` and drop the
+ * paragraph. The section it described (a matched Table with nothing after
+ * it in the document) becomes the document's actual last section instead of
+ * a separate, contentless one. Must run after {@link collapseAdjacentSectionBreaks}
+ * so a run of adjacent matches at the very end of the document is already
+ * reduced to one paragraph by the time this looks for it.
+ */
+export function collapseTrailingLandscapeSection(documentXml) {
+  const re = new RegExp(
+    SECTPR_ONLY_PARA + BOOKMARK_GAP + '<w:sectPr(?:\\s*\\/>|>[\\s\\S]*?<\\/w:sectPr>)\\s*<\\/w:body>',
+  );
+  const match = documentXml.match(re);
+  if (!match) return documentXml;
+  return documentXml.replace(re, `$2<w:sectPr>$1</w:sectPr></w:body>`);
+}
+
+/**
  * Post-process a .docx file in place: read `word/document.xml`, apply the
  * corrections above, and write the entry back into the archive. When `toc`
  * is true (spec §1.10/§2.2, "Lot 3"), also patches `word/settings.xml` to
@@ -292,6 +376,7 @@ export function postProcessDocx(docxPath, { toc = false, emojiFont = true } = {}
     const documentPath = join(dir, 'word', 'document.xml');
     const originalDocument = readFileSync(documentPath, 'utf8');
     let patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
+    patchedDocument = collapseTrailingLandscapeSection(collapseAdjacentSectionBreaks(patchedDocument));
     if (emojiFont) patchedDocument = forceEmojiColorFont(patchedDocument);
     let changed = false;
     if (patchedDocument !== originalDocument) {

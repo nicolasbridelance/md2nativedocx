@@ -78,6 +78,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       marginsCustomBottom: config.get<number>('layout.marginsCustomBottom', 2.5),
       marginsCustomLeft: config.get<number>('layout.marginsCustomLeft', 2.5),
       footerPageNumber: config.get<boolean>('layout.footerPageNumber', false),
+      landscapeTables: config.get<boolean>('layout.landscapeTables', false),
       headingFont: config.get<string>('typography.headingFont', ''),
       bodyFont: config.get<string>('typography.bodyFont', ''),
       fontSize: config.get<number>('typography.fontSize', 11),

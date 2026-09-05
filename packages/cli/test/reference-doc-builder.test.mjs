@@ -331,3 +331,21 @@ test('buildReferenceDoc: footerPageNumber adds the footer part + relationship + 
     rmSync(result.dir, { recursive: true, force: true });
   }
 });
+
+test('buildReferenceDoc: landscapeTables alone (no pageSize/orientation/margins) still writes an explicit A4/normal sectPr', () => {
+  // Lot 5 (spec §1.9/§2.3): the Lua filter's "return to portrait" paragraphs
+  // need a concrete page size/margins to agree with — leaving the reference
+  // doc's own sectPr empty here would let it fall back to whatever Letter/A4
+  // default Pandoc/LibreOffice happen to resolve locally, which would then
+  // disagree with the filter's own A4/normal fallback (found manually
+  // testing this lot end to end: the non-table sections of the document
+  // silently switched page size around the landscape table).
+  const result = buildReferenceDoc(REFERENCE_DOC, { landscapeTables: true });
+  try {
+    const documentXml = execFileSync('unzip', ['-p', result.path, 'word/document.xml'], { encoding: 'utf8' });
+    assert.match(documentXml, /<w:pgSz w:w="11906" w:h="16838"\/>/, 'must default to A4 portrait, not stay empty');
+    assert.match(documentXml, /<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417"/, 'must default to the "normal" margin preset');
+  } finally {
+    rmSync(result.dir, { recursive: true, force: true });
+  }
+});

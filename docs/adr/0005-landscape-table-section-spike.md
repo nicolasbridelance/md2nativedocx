@@ -1,9 +1,11 @@
 # ADR 0005 — Spike : tableaux en section paysage dédiée (Lot 5, spec §1.9/§2.3)
 
-- **Statut :** Spike réalisé, implémentation **non commencée** (décision d'implémentation en
-  attente du mainteneur, voir "Décision" ci-dessous).
+- **Statut :** Spike réalisé, puis option (a) ("Décision" ci-dessous) implémentée en entier le
+  même jour — voir `TODO.md`, entrée Lot 5. Ce document reste la trace des faits empiriques
+  découverts par le spike ; les détails d'implémentation (dont un piège supplémentaire trouvé en
+  écrivant le code réel, pas anticipé ici) sont dans `TODO.md`, pas dupliqués ici.
 - **Date :** 2026-09-05
-- **Décideur :** à trancher avec le mainteneur — ce document restitue les faits empiriques.
+- **Décideur :** Nicolas Bridelance (mainteneur) — option (a) confirmée avant implémentation.
 
 ## Contexte
 
@@ -105,17 +107,20 @@ paysage.
 
 ## Décision
 
-**En attente du mainteneur.** Ce spike confirme que le Lot 5 est correctement noté "L" (le plus
-risqué) dans la spec, et révèle un piège plus large que celui déjà anticipé (pages blanches sur
-tableaux contigus ou en fin de document, pas seulement le décalage d'un paragraphe). Deux options
-pour la suite :
+**Option (a) retenue et implémentée en entier (2026-09-05, même jour que ce spike).** Ce spike a
+confirmé que le Lot 5 était correctement noté "L" (le plus risqué) dans la spec, et a révélé un
+piège plus large que celui déjà anticipé par la spec (pages blanches sur tableaux contigus ou en
+fin de document, pas seulement le décalage d'un paragraphe) :
 
-- (a) Implémenter la solution complète ci-dessus (fusion des paires contiguës + chirurgie
-  `postprocess.mjs` pour le cas de fin de document + paramétrage dynamique du retour portrait).
+- (a) **[retenue]** Implémenter la solution complète ci-dessus (fusion des sections vides
+  résultant de paires contiguës ou d'une fin de document + paramétrage dynamique du retour
+  portrait) — livrée, voir `TODO.md` (Lot 5) pour le détail (dont un bug de regex et une
+  dépendance de géométrie de page trouvés en écrivant le code réel, ni l'un ni l'autre anticipé
+  par ce spike).
 - (b) Réduire le périmètre v1 : n'accepter que les tableaux qui ne sont **ni** contigus à un autre
-  tableau paysage **ni** en toute fin de document, avec un avertissement explicite sinon (même
-  mécanisme que les autres garde-fous "reconnu et averti" du projet) — scope plus petit, livrable
-  plus vite, quitte à couvrir le reste plus tard.
+  tableau paysage **ni** en toute fin de document — non retenue, l'implémentation complète s'est
+  révélée abordable (les deux mécanismes en jeu, `RawBlock('openxml', ...)` et la chirurgie ZIP
+  post-Pandoc, étaient déjà éprouvés ailleurs dans le projet).
 
 ## Conséquences
 

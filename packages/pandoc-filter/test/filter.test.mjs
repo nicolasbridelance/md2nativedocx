@@ -72,3 +72,77 @@ test('pandoc filter leaves non-mermaid blocks untouched', () => {
   const xml = runPandoc('```js\nconst x = 1;\n```\n');
   assert.ok(!xml.includes('wpg:wgp'));
 });
+
+// --- Landscape table sections (spec §1.9/§2.3, "Lot 5") ---
+//
+// The block-detection/sectPr-placement half of ADR 0005's spike, now wired
+// into the real filter. The blank-page cleanup (adjacent/trailing matches)
+// is a separate concern, tested in packages/cli/test/postprocess.test.mjs
+// (`collapseAdjacentSectionBreaks`/`collapseTrailingLandscapeSection`) —
+// this file only tests what the Lua filter itself emits.
+
+const LANDSCAPE_ENV = {
+  ...process.env,
+  PANDOC_FILTER_CORE: coreBin,
+  MD2NATIVEDOCX_LANDSCAPE_TABLES: '1',
+  MD2NATIVEDOCX_PAGE_W_TWIPS: '11906',
+  MD2NATIVEDOCX_PAGE_H_TWIPS: '16838',
+  MD2NATIVEDOCX_MARGIN_TOP_TWIPS: '1417',
+  MD2NATIVEDOCX_MARGIN_RIGHT_TWIPS: '1417',
+  MD2NATIVEDOCX_MARGIN_BOTTOM_TWIPS: '1417',
+  MD2NATIVEDOCX_MARGIN_LEFT_TWIPS: '1417',
+};
+
+function runPandocWithEnv(markdown, env) {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, markdown);
+  try {
+    execFileSync('pandoc', [md, '-o', docx, '--lua-filter', filter], { env });
+    return execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const HEADER_TABLE_MD = '# Intro\n\nParagraphe avant.\n\n## Section title before table\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n# After\n\nParagraphe apres.\n';
+
+test('landscape tables: off by default — no sectPr paragraph is inserted around a Header+Table', () => {
+  const xml = runPandocWithEnv(HEADER_TABLE_MD, { ...process.env, PANDOC_FILTER_CORE: coreBin });
+  assert.ok(!xml.includes('<w:sectPr>'), 'MD2NATIVEDOCX_LANDSCAPE_TABLES unset must leave document.xml unchanged');
+});
+
+test('landscape tables: wraps a Header immediately followed by a Table with a portrait-closing paragraph before and a landscape-closing one after', () => {
+  const xml = runPandocWithEnv(HEADER_TABLE_MD, LANDSCAPE_ENV);
+  const beforeIdx = xml.indexOf('<w:sectPr>');
+  const afterIdx = xml.indexOf('<w:sectPr>', beforeIdx + 1);
+  assert.ok(beforeIdx >= 0 && afterIdx > beforeIdx, 'expected two sectPr-only paragraphs');
+
+  // ADR 0005: the paragraph before the Header closes the CURRENT (portrait)
+  // section, the one after the Table closes the just-opened (landscape) one
+  // — the reverse of a naive "toggle before the Header" reading.
+  const headerIdx = xml.indexOf('Section title before table');
+  const tableIdx = xml.indexOf('<w:tbl>');
+  assert.ok(beforeIdx < headerIdx, 'the portrait-closing paragraph must come before the Header');
+  assert.ok(headerIdx < tableIdx, 'sanity: the Header must precede the Table in the source');
+  assert.ok(afterIdx > tableIdx, 'the landscape-closing paragraph must come after the Table');
+
+  const beforeBlock = xml.slice(beforeIdx, xml.indexOf('</w:sectPr>', beforeIdx));
+  const afterBlock = xml.slice(afterIdx, xml.indexOf('</w:sectPr>', afterIdx));
+  assert.ok(!beforeBlock.includes('w:orient="landscape"'), 'the closing-current-section paragraph must stay portrait');
+  assert.ok(afterBlock.includes('w:orient="landscape"'), 'the closing-new-section paragraph must be landscape');
+});
+
+test('landscape tables: a Table not immediately preceded by a Header is left untouched', () => {
+  const md = '# Intro\n\nUn paragraphe separe le titre du tableau.\n\n| a | b |\n|---|---|\n| 1 | 2 |\n';
+  const xml = runPandocWithEnv(md, LANDSCAPE_ENV);
+  assert.ok(!xml.includes('<w:sectPr>'), 'a paragraph between the Header and the Table must prevent the match');
+});
+
+test('landscape tables: mermaid code blocks still convert normally when the feature is on (the two filter passes do not interfere)', () => {
+  const md = '```mermaid\ngraph TD\n  A --> B\n```\n\n## Section title before table\n\n| a | b |\n|---|---|\n| 1 | 2 |\n';
+  const xml = runPandocWithEnv(md, LANDSCAPE_ENV);
+  assert.ok(xml.includes('<wpc:wpc'), 'mermaid conversion (filter 1) must still run');
+  assert.ok(xml.includes('<w:sectPr>'), 'landscape table detection (filter 2) must still run');
+});

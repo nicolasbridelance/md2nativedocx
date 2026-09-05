@@ -12,6 +12,7 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     marginsCustomBottom: 2.5,
     marginsCustomLeft: 2.5,
     footerPageNumber: false,
+    landscapeTables: false,
     headingFont: '',
     bodyFont: '',
     fontSize: 11,
@@ -69,6 +70,14 @@ test('buildConfigPanelHtml greys out Lot 1 layout/typography rows when a custom 
   assert.ok(pageSizeRow?.startsWith(' greyed"'), 'layout.pageSize must be greyed when a custom reference doc is set');
   assert.ok(!tocRow?.startsWith(' greyed"'), 'toc.enabled must stay active regardless of a custom reference doc');
   assert.ok(html.includes('/path/to/custom.docx'), 'the effective reference document path must be shown');
+});
+
+test('buildConfigPanelHtml includes the Lot 5 landscape tables row, greyed with the rest of Lot 1 when a custom reference doc is set', () => {
+  const html = buildConfigPanelHtml(baseState({ referenceDocument: '/path/to/custom.docx' }), describe, 'n');
+  const rows = html.split('<div class="row').slice(1);
+  const row = rows.find((r) => r.includes('layout.landscapeTables'));
+  assert.ok(row, 'expected a row for layout.landscapeTables');
+  assert.ok(row?.startsWith(' greyed"'), 'layout.landscapeTables must be greyed when a custom reference doc is set');
 });
 
 test('buildConfigPanelHtml does not grey anything out when no custom reference document is set', () => {

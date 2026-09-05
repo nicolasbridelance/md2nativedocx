@@ -6,10 +6,12 @@
  * vscode-facing glue.
  *
  * Scope (confirmed in this session, see TODO.md's Lot 4 entry): only the
- * settings Lots 1-3 actually shipped are exposed — "Tableaux en paysage"
- * (1.9, Lot 5) and table-style/heading-numbering (1.11/1.12) have no
- * settings to expose yet, so no dead toggle is built for them (would
- * violate UX_SPEC.md's "zero unnecessary configuration" principle).
+ * settings Lots 1-3 and 5 actually shipped are exposed — table-style/
+ * heading-numbering (1.11/1.12) still have no settings to expose, so no
+ * dead toggle is built for them (would violate UX_SPEC.md's "zero
+ * unnecessary configuration" principle). "Tableaux en paysage" (1.9, Lot 5)
+ * was in that same no-control category when this file was first written,
+ * added to the Mise en page group once the setting existed.
  *
  * Security: `headingFont`/`bodyFont`/`accentColor`/`referenceDocument` are
  * free-text settings a user can type anything into — every one of them
@@ -27,6 +29,7 @@ export interface ConfigState {
   marginsCustomBottom: number;
   marginsCustomLeft: number;
   footerPageNumber: boolean;
+  landscapeTables: boolean;
   headingFont: string;
   bodyFont: string;
   fontSize: number;
@@ -173,6 +176,14 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       label: 'Pied de page avec numéro de page',
       settingPath: 'layout.footerPageNumber',
       control: checkbox('layout.footerPageNumber', state.footerPageNumber, hasCustomRef),
+      describe,
+      greyWhenCustomRef: g,
+      hasCustomRef,
+    }),
+    row({
+      label: 'Tableaux en section paysage dédiée',
+      settingPath: 'layout.landscapeTables',
+      control: checkbox('layout.landscapeTables', state.landscapeTables, hasCustomRef),
       describe,
       greyWhenCustomRef: g,
       hasCustomRef,

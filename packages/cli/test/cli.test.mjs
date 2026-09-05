@@ -322,6 +322,92 @@ test('Lot 1 fast-follow: MD2NATIVEDOCX_FOOTER_PAGE_NUMBER adds a working page-nu
   }
 });
 
+test('Lot 5: MD2NATIVEDOCX_LANDSCAPE_TABLES wraps a title+table pair in its own landscape section, end to end', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(
+    md,
+    '# Intro\n\nParagraphe avant.\n\n## Section title before table\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n# After\n\nParagraphe apres.\n',
+  );
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_LANDSCAPE_TABLES: '1' },
+    });
+    assert.equal(code, 0, out);
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    // Exactly the "middle of the document, real content on both sides" case
+    // from ADR 0005's spike: 3 sections (portrait/landscape/portrait), no
+    // blank-page cleanup needed since neither trap condition applies here.
+    const sectPrCount = (documentXml.match(/<w:sectPr/g) ?? []).length;
+    assert.equal(sectPrCount, 3, 'expected 3 sections: intro (portrait), table (landscape), after (portrait)');
+    const landscapeCount = (documentXml.match(/w:orient="landscape"/g) ?? []).length;
+    assert.equal(landscapeCount, 1, 'only the table\'s own section should be landscape');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Lot 5: a table that is the last block in the document gets no trailing blank page (ADR 0005 trap)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# Intro\n\nParagraphe avant.\n\n## Table one\n\n| a | b |\n|---|---|\n| 1 | 2 |\n');
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_LANDSCAPE_TABLES: '1' },
+    });
+    assert.equal(code, 0, out);
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    // Without the postprocess.mjs collapse, this would be 3 sections (the
+    // 3rd an empty, blank-page-producing one) — see ADR 0005 and
+    // collapseTrailingLandscapeSection's tests.
+    const sectPrCount = (documentXml.match(/<w:sectPr/g) ?? []).length;
+    assert.equal(sectPrCount, 2, 'expected exactly 2 sections: intro (portrait), table (landscape, now the body-final one)');
+    assert.match(documentXml, /<w:sectPr><w:pgSz[^>]*w:orient="landscape"[^>]*\/>[\s\S]*<\/w:body>/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Lot 5: two adjacent title+table pairs merge into one continuous landscape section (ADR 0005 trap)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(
+    md,
+    '# Intro\n\nParagraphe avant.\n\n## Table one\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n## Table two\n\n| c | d |\n|---|---|\n| 3 | 4 |\n',
+  );
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_LANDSCAPE_TABLES: '1' },
+    });
+    assert.equal(code, 0, out);
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    // Without the adjacent-pair collapse, this would be 4 sections with an
+    // empty (blank-page) one wedged between the two tables.
+    const sectPrCount = (documentXml.match(/<w:sectPr/g) ?? []).length;
+    assert.equal(sectPrCount, 2, 'expected exactly 2 sections: intro (portrait), both tables together (landscape)');
+    assert.ok(documentXml.indexOf('Table one') < documentXml.indexOf('Table two'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Lot 5: off by default — no MD2NATIVEDOCX_LANDSCAPE_TABLES means no section break at all', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# Intro\n\nParagraphe avant.\n\n## Section title\n\n| a | b |\n|---|---|\n| 1 | 2 |\n');
+  try {
+    assert.equal(runCli([md, '-o', docx]).code, 0);
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.equal((documentXml.match(/<w:sectPr/g) ?? []).length, 1, 'expected only the document\'s own single final sectPr');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('Lot 1: layout/typography options are ignored (with an info note, not a counted warning) when a custom reference doc is set', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');
