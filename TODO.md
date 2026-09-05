@@ -433,7 +433,9 @@ de la spec, §5.
       (LibreOffice headless). 1.11 (style de tableau, sous-spécifié dans la spec) et 1.13 (pied de
       page numéroté, demande une nouvelle partie `word/footer*.xml` + relation + content-type type
       `injectSmartArtParts`) restent **hors scope de cette passe**, fast-follow explicite du même
-      Lot 1 — pas une régression de périmètre, décidé avec le mainteneur avant de commencer.
+      Lot 1 — pas une régression de périmètre, décidé avec le mainteneur avant de commencer. **1.13
+      livré séparément le même jour, voir entrée dédiée juste en dessous.** 1.11 reste ouvert,
+      fusionné avec le Lot 6 (optionnel) faute de presets concrets à choisir.
       - Nouveau module `packages/cli/src/referenceDocBuilder.mjs` : même pattern
         `execFileSync('unzip'/'zip', [...])` que `postprocess.mjs` — **aucune nouvelle dépendance
         npm**. Fonctions pures testables séparément (`resolvePageSize`/`resolveMargins`/
@@ -486,6 +488,37 @@ de la spec, §5.
         `packages/cli/assets/README.md`) : les valeurs twips des presets de marges (`normal`
         notamment, 2,5cm/1417 twips — la valeur que la spec elle-même énonce, pas forcément celle
         qu'un vrai Word en locale métrique écrit pour son propre preset "Normales").
+- [x] **Lot 1 fast-follow — 1.13 pied de page avec numéro de page, livré (2026-09-05)** (spec
+      §1.13) : `md2nativedocx.layout.footerPageNumber`/`MD2NATIVEDOCX_FOOTER_PAGE_NUMBER`, patch du
+      `reference.docx` généré (pas du `.docx` final).
+      - **Vérifié empiriquement avant d'écrire le code, comme pour le Lot 3** : contrairement à
+        `settings.xml` (qui n'est PAS repris, voir Lot 3 ci-dessous), Pandoc reprend bel et bien tel
+        quel un pied de page (partie `word/footer1.xml` + relation + `w:footerReference` dans
+        `sectPr`) fourni via `--reference-doc` — testé avec un canari (`PAGE` field), confirmé
+        survivant dans le `.docx` généré et rendu correctement par LibreOffice. Donc, à la
+        différence du TOC, ce réglage patch bien le gabarit (`referenceDocBuilder.mjs`), pas le
+        document final — et suit la même règle de conflit que les autres réglages du Lot 1 (ignoré
+        silencieusement si `referenceDocument` custom fourni), sans garde-fou spécial à ajouter.
+      - Nouvelles fonctions pures `patchRelsForFooter()`/`patchContentTypesForFooter()` +
+        constante `FOOTER_PAGE_NUMBER_XML` (un champ `PAGE` centré minimal) dans
+        `referenceDocBuilder.mjs`, `patchSectPr()` étendu avec un paramètre `footerRId` optionnel
+        (élément `w:footerReference` en premier enfant de `sectPr`, ordre confirmé contre un vrai
+        `sectPr` traité par Pandoc, pas juste lu dans le schéma). `nextRelationshipId()` calcule le
+        premier `rIdN` libre plutôt qu'un id fixe — `reference.docx` a déjà `rId1`-`rId8` plus un
+        `rId30` décoratif (hyperlien externe dans son contenu de démonstration, jamais atteint la
+        sortie réelle) qui aurait collisionné avec un id naïf comme `rId9`.
+      - **Piège rencontré et déjà documenté ailleurs dans le code, retrouvé ici** : `unzip` traite
+        `[Content_Types].xml` comme un motif glob (classe de caractères) et échoue silencieusement
+        ("filename not matched") sans échappement — même piège que celui déjà noté dans
+        `postprocess.mjs`'s `injectSmartArtParts` (2026-09-03), corrigé de la même façon
+        (`\[Content_Types\].xml` côté `unzip`, littéral côté `zip`).
+      - 1.11 (style de tableau) reste seul hors scope du Lot 1, faute de presets concrets à choisir
+        dans la spec — fusionné avec le Lot 6 (optionnel) ci-dessous plutôt que de deviner un
+        catalogue de styles.
+      - Tests : 9 nouveaux `reference-doc-builder.test.mjs` (fonctions pures + intégration
+        `buildReferenceDoc({footerPageNumber:true})` réelle unzip/zip vérifiant la cohérence
+        partie/relation/content-type/sectPr), 1 `cli.test.mjs` bout-en-bout. 418 tests au total,
+        tous verts ; `test:visual` 35/35 inchangé.
 - [x] **Lot 2 — rendu couleur des emoji/badges, mécanique livrée (2026-09-05)** (spec §1.15,
       §2.5) : `postprocess.mjs` gagne `forceEmojiColorFont()`, appliquée par défaut dans
       `postProcessDocx()` (réglage `md2nativedocx.emoji.forceColorFont`/`MD2NATIVEDOCX_EMOJI_FONT`,

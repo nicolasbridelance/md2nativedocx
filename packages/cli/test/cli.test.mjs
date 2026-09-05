@@ -303,6 +303,25 @@ test('Lot 2: emoji color font is forced by default, opt-out via MD2NATIVEDOCX_EM
   }
 });
 
+test('Lot 1 fast-follow: MD2NATIVEDOCX_FOOTER_PAGE_NUMBER adds a working page-number footer', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# T\n\nUn paragraphe.\n');
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_FOOTER_PAGE_NUMBER: '1' },
+    });
+    assert.equal(code, 0, out);
+    const listing = execFileSync('unzip', ['-l', docx], { encoding: 'utf8' });
+    assert.ok(listing.includes('word/footer1.xml'));
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(documentXml.includes('<w:footerReference'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('Lot 1: layout/typography options are ignored (with an info note, not a counted warning) when a custom reference doc is set', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');

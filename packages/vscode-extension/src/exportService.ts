@@ -72,6 +72,7 @@ export interface LayoutOptions {
   lineSpacing?: string;
   justify?: string;
   accentColor?: string;
+  footerPageNumber?: boolean;
 }
 
 export interface RunCliOptions {
@@ -123,6 +124,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (layout.lineSpacing) env.MD2NATIVEDOCX_LINE_SPACING = layout.lineSpacing;
     if (layout.justify) env.MD2NATIVEDOCX_JUSTIFY = layout.justify;
     if (layout.accentColor) env.MD2NATIVEDOCX_ACCENT_COLOR = layout.accentColor;
+    if (layout.footerPageNumber === true) env.MD2NATIVEDOCX_FOOTER_PAGE_NUMBER = '1';
   }
   if (options.toc === true) {
     env.MD2NATIVEDOCX_TOC = '1';

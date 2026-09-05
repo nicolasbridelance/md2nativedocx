@@ -187,6 +187,11 @@
           "pattern": "^$|^[0-9A-Fa-f]{6}$",
           "markdownDescription": "%configuration.typography.accentColor.markdownDescription%"
         },
+        "md2nativedocx.layout.footerPageNumber": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%configuration.layout.footerPageNumber.markdownDescription%"
+        },
         "md2nativedocx.toc.enabled": {
           "type": "boolean",
           "default": false,

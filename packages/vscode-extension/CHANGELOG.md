@@ -7,8 +7,8 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ### Added
 - Page/typography export customization (page format, orientation, margins, heading/body fonts,
-  base font size, line spacing, justification, theme accent color) via 11 new
-  `md2nativedocx.layout.*`/`md2nativedocx.typography.*` settings. Ignored (with a note) when
+  base font size, line spacing, justification, theme accent color, a page-numbered footer) via 12
+  new `md2nativedocx.layout.*`/`md2nativedocx.typography.*` settings. Ignored (with a note) when
   `md2nativedocx.referenceDocument` points at a custom template — its own page setup wins.
 - Automatic table of contents via `md2nativedocx.toc.enabled`/`md2nativedocx.toc.depth`, placed
   after the document's title and set to refresh automatically when Word opens the file. Works

@@ -34,6 +34,17 @@ project shipped with until now. Full detail (root-cause, empirical validation, d
   `md2nativedocx.referenceDocument` always wins — Lot 1 settings are silently ignored for it, with
   an info note (not a counted warning) surfaced from both the bare CLI and the VS Code output
   channel.
+- **Lot 1 fast-follow, 1.13 (footer page number)**, `md2nativedocx.layout.footerPageNumber`/
+  `MD2NATIVEDOCX_FOOTER_PAGE_NUMBER`. Unlike TOC's `settings.xml` (see below), confirmed
+  empirically that Pandoc *does* carry over a reference doc's footer part/relationship/
+  `footerReference` verbatim — a canary footer with a `PAGE` field survived a real `pandoc --reference-doc`
+  round-trip and rendered correctly. So this patches the *reference* doc (`referenceDocBuilder.mjs`,
+  new `patchRelsForFooter`/`patchContentTypesForFooter`), not the final output — and inherits the
+  same "ignored when custom template" conflict rule as the rest of Lot 1 automatically, no special
+  case needed. New relationship ids are computed as the smallest unused `rIdN` (`reference.docx`
+  already has `rId1`-`rId8` plus a decorative `rId30`) rather than a fixed id, to avoid a collision.
+  Only 1.11 (table style presets) remains genuinely out of scope now — no concrete preset names in
+  the spec to implement against, merged into the optional Lot 6 rather than guessed at.
 - **Lot 3 (TOC)**, `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` → Pandoc `--toc`/`--toc-depth`.
   Two things the spec's plan got wrong that only showed up by testing against a real `pandoc`
   run, not by reading the spec: (1) Pandoc does **not** carry over the reference doc's
@@ -67,18 +78,16 @@ project shipped with until now. Full detail (root-cause, empirical validation, d
   — this session's evidence is as far as it goes without a real Word install.
 
 **Deliberately out of scope this pass** (confirmed with the maintainer up front, not a silent cut):
-1.9 (dedicated landscape section for tables — new Lua filter territory, its own spike), 1.11
-(table style presets — underspecified in the spec, no concrete preset names to pick from yet),
-1.13 (footer page numbers — needs a brand-new `word/footer*.xml` part + relationship + content-type
-override, closer to `injectSmartArtParts` in shape than to a same-path patch). All still tracked in
-`TODO.md`'s Lot 1 entry as an explicit fast-follow.
+1.9 (dedicated landscape section for tables — new Lua filter territory, its own spike) and 1.11
+(table style presets — underspecified in the spec, no concrete preset names to pick from yet, see
+above). Both still tracked in `TODO.md`.
 
 ## Current state (verified right before this note was written)
 
 - `git status`: everything in this session's diff described above is staged/committable; nothing
   else pending. (Check `git log --oneline -5` for the actual latest hash once time has passed.)
 - `npm run lint && npm run typecheck`: clean across every workspace.
-- `npm test`: 410 tests, all workspaces (83 cli + 291 core + 11 pandoc-filter + 25
+- `npm test`: 418 tests, all workspaces (91 cli + 291 core + 11 pandoc-filter + 25
   vscode-extension) — up from 361 at the last handover.
 - `npm run test:visual`: 35/35 fixtures, 0.000% pixel diff on every one — proves the default
   (no Lot 1/2/3 settings touched) behavior is byte-for-byte unchanged.
@@ -86,8 +95,9 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
   margins, custom heading/body fonts, 1.5 line spacing, justified, accent color) with a real
   flowchart diagram — justification/margins/fonts/spacing all visibly correct, diagram still fits
   and renders cleanly. Separately rendered a TOC + diagram + custom-reference-doc combination
-  (PNG and PDF) to confirm placement and the settings.xml carry-over finding above, and an
-  emoji-in-prose document (with and without a font-substitution alias) for the Lot 2 finding above.
+  (PNG and PDF) to confirm placement and the settings.xml carry-over finding above, an
+  emoji-in-prose document (with and without a font-substitution alias) for the Lot 2 finding above,
+  and a footer-page-number document (PDF) confirming the page number actually renders.
 - `fonts-noto-color-emoji` is now installed in this Codespace session (ad hoc, like LibreOffice/
   Xvfb before it) — not persisted to `.devcontainer/`, so a fresh Codespace won't have it; only
   relevant if someone wants to re-run the Lot 2 color verification manually.
@@ -98,7 +108,7 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
 
 ## Not done / explicitly deferred (not forgotten, just not this session)
 
-- Lot 1's own 1.11/1.13 fast-follow (see above).
+- Lot 1's remaining 1.11 gap (table style presets — merged into the optional Lot 6, see above).
 - Real-Word verification that a TOC actually auto-populates on open (see the Lot 3 note above), and
   that Lot 2's colored emoji actually render in color on Windows/macOS Word (see the Lot 2 note
   above) — neither is verifiable via LibreOffice headless, both need a human with real Word.
@@ -130,3 +140,6 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
   placement fix and where the `settings.xml` patch actually lives now.
 - `packages/cli/src/postprocess.mjs`'s `forceEmojiColorFont` — the grapheme-splitting logic and its
   doc comment's explanation of the `Extended_Pictographic`/regional-indicator classification.
+- `packages/cli/src/referenceDocBuilder.mjs`'s `patchRelsForFooter`/`patchContentTypesForFooter`/
+  `FOOTER_PAGE_NUMBER_XML` — the 1.13 footer implementation and its "Pandoc does carry this over"
+  empirical confirmation (contrast with `patchSettings`'s "does not" finding in the same file).

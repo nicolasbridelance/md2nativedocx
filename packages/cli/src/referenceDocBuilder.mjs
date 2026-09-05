@@ -203,20 +203,80 @@ export function patchStyles(stylesXml, { fontSizeHalfPt, lineSpacing, justify } 
 
 /**
  * Patch `word/document.xml`'s final (only) `<w:sectPr />` into a full
- * section with explicit page size/orientation/margins. `pgSize`/`margins`
- * are each `null` when not requested — falls back to A4 portrait / the
- * `normal` preset respectively for whichever one the caller didn't ask to
- * change, since a `<w:sectPr>` needs both to be well-formed.
+ * section with explicit page size/orientation/margins, and optionally a
+ * `<w:footerReference>` (spec §1.13, "Lot 1" fast-follow — `footerRId` is the
+ * relationship id {@link patchRelsForFooter} minted for `word/footer1.xml`).
+ * `pgSize`/`margins` are each `null` when not requested — falls back to A4
+ * portrait / the `normal` preset respectively for whichever one the caller
+ * didn't ask to change, since a `<w:sectPr>` needs both to be well-formed
+ * regardless of which specific option triggered building one at all.
+ * `footerReference` must be the first child when present — confirmed
+ * against a real Pandoc-processed `sectPr` (`TODO.md`), not assumed.
  */
-export function patchSectPr(documentXml, { pgSize, margins } = {}) {
-  if (!pgSize && !margins) return documentXml;
+export function patchSectPr(documentXml, { pgSize, margins, footerRId } = {}) {
+  if (!pgSize && !margins && !footerRId) return documentXml;
   const size = pgSize ?? DEFAULT_PAGE_SIZE;
   const mar = margins ?? MARGIN_PRESETS_TWIPS.normal;
   const orientAttr = size.orientation === 'landscape' ? ' w:orient="landscape"' : '';
+  const footerRef = footerRId ? `<w:footerReference w:type="default" r:id="${footerRId}"/>` : '';
   const sectPr =
-    `<w:sectPr><w:pgSz w:w="${size.w}" w:h="${size.h}"${orientAttr}/>` +
+    `<w:sectPr>${footerRef}<w:pgSz w:w="${size.w}" w:h="${size.h}"${orientAttr}/>` +
     `<w:pgMar w:top="${mar.top}" w:right="${mar.right}" w:bottom="${mar.bottom}" w:left="${mar.left}" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
   return documentXml.replace(/<w:sectPr\s*\/>/, sectPr);
+}
+
+/**
+ * Minimal footer part (spec §1.13): a single centered `PAGE` field. Written
+ * as a brand-new `word/footer1.xml` package part — confirmed empirically
+ * that, unlike `settings.xml` (see `patchSettings`'s doc comment), Pandoc
+ * *does* carry over a reference document's footer part/relationship/
+ * `footerReference` verbatim: a canary footer with a `PAGE` field, added to
+ * a copy of `reference.docx` and round-tripped through a real `pandoc`
+ * invocation, survived into the generated `.docx` and rendered a page
+ * number when opened in LibreOffice.
+ */
+export const FOOTER_PAGE_NUMBER_XML =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' +
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r>' +
+  '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>' +
+  '<w:r><w:fldChar w:fldCharType="separate"/></w:r>' +
+  '<w:r><w:t>1</w:t></w:r>' +
+  '<w:r><w:fldChar w:fldCharType="end"/></w:r>' +
+  '</w:p></w:ftr>';
+
+/** Smallest unused `rId` in a `.rels` file's `Id="rIdN"` attributes (`rId1`
+ * if there are none) — `reference.docx`'s own relationships already go up
+ * to `rId8` plus a decorative `rId30` (an external hyperlink in its
+ * placeholder body content, never reaching real output), so a fixed id
+ * would risk colliding. */
+function nextRelationshipId(relsXml) {
+  const ids = [...relsXml.matchAll(/Id="rId(\d+)"/g)].map((m) => Number(m[1]));
+  const max = ids.length ? Math.max(...ids) : 0;
+  return `rId${max + 1}`;
+}
+
+/** Add the footer relationship to `word/_rels/document.xml.rels`. Returns
+ * `{ xml, rId }` — `rId` is what {@link patchSectPr}'s `footerRId` and
+ * `patchContentTypesForFooter` need to stay consistent. */
+export function patchRelsForFooter(relsXml) {
+  const rId = nextRelationshipId(relsXml);
+  const rel =
+    '<Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" ' +
+    `Id="${rId}" Target="footer1.xml" />`;
+  return { xml: relsXml.replace('</Relationships>', `${rel}</Relationships>`), rId };
+}
+
+/** Declare `word/footer1.xml`'s content type in `[Content_Types].xml`.
+ * Idempotent (checked by path, not just presence of the word "footer") in
+ * case a future base template already ships a footer of its own. */
+export function patchContentTypesForFooter(contentTypesXml) {
+  if (contentTypesXml.includes('/word/footer1.xml')) return contentTypesXml;
+  const override =
+    '<Override PartName="/word/footer1.xml" ' +
+    'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml" />';
+  return contentTypesXml.replace('</Types>', `${override}</Types>`);
 }
 
 /**
@@ -257,9 +317,11 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
   const {
     pageSize, orientation, margins, marginsCustomCm,
     headingFont, bodyFont, fontSizePt, lineSpacing, justify, accentColor,
+    footerPageNumber,
   } = rawOptions;
 
-  const needsSectPr = pageSize !== undefined || orientation !== undefined || margins !== undefined;
+  const needsFooter = footerPageNumber === true;
+  const needsSectPr = pageSize !== undefined || orientation !== undefined || margins !== undefined || needsFooter;
   const needsTheme = headingFont !== undefined || bodyFont !== undefined || accentColor !== undefined;
   const resolvedLineSpacing = resolveLineSpacing(lineSpacing);
   const needsStyles = fontSizePt !== undefined || resolvedLineSpacing !== null || justify === 'both';
@@ -276,8 +338,16 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
     if (needsTheme) entries.push('word/theme/theme1.xml');
     if (needsStyles) entries.push('word/styles.xml');
     if (needsSectPr) entries.push('word/document.xml');
+    if (needsFooter) entries.push('word/_rels/document.xml.rels', '[Content_Types].xml');
 
-    execFileSync('unzip', ['-o', '-q', workDocx, ...entries, '-d', dir], { stdio: 'pipe' });
+    // unzip treats `[...]` in a member-name argument as a glob character
+    // class (not a literal bracket), so `[Content_Types].xml` must be
+    // escaped for extraction or it silently fails to match ("filename not
+    // matched") — same pitfall already found and documented in
+    // postprocess.mjs's injectSmartArtParts. `zip` (the write side, below)
+    // does not need the same escaping.
+    const unzipEntries = entries.map((e) => (e === '[Content_Types].xml' ? '\\[Content_Types\\].xml' : e));
+    execFileSync('unzip', ['-o', '-q', workDocx, ...unzipEntries, '-d', dir], { stdio: 'pipe' });
 
     if (needsTheme) {
       const p = join(dir, 'word', 'theme', 'theme1.xml');
@@ -292,11 +362,26 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
         'utf8',
       );
     }
+
+    let footerRId;
+    if (needsFooter) {
+      const relsPath = join(dir, 'word', '_rels', 'document.xml.rels');
+      const patched = patchRelsForFooter(readFileSync(relsPath, 'utf8'));
+      footerRId = patched.rId;
+      writeFileSync(relsPath, patched.xml, 'utf8');
+
+      const contentTypesPath = join(dir, '[Content_Types].xml');
+      writeFileSync(contentTypesPath, patchContentTypesForFooter(readFileSync(contentTypesPath, 'utf8')), 'utf8');
+
+      writeFileSync(join(dir, 'word', 'footer1.xml'), FOOTER_PAGE_NUMBER_XML, 'utf8');
+      entries.push('word/footer1.xml');
+    }
+
     if (needsSectPr) {
       const p = join(dir, 'word', 'document.xml');
       const pgSize = pageSize !== undefined || orientation !== undefined ? resolvePageSize(pageSize, orientation) : null;
       const mar = margins !== undefined ? resolveMargins(margins, marginsCustomCm) : null;
-      writeFileSync(p, patchSectPr(readFileSync(p, 'utf8'), { pgSize, margins: mar }), 'utf8');
+      writeFileSync(p, patchSectPr(readFileSync(p, 'utf8'), { pgSize, margins: mar, footerRId }), 'utf8');
     }
 
     execFileSync('zip', ['-q', '-X', workDocx, ...entries], { cwd: dir, stdio: 'pipe' });

@@ -11,6 +11,8 @@ import {
   patchStyles,
   patchSectPr,
   patchSettings,
+  patchRelsForFooter,
+  patchContentTypesForFooter,
   buildReferenceDoc,
   resolveMaxDrawingExtentEmu,
   PAGE_SIZES_TWIPS,
@@ -169,6 +171,60 @@ test('patchSectPr: landscape adds w:orient="landscape"', () => {
   assert.match(out, /<w:pgSz w:w="200" w:h="100" w:orient="landscape"\/>/);
 });
 
+test('patchSectPr: footerRId alone (no pgSize/margins) still produces a full sectPr with A4/normal defaults', () => {
+  const out = patchSectPr(DOCUMENT_FIXTURE, { footerRId: 'rId9' });
+  assert.match(out, /<w:footerReference w:type="default" r:id="rId9"\/>/);
+  assert.match(out, new RegExp(`w:top="${MARGIN_PRESETS_TWIPS.normal.top}"`));
+});
+
+test('patchSectPr: footerReference is the first child of sectPr, before pgSz (schema order, confirmed against a real Pandoc-processed sectPr)', () => {
+  const out = patchSectPr(DOCUMENT_FIXTURE, {
+    pgSize: { w: 100, h: 200, orientation: 'portrait' },
+    footerRId: 'rId5',
+  });
+  const sectPr = out.match(/<w:sectPr>.*<\/w:sectPr>/)[0];
+  assert.ok(sectPr.indexOf('footerReference') < sectPr.indexOf('pgSz'));
+});
+
+// --- patchRelsForFooter / patchContentTypesForFooter (spec §1.13, "Lot 1" fast-follow) ---
+
+const RELS_FIXTURE =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Type=".../styles" Id="rId2" Target="styles.xml" />' +
+  '</Relationships>';
+
+test('patchRelsForFooter: adds a footer relationship with the smallest unused rId', () => {
+  const { xml, rId } = patchRelsForFooter(RELS_FIXTURE);
+  assert.equal(rId, 'rId3');
+  assert.match(xml, /Id="rId3" Target="footer1\.xml"/);
+});
+
+test('patchRelsForFooter: skips past a much higher pre-existing rId (e.g. a decorative external hyperlink)', () => {
+  const withHighId = RELS_FIXTURE.replace(
+    '</Relationships>',
+    '<Relationship Type=".../hyperlink" Id="rId30" Target="http://example.com" TargetMode="External" /></Relationships>',
+  );
+  const { rId } = patchRelsForFooter(withHighId);
+  assert.equal(rId, 'rId31');
+});
+
+const CONTENT_TYPES_FIXTURE =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+  '<Default Extension="xml" ContentType="application/xml" />' +
+  '</Types>';
+
+test('patchContentTypesForFooter: declares /word/footer1.xml', () => {
+  const out = patchContentTypesForFooter(CONTENT_TYPES_FIXTURE);
+  assert.match(out, /PartName="\/word\/footer1\.xml" ContentType="application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.footer\+xml"/);
+});
+
+test('patchContentTypesForFooter: idempotent — does not duplicate an existing declaration', () => {
+  const once = patchContentTypesForFooter(CONTENT_TYPES_FIXTURE);
+  assert.equal(patchContentTypesForFooter(once), once);
+});
+
 // --- patchSettings (spec §1.10/§2.2, "Lot 3" — applied to the *final*
 // generated .docx's settings.xml by postprocess.mjs, not to the reference
 // doc; see that module's tests for the integration path) ---
@@ -248,6 +304,29 @@ test('buildReferenceDoc: a single unrelated option (e.g. only fontSize) leaves t
     assert.match(documentXml, /<w:sectPr \/>/, 'sectPr must stay untouched when no page option was given');
     const stylesXml = execFileSync('unzip', ['-p', result.path, 'word/styles.xml'], { encoding: 'utf8' });
     assert.ok(stylesXml.includes('<w:sz w:val="18" />'));
+  } finally {
+    rmSync(result.dir, { recursive: true, force: true });
+  }
+});
+
+test('buildReferenceDoc: footerPageNumber adds the footer part + relationship + content-type + sectPr reference, all consistent', () => {
+  const result = buildReferenceDoc(REFERENCE_DOC, { footerPageNumber: true });
+  try {
+    const listing = execFileSync('unzip', ['-l', result.path], { encoding: 'utf8' });
+    assert.ok(listing.includes('word/footer1.xml'), 'the footer part must be a new zip entry');
+
+    const contentTypes = execFileSync('unzip', ['-p', result.path, '\\[Content_Types\\].xml'], { encoding: 'utf8' });
+    assert.ok(contentTypes.includes('/word/footer1.xml'));
+
+    const rels = execFileSync('unzip', ['-p', result.path, 'word/_rels/document.xml.rels'], { encoding: 'utf8' });
+    const relMatch = rels.match(/Id="(rId\d+)" Target="footer1\.xml"/);
+    assert.ok(relMatch, 'expected a relationship pointing at footer1.xml');
+
+    const documentXml = execFileSync('unzip', ['-p', result.path, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(
+      documentXml.includes(`<w:footerReference w:type="default" r:id="${relMatch[1]}"/>`),
+      'sectPr must reference the same rId the relationship was minted with',
+    );
   } finally {
     rmSync(result.dir, { recursive: true, force: true });
   }
