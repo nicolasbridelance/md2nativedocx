@@ -53,10 +53,17 @@ qui reste à identifier.
 - **LibreOffice** : deuxième connecteur correct, premier toujours déformé
   (`chain-conn-libreoffice.png`, ce dossier).
 
+## Confirmation en vrai Word (2026-09-05, mainteneur)
+
+**Les deux connecteurs (A→B et B→C) s'affichent comme des chevrons propres et identiques.**
+L'asymétrie observée sous LibreOffice (premier connecteur déchiré, second correct) est donc
+confirmée comme un défaut de rendu spécifique à LibreOffice sur cette itération précise — pas un
+problème de câblage. Le fichier de ce round est correct tel quel.
+
 ## Statut
 
-**En attente d'un test Word réel, avec une question précise** : le premier connecteur (A→B) a-t-il
-le même défaut dans Word que sous LibreOffice, ou seul le second rendu (B→C, déjà correct sous
-LibreOffice) fonctionne aussi dans Word ? Cette réponse tranche si l'asymétrie restante est un bug
-LibreOffice isolé (le fichier serait alors probablement déjà bon dans Word) ou un vrai défaut de
-câblage qui reste à trouver.
+**Round clos, positif.** Le mécanisme de connecteur `chain` (algorithme `conn`, points `auto`,
+paire `parTransId`/`sibTransId`, `forEach` imbriqué, pas de wrapper `composite`, `sibTrans` à
+`fact="0.4"`) est confirmé fonctionnel dans Word réel. Prochaine étape (non commencée) : appliquer
+le même mécanisme à `cycle.ts` (routage courbe/radial, plus complexe) — piste séparée, pour ne pas
+empiler un pari non vérifié sur un mécanisme qui vient tout juste d'être validé.
