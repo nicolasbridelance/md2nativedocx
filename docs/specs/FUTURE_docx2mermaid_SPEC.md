@@ -42,6 +42,28 @@ pour le sens Mermaid → formes natives (déjà rare), il y en a encore moins po
 | Deviner la sémantique d'une forme non répertoriée en §6.1 | Une forme ajoutée à la main sans référence connue est signalée explicitement (avertissement ou erreur), jamais convertie par supposition silencieuse |
 | Reconstruire le layout dans le Mermaid de sortie | Mermaid n'encode pas de coordonnées, seulement la topologie (nœuds, liens, formes). Un déplacement pur d'une boîte dans Word n'a donc aucun effet sur le Mermaid réexporté — seul l'ajout/suppression de nœuds/liens ou le changement de forme/texte compte |
 
+**Note ajoutée 2026-09-05, à reconsidérer plus tard, pas un changement de scope maintenant** : le
+mainteneur veut qu'un jour ce sens inverse sache aussi lire un diagramme **SmartArt** (pas
+seulement les formes `wpc:wpc`/`wps:wsp`) et lui retrouver un équivalent Mermaid 1:1 — le pendant
+naturel du chantier en cours côté génération (voir le plan d'élargissement de la couverture
+SmartArt, sessions de septembre 2026, et `docs/smartart-layout-catalog.md`). Deux sous-problèmes
+de taille très différente, à ne pas confondre le jour où ce chantier démarre :
+1. **Relire nos propres diagrammes SmartArt générés** (`chain`/`tree`/`cycle`/futurs) — plus
+   simple, mais actuellement **pas prêt** : `chain.ts`/`tree.ts`/`cycle.ts` utilisent des
+   `modelId` synthétiques (`"0"`, `"1"`, `"2"`...) plutôt que l'ID Mermaid d'origine (voir le doc
+   comment de `buildChainDataXml` dans `chain.ts`) — contrairement à la convention déjà appliquée
+   au traducteur `wpc:wpc`/`wps:wsp` (§4 ci-dessus, `cNvPr/name`/`descr`). Un futur-proofing
+   symétrique à celui de §4 (stocker l'ID Mermaid dans un champ inoffensif du point de contenu,
+   par ex. un attribut personnalisé ou `dgm:prSet phldrT`) serait à faire pendant qu'on retouche de
+   toute façon ces générateurs pour la couverture élargie, plutôt qu'après coup.
+2. **Relire un SmartArt inséré directement dans Word** (Insertion → SmartArt, n'importe lequel des
+   ~150-180 layouts de la galerie, jamais passé par `md2nativedocx`) — problème bien plus large,
+   symétrique du constat déjà fait côté génération (`docs/smartart-layout-catalog.md`) : une bonne
+   moitié de la galerie (Matrix/Pyramid/Picture/la majorité de Relationship) n'a pas plus
+   d'équivalent Mermaid dans ce sens que dans l'autre. Nécessitera son propre catalogue
+   "layout Microsoft → construction Mermaid la plus proche" le jour venu, pas une simple inversion
+   mécanique du catalogue de génération.
+
 ---
 
 ## 2. Architecture — miroir inversé du pipeline existant
