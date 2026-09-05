@@ -139,12 +139,27 @@ test('every content node gets a presOf-bearing Main presentation point (the mirr
   const presOfCount = (dataXml.match(/type="presOf"/g) ?? []).length;
   const presParOfCount = (dataXml.match(/type="presParOf"/g) ?? []).length;
   // One per content node, plus the doc point's own presOf onto the root
-  // presentation point: without
-  // it, LibreOffice renders the whole diagram blank (confirmed by rendering
-  // this generator's actual output under headless LibreOffice, not just
-  // asserting on the XML string -- see chain.ts's buildChainDataXml doc comment).
-  assert.equal(presOfCount, 4);
-  assert.equal(presParOfCount, 6); // root->composite and composite->Main, per node
+  // presentation point (without it, LibreOffice renders the whole diagram
+  // blank -- see chain.ts's buildChainDataXml doc comment), plus one per
+  // sibTrans connector transition (2 gaps for 3 nodes).
+  assert.equal(presOfCount, 4 + 2);
+  // root->composite and composite->Main per node, plus root->sibTrans per gap.
+  assert.equal(presParOfCount, 6 + 2);
+});
+
+test('a chain of N nodes gets N-1 sibTrans connector transitions, each with its own presentation mirror', () => {
+  const ast = chainFlowchart('graph TD\n  A --> B\n  B --> C\n  C --> D');
+  const { dataXml } = generateChain(ast);
+  assert.equal((dataXml.match(/type="sibTrans"/g) ?? []).length, 3); // 3 gaps for 4 nodes
+  assert.equal((dataXml.match(/presName="sibTrans"/g) ?? []).length, 3);
+  assert.equal((dataXml.match(/sibTransId="/g) ?? []).length, 3); // one per parOf cxn that has a following sibling
+});
+
+test('single-node chain has no sibTrans transition (nothing to connect)', () => {
+  const ast = chainFlowchart('graph TD\n  Solo[Alone]');
+  const { dataXml } = generateChain(ast);
+  assert.ok(!dataXml.includes('type="sibTrans"'));
+  assert.ok(!dataXml.includes('sibTransId="'));
 });
 
 test('single-node chain (degenerate case) still produces valid output', () => {
