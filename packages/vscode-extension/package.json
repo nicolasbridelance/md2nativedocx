@@ -58,6 +58,24 @@
         "shortTitle": "%command.exportBlock.shortTitle%"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "md2nativedocx",
+          "title": "md2nativedocx",
+          "icon": "icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "md2nativedocx": [
+        {
+          "id": "md2nativedocx.configView",
+          "type": "webview",
+          "name": "%view.configView.name%"
+        }
+      ]
+    },
     "menus": {
       "explorer/context": [
         {

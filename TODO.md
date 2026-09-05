@@ -586,15 +586,53 @@ de la spec, §5.
         (`patchSettings` pur), 2 `cli.test.mjs` bout-en-bout (TOC placé après le H1 + fonctionne
         avec un `referenceDocument` custom). VS Code : `md2nativedocx.toc.enabled`/`.toc.depth`.
         401 tests au total, tous verts ; `test:visual` 35/35 inchangé.
-- [ ] **Lot 4 — panneau de configuration Activity Bar + Sidebar** (spec §3) : nouveau View
-      Container + Webview View (`registerWebviewViewProvider`), réglages groupés
-      pédagogiquement (mise en page / typographie / structure / tableaux paysage / emoji /
-      avancé), aperçu CSS "Niveau 1" pour la mise en page/typo uniquement (pas de simulation
-      honnête possible pour saut de section ou rendu emoji, spec §3.3). Lecture/écriture via
-      `vscode.workspace.getConfiguration` — pas de double source de vérité avec
-      `contributes.configuration`. **Escalade `AGENTS.md`** : ajouter le point d'entrée à
-      `docs/specs/UX_SPEC.md` (tableau "Points d'entrée", Partie 1) plutôt que de le laisser
-      implicite. Dépend des Lots 1–3.
+- [x] **Lot 4 — panneau de configuration Activity Bar + Sidebar, livré (2026-09-05)** (spec §3) :
+      nouveau View Container (icône = `icon.svg` existant, réutilisé tel quel — un SVG à formes
+      pleines convient au masquage monochrome de l'Activity Bar, pas besoin d'une icône dédiée) +
+      Webview View (`registerWebviewViewProvider`), réglages groupés pédagogiquement.
+      - **Portée volontairement réduite à ce qui existe réellement** : seuls 4 groupes construits
+        (Mise en page, Typographie, Structure du document — TOC + pied de page, Emoji &amp;
+        badges, Avancé) — pas de groupe "Tableaux en paysage" (1.9, Lot 5 pas commencé) ni de
+        contrôles pour le style de tableau/numérotation des titres (1.11/1.12, jamais spécifiés
+        concrètement) : un toggle pour un réglage inexistant serait un contrôle mort, contraire au
+        principe "zéro config inutile" d'`UX_SPEC.md`. Pas une réduction de scope improvisée — la
+        spec elle-même place le Lot 4 après les Lots 1-3 précisément pour cette raison ("le
+        panneau ne fait qu'exposer des réglages qui doivent déjà exister").
+      - **Séparation logique pure/glue vscode**, même philosophie que `mermaidBlocks.ts` +
+        `extension.ts` : `packages/vscode-extension/src/configPanelHtml.ts` (aucun import
+        `vscode`, `buildConfigPanelHtml()` testable en `node:test` sans Extension Development
+        Host) construit tout le HTML ; `configPanel.ts` (le `WebviewViewProvider`) ne fait que
+        lire/écrire `vscode.workspace.getConfiguration('md2nativedocx')` et appeler la fonction
+        pure. Écoute `vscode.workspace.onDidChangeConfiguration` pour rester synchronisé si les
+        réglages changent ailleurs (settings.json natif) — aucune double source de vérité (§3.4).
+      - **"Pas de texte dupliqué entre les deux surfaces" (§3.2) implémenté littéralement**, pas
+        approximé : `configPanel.ts` relit directement `package.nls.json` (via
+        `context.extensionUri`) et sert exactement les mêmes chaînes `markdownDescription` que
+        `contributes.configuration` en tooltip (backticks/liens markdown légèrement nettoyés pour
+        un `title` HTML natif, pas de rendu markdown tenté). Un tooltip qui divergerait du texte du
+        panneau natif `Ctrl+,` serait un vrai bug de cohérence, pas juste une redite.
+      - **Sécurité** : CSP stricte (`default-src 'none'`, script nonce, aucune ressource externe —
+        même logique que "jamais de relation OOXML externe" appliquée ici à un webview) ; toute
+        valeur libre affichée (police, couleur, chemin du gabarit custom) est échappée en HTML
+        avant insertion — testé explicitement par injection XSS (`<script>` dans un champ police).
+      - Grisage des contrôles Lot 1 (mise en page/typo, y compris le pied de page) quand
+        `md2nativedocx.referenceDocument` est fourni, TOC/emoji restant actifs — demandé par le
+        mainteneur en même temps que la confirmation de l'option (a) lors du Lot 1.
+      - Aperçu Niveau 1 (mini-page CSS : format/orientation/marges/police/taille/interligne/
+        justification, recalculé côté client à chaque changement) — pas de tentative pour
+        1.9/1.15, conforme à la recommandation propre de la spec §3.3.
+      - **Vérifié en Extension Development Host réel** (`xvfb-run`, déjà installé ad hoc dans
+        cette session — aucune modif `.devcontainer/`), pas seulement en test unitaire : le
+        container/la vue se déclarent avec les bons ids, et le webview se résout sans exception
+        une fois révélé (`workbench.view.extension.md2nativedocx` puis
+        `md2nativedocx.configView.focus`). Aucune vérification visuelle à l'œil possible dans ce
+        sandbox (pas d'UI VS Code interactive) — reste à faire manuellement.
+      - Escalade `AGENTS.md` traitée : point d'entrée ajouté à `docs/specs/UX_SPEC.md` (tableau
+        "Points d'entrée", Partie 1) plutôt que laissé implicite.
+      - Tests : 12 nouveaux `configPanelHtml.test.ts` (fonctions pures — groupes, échappement XSS,
+        grisage conditionnel, cohérence `describe()`), 2 nouveaux `test/suite/extension.test.ts`
+        (réels). 430 tests unitaires + 7 tests Extension Development Host au total, tous verts ;
+        `test:visual` 35/35 inchangé.
 - [ ] **Lot 5 — tableaux en section paysage dédiée** (spec §1.9, §2.3) : le saut de section
       s'insère avant le **titre** qui précède le tableau, pas avant le tableau. Nouveau filtre
       Lua (`Pandoc(doc)` avec lookahead `Header`→`Table`, en plus du seul `CodeBlock` mermaid

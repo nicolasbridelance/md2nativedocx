@@ -4,6 +4,7 @@
   "command.exportDocument.shortTitle": "Export to Word",
   "command.exportBlock.title": "md2nativedocx: Export diagram under cursor",
   "command.exportBlock.shortTitle": "Export this block only",
+  "view.configView.name": "Configuration",
   "configuration.outputDirectory.markdownDescription": "Output folder for generated `.docx` files. Empty (default) = same folder as the source `.md` file — no configuration required before first use.",
   "configuration.referenceDocument.markdownDescription": "Path to a `.docx` file used as the Word template for every export (mirrors Pandoc's `--reference-doc`) — point this at your company's template to match its fonts, colors, and styles. Empty (default) = the extension's built-in template. Relative paths are resolved against the workspace folder.",
   "configuration.smartArt.enabled.markdownDescription": "Off by default (a 2026-09-03 real-Word test found a diagram it produced would not open at all — see the compliance notes). When on, an eligible diagram (a simple chain, tree, or cycle shape) becomes a native, editable SmartArt graphic instead of the usual OOXML canvas shapes; treat as experimental until verified reliable in Word.",

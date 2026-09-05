@@ -16,6 +16,7 @@ import {
   type LayoutOptions,
 } from './exportService';
 import { ensurePandoc } from './pandocProvisioner';
+import { ConfigPanelProvider, CONFIG_VIEW_ID } from './configPanel';
 
 let outputChannel: vscode.OutputChannel;
 let extensionContext: vscode.ExtensionContext;
@@ -33,6 +34,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('md2nativedocx.exportBlock', (uri?: vscode.Uri, blockIndex?: number) =>
       handleExportBlock(uri, blockIndex),
     ),
+    vscode.window.registerWebviewViewProvider(CONFIG_VIEW_ID, new ConfigPanelProvider(context)),
   );
 
   registerStatusBar(context);

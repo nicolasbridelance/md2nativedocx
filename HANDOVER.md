@@ -1,8 +1,8 @@
 # Handover — 2026-09-05
 
-One entry point for picking this project back up. Written at the end of a session that shipped the
-first three slices of Phase 8 (export customization). Supersedes the 2026-09-04 handover — check
-the git log / `TODO.md` for anything newer than this file's date.
+One entry point for picking this project back up. Written at the end of a session that shipped
+four slices of Phase 8 (export customization). Supersedes the 2026-09-04 handover — check the git
+log / `TODO.md` for anything newer than this file's date.
 
 ## What shipped this session
 
@@ -76,6 +76,26 @@ project shipped with until now. Full detail (root-cause, empirical validation, d
   diagram text (DrawingML `a:t`/`a:r`, a different namespace) is never touched by this patch. What
   is still **not** verified: real Word/macOS rendering (the actual "à tester" the spec asked for)
   — this session's evidence is as far as it goes without a real Word install.
+- **Lot 4 (configuration panel, spec §3)** — a dedicated Activity Bar icon opening a Webview View
+  that exposes every Lot 1-3 setting visually (grouped: Mise en page, Typographie, Structure du
+  document, Emoji & badges, Avancé), with a Niveau-1 CSS page mockup preview. First Webview in this
+  codebase. Deliberately scoped to *only* the settings that actually exist — no "Tableaux en
+  paysage" group (Lot 5, not started) and no table-style/heading-numbering controls (1.11/1.12,
+  never concretely specified): a toggle for a nonexistent setting would be a dead control, against
+  `UX_SPEC.md`'s "zero unnecessary configuration" principle, and the spec's own phasing already
+  places Lot 4 after Lots 1-3 for exactly this reason. Split into a pure `configPanelHtml.ts` (no
+  `vscode` import, unit-testable) and a thin `configPanel.ts` `WebviewViewProvider` glue — same
+  separation `mermaidBlocks.ts`/`extension.ts` already established. Notably: `configPanel.ts` reads
+  `package.nls.json` directly at runtime to source every tooltip, so the panel's descriptions can
+  never drift from `contributes.configuration`'s — spec §3.2 asked for "no duplicated text between
+  the two surfaces" and this is a literal, not approximate, implementation of that. Strict CSP (no
+  external resources, nonce'd inline script) and HTML-escaping of every free-text setting value
+  (font names, accent color, reference-doc path) — tested explicitly with a `<script>`-injection
+  attempt in a font field. Verified in a **real** Extension Development Host (`xvfb-run`, already
+  installed ad hoc this session): the view container/view declare correctly, and the webview
+  resolves without throwing when focused — the practical verification ceiling here, since a
+  webview's actual rendered DOM lives in an iframe the extension API can't inspect. No eyeballed
+  visual check was possible in this sandbox (no interactive VS Code UI) — flagged as not done below.
 
 **Deliberately out of scope this pass** (confirmed with the maintainer up front, not a silent cut):
 1.9 (dedicated landscape section for tables — new Lua filter territory, its own spike) and 1.11
@@ -87,8 +107,9 @@ above). Both still tracked in `TODO.md`.
 - `git status`: everything in this session's diff described above is staged/committable; nothing
   else pending. (Check `git log --oneline -5` for the actual latest hash once time has passed.)
 - `npm run lint && npm run typecheck`: clean across every workspace.
-- `npm test`: 418 tests, all workspaces (91 cli + 291 core + 11 pandoc-filter + 25
-  vscode-extension) — up from 361 at the last handover.
+- `npm test`: 430 tests, all workspaces (91 cli + 291 core + 11 pandoc-filter + 37
+  vscode-extension) — up from 361 at the last handover. Plus 7 real Extension Development Host
+  tests (`npm run test:extension-host`, via `xvfb-run`), all passing.
 - `npm run test:visual`: 35/35 fixtures, 0.000% pixel diff on every one — proves the default
   (no Lot 1/2/3 settings touched) behavior is byte-for-byte unchanged.
 - Manually rendered (LibreOffice headless) a document combining Lot 1 settings (A4, moderate
@@ -112,16 +133,18 @@ above). Both still tracked in `TODO.md`.
 - Real-Word verification that a TOC actually auto-populates on open (see the Lot 3 note above), and
   that Lot 2's colored emoji actually render in color on Windows/macOS Word (see the Lot 2 note
   above) — neither is verifiable via LibreOffice headless, both need a human with real Word.
-- Lot 4 (Activity Bar/Sidebar configuration panel, spec §3) — depends on Lots 1-3. One concrete
-  requirement already known for whenever it's built: grey out the Lot 1 layout/typography controls
-  when `md2nativedocx.referenceDocument` is set (the maintainer asked for this explicitly while
-  confirming this session's conflict-resolution design) — not implementable before the panel itself
-  exists, so just noted in `TODO.md` for then.
 - Lot 5 (dedicated landscape section for tables, spec §1.9/§2.3) — the riskiest lot, explicitly
   deferred to its own spike per the phasing plan.
-- The l10n gap: the 11 new settings' descriptions are only in `package.nls.json` (English); the 5
-  translated `package.nls.*.json` files were not updated (no linguistic authority to translate
-  them) — VS Code's standard English fallback applies until someone does.
+- Lot 4's own gap: a real, eyeballed look at the panel in an actual VS Code window — this session's
+  verification stopped at "resolves without throwing" in a headless Extension Development Host,
+  never a visual check of the layout/preview/greying/tooltips actually looking right.
+- The l10n gap: the settings' descriptions (Lot 1-3) and the panel's own view/container labels are
+  only in `package.nls.json` (English); the 5 translated `package.nls.*.json` files were not
+  updated (no linguistic authority to translate them) — VS Code's standard English fallback
+  applies until someone does. Since the panel reads `package.nls.json` directly (not the
+  locale-specific files), its tooltips would stay English-only even if those were translated,
+  until `configPanel.ts`'s `loadNlsStrings()` is taught to prefer `package.nls.<locale>.json` —
+  noted for whenever the l10n gap itself gets addressed.
 - The margin-preset twip values (`normal`/`moderate`/`wide` in `referenceDocBuilder.mjs`) are an
   assumption pending real-Word verification, same category as the pre-existing Aptos font
   reconstruction caveat in `packages/cli/assets/README.md` — flagged together in `TODO.md`.
@@ -143,3 +166,8 @@ above). Both still tracked in `TODO.md`.
 - `packages/cli/src/referenceDocBuilder.mjs`'s `patchRelsForFooter`/`patchContentTypesForFooter`/
   `FOOTER_PAGE_NUMBER_XML` — the 1.13 footer implementation and its "Pandoc does carry this over"
   empirical confirmation (contrast with `patchSettings`'s "does not" finding in the same file).
+- `packages/vscode-extension/src/configPanelHtml.ts` — the Lot 4 panel's pure HTML builder; its own
+  doc comment explains the scope decision and the escaping/CSP reasoning.
+- `packages/vscode-extension/test/suite/extension.test.ts`'s two "Lot 4" tests — the real
+  Extension-Development-Host verification and its stated ceiling (can't inspect webview DOM
+  content from the extension API).

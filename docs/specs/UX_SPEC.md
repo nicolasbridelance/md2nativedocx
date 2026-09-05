@@ -50,6 +50,7 @@ rappelant où elle est la plus tentante à franchir.
 | Menu contextuel (clic droit) | Explorateur de fichiers, et clic droit dans l'éditeur | Sur tout `.md`/`.mmd` |
 | Palette de Commandes | `Ctrl+Shift+P` → "md2nativedocx: ..." | Toujours disponible — c'est le filet de sécurité pour qui préfère le clavier, jamais le point d'entrée principal |
 | Walkthrough d'accueil | Onglet Welcome de VS Code, à l'installation | Une fois, à l'installation, via l'API `Walkthroughs` de VS Code |
+| Panneau de configuration (Phase 8, Lot 4) | Icône dédiée dans l'Activity Bar → vue Webview dans la Sidebar primaire | Toujours disponible — réglages de mise en page/typo/TOC/emoji (spec `export_customization_SPEC.md` §3), synchronisé en lecture/écriture avec `settings.json` natif, jamais de double source de vérité. N'expose que les réglages qui existent réellement (Lots 1-3) ; pas de contrôle pour un réglage pas encore livré (Lot 5, Lot 6). |
 
 Le CodeLens et la pastille de statut sont délibérément redondants : le CodeLens peut être filtré
 mentalement par des utilisateurs habitués à en voir beaucoup (GitLens, Copilot, etc.), la pastille

@@ -17,6 +17,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   (default: on) — forces the emoji color font on pictographic characters without affecting the
   surrounding text's own font, bold, or italic. Depends on local font substitution on
   macOS/Linux/LibreOffice; turn off if it renders worse there than doing nothing.
+- A dedicated Activity Bar icon opens a configuration panel exposing every page/typography/TOC/
+  emoji setting above visually (page mockup preview included), grouped by topic, always in sync
+  with `settings.json`. Greys out page/typography controls when a custom
+  `md2nativedocx.referenceDocument` is set.
 - Three new Mermaid diagram types export as native, editable OOXML shapes: `quadrantChart`,
   `venn-beta` (2-3 sets, true overlapping-circle geometry), and `mindmap` (radial layout, all 6
   node shapes). No extension-side changes were needed — the same `` ```mermaid `` block detection

@@ -98,4 +98,33 @@ suite('md2nativedocx extension host', () => {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
   });
+
+  test('Lot 4: declares the Activity Bar container and the config webview view', async () => {
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext);
+    await ext.activate();
+    const contributes = ext.packageJSON.contributes as {
+      viewsContainers?: { activitybar?: Array<{ id: string }> };
+      views?: Record<string, Array<{ id: string; type: string }>>;
+    };
+    assert.ok(
+      contributes.viewsContainers?.activitybar?.some((c) => c.id === 'md2nativedocx'),
+      'expected an activitybar viewsContainer with id "md2nativedocx"',
+    );
+    const views = contributes.views?.['md2nativedocx'] ?? [];
+    const configView = views.find((v) => v.id === 'md2nativedocx.configView');
+    assert.ok(configView, 'expected a view with id "md2nativedocx.configView"');
+    assert.equal(configView?.type, 'webview');
+  });
+
+  test('Lot 4: the config webview resolves without throwing when revealed', async () => {
+    // Real end-to-end signal beyond the pure configPanelHtml unit tests:
+    // if ConfigPanelProvider.resolveWebviewView (or buildConfigPanelHtml)
+    // threw, focusing the view would fail here. The rendered HTML itself
+    // lives inside the webview's own iframe and isn't inspectable through
+    // the extension API, so this is the practical ceiling for an
+    // Extension-Development-Host-level check.
+    await vscode.commands.executeCommand('workbench.view.extension.md2nativedocx');
+    await vscode.commands.executeCommand('md2nativedocx.configView.focus');
+  });
 });
