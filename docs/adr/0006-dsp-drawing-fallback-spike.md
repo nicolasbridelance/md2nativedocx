@@ -1,14 +1,14 @@
 # ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** **URN innocentée (round 5) — cause toujours dans le contenu structurel de
-  `layout1.xml`/`data1.xml`, round 6 en test (2026-09-05).** Round 3 a localisé le problème à
-  `data`/`layout` (`colors`/`quickStyle` innocentés). Round 4 (`presOf`/`constrLst`/`ruleLst`
-  manquants sur `dgm:layoutNode`) insuffisant seul. **Round 5 : le fichier réel, seule l'URN du
-  layout changée, s'ouvre normalement** — Word n'a pas de liste fermée d'URN reconnues, ce n'est
-  pas une limite dure. Round 6 teste un nouveau candidat (éléments/attributs manquants sur
-  `dgm:shape`, même famille de problème que round 4 mais sur un autre type).
+- **Statut :** **URN innocentée (round 5) ; deux correctifs structurels testés et insuffisants
+  (rounds 4 et 6) ; round 7 en test (2026-09-05).** Round 3 a localisé le problème à `data`/
+  `layout` (`colors`/`quickStyle` innocentés). Round 4 (`presOf`/`constrLst`/`ruleLst` manquants
+  sur `dgm:layoutNode`) et round 6 (`adjLst`/`r:blip` manquants sur `dgm:shape`) **échouent tous
+  les deux**, y compris cumulés. Round 5 a innocenté l'URN elle-même (pas de liste fermée). Round 7
+  teste une troisième piste, plus structurelle : des points de contenu `parTrans`/`sibTrans`
+  requis sur chaque connexion parent-enfant, entièrement absents de notre modèle de données.
 - **Date :** 2026-09-05
-- **Décideur :** Nicolas Bridelance (mainteneur) — 5 rounds de tests réels effectués à ce jour.
+- **Décideur :** Nicolas Bridelance (mainteneur) — 6 rounds de tests réels effectués à ce jour.
 
 ## Contexte
 
@@ -145,6 +145,22 @@ Word), mais sur un type complexe différent (`CT_Shape`, pas `CT_LayoutNode`).
 `docs/adr/spikes/spike-dsp-drawing/round6-shape-adjlst/` (`build-round6.mjs` →
 `cycle-round6-graft.docx`, cumule le correctif du round 4 toujours appliqué + ce nouveau
 correctif). Remis au mainteneur.
+
+**Résultat (2026-09-05) : échoue, même erreur.** Hypothèse infirmée (seule ou cumulée avec le
+round 4) : ni `presOf`/`constrLst`/`ruleLst`, ni `adjLst`/`r:blip`, ne suffisent.
+
+## Round 7 — points de contenu `parTrans`/`sibTrans` manquants (2026-09-05)
+
+Dump complet du `data1.xml` réel (pas juste le point `doc` déjà vu) : chaque connexion
+parent-enfant porte des attributs `parTransId`/`sibTransId` référençant des points de contenu
+dédiés (`type="parTrans"`/`type="sibTrans"`) dans `dgm:ptLst` — notre modèle de données n'a ni ces
+points ni ces attributs, chaque connexion étant un simple tuple `srcId`/`destId`/`srcOrd`/`destOrd`.
+
+`docs/adr/spikes/spike-dsp-drawing/round7-partrans/` (`build-round7.mjs` →
+`cycle-round7-graft.docx`, cumule les correctifs des rounds 4+6 sur `layout.xml` + ajoute les
+points `parTrans`/`sibTrans` et attributs correspondants à `data.xml`, sans nouveaux points de
+présentation pour eux — notre `layoutDef` n'a pas de `forEach` sur `ptType="sibTrans"`). Remis au
+mainteneur.
 
 ## Conséquences
 
