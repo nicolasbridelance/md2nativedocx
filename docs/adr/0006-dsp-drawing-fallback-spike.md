@@ -1,9 +1,12 @@
 # ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** Spike réalisé, résultat positif sous LibreOffice — **test en vrai Word en attente
-  du mainteneur** avant de démarrer le Milestone 1 (implémentation réelle du geometry engine).
+- **Statut :** **Hypothèse infirmée par test Word réel (2026-09-05).** `cycle-with-drawing.docx`
+  refuse toujours de s'ouvrir dans Word, message identique à l'incident d'origine ("Word a
+  rencontré une erreur lors de l'ouverture du fichier"). Le Milestone 1 (geometry engine complet)
+  **ne démarre pas** tant que la vraie cause n'est pas trouvée — voir "Suite" en bas de ce
+  document pour la piste de bissection en cours.
 - **Date :** 2026-09-05
-- **Décideur :** à confirmer par le mainteneur une fois le test Word réel fait.
+- **Décideur :** Nicolas Bridelance (mainteneur) — test réel effectué, résultat négatif rapporté.
 
 ## Contexte
 
@@ -55,17 +58,38 @@ LibreOffice. C'est la seule question que ce spike ne peut pas trancher lui-même
 
 ## Décision
 
-**En attente.** Le fichier `docs/adr/spikes/spike-dsp-drawing/cycle-with-drawing.docx` a été remis
-au mainteneur pour test dans un vrai Word. Deux issues possibles :
-- **Word l'ouvre** : le Milestone 1 (geometry engine réel, `packages/core/src/smartart/drawing.ts`,
-  câblage `postprocess.mjs`/`md2nativedocx-core.mjs` pour la 5e partie) peut démarrer avec
-  confiance sur l'approche.
-- **Word le refuse quand même** : l'hypothèse de TODO.md est fausse ou incomplète — il faudra
-  chercher une autre différence structurelle entre notre sortie et un vrai fichier Word (candidats
-  déjà écartés ou non testés à lister à ce moment-là), avant de retenter une implémentation.
+**Hypothèse infirmée.** Résultat du test réel : même message d'erreur qu'à l'incident d'origine.
+Le `dsp:drawing` seul ne suffit pas — soit il manque autre chose en plus, soit il ne joue aucun
+rôle et la vraie cause est ailleurs. Pas de nouvelle implémentation avant d'avoir isolé la cause
+réelle par bissection (voir "Suite").
+
+## Suite — bissection en cours (2026-09-05, après le résultat négatif)
+
+Deux hypothèses restent à trancher, qui pointent dans des directions très différentes :
+1. **Le contenu de nos 4-5 parties diagramme est structurellement invalide** pour Word (au-delà
+   de ce que le schéma XML brut ou LibreOffice peuvent détecter) — par exemple le `layoutDef`
+   personnalisé lui-même (`dgm:alg type="cycle"`) pourrait violer une contrainte que Word valide
+   strictement et LibreOffice tolère, indépendamment de `dsp:drawing`.
+2. **Quelque chose dans le document autour du diagramme** (racine `w:document`, `mc:Ignorable`,
+   `rsid`, `w:compat`, etc. — générés par notre pipeline CLI, pas par le traducteur SmartArt
+   lui-même) est ce qui fait échouer l'ouverture, sans rapport avec le contenu du diagramme.
+
+**Test de bissection décisif** : greffer nos propres 5 parties diagramme (data/layout/colors/
+quickStyle/drawing, celles de ce spike) **dans une copie du vrai fichier Word**
+(`handmade_samples/cycle-simple.docx`), à la place des siennes, en conservant tout le reste du
+fichier réel (document.xml, rels, styles, settings — tout ce qu'un vrai Word a lui-même écrit).
+- **Si cette copie s'ouvre** : le problème est isolé au **contenu du diagramme** (hypothèse 1) —
+  it faut alors comparer notre `layoutDef`/`dataModel` ligne à ligne contre un exemple connu plus
+  strictement, pas juste vérifier le XML bien formé.
+- **Si elle échoue aussi** : le problème est dans **l'enveloppe du document** produite par notre
+  pipeline (hypothèse 2) — `postProcessDocx`/`injectSmartArtParts`/le `reference.docx` généré, pas
+  le contenu du diagramme lui-même.
+
+Voir `docs/adr/spikes/spike-dsp-drawing/round2-graft/` pour ce test, construit et remis au
+mainteneur en parallèle de la mise à jour de cet ADR.
 
 ## Conséquences
 
-- Le script `build-spike.mjs` est réutilisable tel quel pour repartir avec `chain`/`tree` une fois
-  `cycle` confirmé (mêmes 3 étapes, juste changer le générateur source).
-- Aucune modification de code de production à ce stade — uniquement le dossier spike.
+- Le script `build-spike.mjs` reste réutilisable pour `chain`/`tree` une fois la vraie cause
+  trouvée et corrigée sur `cycle`.
+- Aucune modification de code de production à ce stade — uniquement des dossiers spike.
