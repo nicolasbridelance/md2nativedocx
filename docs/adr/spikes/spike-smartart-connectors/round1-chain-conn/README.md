@@ -49,11 +49,28 @@ C'est exactement le type de défaut que `TESTING.md` chapitre 4 documente comme 
 de toute la chaîne de test automatisée (1 à 5) : aucune ne peut distinguer "notre XML est faux" de
 "LibreOffice ne sait pas dessiner ça".
 
+## Confirmation en vrai Word (2026-09-05, mainteneur)
+
+**Même résultat que LibreOffice : aucune flèche entre A/B/C.** Ceci tranche définitivement
+l'hypothèse "limite connue de LibreOffice" évoquée plus haut — le vrai Word ne rend pas non plus le
+connecteur, donc le problème est dans le câblage de ce round, pas dans l'outil de vérification
+local. Aucune erreur de récupération/contenu illisible signalée (donc pas une régression de la
+classe de bug `mc:Ignorable`/schéma — cohérent avec le 0 erreur du validateur) : c'est un échec de
+rendu silencieux, pas un rejet du fichier.
+
+**Hypothèse la plus probable pour la suite** : contrairement au round 4/5 de l'ADR 0004 (composite/
+Main), reconstruire le `conn` algorithm et son câblage `sibTrans` uniquement à partir de la
+documentation publique des paramètres (sans jamais avoir vu la structure d'un vrai
+`layoutDef`/`data1.xml` de connecteur réel) a probablement le même défaut que la toute première
+tentative de `hierarchy1` (ADR 0004, "Résultat de rendu — négatif") : plausible au sens du schéma,
+mais incomplet ou mal ordonné dans le détail (élément manquant, attribut de câblage différent de
+`sibTransId`, ordre `presParOf` différent, etc.) — la doc `dd439439` documente les *paramètres* de
+l'algorithme, pas la recette complète de câblage `data`+`layout` qui le fait vraiment apparaître.
+
 ## Statut
 
-**En attente d'un test Word réel par le mainteneur** (`chain-conn.docx`, ce dossier) avant de :
-- répliquer le même mécanisme sur `cycle.ts` (`conn` avec `connRout="curve"`/points radiaux —
-  volontairement pas commencé, pour ne pas empiler un deuxième pari non vérifié sur le même
-  mécanisme non confirmé) ;
-- démarrer le rapprochement stylistique (deuxième chantier déjà validé par le mainteneur, séquencé
-  après les connecteurs).
+**Round 1 clos, négatif.** Prochaine étape proposée : demander au mainteneur un vrai `.docx` Word
+contenant un SmartArt "Processus" (ou "Processus continu") à 3 boîtes créé à la main dans Word —
+même méthode qui a débloqué composite/Main en ADR 0004 Round 2 (extraire la *structure* réelle
+`layout1.xml`/`data1.xml`, jamais son contenu, dans un round 2 dédié) — plutôt que de continuer à
+deviner à partir de la seule doc des paramètres. `cycle.ts` reste intouché en attendant.
