@@ -855,10 +855,10 @@ fermée, pas un cas de labo.
       `packages/core/src/smartart/{chain,tree,cycle}.ts` (ids remplacés par des entiers
       séquentiels), confirmé sans erreur de schéma restante par le même validateur, sans
       régression LibreOffice/`test:visual`/tests unitaires (2 tests mis à jour, vérifiaient
-      littéralement l'ancienne chaîne `"p-root"`). **En attente de la confirmation Word réelle
-      finale** avant de réactiver `smartArt.enabled` par défaut. Outil du validateur conservé dans
-      `docs/adr/spikes/spike-dsp-drawing/round9-modelid-fix/` — à utiliser en premier pour tout
-      futur "Word refuse d'ouvrir le fichier", avant toute comparaison manuelle.
+      littéralement l'ancienne chaîne `"p-root"`). **Confirmé par le mainteneur en vrai Word
+      (2026-09-05) : le fichier s'ouvre.** L'incident de corruption est clos. Outil du validateur
+      conservé dans `docs/adr/spikes/spike-dsp-drawing/round9-modelid-fix/` — à utiliser en premier
+      pour tout futur "Word refuse d'ouvrir le fichier", avant toute comparaison manuelle.
       - **Historique de l'hypothèse initiale (infirmée), gardé pour mémoire** : un échantillon
         Word réel (`handmade_samples/cycle-simple.docx`, Insertion → SmartArt → Cycle simple)
         diffé contre notre sortie avait montré une 5e partie manquante, `word/diagrams/drawingN.xml`
@@ -872,6 +872,39 @@ fermée, pas un cas de labo.
       généré avec SmartArt forcé a retouché le même bug non corrigé ; corrigé en régénérant avec
       les réglages par défaut, ne change rien à l'état du chantier (toujours non corrigé). Détail
       complet : `docs/history/TODO_ARCHIVE.md`.
+- [x] **Nouveau bug trouvé en vrai Word une fois la corruption corrigée, corrigé (2026-09-05)** —
+      le fichier s'ouvre maintenant, mais `tree` affichait un artefact : la boîte racine ("A")
+      montrait aussi une liste à puces des enfants ("• B • C • D") **en plus** des 3 vraies boîtes
+      B/C/D déjà correctement affichées en dessous. **Root cause, un angle mort méthodologique
+      important, pas juste un bug isolé** : `level1Main`/`level2Main` déclaraient
+      `<dgm:presOf axis="desOrSelf" .../>` dans le `layoutDef`. LibreOffice n'exécute jamais
+      `forEach`/`presOf` en direct (il affiche seulement le miroir de présentation qu'on a
+      pré-calculé à la main dans `data.xml`, ADR 0004 "Round 5") — donc cette ligne n'a **aucun
+      effet visible sous LibreOffice**, quelle que soit sa valeur. Le vrai Word, lui, sait
+      résoudre `forEach`/`presOf` dynamiquement, et évalué en direct sur la racine,
+      `axis="desOrSelf"` correspond à la racine **et à tous ses descendants** — d'où le texte des
+      3 enfants qui se retrouve mélangé dans la boîte de la racine. Un `level2Main` (feuille, donc
+      sans descendant à ce jour) ne montrait rien d'anormal par comparaison, mais la même ligne y
+      est tout aussi incorrecte en principe (latent, pas encore visible tant que
+      `tree.ts` reste limité à la profondeur 2). **Corrigé** : `axis="self"` à la place, dans les
+      3 générateurs (`chain.ts`/`cycle.ts` avaient la même ligne, jamais visiblement buggée faute
+      de vraie imbrication parent-enfant dans leur modèle de données, mais corrigée quand même —
+      `axis="self"` est la sémantique correcte partout, pas seulement celle qui ne plantait pas).
+      **Implication plus large, à retenir pour la suite du chantier SmartArt** : toute la suite de
+      tests actuelle (`test:visual`, LibreOffice) est structurellement aveugle à cette classe de
+      bug — un défaut de requête `presOf`/`forEach` dynamique ne peut être détecté que par un vrai
+      test dans Word, jamais par le rendu LibreOffice ni par le validateur de schéma (ce n'est pas
+      une violation de schéma, c'est une sémantique de requête mal choisie). **En attente de
+      re-confirmation en vrai Word** (fichiers régénérés remis au mainteneur) avant de considérer
+      ce point clos.
+      - **Signalé au passage, pas traité maintenant** : `chain`/`cycle` n'ont toujours pas de
+        connecteurs dessinés entre les boîtes (limite déjà documentée dans leurs propres doc
+        comments) et le style visuel général (couleurs plates `accent1`) ne ressemble pas à un
+        SmartArt "vanilla" créé à la main dans Word (dont les quickstyles par défaut ont souvent
+        des dégradés/effets 3D) — décision délibérée liée à la licence (ADR 0004 : ne pas
+        redistribuer les quickstyles/styles réels de Microsoft), pas un oubli. À rouvrir
+        séparément si le mainteneur veut investir dans un rendu plus proche du natif, plutôt que
+        mélangé à ce correctif.
 
 ---
 

@@ -70,6 +70,31 @@ export const TREE_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/tree1-rl';
  *  2. The data model needs a `presOf` connecting the `doc` point itself to
  *     the `p-root` presentation point (see `buildTreeDataXml` below) — see
  *     `chain.ts`'s identical fix for the shared root cause.
+ *
+ * **Third bug, found in real Word (2026-09-05), invisible to LibreOffice for
+ * a structural reason, not just bad luck**: both `level1Main` (the root
+ * box) and `level2Main` (each child box) originally declared
+ * `<dgm:presOf axis="self" ptType="node" st="1" cnt="0"/>`. LibreOffice
+ * never evaluates a layout's own `presOf`/`forEach` live — it only displays
+ * whatever presentation mirror `buildTreeDataXml` hand-authored in the data
+ * model (ADR 0004 "Round 5"), so this line has zero effect there. Real
+ * Word, unlike LibreOffice, *can* resolve `forEach`/`presOf` dynamically —
+ * and for the root, evaluated live, `axis="desOrSelf"` matches the root
+ * **and every descendant** (all its children), `st="1" cnt="0"` meaning
+ * "all matches from the first" — so the root's own text box additionally
+ * renders every child's text as a bulleted sub-list inside itself, on top
+ * of those same children already getting their own, correct `level2Main`
+ * boxes below. A leaf child has no descendants, so `level2Main` looked
+ * fine by comparison — the bug was root-only at this module's current
+ * depth-2 scope, but the same axis would misfire on any child that gained
+ * its own descendants once adaptive-depth trees exist (TODO.md). Fixed by
+ * using `axis="self"` on both: "this exact node, nothing beneath it" is
+ * what a single-node text box is actually supposed to mean here, whether
+ * or not that node happens to have children. `chain.ts`/`cycle.ts` carry
+ * the identical pre-fix line but never hit the bug in practice (their data
+ * model has no real parent-child nesting among content nodes to begin
+ * with) — fixed there too anyway, since `axis="self"` is the correct
+ * semantic regardless, not merely the one that happens not to misfire.
  */
 export const TREE_LAYOUT_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -103,7 +128,7 @@ export const TREE_LAYOUT_XML =
   '</dgm:constrLst>' +
   '<dgm:layoutNode name="level1Main" styleLbl="node1">' +
   '<dgm:alg type="tx"/><dgm:shape type="roundRect"/>' +
-  '<dgm:presOf axis="desOrSelf" ptType="node" st="1" cnt="0"/>' +
+  '<dgm:presOf axis="self" ptType="node" st="1" cnt="0"/>' +
   '<dgm:constrLst>' +
   '<dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>' +
@@ -124,7 +149,7 @@ export const TREE_LAYOUT_XML =
   '<dgm:alg type="composite"/><dgm:shape/>' +
   '<dgm:layoutNode name="level2Main" styleLbl="node2">' +
   '<dgm:alg type="tx"/><dgm:shape type="roundRect"/>' +
-  '<dgm:presOf axis="desOrSelf" ptType="node" st="1" cnt="0"/>' +
+  '<dgm:presOf axis="self" ptType="node" st="1" cnt="0"/>' +
   '<dgm:constrLst>' +
   '<dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>' +

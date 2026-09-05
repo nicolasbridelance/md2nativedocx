@@ -70,7 +70,7 @@ export const CYCLE_LAYOUT_XML =
   '<dgm:layoutNode name="Main" styleLbl="node1">' +
   '<dgm:alg type="tx"/>' +
   '<dgm:shape type="roundRect"/>' +
-  '<dgm:presOf axis="desOrSelf" ptType="node" st="1" cnt="0"/>' +
+  '<dgm:presOf axis="self" ptType="node" st="1" cnt="0"/>' +
   '<dgm:constrLst>' +
   '<dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>' +

@@ -88,6 +88,16 @@ tests in real Word before each release).
 adding a case in its own `test-corpus/visual/README.md`. Mechanism: `scripts/test-visual.mjs` +
 `scripts/lib/png.mjs` (in-house PNG decoder/diff, zero dependency).
 
+**Known blind spot, not a bug in this chapter itself**: LibreOffice never dynamically resolves a
+SmartArt `layoutDef`'s own `forEach`/`presOf` queries — it only ever displays whatever static
+presentation mirror `packages/core/src/smartart/{chain,tree,cycle}.ts` hand-authored into the data
+model (ADR 0004 "Round 5"). Real Word *does* resolve those queries live. A bug in how a `presOf`
+query is written (e.g. an `axis` that matches more nodes than intended) is therefore **completely
+invisible to this chapter** — found the hard way (TODO.md, "Incident SmartArt", 2026-09-05):
+`tree.ts`'s root box rendered fine here while showing an extra bulleted list of every child's text
+in real Word. Only chapter 7 (real Word) can catch this class of defect; chapters 1-5 (including
+this one and schema validation) structurally cannot.
+
 ## 5. Open XML schema validation
 
 `scripts/oxml-validator/` (a small C# wrapper around Microsoft's own
