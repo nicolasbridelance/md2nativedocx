@@ -15,6 +15,7 @@ set -euo pipefail
 
 PANDOC_VERSION="3.1.3"
 LUA_VERSION="5.4"
+DOTNET_SDK_VERSION="10.0.200"
 
 echo "==> Installing Pandoc ${PANDOC_VERSION}"
 if ! command -v pandoc >/dev/null 2>&1 || ! pandoc --version | grep -q "${PANDOC_VERSION}"; then
@@ -48,6 +49,24 @@ if ! command -v libreoffice >/dev/null 2>&1 && ! command -v soffice >/dev/null 2
   sudo apt-get install -y -qq libreoffice-writer libreoffice-impress
 fi
 libreoffice --version 2>/dev/null || soffice --version 2>/dev/null || echo "LibreOffice not found"
+
+echo "==> Installing .NET SDK ${DOTNET_SDK_VERSION}"
+# Optional dependency: only used by scripts/oxml-validator/ (npm run
+# test:oxml-validate, AGENTS.md → "Diagnosing 'Word won't open the file'").
+# test:oxml-validate degrades gracefully (exit 0) without it, so a failure
+# provisioning it here should never block the rest of setup.
+# Installed via Microsoft's own dotnet-install.sh, exact version pinned,
+# same OS-independent-tarball approach as Pandoc above rather than an apt
+# package (whose available version depends on this image's repo, like the
+# LibreOffice limitation documented above) -- keeps this in sync with
+# actions/setup-dotnet@v4's pinned version in ci.yml.
+if ! command -v dotnet >/dev/null 2>&1 || ! dotnet --list-sdks | grep -q "^${DOTNET_SDK_VERSION} "; then
+  curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
+  bash /tmp/dotnet-install.sh --version "${DOTNET_SDK_VERSION}" --install-dir /usr/local/share/dotnet
+  sudo ln -sf /usr/local/share/dotnet/dotnet /usr/local/bin/dotnet
+  rm -f /tmp/dotnet-install.sh
+fi
+dotnet --version
 
 echo "==> Installing npm workspace dependencies"
 npm install

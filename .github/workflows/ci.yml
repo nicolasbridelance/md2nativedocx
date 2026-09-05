@@ -25,6 +25,16 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq pandoc lua5.4
 
+      - uses: actions/setup-dotnet@v4
+        # Optional dependency: only used by scripts/oxml-validator/ (npm run
+        # test:oxml-validate, AGENTS.md → "Diagnosing 'Word won't open the
+        # file'"). Version kept in sync with .devcontainer/setup.sh's
+        # DOTNET_SDK_VERSION. test:oxml-validate degrades gracefully without
+        # it, so this step failing should not be treated as unusual — it
+        # just means that one check gets skipped.
+        with:
+          dotnet-version: '10.0.200'
+
       - name: Install dependencies
         run: npm ci
 
@@ -42,6 +52,9 @@ jobs:
 
       - name: Fuzz tests (core)
         run: npm run test:fuzz
+
+      - name: Open XML schema validation
+        run: npm run test:oxml-validate
 
       - name: Write job summary
         if: always()
