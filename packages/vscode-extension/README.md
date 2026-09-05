@@ -77,6 +77,12 @@ A sign the market already validated native editability as worth building: docu.m
 LaTeX formulas into editable Word equations — just never applied that idea to diagrams. That's
 exactly the gap `md2nativedocx` fills.
 
+Every export is also validated against **the exact schema Word itself enforces**, using
+Microsoft's own Open XML SDK — not a guess, not a reimplementation. A `.docx` can be well-formed
+XML and still be a file real Word refuses to open; this check catches that class of problem before
+you do, and the result (a clean "0 errors", or exactly what and where otherwise) lands in the
+export's own `.log` file.
+
 ## Usage
 
 Works on any `.md` file — with or without a Mermaid diagram, text/tables/formatting export either
@@ -92,8 +98,10 @@ way — and on a raw `.mmd` Mermaid file too.
 No configuration required before first use. Optional settings: `md2nativedocx.outputDirectory`
 chooses where `.docx` files are written (default: the same folder as the source);
 `md2nativedocx.referenceDocument` points at a company Word template to match its fonts/colors/
-styles; `md2nativedocx.smartArt.enabled` (default: on) can force every diagram through the plain
-OOXML canvas shapes instead of native SmartArt.
+styles; `md2nativedocx.smartArt.enabled` (default: off, experimental) turns an eligible diagram
+into a native SmartArt graphic instead of the default OOXML canvas shapes;
+`md2nativedocx.wordCompatibilityCheck.enabled` (default: on) validates every export against Word's
+own schema and reports the result in its `.log` file.
 
 A guided Getting Started walkthrough (Command Palette → *Get Started with md2nativedocx*) shows
 the three steps in practice right after install.
@@ -133,6 +141,11 @@ already on your machine, it's downloaded automatically (one-time, official unmod
 checksum-verified) and cached for every export after that. Already have Pandoc installed? It's used
 as-is and nothing is downloaded. If automatic setup ever fails (offline, unsupported platform), an
 explicit error message with a manual install link is shown — no silent crash.
+
+The Word compatibility check (see above) works the same way with the official Microsoft `.NET`
+runtime: downloaded once if not already present, checksum-verified, cached — or used as-is if
+you already have `.NET`. Turn off `md2nativedocx.wordCompatibilityCheck.enabled` to skip that
+entirely and export exactly as before.
 
 ## What this extension doesn't do (yet)
 

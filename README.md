@@ -23,6 +23,7 @@ Convert Markdown containing **Mermaid** diagrams into a complete `.docx` with
 | Fidelity to the Mermaid preview | ~ | ✅ Same layout engine (Dagre) |
 | Dependency on external rendering | Yes (image) | No (vector) |
 | LaTeX formulas as native Word equations | Varies by tool | ✅ via Pandoc, free (see §2) |
+| Validated against Word's own file-format schema | Not checked | ✅ Every export, via Microsoft's own Open XML SDK |
 
 Named comparison against competing VS Code extensions (installs, rendering method verified from
 their own docs): see `docs/specs/cahier_des_charges.md` §12.1 (French), or directly the
@@ -58,6 +59,19 @@ other Mermaid diagram type is recognized and gets a clear in-document note rathe
 wrong flowchart-shaped guess — see `docs/smartart-full-catalog-cross-mermaid.md` and
 `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` for the roadmap covering the rest.
 
+## Word compatibility, verified — not assumed
+
+A `.docx` can be well-formed XML, render correctly under LibreOffice, and still be a file that
+real Word refuses to open outright — the two aren't the same guarantee. `md2nativedocx` validates
+every export against the **exact schema Microsoft's own Word enforces**, using Microsoft's own
+Open XML SDK (`DocumentFormat.OpenXml.Validation.OpenXmlValidator`) — not a guess, not a
+third-party reimplementation. The result goes straight into the `.log` file written next to every
+export: a clean "0 errors" when the file conforms, or the precise part/path/description of
+whatever doesn't, so a real problem shows up as a readable line in a log file instead of Word's own
+opaque "an error occurred while opening the file." See `docs/adr/0006-dsp-drawing-fallback-spike.md`
+for the incident that motivated this (7 rounds of guessing, resolved in one pass once this
+validator was used) and `docs/adr/0007-openxml-validator-adoption.md` for how it's wired in.
+
 ## Installation
 
 Prerequisites: **Node.js ≥ 18**, **Pandoc** (installed separately), and a **Lua** interpreter for
@@ -87,6 +101,7 @@ npm run lint         # ESLint + eslint-plugin-security
 npm run test         # unit + golden tests
 npm run test:fuzz    # property-based tests on the untrusted-input boundary
 npm run test:visual  # headless LibreOffice render + pixel-diff (CI)
+npm run test:oxml-validate  # schema validation via Microsoft's Open XML SDK (.NET, opt-in)
 ```
 
 ## Documentation
@@ -95,7 +110,7 @@ npm run test:visual  # headless LibreOffice render + pixel-diff (CI)
 - `docs/specs/cahier_des_charges.md` (French) — the **what** and **why** (spec, phases, scope).
 - `AGENTS.md` — the **how** (conventions, non-negotiable security rules).
 - `docs/adr/` — architecture decisions (layout engine, Pandoc integration).
-- `TESTING.md` — the seven testing chapters, what each one guarantees, where it lives.
+- `TESTING.md` — the eight testing chapters, what each one guarantees, where it lives.
 - `docs/compliance/` — license, dependencies, IT risk analysis, non-technical guide.
 - `CONTRIBUTING.md` — how to contribute.
 
