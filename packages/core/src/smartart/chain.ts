@@ -77,14 +77,29 @@ export const CHAIN_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/chain1-rl'
  * `hierarchy1` from a tutorial rather than a real sample. Round 2 studied
  * the *structure* (never the content) of a real Word-authored "Processus"
  * SmartArt the maintainer built by hand (`handmade_samples/
- * processus_simple.docx`, real `process1` layout) and found the two
- * concrete gaps: the shape needs `type="conn"` (round 1 left it empty,
+ * processus_simple.docx`, real `process1` layout) and found two concrete
+ * gaps: the shape needs `type="conn"` (round 1 left it empty,
  * `<dgm:shape/>`), and `begPts`/`endPts` should just be `"auto"` — Word's
  * own layout doesn't hardcode edge points, `dim`, or arrow style at all,
  * relying on `conn`'s own documented defaults (`dim="2D"`, `begSty="noArr"`,
  * `endSty="arr"`). This also means the connector no longer needs a
  * direction-specific point substitution in the TD/BT/RL variants below —
- * `"auto"` routes correctly regardless of the `lin` direction.
+ * `"auto"` routes correctly regardless of the `lin` direction. Confirmed by
+ * the maintainer to still render no connector in real Word (round 2,
+ * `docs/adr/spikes/spike-smartart-connectors/round2-chain-conn-real-structure/`).
+ *
+ * Round 3 found the remaining gap: the real layout's `sibTransForEach` is
+ * nested **inside** `nodesForEach`, as a sibling of the `node` layoutNode
+ * within each iteration — not a separate top-level `forEach` after it, as
+ * rounds 1-2 had it. `conn`'s `begPts`/`endPts="auto"` most likely needs
+ * that per-iteration scope to resolve "the node this transition follows"
+ * against, unlike the plain `sp` spacer this same separate-loop shape
+ * previously held (which needs no such relational context, and did render
+ * correctly — the pre-connector spacing was never broken). Also added the
+ * `sibTrans` layoutNode's own `connDist`/`begPad`/`endPad` constraints
+ * (present in the real layout, absent from rounds 1-2) and an empty
+ * `r:blip` on its shape, matching the real layout's shape element exactly
+ * bar its actual relationship content.
  */
 export const CHAIN_LAYOUT_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -121,16 +136,21 @@ export const CHAIN_LAYOUT_XML =
   '<dgm:ruleLst><dgm:rule type="primFontSz" val="5"/></dgm:ruleLst>' +
   '</dgm:layoutNode>' +
   '</dgm:layoutNode>' +
-  '</dgm:forEach>' +
   '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">' +
   '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans">' +
   '<dgm:alg type="conn">' +
   '<dgm:param type="begPts" val="auto"/>' +
   '<dgm:param type="endPts" val="auto"/>' +
   '</dgm:alg>' +
-  '<dgm:shape type="conn"/>' +
+  '<dgm:shape xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" type="conn" r:blip=""/>' +
   '<dgm:presOf axis="self"/>' +
+  '<dgm:constrLst>' +
+  '<dgm:constr type="connDist"/>' +
+  '<dgm:constr type="begPad" refType="connDist" fact="0.25"/>' +
+  '<dgm:constr type="endPad" refType="connDist" fact="0.25"/>' +
+  '</dgm:constrLst>' +
   '</dgm:layoutNode>' +
+  '</dgm:forEach>' +
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
   '</dgm:layoutDef>';
