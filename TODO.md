@@ -638,8 +638,31 @@ de la spec, §5.
       Lua (`Pandoc(doc)` avec lookahead `Header`→`Table`, en plus du seul `CodeBlock` mermaid
       traité aujourd'hui) — piège OOXML documenté dans la spec (le `sectPr` de fin de section se
       code dans le dernier paragraphe de la section qui se termine, pas en tête de la suivante).
-      **Prévoir un spike dédié avant d'estimer plus finement** (même pratique que Pandoc/ADR 0002
-      et SmartArt/ADR 0004) — lot le plus risqué du chantier, dépend du Lot 1.
+      **Spike dédié réalisé (2026-09-05)** — `docs/adr/0005-landscape-table-section-spike.md`,
+      décision d'implémentation en attente du mainteneur :
+      - Piège documenté par la spec **confirmé et précisé par rendu réel** (pas juste lu) : le
+        paragraphe inséré avant le `Header` doit porter les réglages **portrait** (ceux de la
+        section qui se termine là), celui inséré après le `Table` doit porter les réglages
+        **paysage** (ceux de la section qui vient de s'ouvrir) — l'inverse d'une lecture littérale
+        naïve de "bascule avant le Header".
+      - **Piège supplémentaire trouvé par le spike, absent de la spec** : une section
+        complètement vide (zéro paragraphe de contenu entre deux bascules) rend une **page
+        blanche supplémentaire** sous LibreOffice. Deux cas concrets confirmés par rendu réel : (1)
+        deux paires `Header`→`Table` adjacentes sans contenu entre elles, (2) un tableau paysage
+        qui est le **dernier bloc du document** — ce n'est pas un cas rare, reproduit sur
+        l'exemple le plus simple possible (un seul tableau en fin de document).
+      - Conséquence sur le découpage : le cas "fin de document" ne peut **pas** se corriger dans le
+        filtre Lua seul (le `sectPr` final de `<w:body>` est un artefact du writer Pandoc/
+        `reference.docx`, confirmé repris tel quel du gabarit quand non vide — même mécanique que
+        Lot 1 — mais pas exposé dans `doc.blocks`) : il faudra une chirurgie XML dans
+        `postprocess.mjs` en plus du filtre Lua (même catégorie que le déplacement du patch
+        `updateFields` du TOC au Lot 3). Le paragraphe "retour au portrait" doit aussi être
+        paramétré par le `pgSz`/`pgMar` réellement actif (Lot 1), pas une constante Letter figée.
+      - Deux options pour la suite, non tranchées : (a) implémenter la solution complète (fusion
+        des paires `Header`→`Table` contiguës + chirurgie `postprocess.mjs` fin-de-document +
+        paramétrage dynamique), ou (b) réduire le périmètre v1 en avertissant explicitement sur
+        les tableaux contigus/en fin de document plutôt que les supporter tout de suite.
+      Lot le plus risqué du chantier, dépend du Lot 1.
 - [ ] Lot 6 (optionnel, non demandé explicitement) — numérotation automatique des titres (1.12),
       raffinements de style de tableau (1.11).
 
