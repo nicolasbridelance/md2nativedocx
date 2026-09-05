@@ -1,13 +1,14 @@
 # ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** **Hypothèse `dsp:drawing` infirmée, ET localisée au contenu du diagramme
-  (2026-09-05).** `cycle-with-drawing.docx` refuse de s'ouvrir (même erreur que l'incident
-  d'origine) — round 1. `cycle-graft.docx` (nos 5 parties diagramme greffées dans le vrai fichier
-  Word, tout le reste inchangé) **échoue aussi** — round 2, ce qui prouve que le problème est dans
-  le **contenu** de nos parties diagramme, pas dans l'enveloppe produite par notre pipeline CLI.
-  Round 3 (isolation data+layout vs colors+quickStyle) en cours, voir "Suite".
+- **Statut :** **Cause localisée au `layout1.xml`/`data1.xml` personnalisés, nouvelle hypothèse
+  concrète en test (2026-09-05).** Round 1 (`dsp:drawing`) et round 2 (greffe complète) ont
+  échoué. **Round 3 tranche** : `cycle-isolate-a.docx` (nos `data`+`layout` seuls) **échoue**,
+  `cycle-isolate-b.docx` (nos `colors`+`quickStyle` seuls) **s'ouvre** — le problème est
+  spécifiquement dans `data.xml`/`layout.xml`. Comparaison ligne à ligne avec le fichier réel a
+  trouvé une nouvelle piste concrète (éléments `presOf`/`constrLst`/`ruleLst` requis mais absents
+  de nos `layoutNode`) — round 4 en test.
 - **Date :** 2026-09-05
-- **Décideur :** Nicolas Bridelance (mainteneur) — 2 tests réels effectués, résultats négatifs rapportés.
+- **Décideur :** Nicolas Bridelance (mainteneur) — 3 rounds de tests réels effectués à ce jour.
 
 ## Contexte
 
@@ -89,10 +90,33 @@ détail dans son propre `README.md`) :
   ne définissent pas — un échec ici ne serait pas une preuve définitive contre notre format
   `colors`/`quickStyle`, seulement contre cette référence de style spécifique.
 
-Remis au mainteneur pour test réel des deux fichiers en une fois.
+**Résultat (2026-09-05) : `cycle-isolate-a.docx` échoue, `cycle-isolate-b.docx` s'ouvre.** Tranché
+sans ambiguïté : le problème est dans `data1.xml`/`layout1.xml`, pas dans `colors`/`quickStyle`
+(le biais connu ci-dessus ne joue donc aucun rôle — `colors`/`quickStyle` sont innocentés
+complètement, pas seulement "probablement").
+
+## Round 4 — nouvelle hypothèse concrète, en test (2026-09-05)
+
+Comparaison ligne à ligne de notre `CYCLE_LAYOUT_XML` contre le `layout1.xml` réel : **chaque**
+`dgm:layoutNode` du fichier réel inclut `presOf`, `constrLst` et `ruleLst`, même vides
+(`<dgm:presOf axis="self"/>`, `<dgm:ruleLst/>`) — y compris sur des nœuds structurels comme le
+connecteur `sibTrans`, qui ne présente pourtant rien lui-même. Nos trois générateurs (`chain.ts`/
+`tree.ts`/`cycle.ts`, même motif d'écriture partout, vérifié) **omettent entièrement** ces
+éléments sur tout `layoutNode` sauf la seule feuille qui présente du texte ("Main"). Si le schéma
+`CT_LayoutNode` les rend obligatoires (contenu vide toléré, mais l'élément doit exister), c'est
+exactement le genre d'écart qu'un validateur XML strict (Word) rejette et qu'un parseur tolérant
+(LibreOffice) ignore silencieusement — cohérent avec toutes les observations des rounds 1 à 3.
+
+Deux fichiers construits (`docs/adr/spikes/spike-dsp-drawing/round4-schema-fix/`, détail dans son
+`README.md`) : `cycle-round4-graft.docx` (patch minimal greffé dans le vrai fichier, isolation la
+plus propre) et `cycle-round4-standalone.docx` (diagramme complet produit par notre propre
+pipeline CLI, seul le `layoutDef` patché — **si celui-ci s'ouvre seul, tout le plan `dsp:drawing`/
+Milestone 1 devient inutile**, ce trou de schéma étant la vraie cause, bien plus petite que prévu).
+Remis au mainteneur.
 
 ## Conséquences
 
 - Le script `build-spike.mjs` reste réutilisable pour `chain`/`tree` une fois la vraie cause
-  trouvée et corrigée sur `cycle`.
+  trouvée et corrigée sur `cycle` (round 4 ci-dessus concerne déjà les trois générateurs, même
+  motif d'écriture confirmé partagé).
 - Aucune modification de code de production à ce stade — uniquement des dossiers spike.
