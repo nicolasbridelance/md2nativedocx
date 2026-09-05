@@ -386,6 +386,34 @@ test('colours reaching a:srgbClr are validated as hex, not merely escaped', () =
   assert.ok(!xml.includes('nothex'));
 });
 
+test('maxDrawingCx/maxDrawingCy (export_customization_SPEC.md §2.4) override the built-in Letter-portrait page area', () => {
+  // A diagram big enough to hit the default scale-down (see the "shrink
+  // arrowhead markers"/scale tests elsewhere in this file for the same
+  // technique: enough chained long-labeled nodes to exceed MAX_DRAWING_CX).
+  const text =
+    'graph TD\n' +
+    Array.from({ length: 10 }, (_, i) => `  N${i}[A rather long node label number ${i}] --> N${i + 1}[Next]`).join('\n');
+  const { ast } = parseMermaid(text);
+  const l = layout(ast);
+  const withoutOverride = translateToOoxml(ast, l);
+  const extentWithout = Number(withoutOverride.match(/<wp:extent cx="(\d+)"/)![1]);
+
+  // A tiny explicit page area must produce a visibly smaller extent than the
+  // built-in default, proving the option reaches scaledExtent()/wrapInParagraph.
+  const withOverride = translateToOoxml(ast, l, { maxDrawingCx: 100000, maxDrawingCy: 100000 });
+  const extentWith = Number(withOverride.match(/<wp:extent cx="(\d+)"/)![1]);
+
+  assert.ok(extentWith < extentWithout, 'a smaller maxDrawingCx must shrink the emitted extent');
+  assert.ok(extentWith <= 100000, 'the emitted extent must respect the override cap');
+});
+
+test('maxDrawingCx/maxDrawingCy default to the built-in constants when omitted (no behavior change for existing callers)', () => {
+  const { ast } = parseMermaid('graph TD\n  A[A] --> B[B]');
+  const l = layout(ast);
+  assert.equal(translateToOoxml(ast, l), translateToOoxml(ast, l, {}));
+  assert.equal(translateToOoxml(ast, l), translateToOoxml(ast, l, { maxDrawingCx: undefined, maxDrawingCy: undefined }));
+});
+
 // --- Regression tests for the connector-geometry defects found by rendering
 // a generated .docx through LibreOffice headless (structural XML checks alone
 // cannot catch these). ---

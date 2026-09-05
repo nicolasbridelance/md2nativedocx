@@ -427,12 +427,65 @@ configurables) et sur la perte de couleur des emoji/badges (✅/⚠️) à l'ouv
 encore priorisé par rapport à la Phase 6/7 en cours (Slides/SmartArt) — voir "Questions ouvertes"
 de la spec, §5.
 
-- [ ] **Lot 1 — réglages de mise en page/typo via `reference.docx` généré dynamiquement**
-      (spec §1.1–1.8/1.11/1.13/1.14, §2.1) : nouveau module `referenceDocBuilder` (réutilise le
-      pattern `execFileSync('unzip'/'zip', [...])` déjà utilisé par `postprocess.mjs` — **aucune
-      nouvelle dépendance npm**), patch de `theme1.xml`/`styles.xml`/`document.xml` selon les
-      réglages VS Code. Inclut la dépendance cachée sur `MAX_DRAWING_CX`/`MAX_DRAWING_CY`
-      (`ooxml-translator.ts:160-175`, spec §2.4) à rendre dynamique.
+- [x] **Lot 1 (sous-ensemble solide) — réglages de mise en page/typo via `reference.docx` généré
+      dynamiquement (2026-09-05)** : 1.1-1.8 + 1.14 (format/orientation/marges, polices titre+corps,
+      taille, interligne, justification, couleur d'accent) livrés et vérifiés en rendu réel
+      (LibreOffice headless). 1.11 (style de tableau, sous-spécifié dans la spec) et 1.13 (pied de
+      page numéroté, demande une nouvelle partie `word/footer*.xml` + relation + content-type type
+      `injectSmartArtParts`) restent **hors scope de cette passe**, fast-follow explicite du même
+      Lot 1 — pas une régression de périmètre, décidé avec le mainteneur avant de commencer.
+      - Nouveau module `packages/cli/src/referenceDocBuilder.mjs` : même pattern
+        `execFileSync('unzip'/'zip', [...])` que `postprocess.mjs` — **aucune nouvelle dépendance
+        npm**. Fonctions pures testables séparément (`resolvePageSize`/`resolveMargins`/
+        `resolveLineSpacing`/`patchTheme`/`patchStyles`/`patchSectPr`) + orchestrateur
+        `buildReferenceDoc()` qui ne patch que les parties XML réellement concernées par les
+        options données (pas de réécriture globale), retourne `null` (no-op) quand rien n'est réglé.
+      - **Validé empiriquement avant d'écrire le module** (le point le plus risqué du plan) : Pandoc
+        `--reference-doc` reprend bien tel quel le `<w:sectPr>` du gabarit fourni (testé avec des
+        valeurs custom distinctives, round-trippées via un vrai `pandoc`) ; les styles `BodyText`/
+        `FirstParagraph` que Pandoc applique aux paragraphes réels n'écrasent pas `w:line`/`w:jc`,
+        donc patcher `w:docDefaults` dans `styles.xml` suffit à propager interligne/justification
+        au corps de texte généré.
+      - **Dépendance cachée `MAX_DRAWING_CX`/`MAX_DRAWING_CY` (spec §2.4) rendue dynamique** —
+        escaladé et confirmé avec le mainteneur avant de le faire (changement de l'API publique de
+        `packages/core`, voir AGENTS.md → "Escalate to a human") : `TranslateOptions` gagne deux
+        champs optionnels additifs `maxDrawingCx`/`maxDrawingCy` (EMU), défaut inchangé si absents.
+        Câblage bout en bout : CLI calcule la zone utile réelle (page × orientation × marges) via
+        `resolveMaxDrawingExtentEmu()`, la passe par `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY` (même
+        convention qu'un env var par réglage, comme `MD2NATIVEDOCX_SMARTART_DIR`) au subprocess
+        Pandoc, que `md2nativedocx-core.mjs` (le pont Lua→core, un par bloc `` ```mermaid ``) relit
+        et transmet à `translateToOoxml()`. Scope volontairement limité au pipeline flowchart
+        (`ooxml-translator.ts`) — les 3 types non-flowchart (`quadrant`/`venn`/`mindmap`,
+        `translator/canvas.ts`) gardent leur propre constante figée, non touchée par cette passe.
+      - **Conflit avec `md2nativedocx.referenceDocument` custom (spec §2.1/§5, option (a) confirmée
+        avec le mainteneur)** : un gabarit custom gagne toujours, les réglages Lot 1 sont
+        silencieusement ignorés pour lui (on ne connaît pas sa mise en page). Note info (pas un
+        warning compté — préfixe `md2nativedocx (info): ` distinct du `md2nativedocx: ` que
+        `extractWarnings` compte) écrite côté CLI ; dupliquée côté extension VS Code
+        (`outputChannel`, car le stderr du CLI n'est lu qu'en cas d'échec, jamais sur un export
+        réussi) pour rester visible dans les deux cas d'usage.
+      - VS Code : 11 nouveaux réglages `md2nativedocx.layout.*`/`md2nativedocx.typography.*`
+        (`package.json` + `package.nls.json`, anglais uniquement — pas de traduction dans les 5
+        locales existantes, gap connu, fallback anglais standard de VS Code). `extension.ts` lit
+        chaque réglage via `.inspect()` (pas `.get()`) pour ne transmettre au CLI que ce que
+        l'utilisateur a **explicitement** touché — sinon la valeur par défaut du schéma (ex. `A4`)
+        aurait été envoyée à chaque export, changeant silencieusement le comportement par défaut de
+        tous les utilisateurs existants (aujourd'hui : page size implicite de Word/Pandoc, jamais
+        A4 forcé). **Suivi noté pour le Lot 4** (panneau Activity Bar/Sidebar, pas encore construit) :
+        griser les réglages Lot 1 dans le panneau custom quand `referenceDocument` est fourni,
+        demandé par le mainteneur en même temps que la confirmation de l'option (a) — pas
+        implémentable avant que le panneau lui-même existe.
+      - Tests : `packages/cli/test/reference-doc-builder.test.mjs` (25 tests, fonctions pures +
+        `buildReferenceDoc` intégration réelle unzip/zip), 3 nouveaux tests bout-en-bout dans
+        `cli.test.mjs` (env vars → `.docx` réel, re-scaling du diagramme sous petite page, conflit
+        `referenceDocument`), 2 nouveaux tests `packages/core` (`maxDrawingCx`/`maxDrawingCy`
+        override + défaut inchangé si omis). 391 tests au total sur le monorepo (64 cli + 291 core +
+        11 pandoc-filter + 25 vscode-extension), tous verts ; `test:visual` 35/35 à 0,000 % de diff
+        (comportement par défaut prouvé strictement inchangé) ; lint + typecheck propres partout.
+      - Assumption non vérifiée en vrai Word, flaguée comme telle (même catégorie que l'Aptos/
+        `packages/cli/assets/README.md`) : les valeurs twips des presets de marges (`normal`
+        notamment, 2,5cm/1417 twips — la valeur que la spec elle-même énonce, pas forcément celle
+        qu'un vrai Word en locale métrique écrit pour son propre preset "Normales").
 - [ ] **Lot 2 — rendu couleur des emoji/badges** (spec §1.15, §2.5) : post-traitement dans
       `postprocess.mjs`, force `w:rFonts` "Segoe UI Emoji" sur les runs contenant un emoji.
       Réglage `md2nativedocx.emoji.forceColorFont` (défaut `true`). **À valider empiriquement

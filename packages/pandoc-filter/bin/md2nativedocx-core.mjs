@@ -90,6 +90,24 @@ const inputPath = process.argv[2];
 const input = inputPath ? readFileSync(inputPath, 'utf8') : readFileSync(0, 'utf8');
 
 /**
+ * `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY` (EMU) — set by
+ * `packages/cli/bin/md2nativedocx.mjs` from the resolved page format/
+ * orientation/margins (export_customization_SPEC.md §2.4, Lot 1) when they
+ * differ from the Letter-portrait default `ooxml-translator.ts` otherwise
+ * assumes. Absent/unparseable falls back to that default (same
+ * `TranslateOptions` field left `undefined`) rather than failing the export
+ * over a formatting nicety.
+ */
+function translateOptionsFromEnv() {
+  const cx = Number.parseInt(process.env.MD2NATIVEDOCX_MAX_DRAWING_CX ?? '', 10);
+  const cy = Number.parseInt(process.env.MD2NATIVEDOCX_MAX_DRAWING_CY ?? '', 10);
+  const options = {};
+  if (Number.isFinite(cx) && cx > 0) options.maxDrawingCx = cx;
+  if (Number.isFinite(cy) && cy > 0) options.maxDrawingCy = cy;
+  return options;
+}
+
+/**
  * Try the SmartArt path for `ast`; returns the `<w:p>` fragment to emit, or
  * `null` to fall back to the `wpg:wgp` translator. Never throws — any
  * failure here (including `generateSmartArt` itself, defensively) falls
@@ -175,7 +193,7 @@ try {
       for (const warning of result.warnings) {
         process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
       }
-      let output = translateToOoxml(ast, result);
+      let output = translateToOoxml(ast, result, translateOptionsFromEnv());
       // Only note the fallback when SmartArt was actually attempted for this
       // diagram (smartArtDir set) and rejected for one of classifyTopology's
       // structured reasons — never for an unexpected generation error (already

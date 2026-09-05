@@ -6,6 +6,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 ## [Unreleased]
 
 ### Added
+- Page/typography export customization (page format, orientation, margins, heading/body fonts,
+  base font size, line spacing, justification, theme accent color) via 11 new
+  `md2nativedocx.layout.*`/`md2nativedocx.typography.*` settings. Ignored (with a note) when
+  `md2nativedocx.referenceDocument` points at a custom template — its own page setup wins.
 - Three new Mermaid diagram types export as native, editable OOXML shapes: `quadrantChart`,
   `venn-beta` (2-3 sets, true overlapping-circle geometry), and `mindmap` (radial layout, all 6
   node shapes). No extension-side changes were needed — the same `` ```mermaid `` block detection

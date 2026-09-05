@@ -23,6 +23,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
+import { buildReferenceDoc, resolveMaxDrawingExtentEmu } from '../src/referenceDocBuilder.mjs';
 
 // The pandoc-filter package may be hoisted to the repo root node_modules (npm
 // workspaces) or nested under packages/cli/node_modules. Resolve whichever
@@ -47,8 +48,78 @@ const REFERENCE_DOC_PATH = fileURLToPath(new URL('../assets/reference.docx', imp
 // this package's bundled default above. Unset for standalone `npx
 // md2nativedocx` usage, which is unaffected.
 const referenceDocOverride = process.env.MD2NATIVEDOCX_REFERENCE_DOC;
-const EFFECTIVE_REFERENCE_DOC_PATH =
-  referenceDocOverride && existsSync(referenceDocOverride) ? referenceDocOverride : REFERENCE_DOC_PATH;
+const hasCustomReferenceDoc = Boolean(referenceDocOverride && existsSync(referenceDocOverride));
+
+/**
+ * Page/typography options for the export (spec §1.1-1.8/1.14, "Lot 1"),
+ * read one env var per setting — same convention as
+ * MD2NATIVEDOCX_REFERENCE_DOC/MD2NATIVEDOCX_ENABLE_SMARTART above, set by the
+ * VS Code extension's `exportService.ts` from
+ * `md2nativedocx.layout.*`/`md2nativedocx.typography.*` settings, or by hand
+ * for standalone CLI usage. Every field is optional; an absent one leaves
+ * `referenceDocBuilder.mjs`'s corresponding patch untouched.
+ */
+function readLayoutOptionsFromEnv() {
+  const str = (name) => {
+    const v = process.env[name];
+    return v && v.trim() !== '' ? v.trim() : undefined;
+  };
+  const num = (name) => {
+    const v = process.env[name];
+    if (v === undefined || v.trim() === '') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  const marginsCustomCm = {
+    top: num('MD2NATIVEDOCX_MARGINS_CUSTOM_TOP'),
+    right: num('MD2NATIVEDOCX_MARGINS_CUSTOM_RIGHT'),
+    bottom: num('MD2NATIVEDOCX_MARGINS_CUSTOM_BOTTOM'),
+    left: num('MD2NATIVEDOCX_MARGINS_CUSTOM_LEFT'),
+  };
+  return {
+    pageSize: str('MD2NATIVEDOCX_PAGE_SIZE'),
+    orientation: str('MD2NATIVEDOCX_ORIENTATION'),
+    margins: str('MD2NATIVEDOCX_MARGINS'),
+    marginsCustomCm: Object.values(marginsCustomCm).some((v) => v !== undefined) ? marginsCustomCm : undefined,
+    headingFont: str('MD2NATIVEDOCX_HEADING_FONT'),
+    bodyFont: str('MD2NATIVEDOCX_BODY_FONT'),
+    fontSizePt: num('MD2NATIVEDOCX_FONT_SIZE'),
+    lineSpacing: str('MD2NATIVEDOCX_LINE_SPACING'),
+    justify: str('MD2NATIVEDOCX_JUSTIFY'),
+    accentColor: str('MD2NATIVEDOCX_ACCENT_COLOR'),
+  };
+}
+
+function hasAnyLayoutOption(options) {
+  return Object.values(options).some((v) => v !== undefined);
+}
+
+const rawLayoutOptions = readLayoutOptionsFromEnv();
+
+// Conflict resolution (spec §2.1/§5, option (a) — confirmed with the
+// maintainer): a custom `referenceDocument` wins outright. We don't know its
+// page setup, so Lot 1 options are silently ignored for it rather than
+// patched into a document we didn't build — logged as an info line (not the
+// `md2nativedocx: ` prefix `extractWarnings` counts, since this isn't a
+// defect in the export, just a settings precedence the user should know
+// about) only when it would otherwise have done something.
+if (hasCustomReferenceDoc && hasAnyLayoutOption(rawLayoutOptions)) {
+  process.stderr.write(
+    'md2nativedocx (info): page/typography options are ignored because a custom reference document (MD2NATIVEDOCX_REFERENCE_DOC) is set.\n',
+  );
+}
+const layoutOptions = hasCustomReferenceDoc ? {} : rawLayoutOptions;
+
+const generatedReferenceDoc = hasCustomReferenceDoc ? null : buildReferenceDoc(REFERENCE_DOC_PATH, layoutOptions);
+const EFFECTIVE_REFERENCE_DOC_PATH = hasCustomReferenceDoc
+  ? referenceDocOverride
+  : (generatedReferenceDoc?.path ?? REFERENCE_DOC_PATH);
+
+// Usable page area for the diagram translator (spec §2.4) — independent of
+// whether a reference.docx patch was actually needed above (e.g. only a
+// font changed, not the page): a page size/orientation/margins choice must
+// still reach the translator so it doesn't keep assuming Letter portrait.
+const maxDrawingExtentEmu = hasCustomReferenceDoc ? null : resolveMaxDrawingExtentEmu(layoutOptions);
 
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx> [options]
 
@@ -177,6 +248,10 @@ async function main() {
   const pandocEnv = smartArtDir
     ? { ...process.env, MD2NATIVEDOCX_SMARTART_DIR: smartArtDir }
     : { ...process.env };
+  if (maxDrawingExtentEmu) {
+    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CX = String(Math.round(maxDrawingExtentEmu.cx));
+    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CY = String(Math.round(maxDrawingExtentEmu.cy));
+  }
 
   execFile(pandocBin, pandocArgs, { cwd, env: pandocEnv }, (err, stdout, stderr) => {
     try {
@@ -218,6 +293,7 @@ async function main() {
       process.stdout.write(`Wrote ${basename(output)}\n`);
     } finally {
       if (smartArtDir) rmSync(smartArtDir, { recursive: true, force: true });
+      if (generatedReferenceDoc) rmSync(generatedReferenceDoc.dir, { recursive: true, force: true });
     }
   });
 }

@@ -158,3 +158,105 @@ test('MD2NATIVEDOCX_DISABLE_SMARTART forces the wpc:wpc canvas fallback even for
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Lot 1: page/typography env vars reach the generated .docx end to end (export_customization_SPEC.md §1.1-1.8/1.14)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# T\n\nUn paragraphe de test.\n');
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: {
+        ...process.env,
+        MD2NATIVEDOCX_PAGE_SIZE: 'Letter',
+        MD2NATIVEDOCX_ORIENTATION: 'landscape',
+        MD2NATIVEDOCX_MARGINS: 'narrow',
+        MD2NATIVEDOCX_HEADING_FONT: 'Georgia',
+        MD2NATIVEDOCX_BODY_FONT: 'Verdana',
+        MD2NATIVEDOCX_FONT_SIZE: '13',
+        MD2NATIVEDOCX_LINE_SPACING: '1.5',
+        MD2NATIVEDOCX_JUSTIFY: 'both',
+        MD2NATIVEDOCX_ACCENT_COLOR: 'FF0000',
+      },
+    });
+    assert.equal(code, 0, out);
+    // Pandoc re-serializes the sectPr it copies from the reference doc
+    // (attribute order/spacing not preserved verbatim), so assert on the
+    // sectPr as a whole rather than a fixed attribute order.
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    const sectPr = documentXml.match(/<w:sectPr>[\s\S]*?<\/w:sectPr>/)[0];
+    assert.match(sectPr, /w:w="15840"/);
+    assert.match(sectPr, /w:h="12240"/);
+    assert.match(sectPr, /w:orient="landscape"/);
+    assert.match(sectPr, /w:top="720"/);
+    assert.match(sectPr, /w:right="720"/);
+    assert.match(sectPr, /w:bottom="720"/);
+    assert.match(sectPr, /w:left="720"/);
+    const themeXml = execFileSync('unzip', ['-p', docx, 'word/theme/theme1.xml'], { encoding: 'utf8' });
+    assert.ok(themeXml.includes('typeface="Georgia"'));
+    assert.ok(themeXml.includes('typeface="Verdana"'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Lot 1: a Letter-portrait-sized diagram is re-scaled to fit a smaller custom page/margins', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docxDefault = join(dir, 'default.docx');
+  const docxNarrow = join(dir, 'narrow.docx');
+  // A merge-after-branch shape (not SmartArt-eligible, see the first test in
+  // this file) with long labels, big enough to actually hit the scale-down
+  // path under a much smaller usable page area.
+  writeFileSync(
+    md,
+    '# T\n\n```mermaid\ngraph TD\n' +
+      '  A[Un noeud avec un long libelle] --> B[Un autre noeud avec un long libelle]\n' +
+      '  A --> C[Encore un noeud avec un long libelle]\n' +
+      '  B --> D[Dernier noeud avec un long libelle]\n  C --> D\n```\n',
+  );
+  try {
+    assert.equal(runCli([md, '-o', docxDefault]).code, 0);
+    const { code, out } = runCli([md, '-o', docxNarrow], {
+      env: { ...process.env, MD2NATIVEDOCX_PAGE_SIZE: 'A4', MD2NATIVEDOCX_MARGINS: 'wide' },
+    });
+    assert.equal(code, 0, out);
+    const extentOf = (docx) => {
+      const xml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+      const [, cx] = xml.match(/<wp:extent cx="(\d+)"/);
+      return Number(cx);
+    };
+    assert.ok(
+      extentOf(docxNarrow) < extentOf(docxDefault),
+      'a smaller usable page area (A4 + wide margins vs the Letter-portrait default) must produce a narrower diagram',
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Lot 1: layout/typography options are ignored (with an info note, not a counted warning) when a custom reference doc is set', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  const customReferenceDoc = join(dir, 'custom-reference.docx');
+  writeFileSync(md, '# T\n\nUn paragraphe.\n');
+  copyFileSync(join(here, '..', 'assets', 'reference.docx'), customReferenceDoc);
+  try {
+    const { code, out, err } = runCli([md, '-o', docx], {
+      env: {
+        ...process.env,
+        MD2NATIVEDOCX_REFERENCE_DOC: customReferenceDoc,
+        MD2NATIVEDOCX_PAGE_SIZE: 'A4',
+        MD2NATIVEDOCX_ORIENTATION: 'landscape',
+      },
+    });
+    assert.equal(code, 0, out);
+    assert.match(err, /md2nativedocx \(info\): page\/typography options are ignored/);
+    assert.ok(!out.includes('Warnings:'), 'the info note must not be counted as a warning');
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(documentXml.includes('<w:sectPr />'), "the custom reference doc's own (empty) sectPr must be untouched");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

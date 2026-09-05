@@ -52,6 +52,28 @@ function resolveCliBin(): string {
   return join(dirname(pkgJsonPath), 'bin', 'md2nativedocx.mjs');
 }
 
+/** Page/typography options (`export_customization_SPEC.md` §1.1-1.8/1.14,
+ * "Lot 1") mirroring the `md2nativedocx.layout.*`/`md2nativedocx.typography.*`
+ * settings. Every field optional — an absent one leaves the corresponding
+ * `reference.docx` patch untouched (`referenceDocBuilder.mjs`). Ignored
+ * outright by the CLI when `referenceDoc` above is also set (spec §2.1,
+ * option (a): a custom template's own page setup wins). */
+export interface LayoutOptions {
+  pageSize?: string;
+  orientation?: string;
+  margins?: string;
+  marginsCustomTop?: number;
+  marginsCustomRight?: number;
+  marginsCustomBottom?: number;
+  marginsCustomLeft?: number;
+  headingFont?: string;
+  bodyFont?: string;
+  fontSize?: number;
+  lineSpacing?: string;
+  justify?: string;
+  accentColor?: string;
+}
+
 export interface RunCliOptions {
   pandocBin?: string;
   /** Path to a `.docx` used as Pandoc's `--reference-doc` (mirrors the
@@ -64,6 +86,8 @@ export interface RunCliOptions {
    * (the CLI's default, as of the 2026-09-03 flip — see
    * `md2nativedocx.mjs`'s doc comment on `smartArtEnabled`). */
   smartArtEnabled?: boolean;
+  /** See {@link LayoutOptions}. */
+  layout?: LayoutOptions;
 }
 
 function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
@@ -72,6 +96,22 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
   if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
   if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
+  const layout = options.layout;
+  if (layout) {
+    if (layout.pageSize) env.MD2NATIVEDOCX_PAGE_SIZE = layout.pageSize;
+    if (layout.orientation) env.MD2NATIVEDOCX_ORIENTATION = layout.orientation;
+    if (layout.margins) env.MD2NATIVEDOCX_MARGINS = layout.margins;
+    if (layout.marginsCustomTop !== undefined) env.MD2NATIVEDOCX_MARGINS_CUSTOM_TOP = String(layout.marginsCustomTop);
+    if (layout.marginsCustomRight !== undefined) env.MD2NATIVEDOCX_MARGINS_CUSTOM_RIGHT = String(layout.marginsCustomRight);
+    if (layout.marginsCustomBottom !== undefined) env.MD2NATIVEDOCX_MARGINS_CUSTOM_BOTTOM = String(layout.marginsCustomBottom);
+    if (layout.marginsCustomLeft !== undefined) env.MD2NATIVEDOCX_MARGINS_CUSTOM_LEFT = String(layout.marginsCustomLeft);
+    if (layout.headingFont) env.MD2NATIVEDOCX_HEADING_FONT = layout.headingFont;
+    if (layout.bodyFont) env.MD2NATIVEDOCX_BODY_FONT = layout.bodyFont;
+    if (layout.fontSize !== undefined) env.MD2NATIVEDOCX_FONT_SIZE = String(layout.fontSize);
+    if (layout.lineSpacing) env.MD2NATIVEDOCX_LINE_SPACING = layout.lineSpacing;
+    if (layout.justify) env.MD2NATIVEDOCX_JUSTIFY = layout.justify;
+    if (layout.accentColor) env.MD2NATIVEDOCX_ACCENT_COLOR = layout.accentColor;
+  }
   return new Promise((resolve, reject) => {
     execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {

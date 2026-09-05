@@ -91,6 +91,101 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%"
+        },
+        "md2nativedocx.layout.pageSize": {
+          "type": "string",
+          "enum": ["A4", "Letter", "Legal"],
+          "default": "A4",
+          "markdownDescription": "%configuration.layout.pageSize.markdownDescription%"
+        },
+        "md2nativedocx.layout.orientation": {
+          "type": "string",
+          "enum": ["portrait", "landscape"],
+          "default": "portrait",
+          "markdownDescription": "%configuration.layout.orientation.markdownDescription%"
+        },
+        "md2nativedocx.layout.margins": {
+          "type": "string",
+          "enum": ["normal", "narrow", "moderate", "wide", "custom"],
+          "enumDescriptions": [
+            "%configuration.layout.margins.normal%",
+            "%configuration.layout.margins.narrow%",
+            "%configuration.layout.margins.moderate%",
+            "%configuration.layout.margins.wide%",
+            "%configuration.layout.margins.custom%"
+          ],
+          "default": "normal",
+          "markdownDescription": "%configuration.layout.margins.markdownDescription%"
+        },
+        "md2nativedocx.layout.marginsCustomTop": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0.1,
+          "maximum": 15,
+          "markdownDescription": "%configuration.layout.marginsCustomTop.markdownDescription%"
+        },
+        "md2nativedocx.layout.marginsCustomRight": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0.1,
+          "maximum": 15,
+          "markdownDescription": "%configuration.layout.marginsCustomRight.markdownDescription%"
+        },
+        "md2nativedocx.layout.marginsCustomBottom": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0.1,
+          "maximum": 15,
+          "markdownDescription": "%configuration.layout.marginsCustomBottom.markdownDescription%"
+        },
+        "md2nativedocx.layout.marginsCustomLeft": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0.1,
+          "maximum": 15,
+          "markdownDescription": "%configuration.layout.marginsCustomLeft.markdownDescription%"
+        },
+        "md2nativedocx.typography.headingFont": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%configuration.typography.headingFont.markdownDescription%"
+        },
+        "md2nativedocx.typography.bodyFont": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%configuration.typography.bodyFont.markdownDescription%"
+        },
+        "md2nativedocx.typography.fontSize": {
+          "type": "number",
+          "default": 11,
+          "minimum": 9,
+          "maximum": 14,
+          "markdownDescription": "%configuration.typography.fontSize.markdownDescription%"
+        },
+        "md2nativedocx.typography.lineSpacing": {
+          "type": "string",
+          "enum": ["default", "single", "1.15", "1.5", "double"],
+          "enumDescriptions": [
+            "%configuration.typography.lineSpacing.default%",
+            "%configuration.typography.lineSpacing.single%",
+            "%configuration.typography.lineSpacing.1.15%",
+            "%configuration.typography.lineSpacing.1.5%",
+            "%configuration.typography.lineSpacing.double%"
+          ],
+          "default": "default",
+          "markdownDescription": "%configuration.typography.lineSpacing.markdownDescription%"
+        },
+        "md2nativedocx.typography.justify": {
+          "type": "string",
+          "enum": ["left", "both"],
+          "default": "left",
+          "markdownDescription": "%configuration.typography.justify.markdownDescription%"
+        },
+        "md2nativedocx.typography.accentColor": {
+          "type": "string",
+          "default": "",
+          "pattern": "^$|^[0-9A-Fa-f]{6}$",
+          "markdownDescription": "%configuration.typography.accentColor.markdownDescription%"
         }
       }
     },

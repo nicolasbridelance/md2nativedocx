@@ -13,6 +13,7 @@ import {
   BlockNotFoundError,
   ExportFailedError,
   type ExportResult,
+  type LayoutOptions,
 } from './exportService';
 import { ensurePandoc } from './pandocProvisioner';
 
@@ -74,6 +75,61 @@ function smartArtEnabledSetting(): boolean {
   return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', false);
 }
 
+/** Value the user actually configured for `md2nativedocx.<key>` at some
+ * scope (workspace folder / workspace / user), or `undefined` if they never
+ * touched it — as opposed to `.get()`, which always returns the
+ * `package.json` schema default when nothing was set. The distinction
+ * matters here: forwarding every Lot 1 layout/typography setting's *default*
+ * value unconditionally would make every export rebuild `reference.docx`
+ * with an explicit page format even for users who never opened these
+ * settings, silently changing today's page-size behaviour (Word/Pandoc's
+ * own default) for everyone. Only an explicit choice should trigger that. */
+function explicitSetting<T>(config: vscode.WorkspaceConfiguration, key: string): T | undefined {
+  const info = config.inspect<T>(key);
+  if (!info) return undefined;
+  return info.workspaceFolderValue ?? info.workspaceValue ?? info.globalValue;
+}
+
+/** `md2nativedocx.layout.*`/`md2nativedocx.typography.*` — Lot 1 page/
+ * typography customization (`export_customization_SPEC.md` §1.1-1.8/1.14).
+ * `undefined` when the user hasn't explicitly set any of them (see
+ * {@link explicitSetting}), so a plain, untouched install behaves exactly as
+ * before this feature existed. */
+function layoutOptionsSetting(): LayoutOptions | undefined {
+  const config = vscode.workspace.getConfiguration('md2nativedocx');
+  const trimmedOrUndefined = (v: string | undefined) => (v && v.trim() !== '' ? v.trim() : undefined);
+  const options: LayoutOptions = {
+    pageSize: explicitSetting<string>(config, 'layout.pageSize'),
+    orientation: explicitSetting<string>(config, 'layout.orientation'),
+    margins: explicitSetting<string>(config, 'layout.margins'),
+    marginsCustomTop: explicitSetting<number>(config, 'layout.marginsCustomTop'),
+    marginsCustomRight: explicitSetting<number>(config, 'layout.marginsCustomRight'),
+    marginsCustomBottom: explicitSetting<number>(config, 'layout.marginsCustomBottom'),
+    marginsCustomLeft: explicitSetting<number>(config, 'layout.marginsCustomLeft'),
+    headingFont: trimmedOrUndefined(explicitSetting<string>(config, 'typography.headingFont')),
+    bodyFont: trimmedOrUndefined(explicitSetting<string>(config, 'typography.bodyFont')),
+    fontSize: explicitSetting<number>(config, 'typography.fontSize'),
+    lineSpacing: explicitSetting<string>(config, 'typography.lineSpacing'),
+    justify: explicitSetting<string>(config, 'typography.justify'),
+    accentColor: trimmedOrUndefined(explicitSetting<string>(config, 'typography.accentColor')),
+  };
+  return Object.values(options).some((v) => v !== undefined) ? options : undefined;
+}
+
+/** Spec §2.1/§5, option (a): a custom `referenceDocument` wins outright over
+ * Lot 1 layout/typography settings — its own page setup is unknown to us, so
+ * patching it would be guesswork. The CLI already enforces this silently;
+ * this only makes the precedence visible to a VS Code user who set both,
+ * since the CLI's own info note (stderr) is never surfaced on a *successful*
+ * export (`runCli` only reads stderr back on failure). */
+function warnIfLayoutOptionsIgnored(referenceDoc: string | undefined, layout: LayoutOptions | undefined): void {
+  if (referenceDoc && layout) {
+    outputChannel.appendLine(
+      'md2nativedocx.layout.*/typography.* settings are ignored for this export because md2nativedocx.referenceDocument is set — the custom template\'s own page setup is used instead.',
+    );
+  }
+}
+
 function resolveAgainstWorkspace(rawPath: string): string {
   if (isAbsolute(rawPath)) return rawPath;
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -95,9 +151,11 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
     const pandocBin = await resolvePandocBin(progress);
     const referenceDoc = referenceDocumentSetting();
     const smartArtEnabled = smartArtEnabledSetting();
+    const layout = layoutOptionsSetting();
+    warnIfLayoutOptionsIgnored(referenceDoc, layout);
     return isMermaidFilePath(uri.fsPath)
-      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled })
-      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled });
+      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout })
+      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout });
   });
 }
 
@@ -140,7 +198,9 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     const pandocBin = await resolvePandocBin(progress);
     const referenceDoc = referenceDocumentSetting();
     const smartArtEnabled = smartArtEnabledSetting();
-    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled });
+    const layout = layoutOptionsSetting();
+    warnIfLayoutOptionsIgnored(referenceDoc, layout);
+    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout });
   });
 }
 

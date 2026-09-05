@@ -164,6 +164,11 @@ function arrowMarkerSize(baseWidthEmu: number, scale: number): 'sm' | 'med' {
  * `a:ext` shrink while `a:chOff`/`a:chExt` stay in native coordinates, so Word
  * applies the homothety to every child shape for us.
  *
+ * These are only the *default* fallback now (`export_customization_SPEC.md`
+ * §2.4): a caller whose export uses a different page format/orientation/
+ * margins (Lot 1) passes the real usable area via `TranslateOptions.maxDrawingCx`/
+ * `maxDrawingCy` instead of relying on this Letter-portrait assumption.
+ *
  * Height IS capped, on purpose, even though the drawing is `wp:inline` (flows
  * with the text) and one might expect Word to paginate an over-height inline
  * object the way it does an oversized picture. It does not, for this element
@@ -302,6 +307,18 @@ export interface TranslateOptions {
   fill?: string;
   /** Line color (hex, no `#`) for node shapes and edges. */
   line?: string;
+  /**
+   * Usable page width/height in EMU, overriding the {@link MAX_DRAWING_CX}/
+   * {@link MAX_DRAWING_CY} defaults (Letter portrait, 1in margins) a diagram
+   * is scaled to fit. Set this when the export's actual page format/
+   * orientation/margins differ from that default (`export_customization_SPEC.md`
+   * §2.4) — otherwise a diagram stays sized for Letter portrait even though,
+   * say, A4 landscape was chosen, risking an unwanted extra shrink or a
+   * page overflow. Either both or neither should be set; an unset one falls
+   * back to its own default independently.
+   */
+  maxDrawingCx?: number;
+  maxDrawingCy?: number;
 }
 
 /** A rectangle in logical pixels. */
@@ -416,6 +433,10 @@ export function translateToOoxml(
   const fill = hexColor(options.fill, DEFAULT_FILL);
   const line = hexColor(options.line, DEFAULT_LINE);
   const nextId = createIdAllocator();
+  const maxExtent = {
+    cx: options.maxDrawingCx ?? MAX_DRAWING_CX,
+    cy: options.maxDrawingCy ?? MAX_DRAWING_CY,
+  };
 
   // `wp:docPr` shares its id space with the shapes below it, so it draws from
   // the same allocator and must be taken before the group is rendered.
@@ -424,9 +445,9 @@ export function translateToOoxml(
   // Every child coordinate is pre-multiplied by this factor (see
   // `renderContent`'s doc comment) instead of relying on an enclosing
   // group's chOff/chExt-vs-ext transform to apply it implicitly.
-  const { scale } = scaledExtent(bb);
+  const { scale } = scaledExtent(bb, maxExtent);
   const content = renderContent(flowchart, layout, fill, line, nextId, scale);
-  return wrapInParagraph(content, bb, docPrId);
+  return wrapInParagraph(content, bb, docPrId, maxExtent);
 }
 
 /**
@@ -560,8 +581,9 @@ function wrapInParagraph(
   content: string,
   bb: { width: number; height: number },
   docPrId: number,
+  maxExtent: { cx: number; cy: number } = { cx: MAX_DRAWING_CX, cy: MAX_DRAWING_CY },
 ): string {
-  const { cx, cy } = scaledExtent(bb);
+  const { cx, cy } = scaledExtent(bb, maxExtent);
   return [
     `<w:p ${NS.w}>`,
     '  <w:r>',
@@ -611,13 +633,16 @@ function nativeExtent(bb: { width: number; height: number }): { cx: number; cy: 
  * factor so the group's `a:ext` can shrink in step with `wp:extent` while its
  * `a:chExt` stays in native coordinates.
  */
-function scaledExtent(bb: { width: number; height: number }): {
+function scaledExtent(
+  bb: { width: number; height: number },
+  maxExtent: { cx: number; cy: number } = { cx: MAX_DRAWING_CX, cy: MAX_DRAWING_CY },
+): {
   cx: number;
   cy: number;
   scale: number;
 } {
   const { cx: nativeCx, cy: nativeCy } = nativeExtent(bb);
-  const scale = Math.min(1, MAX_DRAWING_CX / nativeCx, MAX_DRAWING_CY / nativeCy);
+  const scale = Math.min(1, maxExtent.cx / nativeCx, maxExtent.cy / nativeCy);
   return {
     cx: Math.max(1, Math.round(nativeCx * scale)),
     cy: Math.max(1, Math.round(nativeCy * scale)),
