@@ -3,7 +3,7 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.4.0] — 2026-09-05
 
 ### Added
 - Page/typography export customization (page format, orientation, margins, heading/body fonts,
@@ -21,12 +21,39 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   emoji setting above visually (page mockup preview included), grouped by topic, always in sync
   with `settings.json`. Greys out page/typography controls when a custom
   `md2nativedocx.referenceDocument` is set.
+- Wide tables now get their own landscape-oriented page section instead of being squeezed into a
+  portrait page.
 - Three new Mermaid diagram types export as native, editable OOXML shapes: `quadrantChart`,
   `venn-beta` (2-3 sets, true overlapping-circle geometry), and `mindmap` (radial layout, all 6
   node shapes). No extension-side changes were needed — the same `` ```mermaid `` block detection
   and export path already worked for any diagram type, only `packages/core`'s translator gained
   the new modules. Any other still-unsupported Mermaid diagram type continues to get a clear
   in-document note instead of a silently wrong flowchart-shaped guess.
+- Broader Mermaid flowchart syntax support: `BT`/`RL` directions, asymmetric node shapes,
+  edge-length modifiers, mid-chain edge labels, the generic `@{shape: ...}` syntax, `style`/
+  `linkStyle` statements, and `<br/>`/HTML entities/Markdown-string (`**bold**`, `*italic*`)
+  formatting inside labels.
+- Chain-shaped SmartArt diagrams now show a real connector arrow between consecutive boxes
+  (previously just boxes, with no visual link between them).
+- Every export is now validated against **the exact schema Word itself enforces**, using
+  Microsoft's own Open XML SDK — not a guess, not a reimplementation. On by default
+  (`md2nativedocx.wordCompatibilityCheck.enabled`, can be turned off); the result (a clean
+  "0 errors", or exactly what and where otherwise) is written to the export's own `.log` file. The
+  one-time `.NET` runtime download this needs is verified and cached the same way Pandoc already
+  is.
+
+### Fixed
+- A SmartArt-eligible chain, cycle, or tree diagram could produce a `.docx` that real Word refused
+  to open outright ("Word encountered an error and needs to close") even though it opened fine in
+  LibreOffice — caused by an invalid `modelId` scheme in the generated diagram data. Found and
+  confirmed fixed using the new Open XML SDK validation above.
+- A tree-shaped SmartArt's root box could show an extra bulleted list of every child's text on top
+  of the correctly-rendered child boxes below it, in real Word only (LibreOffice always rendered it
+  correctly, which is why this one took longer to catch).
+- Self-loop connectors (`A --> A`) rendering incorrectly.
+- Arrowhead markers not shrinking along with a thin connector line's own width.
+- A flowchart with clustered subgraphs could crash the layout engine in some arrangements; it now
+  retries without clustering instead of failing the export.
 
 ## [0.3.0] — 2026-09-03
 
