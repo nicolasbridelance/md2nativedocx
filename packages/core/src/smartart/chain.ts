@@ -60,21 +60,31 @@ export const CHAIN_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/chain1-rl'
  * in real Word).
  *
  * The `sibTrans` node uses the public `dgm:alg type="conn"` connector
- * algorithm (parameters per Microsoft's own public "Connector Algorithm"
- * reference, learn.microsoft.com/.../office-2007/dd439439) to draw a
- * one-dimensional arrow (`dim="1D"`) from the preceding box's right edge
- * (`begPts="midR"`) to the following box's left edge (`endPts="midL"`),
- * arrowhead at the end only. This tutorial's own Basic Block List example
- * has no connectors at all (the gap the maintainer reported after testing
- * the real Word render, 2026-09-05); the `conn` algorithm and its `sibTrans`
- * wiring pattern (a transition content point mirrored into its own
- * presentation point, exactly like `Main` above) come from studying the
- * *structure* of a real Word-authored hierarchy sample's `parTrans`/`sibTrans`
- * wiring (`docs/adr/spikes/spike-smartart/real-diagram-flat/data1.xml`,
- * kept there as reference evidence, never redistributed) — the wiring
- * pattern itself is dictated by the public ECMA-376 schema, not by any of
- * that sample's specific proprietary content (its `layoutDef`/`colorsDef`/
- * `styleDef` values are never read into this generator).
+ * algorithm, `begPts`/`endPts` left as `"auto"` (Word picks the routing) and
+ * a `<dgm:shape type="conn"/>` — the special shape-type identifier that
+ * tells Word to draw the algorithm's own connector geometry, not a named
+ * `prstGeom`. This tutorial's own Basic Block List example has no
+ * connectors at all (the gap the maintainer reported after testing the real
+ * Word render, 2026-09-05).
+ *
+ * A first attempt (round 1, `docs/adr/spikes/spike-smartart-connectors/
+ * round1-chain-conn/`) reconstructed the `conn` algorithm from Microsoft's
+ * public parameter reference alone (`dim="1D"`, explicit `midR`/`midL`
+ * points, `begSty`/`endSty`) — schema-valid, but confirmed by the
+ * maintainer to render **no visible connector in real Word either**,
+ * ruling out "LibreOffice-only limitation" and pointing at an actual
+ * wiring defect, the same failure mode ADR 0004 hit reconstructing
+ * `hierarchy1` from a tutorial rather than a real sample. Round 2 studied
+ * the *structure* (never the content) of a real Word-authored "Processus"
+ * SmartArt the maintainer built by hand (`handmade_samples/
+ * processus_simple.docx`, real `process1` layout) and found the two
+ * concrete gaps: the shape needs `type="conn"` (round 1 left it empty,
+ * `<dgm:shape/>`), and `begPts`/`endPts` should just be `"auto"` — Word's
+ * own layout doesn't hardcode edge points, `dim`, or arrow style at all,
+ * relying on `conn`'s own documented defaults (`dim="2D"`, `begSty="noArr"`,
+ * `endSty="arr"`). This also means the connector no longer needs a
+ * direction-specific point substitution in the TD/BT/RL variants below —
+ * `"auto"` routes correctly regardless of the `lin` direction.
  */
 export const CHAIN_LAYOUT_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -115,14 +125,11 @@ export const CHAIN_LAYOUT_XML =
   '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">' +
   '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans">' +
   '<dgm:alg type="conn">' +
-  '<dgm:param type="dim" val="1D"/>' +
-  '<dgm:param type="begPts" val="midR"/>' +
-  '<dgm:param type="endPts" val="midL"/>' +
-  '<dgm:param type="begSty" val="noArr"/>' +
-  '<dgm:param type="endSty" val="arr"/>' +
+  '<dgm:param type="begPts" val="auto"/>' +
+  '<dgm:param type="endPts" val="auto"/>' +
   '</dgm:alg>' +
-  '<dgm:shape/>' +
-  '<dgm:presOf axis="self" ptType="sibTrans"/>' +
+  '<dgm:shape type="conn"/>' +
+  '<dgm:presOf axis="self"/>' +
   '</dgm:layoutNode>' +
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
@@ -147,10 +154,7 @@ export const CHAIN_LAYOUT_XML =
 export const CHAIN_LAYOUT_XML_TD = CHAIN_LAYOUT_XML.replace(
   `uniqueId="${CHAIN_LAYOUT_URN}"`,
   `uniqueId="${CHAIN_LAYOUT_TD_URN}"`
-)
-  .replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromT"/></dgm:alg>')
-  .replace('<dgm:param type="begPts" val="midR"/>', '<dgm:param type="begPts" val="bCtr"/>')
-  .replace('<dgm:param type="endPts" val="midL"/>', '<dgm:param type="endPts" val="tCtr"/>');
+).replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromT"/></dgm:alg>');
 
 /**
  * The bottom-to-top (Mermaid `BT`) variant: same vertical stacking as
@@ -164,10 +168,7 @@ export const CHAIN_LAYOUT_XML_TD = CHAIN_LAYOUT_XML.replace(
 export const CHAIN_LAYOUT_XML_BT = CHAIN_LAYOUT_XML_TD.replace(
   `uniqueId="${CHAIN_LAYOUT_TD_URN}"`,
   `uniqueId="${CHAIN_LAYOUT_BT_URN}"`
-)
-  .replace('val="fromT"', 'val="fromB"')
-  .replace('<dgm:param type="begPts" val="bCtr"/>', '<dgm:param type="begPts" val="tCtr"/>')
-  .replace('<dgm:param type="endPts" val="tCtr"/>', '<dgm:param type="endPts" val="bCtr"/>');
+).replace('val="fromT"', 'val="fromB"');
 
 /**
  * The right-to-left (Mermaid `RL`) variant: same horizontal stacking as
@@ -177,17 +178,16 @@ export const CHAIN_LAYOUT_XML_BT = CHAIN_LAYOUT_XML_TD.replace(
 export const CHAIN_LAYOUT_XML_RL = CHAIN_LAYOUT_XML.replace(
   `uniqueId="${CHAIN_LAYOUT_URN}"`,
   `uniqueId="${CHAIN_LAYOUT_RL_URN}"`
-)
-  .replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromR"/></dgm:alg>')
-  .replace('<dgm:param type="begPts" val="midR"/>', '<dgm:param type="begPts" val="midL_TMP"/>')
-  .replace('<dgm:param type="endPts" val="midL"/>', '<dgm:param type="endPts" val="midR"/>')
-  .replace('<dgm:param type="begPts" val="midL_TMP"/>', '<dgm:param type="begPts" val="midL"/>');
+).replace('<dgm:alg type="lin"/>', '<dgm:alg type="lin"><dgm:param type="linDir" val="fromR"/></dgm:alg>');
 
 /**
  * Original `dgm:colorsDef` — `node0`/`node1` (used by {@link CHAIN_LAYOUT_XML}'s
  * `Main` layoutNode) with plain solid fills, plus `sibTrans` (used by its
- * connector layoutNode) whose `linClrLst` is what actually colors the
- * connector arrow — a `conn`-algorithm shape has no fill, only a line.
+ * connector layoutNode) with the same solid `fillClrLst` — the `conn`
+ * algorithm defaults to `dim="2D"` (a filled chevron-style shape, not a
+ * thin line), confirmed by studying a real Word-authored "Processus"
+ * SmartArt's `layout1.xml` (`handmade_samples/processus_simple.docx`,
+ * structure only, see {@link CHAIN_LAYOUT_XML}'s doc comment).
  * Written directly from the public ECMA-376/Open-XML-SDK schema
  * (`ColorsDefinition`/`ColorTransformStyleLabel` classes), not extracted
  * from any real Word document — verified in `custom-chain1-ownercolors.docx`
@@ -213,8 +213,8 @@ export const CHAIN_COLORS_XML =
   '<dgm:txEffectClrLst/>' +
   '</dgm:styleLbl>' +
   '<dgm:styleLbl name="sibTrans">' +
-  '<dgm:fillClrLst/>' +
-  '<dgm:linClrLst><a:schemeClr val="accent1"/></dgm:linClrLst>' +
+  '<dgm:fillClrLst><a:schemeClr val="accent1"><a:shade val="75000"/></a:schemeClr></dgm:fillClrLst>' +
+  '<dgm:linClrLst/>' +
   '<dgm:effectClrLst/><dgm:txLinClrLst/><dgm:txFillClrLst/><dgm:txEffectClrLst/>' +
   '</dgm:styleLbl>' +
   '</dgm:colorsDef>';
@@ -224,10 +224,9 @@ export const CHAIN_COLORS_XML =
  * `lnRef`/`fillRef`/`effectRef`/`fontRef` reference into the host document's
  * theme (the same reference-based style vocabulary `ooxml-translator.ts`
  * already uses for `wps:style` in the `.docx` shape translator), plus
- * `sibTrans` for the connector arrow: `lnRef idx="2"` (a visible line —
- * `node0`/`node1`'s `idx="0"` means "no line", correct for a filled
- * rectangle but would make a `conn`-algorithm shape, which has no fill,
- * invisible) and `fillRef idx="0"` (no fill, nothing to fill on a line).
+ * `sibTrans` for the connector arrow: `fillRef idx="1"` (visible solid
+ * fill — the connector is a filled 2D shape, see {@link CHAIN_COLORS_XML}'s
+ * doc comment) and `lnRef idx="0"` (no border, same as `node0`/`node1`).
  * Verified in `custom-chain1-ownerstyle.docx` (ADR 0004 "Round 5") — renders
  * identically to Word's own `quickStyle1.xml`.
  */
@@ -254,8 +253,8 @@ export const CHAIN_STYLE_XML =
   '</dgm:styleLbl>' +
   '<dgm:styleLbl name="sibTrans">' +
   '<dgm:style>' +
-  '<a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>' +
-  '<a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>' +
+  '<a:lnRef idx="0"><a:schemeClr val="accent1"/></a:lnRef>' +
+  '<a:fillRef idx="1"><a:schemeClr val="accent1"/></a:fillRef>' +
   '<a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>' +
   '<a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>' +
   '</dgm:style>' +
@@ -358,11 +357,20 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
  * for N nodes, none after the last one — matches {@link CHAIN_LAYOUT_XML}'s
  * `axis="followSib"` forEach literally: only a node with a *following*
  * sibling has a transition), each mirrored into its own presentation point
- * exactly like a node's `Main` mirror above, plus a `sibTransId` attribute on
- * the preceding node's own `parOf` cxn — the association mechanism a real
+ * exactly like a node's `Main` mirror above.
+ *
+ * Each `sibTrans` point is paired with its own `parTrans` point (unused by
+ * this layout, which has no hierarchy to speak of, but still required —
+ * round 1 of this connector's implementation
+ * (`docs/adr/spikes/spike-smartart-connectors/round1-chain-conn/`) wired
+ * `sibTransId` alone and rendered no connector in real Word either;
+ * studying a real Word-authored "Processus" SmartArt's data file
+ * (`handmade_samples/processus_simple.docx`, structure only, never its
+ * content) showed every `sibTransId`-bearing `parOf` cxn also carries a
+ * `parTransId`, always in that pair) — both set as attributes on the
+ * preceding node's own `parOf` cxn, the association mechanism a real
  * Word-authored data file uses to tell the layout which transition point
- * belongs to which edge (structure only, not content: see this function's
- * own doc comment above on where that structure was studied from).
+ * belongs to which edge.
  */
 function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: string): string {
   const docId = '0';
@@ -376,8 +384,14 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
   const pMainIds = new Map(nodeIds.map((id) => [id, newModelId()]));
   // One transition per gap between consecutive nodes -- none after the last.
   const sibTransIds = nodeIds.slice(0, -1).map(() => newModelId());
+  const parTransIds = sibTransIds.map(() => newModelId());
   const pSibTransIds = sibTransIds.map(() => newModelId());
 
+  // Interleaved per node (text, then its own parTrans/sibTrans pair if it
+  // has a following sibling) rather than grouped by kind -- matches the
+  // physical ptLst order of a real Word-authored data file
+  // (`handmade_samples/processus_simple.docx`) exactly, in case Word's
+  // engine relies on document order for anything beyond the cxnLst graph.
   const contentPts = nodes
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
@@ -386,15 +400,20 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
       const spPr = fill
         ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
         : '<dgm:spPr/>';
-      return (
+      const nodePt =
         `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}` +
         `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`
-      );
+        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`;
+      const parTransId = parTransIds[i];
+      const sibTransId = sibTransIds[i];
+      const transPts =
+        parTransId && sibTransId
+          ? `<dgm:pt modelId="${parTransId}" type="parTrans"><dgm:prSet/></dgm:pt>` +
+            `<dgm:pt modelId="${sibTransId}" type="sibTrans"><dgm:prSet/></dgm:pt>`
+          : '';
+      return nodePt + transPts;
     })
     .join('');
-
-  const sibTransContentPts = sibTransIds.map((id) => `<dgm:pt modelId="${id}" type="sibTrans"><dgm:prSet/></dgm:pt>`).join('');
 
   const presPts =
     `<dgm:pt modelId="${pRootId}" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
@@ -415,8 +434,8 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
   const parOfCxns = nodeIds
     .map((id, i) => {
       const sibTransId = sibTransIds[i];
-      const sibTransAttr = sibTransId ? ` sibTransId="${sibTransId}"` : '';
-      return `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"${sibTransAttr}/>`;
+      const transAttrs = sibTransId ? ` parTransId="${parTransIds[i]}" sibTransId="${sibTransId}"` : '';
+      return `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"${transAttrs}/>`;
     })
     .join('');
 
@@ -465,7 +484,6 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     'qsTypeId="urn:md2nativedocx/smartart-quickstyle/chain1" qsCatId="simple" ' +
     'csTypeId="urn:md2nativedocx/smartart-colors/chain1" csCatId="accent1"/></dgm:pt>' +
     contentPts +
-    sibTransContentPts +
     presPts +
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns}${presOfCxns}${presParOfCxns}</dgm:cxnLst>` +
     '<dgm:bg/><dgm:whole/></dgm:dataModel>'
