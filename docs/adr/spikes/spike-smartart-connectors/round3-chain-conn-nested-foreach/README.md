@@ -36,4 +36,10 @@ complet que Word.
 
 ## Statut
 
-**En attente d'un troisième test Word réel par le mainteneur** (`chain-conn.docx`, ce dossier).
+**Round 3 confirmé insuffisant** — voir `../round4-chain-conn-width-and-flatten/` pour la suite,
+motivée par une expérience du mainteneur : ouvrir `chain-conn.docx` dans Word réel et lui appliquer
+le vrai layout "Processus" (`process1`) via "Modifier la disposition" régénère `data1.xml` pour ce
+layout authentique. **Ce fichier résultant (`chain-conn_to_processus_simple.docx`) n'est pas
+commité** — il embarque le vrai `layoutDef` `process1` de Microsoft, même règle que
+`handmade_samples/` et `real-diagram*/` (voir `.gitignore`) : référence de recherche locale
+uniquement.

@@ -143,8 +143,9 @@ test('every content node gets a presOf-bearing Main presentation point (the mirr
   // blank -- see chain.ts's buildChainDataXml doc comment), plus one per
   // sibTrans connector transition (2 gaps for 3 nodes).
   assert.equal(presOfCount, 4 + 2);
-  // root->composite and composite->Main per node, plus root->sibTrans per gap.
-  assert.equal(presParOfCount, 6 + 2);
+  // root->Main per node (no intermediate "composite" layer, round 4), plus
+  // root->sibTrans per gap.
+  assert.equal(presParOfCount, 3 + 2);
 });
 
 test('a chain of N nodes gets N-1 sibTrans connector transitions, each with its own presentation mirror', () => {

@@ -50,8 +50,9 @@ export const CHAIN_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/chain1-rl'
 
 /**
  * Original `dgm:layoutDef` for a horizontal chain of boxes (`lin` algorithm,
- * one `composite`/`Main` pair per node via `forEach axis="ch"`, one `sibTrans`
- * connector between consecutive items via `forEach axis="followSib"`).
+ * one `Main` box per node via `forEach axis="ch"`, one `sibTrans` connector
+ * between consecutive items via a nested `forEach axis="followSib"` — round
+ * 4 dropped an earlier `composite` wrapper around `Main`, see below).
  * Transcribed from Microsoft's own publicly documented "Basic Block List"
  * tutorial example ("Creating Custom SmartArt Layouts with Office Open XML",
  * learn.microsoft.com/en-us/previous-versions/office/developer/office-2010/gg583880),
@@ -99,7 +100,47 @@ export const CHAIN_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/chain1-rl'
  * `sibTrans` layoutNode's own `connDist`/`begPad`/`endPad` constraints
  * (present in the real layout, absent from rounds 1-2) and an empty
  * `r:blip` on its shape, matching the real layout's shape element exactly
- * bar its actual relationship content.
+ * bar its actual relationship content. First round to render *something*
+ * (LibreOffice, round 3), but a squeezed sliver rather than a clean
+ * chevron.
+ *
+ * Round 4: the maintainer opened round 3's own output in real Word and
+ * used Word's "Change Layout" gallery to switch it to the real "Processus"
+ * (`process1`) layout in place — which regenerates the *data* file's
+ * transition points for that real layout while keeping our text and our
+ * `colorsDef`/`styleDef` (`docs/adr/spikes/spike-smartart-connectors/
+ * round3-chain-conn-nested-foreach/chain-conn_to_processus_simple.docx`).
+ * That real-Word-regenerated data file matches our own data shape almost
+ * exactly (same `doc`/node/`parTrans`/`sibTrans` pattern) and renders a
+ * clean chevron in both Word and LibreOffice — strong indirect evidence our
+ * *data* wiring was never the problem. Comparing the real layout's root
+ * constraints against ours found the likely remaining cause: the real
+ * layout gives `sibTrans` `fact="0.4"` of the node's width (and has no
+ * separate `sp` spacing constraint at all, since the connector *is* the
+ * spacing); this layout had both a redundant `sp` constraint and a
+ * `sibTrans` width of only `fact="0.1"` — four times narrower, plausibly
+ * why round 3's shape came out as a squeezed sliver rather than a chevron.
+ * Removed the redundant `sp` constraint, raised `sibTrans` to `fact="0.4"`,
+ * and matched the real layout's local `h`/`connDist`/`begPad`/`endPad`
+ * values on the `sibTrans` layoutNode itself.
+ *
+ * That width fix rendered a *correct* chevron for the second connector
+ * (B→C) under LibreOffice but left the first (A→B) a torn/jagged sliver —
+ * same data shape, same layout XML, different result, which pointed at a
+ * geometry-solver inconsistency tied to something structural rather than a
+ * missing constraint. The one structural difference left between this
+ * layout and the real "Processus" one: this layout wraps each box in a
+ * `composite` layoutNode (`alg type="composite"`, an aspect-ratio param)
+ * with `Main` nested inside it, so `sibTrans`'s "auto"-resolved neighbor was
+ * an empty composite *container*, not the actual shape — the real layout
+ * has no such wrapper, `sibTrans` sits directly next to `node` (this
+ * module's `Main`). Removed the `composite` wrapper entirely: `Main` is now
+ * a direct child of `nodesForEach`, its own `h` set via `refType="w"
+ * fact="0.6"` in its own `constrLst` (replacing the wrapper's `ar="1.6667"`
+ * param with the same ~1.67:1 ratio, applied the way the real layout
+ * applies it — directly on the shape, not a wrapping container) — matching
+ * the real "Processus" sample's flat `node`/`sibTrans` structure exactly,
+ * not just its parameters. Not yet confirmed in real Word.
  */
 export const CHAIN_LAYOUT_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -113,28 +154,24 @@ export const CHAIN_LAYOUT_XML =
   '<dgm:alg type="lin"/><dgm:shape/>' +
   '<dgm:constrLst>' +
   '<dgm:constr op="equ" type="primFontSz" for="des" ptType="node" val="20"/>' +
-  '<dgm:constr type="w" for="ch" forName="composite" refType="w"/>' +
-  '<dgm:constr type="h" for="ch" forName="composite" refType="h"/>' +
-  '<dgm:constr op="equ" type="sp" refType="w" refFor="ch" refForName="composite" fact="0.1"/>' +
-  '<dgm:constr op="equ" type="w" for="ch" forName="sibTrans" refType="w" refFor="ch" refForName="composite" fact="0.1"/>' +
-  '<dgm:constr op="equ" type="h" for="ch" forName="sibTrans" refType="w" refFor="ch" refForName="sibTrans"/>' +
+  '<dgm:constr type="w" for="ch" forName="Main" refType="w"/>' +
+  '<dgm:constr op="equ" type="h" for="ch" forName="Main"/>' +
+  '<dgm:constr op="equ" type="w" for="ch" forName="sibTrans" refType="w" refFor="ch" refForName="Main" fact="0.4"/>' +
+  '<dgm:constr op="equ" type="h" for="ch" forName="sibTrans"/>' +
   '</dgm:constrLst>' +
   '<dgm:forEach name="nodesForEach" axis="ch" ptType="node">' +
-  '<dgm:layoutNode name="composite">' +
-  '<dgm:alg type="composite"><dgm:param type="ar" val="1.6667"/></dgm:alg>' +
-  '<dgm:shape/>' +
   '<dgm:layoutNode name="Main" styleLbl="node1">' +
   '<dgm:alg type="tx"/>' +
   '<dgm:shape type="roundRect"/>' +
   '<dgm:presOf axis="self" ptType="node" st="1" cnt="0"/>' +
   '<dgm:constrLst>' +
+  '<dgm:constr type="h" refType="w" fact="0.6"/>' +
   '<dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="tMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="bMarg" refType="primFontSz" fact="0.15"/>' +
   '</dgm:constrLst>' +
   '<dgm:ruleLst><dgm:rule type="primFontSz" val="5"/></dgm:ruleLst>' +
-  '</dgm:layoutNode>' +
   '</dgm:layoutNode>' +
   '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">' +
   '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans">' +
@@ -145,9 +182,10 @@ export const CHAIN_LAYOUT_XML =
   '<dgm:shape xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" type="conn" r:blip=""/>' +
   '<dgm:presOf axis="self"/>' +
   '<dgm:constrLst>' +
+  '<dgm:constr type="h" refType="w" fact="0.62"/>' +
   '<dgm:constr type="connDist"/>' +
   '<dgm:constr type="begPad" refType="connDist" fact="0.25"/>' +
-  '<dgm:constr type="endPad" refType="connDist" fact="0.25"/>' +
+  '<dgm:constr type="endPad" refType="connDist" fact="0.22"/>' +
   '</dgm:constrLst>' +
   '</dgm:layoutNode>' +
   '</dgm:forEach>' +
@@ -331,7 +369,7 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
 /**
  * Build the `dgm:dataModel` for a chain of `nodes`, including the hand-built
  * `presOf`/`presParOf` presentation mirror {@link CHAIN_LAYOUT_XML}'s own
- * `root`/`composite`/`Main` layoutNodes need to render under LibreOffice
+ * `root`/`Main` layoutNodes need to render under LibreOffice
  * (ADR 0004 "Round 5" — Word alone can resolve this dynamically via
  * `forEach`, but LibreOffice does not execute `forEach`/`presOf` and only
  * displays whatever presentation mirror is already present in the data).
@@ -400,7 +438,6 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
   let nextModelId = nodes.length + 1;
   const newModelId = () => String(nextModelId++);
   const pRootId = newModelId();
-  const pCompositeIds = new Map(nodeIds.map((id) => [id, newModelId()]));
   const pMainIds = new Map(nodeIds.map((id) => [id, newModelId()]));
   // One transition per gap between consecutive nodes -- none after the last.
   const sibTransIds = nodeIds.slice(0, -1).map(() => newModelId());
@@ -440,7 +477,6 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     nodeIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="${pCompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
           `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('') +
@@ -472,29 +508,22 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
       .join('');
 
   // Interleaved so the presentation tree's child order matches the visual
-  // order (composite, transition, composite, transition, ...) -- root's own
-  // presParOf srcOrd is a single sequence across every kind of child, not
-  // per-kind.
+  // order (Main, transition, Main, transition, ...) -- root's own presParOf
+  // srcOrd is a single sequence across every kind of child, not per-kind.
+  // All direct children of root's own presentation point (no intermediate
+  // "composite" layer), matching the real Word "Processus" sample's flat
+  // node/sibTrans structure exactly (round 4).
   let presParOfOrd = 0;
-  const rootChildrenPresParOf = nodeIds
+  const presParOfCxns = nodeIds
     .map((id, i) => {
-      const composite = `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pCompositeIds.get(id)}" srcOrd="${presParOfOrd++}" destOrd="0" presId="${layoutUrn}"/>`;
+      const main = `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pMainIds.get(id)}" srcOrd="${presParOfOrd++}" destOrd="0" presId="${layoutUrn}"/>`;
       const transition =
         i < sibTransIds.length
           ? `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pSibTransIds[i]}" srcOrd="${presParOfOrd++}" destOrd="0" presId="${layoutUrn}"/>`
           : '';
-      return composite + transition;
+      return main + transition;
     })
     .join('');
-
-  const presParOfCxns =
-    rootChildrenPresParOf +
-    nodeIds
-      .map(
-        (id) =>
-          `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pCompositeIds.get(id)}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
-      )
-      .join('');
 
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
