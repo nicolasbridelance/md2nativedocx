@@ -10,6 +10,7 @@ import {
   patchTheme,
   patchStyles,
   patchSectPr,
+  patchSettings,
   buildReferenceDoc,
   resolveMaxDrawingExtentEmu,
   PAGE_SIZES_TWIPS,
@@ -166,6 +167,27 @@ test('patchSectPr: writes pgSz/pgMar from whichever of pgSize/margins was given,
 test('patchSectPr: landscape adds w:orient="landscape"', () => {
   const out = patchSectPr(DOCUMENT_FIXTURE, { pgSize: { w: 200, h: 100, orientation: 'landscape' } });
   assert.match(out, /<w:pgSz w:w="200" w:h="100" w:orient="landscape"\/>/);
+});
+
+// --- patchSettings (spec §1.10/§2.2, "Lot 3" — applied to the *final*
+// generated .docx's settings.xml by postprocess.mjs, not to the reference
+// doc; see that module's tests for the integration path) ---
+
+const SETTINGS_FIXTURE = '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:settings>';
+
+test('patchSettings: adds w:updateFields when toc is true', () => {
+  const out = patchSettings(SETTINGS_FIXTURE, { toc: true });
+  assert.match(out, /<w:settings[^>]*>\s*<w:updateFields w:val="true" \/>/);
+});
+
+test('patchSettings: no-op when toc is false/unset', () => {
+  assert.equal(patchSettings(SETTINGS_FIXTURE, { toc: false }), SETTINGS_FIXTURE);
+  assert.equal(patchSettings(SETTINGS_FIXTURE, {}), SETTINGS_FIXTURE);
+});
+
+test('patchSettings: idempotent — does not duplicate an existing w:updateFields', () => {
+  const once = patchSettings(SETTINGS_FIXTURE, { toc: true });
+  assert.equal(patchSettings(once, { toc: true }), once);
 });
 
 // --- resolveMaxDrawingExtentEmu ---

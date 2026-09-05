@@ -1,15 +1,16 @@
 # Handover — 2026-09-05
 
 One entry point for picking this project back up. Written at the end of a session that shipped the
-first slice of Phase 8 (export customization). Supersedes the 2026-09-04 handover — check the git
-log / `TODO.md` for anything newer than this file's date.
+first two slices of Phase 8 (export customization). Supersedes the 2026-09-04 handover — check the
+git log / `TODO.md` for anything newer than this file's date.
 
 ## What shipped this session
 
-Lot 1 (subset) of `docs/specs/export_customization_SPEC.md` — page/typography customization via a
-dynamically-generated `reference.docx`, instead of the single static file the project shipped with
-until now. Full detail (root-cause, empirical validation, design decisions) in `TODO.md`'s Phase 8
-entry; short version:
+Lot 1 (subset) and Lot 3 of `docs/specs/export_customization_SPEC.md` — page/typography
+customization plus an automatic TOC, via a dynamically-generated `reference.docx` and a couple of
+final-`.docx` patches, instead of the single static reference file the project shipped with until
+now. Full detail (root-cause, empirical validation, design decisions) in `TODO.md`'s Phase 8 entry;
+short version:
 
 - New module `packages/cli/src/referenceDocBuilder.mjs` patches `theme1.xml`/`styles.xml`/
   `document.xml` (fonts, accent color, base size, line spacing, justification, page size/
@@ -33,10 +34,23 @@ entry; short version:
   `md2nativedocx.referenceDocument` always wins — Lot 1 settings are silently ignored for it, with
   an info note (not a counted warning) surfaced from both the bare CLI and the VS Code output
   channel.
+- **Lot 3 (TOC)**, `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` → Pandoc `--toc`/`--toc-depth`.
+  Two things the spec's plan got wrong that only showed up by testing against a real `pandoc`
+  run, not by reading the spec: (1) Pandoc does **not** carry over the reference doc's
+  `settings.xml` the way it does `sectPr`/theme/styles — confirmed with a canary value that didn't
+  survive — so the `w:updateFields` auto-refresh patch moved from `referenceDocBuilder.mjs` to
+  `postprocess.mjs` (patches the *final* `.docx`'s own settings.xml instead); this also means TOC
+  auto-refresh works fine even with a custom `referenceDocument`, no conflict to resolve there.
+  (2) Pandoc always places the TOC field at the very top of the body, before the title — the spec
+  asked for it "under the H1" and Pandoc has no flag for that, so `postprocess.mjs` gained
+  `repositionTocAfterTitle()` to move it there by direct XML surgery. Verified by real LibreOffice
+  render (PNG + PDF): TOC now sits after the title, but its entries render empty — LibreOffice
+  doesn't evaluate TOC fields on headless export, so whether Word actually auto-populates them on
+  open (which `updateFields` is supposed to trigger) is **not verified in a real Word**.
 
 **Deliberately out of scope this pass** (confirmed with the maintainer up front, not a silent cut):
-1.9 (dedicated landscape section for tables — new Lua filter territory, its own spike), 1.10 (TOC),
-1.11 (table style presets — underspecified in the spec, no concrete preset names to pick from yet),
+1.9 (dedicated landscape section for tables — new Lua filter territory, its own spike), 1.11
+(table style presets — underspecified in the spec, no concrete preset names to pick from yet),
 1.13 (footer page numbers — needs a brand-new `word/footer*.xml` part + relationship + content-type
 override, closer to `injectSmartArtParts` in shape than to a same-path patch). All still tracked in
 `TODO.md`'s Lot 1 entry as an explicit fast-follow.
@@ -46,14 +60,15 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
 - `git status`: everything in this session's diff described above is staged/committable; nothing
   else pending. (Check `git log --oneline -5` for the actual latest hash once time has passed.)
 - `npm run lint && npm run typecheck`: clean across every workspace.
-- `npm test`: 391 tests, all workspaces (64 cli + 291 core + 11 pandoc-filter + 25
+- `npm test`: 401 tests, all workspaces (74 cli + 291 core + 11 pandoc-filter + 25
   vscode-extension) — up from 361 at the last handover.
 - `npm run test:visual`: 35/35 fixtures, 0.000% pixel diff on every one — proves the default
-  (no Lot 1 settings touched) behavior is byte-for-byte unchanged.
+  (no Lot 1/3 settings touched) behavior is byte-for-byte unchanged.
 - Manually rendered (LibreOffice headless) a document combining Lot 1 settings (A4, moderate
   margins, custom heading/body fonts, 1.5 line spacing, justified, accent color) with a real
   flowchart diagram — justification/margins/fonts/spacing all visibly correct, diagram still fits
-  and renders cleanly.
+  and renders cleanly. Separately rendered a TOC + diagram + custom-reference-doc combination
+  (PNG and PDF) to confirm placement and the settings.xml carry-over finding above.
 - Known, pre-existing, unrelated to this session (already flagged at the last handover): `npm test`
   at the root regenerates `test-corpus/corpus/generated/*.docx` and leaves them git-dirty on every
   run. Discarded again this session (`git checkout -- test-corpus/corpus/generated/`) before
@@ -62,8 +77,9 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
 ## Not done / explicitly deferred (not forgotten, just not this session)
 
 - Lot 1's own 1.11/1.13 fast-follow (see above).
-- Lot 2 (colored emoji/badge rendering, spec §1.15/§2.5) — independent of Lot 1, not started.
-- Lot 3 (TOC) — depends on Lot 1's builder, which now exists, but not started.
+- Lot 2 (colored emoji/badge rendering, spec §1.15/§2.5) — independent of Lot 1/3, not started.
+- Real-Word verification that a TOC actually auto-populates on open (see the Lot 3 note above) —
+  not verifiable via LibreOffice headless, needs a human with real Word.
 - Lot 4 (Activity Bar/Sidebar configuration panel, spec §3) — depends on Lots 1-3. One concrete
   requirement already known for whenever it's built: grey out the Lot 1 layout/typography controls
   when `md2nativedocx.referenceDocument` is set (the maintainer asked for this explicitly while
@@ -88,3 +104,5 @@ override, closer to `injectSmartArtParts` in shape than to a same-path patch). A
   the empirical validation and the 3-out-of-10 settings deliberately left out.
 - `packages/cli/test/reference-doc-builder.test.mjs` — the most direct way to see every patch
   function's behavior in isolation (pure functions, no Pandoc/zip involved for most of them).
+- `packages/cli/src/postprocess.mjs`'s `repositionTocAfterTitle`/`postProcessDocx` — the TOC
+  placement fix and where the `settings.xml` patch actually lives now.

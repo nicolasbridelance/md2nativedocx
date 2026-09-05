@@ -88,6 +88,15 @@ export interface RunCliOptions {
   smartArtEnabled?: boolean;
   /** See {@link LayoutOptions}. */
   layout?: LayoutOptions;
+  /** Mirrors `md2nativedocx.toc.enabled`. Unlike `layout`, this works even
+   * when `referenceDoc` above is also set — TOC generation and the
+   * auto-refresh-on-open patch both apply to Pandoc's own output
+   * regardless of which reference doc it used (`md2nativedocx.mjs`'s doc
+   * comment on `tocEnabled` has the empirical confirmation). */
+  toc?: boolean;
+  /** Mirrors `md2nativedocx.toc.depth` (2-4). Only meaningful when `toc` is
+   * `true`. */
+  tocDepth?: number;
 }
 
 function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
@@ -111,6 +120,10 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (layout.lineSpacing) env.MD2NATIVEDOCX_LINE_SPACING = layout.lineSpacing;
     if (layout.justify) env.MD2NATIVEDOCX_JUSTIFY = layout.justify;
     if (layout.accentColor) env.MD2NATIVEDOCX_ACCENT_COLOR = layout.accentColor;
+  }
+  if (options.toc === true) {
+    env.MD2NATIVEDOCX_TOC = '1';
+    if (options.tocDepth !== undefined) env.MD2NATIVEDOCX_TOC_DEPTH = String(options.tocDepth);
   }
   return new Promise((resolve, reject) => {
     execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {

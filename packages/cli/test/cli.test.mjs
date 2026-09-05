@@ -235,6 +235,52 @@ test('Lot 1: a Letter-portrait-sized diagram is re-scaled to fit a smaller custo
   }
 });
 
+test('Lot 3: MD2NATIVEDOCX_TOC generates a TOC placed after the H1 title, with auto-update-on-open set', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(
+    md,
+    '# Rapport\n\n## Introduction\nTexte.\n\n## Conclusion\nTexte.\n',
+  );
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_TOC: '1', MD2NATIVEDOCX_TOC_DEPTH: '2' },
+    });
+    assert.equal(code, 0, out);
+    const documentXml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(documentXml.includes('docPartGallery'), 'expected a TOC field');
+    assert.ok(
+      documentXml.indexOf('Heading1') < documentXml.indexOf('docPartGallery'),
+      'the TOC must be placed after the H1 title, not before it (spec §1.10)',
+    );
+    assert.match(documentXml, /TOC \\o &quot;1-2&quot;/, 'expected --toc-depth=2 to reach the field code');
+    const settingsXml = execFileSync('unzip', ['-p', docx, 'word/settings.xml'], { encoding: 'utf8' });
+    assert.match(settingsXml, /<w:updateFields w:val="true"\s*\/>/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Lot 3: TOC auto-update still works with a custom reference document (settings.xml is Pandoc\'s own, not the template\'s)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  const customReferenceDoc = join(dir, 'custom-reference.docx');
+  writeFileSync(md, '# Rapport\n\n## Introduction\nTexte.\n');
+  copyFileSync(join(here, '..', 'assets', 'reference.docx'), customReferenceDoc);
+  try {
+    const { code, out } = runCli([md, '-o', docx], {
+      env: { ...process.env, MD2NATIVEDOCX_REFERENCE_DOC: customReferenceDoc, MD2NATIVEDOCX_TOC: '1' },
+    });
+    assert.equal(code, 0, out);
+    const settingsXml = execFileSync('unzip', ['-p', docx, 'word/settings.xml'], { encoding: 'utf8' });
+    assert.match(settingsXml, /<w:updateFields w:val="true"\s*\/>/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('Lot 1: layout/typography options are ignored (with an info note, not a counted warning) when a custom reference doc is set', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');

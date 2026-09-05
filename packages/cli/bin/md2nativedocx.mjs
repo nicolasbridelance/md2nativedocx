@@ -94,6 +94,21 @@ function hasAnyLayoutOption(options) {
   return Object.values(options).some((v) => v !== undefined);
 }
 
+/**
+ * `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` (spec §1.10/§2.2, "Lot 3") —
+ * kept separate from `readLayoutOptionsFromEnv()` above: unlike page/
+ * typography (which patch the *reference* doc), TOC support works
+ * unconditionally, custom `referenceDocument` or not. `--toc` is a Pandoc
+ * content-generation flag, independent of which reference doc is used, and
+ * the `w:updateFields` auto-refresh patch (`postProcessDocx`, below) is
+ * applied to the *final generated* `.docx`'s own `settings.xml` — confirmed
+ * empirically that Pandoc synthesizes that file itself regardless of the
+ * reference doc, so there is nothing here to skip for a custom template.
+ */
+const tocEnabled = process.env.MD2NATIVEDOCX_TOC === '1';
+const tocDepthRaw = Number(process.env.MD2NATIVEDOCX_TOC_DEPTH);
+const tocDepth = Number.isFinite(tocDepthRaw) ? Math.min(4, Math.max(2, Math.round(tocDepthRaw))) : 3;
+
 const rawLayoutOptions = readLayoutOptionsFromEnv();
 
 // Conflict resolution (spec §2.1/§5, option (a) — confirmed with the
@@ -215,6 +230,11 @@ async function main() {
   if (existsSync(EFFECTIVE_REFERENCE_DOC_PATH)) {
     pandocArgs.push('--reference-doc', EFFECTIVE_REFERENCE_DOC_PATH);
   }
+  // TOC generation itself works with any reference doc (spec §1.10/§2.2) —
+  // only the w:updateFields auto-refresh patch above needs one we can patch.
+  if (tocEnabled) {
+    pandocArgs.push('--toc', `--toc-depth=${tocDepth}`);
+  }
 
   // MD2NATIVEDOCX_PANDOC_BIN lets a caller (the VS Code extension's automatic
   // Pandoc provisioning, see packages/vscode-extension/src/pandocProvisioner.ts)
@@ -266,7 +286,7 @@ async function main() {
         // without this, Word does not recognize the drawing and drops it
         // (compatibility mode). Must run before injectSmartArtParts, which
         // reads the namespace-fixed/id-renumbered document.xml this writes.
-        postProcessDocx(output);
+        postProcessDocx(output, { toc: tocEnabled });
         // Complete the SmartArt wiring for any diagram the core bridge
         // dispatched to it (no-op if none did, and skipped entirely when
         // SmartArt is disabled — nothing could have been dispatched).

@@ -10,6 +10,9 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   base font size, line spacing, justification, theme accent color) via 11 new
   `md2nativedocx.layout.*`/`md2nativedocx.typography.*` settings. Ignored (with a note) when
   `md2nativedocx.referenceDocument` points at a custom template — its own page setup wins.
+- Automatic table of contents via `md2nativedocx.toc.enabled`/`md2nativedocx.toc.depth`, placed
+  after the document's title and set to refresh automatically when Word opens the file. Works
+  even alongside a custom `md2nativedocx.referenceDocument`.
 - Three new Mermaid diagram types export as native, editable OOXML shapes: `quadrantChart`,
   `venn-beta` (2-3 sets, true overlapping-circle geometry), and `mindmap` (radial layout, all 6
   node shapes). No extension-side changes were needed — the same `` ```mermaid `` block detection

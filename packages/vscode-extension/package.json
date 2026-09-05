@@ -186,6 +186,18 @@
           "default": "",
           "pattern": "^$|^[0-9A-Fa-f]{6}$",
           "markdownDescription": "%configuration.typography.accentColor.markdownDescription%"
+        },
+        "md2nativedocx.toc.enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%configuration.toc.enabled.markdownDescription%"
+        },
+        "md2nativedocx.toc.depth": {
+          "type": "number",
+          "default": 3,
+          "minimum": 2,
+          "maximum": 4,
+          "markdownDescription": "%configuration.toc.depth.markdownDescription%"
         }
       }
     },

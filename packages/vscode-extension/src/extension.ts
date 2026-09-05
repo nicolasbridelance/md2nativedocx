@@ -75,6 +75,19 @@ function smartArtEnabledSetting(): boolean {
   return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', false);
 }
 
+/** `md2nativedocx.toc.enabled`/`md2nativedocx.toc.depth` (spec §1.10/§2.2,
+ * "Lot 3"). Plain `.get()` (not `.inspect()`, unlike {@link layoutOptionsSetting})
+ * is safe here: the schema default is `false`, so forwarding it changes
+ * nothing for an untouched install — unlike a layout/typography default
+ * (e.g. `A4`), which would silently activate page patching for everyone. */
+function tocEnabledSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('toc.enabled', false);
+}
+
+function tocDepthSetting(): number {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<number>('toc.depth', 3);
+}
+
 /** Value the user actually configured for `md2nativedocx.<key>` at some
  * scope (workspace folder / workspace / user), or `undefined` if they never
  * touched it — as opposed to `.get()`, which always returns the
@@ -153,9 +166,11 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
     const smartArtEnabled = smartArtEnabledSetting();
     const layout = layoutOptionsSetting();
     warnIfLayoutOptionsIgnored(referenceDoc, layout);
+    const toc = tocEnabledSetting();
+    const tocDepth = tocDepthSetting();
     return isMermaidFilePath(uri.fsPath)
-      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout })
-      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout });
+      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth })
+      : exportDocument(uri.fsPath, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth });
   });
 }
 
@@ -200,7 +215,16 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     const smartArtEnabled = smartArtEnabledSetting();
     const layout = layoutOptionsSetting();
     warnIfLayoutOptionsIgnored(referenceDoc, layout);
-    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), { pandocBin, referenceDoc, smartArtEnabled, layout });
+    const toc = tocEnabledSetting();
+    const tocDepth = tocDepthSetting();
+    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), {
+      pandocBin,
+      referenceDoc,
+      smartArtEnabled,
+      layout,
+      toc,
+      tocDepth,
+    });
   });
 }
 

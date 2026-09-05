@@ -220,6 +220,27 @@ export function patchSectPr(documentXml, { pgSize, margins } = {}) {
 }
 
 /**
+ * Patch `word/settings.xml` to add `<w:updateFields w:val="true" />` when a
+ * TOC is requested (spec §1.10/§2.2) — without it, a Pandoc-generated TOC
+ * field shows stale/empty content until the user manually refreshes it
+ * (F9); with it, Word itself offers to update fields on open. No-op (and
+ * idempotent) when `toc` is falsy or the flag is already present.
+ *
+ * Applied by `postprocess.mjs` to the **final generated `.docx`**'s own
+ * `settings.xml`, not to the reference doc here — confirmed empirically
+ * that Pandoc synthesizes its own `word/settings.xml` from scratch and does
+ * NOT carry over the reference document's (unlike `theme1.xml`/
+ * `styles.xml`/`document.xml`'s `sectPr`, all confirmed carried over).
+ * Exported from this module anyway since it's the same kind of pure,
+ * independently-testable XML patch as the others here — just consumed by a
+ * different caller.
+ */
+export function patchSettings(settingsXml, { toc } = {}) {
+  if (!toc || /<w:updateFields\b/.test(settingsXml)) return settingsXml;
+  return settingsXml.replace(/(<w:settings\b[^>]*>)/, `$1\n  <w:updateFields w:val="true" />`);
+}
+
+/**
  * Build a patched `reference.docx` from `basePath` for the given raw option
  * values (as they arrive from CLI env vars / VS Code settings — every field
  * optional, `undefined` meaning "user didn't touch this one").

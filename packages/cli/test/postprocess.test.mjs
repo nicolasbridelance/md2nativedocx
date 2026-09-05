@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { injectNamespaces, renumberDrawingIds, injectSmartArtParts } from '../src/postprocess.mjs';
+import { injectNamespaces, renumberDrawingIds, injectSmartArtParts, repositionTocAfterTitle, postProcessDocx } from '../src/postprocess.mjs';
 
 /** A `w:document` root as Pandoc emits it: no wpc/wpg/wps declarations. */
 const PANDOC_ROOT =
@@ -142,14 +142,19 @@ const DOCUMENT_RELS =
   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml" />' +
   '</Relationships>';
 
-/** Build a minimal but valid-enough .docx at `docxPath`, with `documentXml` as `word/document.xml`. */
-function buildMinimalDocx(docxPath, documentXml) {
+/** Build a minimal but valid-enough .docx at `docxPath`, with `documentXml` as
+ * `word/document.xml`. An optional `settingsXml` also writes `word/settings.xml`
+ * (needed only by tests exercising the `toc` option of `postProcessDocx`). */
+function buildMinimalDocx(docxPath, documentXml, settingsXml) {
   const work = mkdtempSync(join(tmpdir(), 'md2nativedocx-post-fixture-'));
   try {
     mkdirSync(join(work, 'word', '_rels'), { recursive: true });
     writeFileSync(join(work, '[Content_Types].xml'), CONTENT_TYPES, 'utf8');
     writeFileSync(join(work, 'word', 'document.xml'), documentXml, 'utf8');
     writeFileSync(join(work, 'word', '_rels', 'document.xml.rels'), DOCUMENT_RELS, 'utf8');
+    if (settingsXml !== undefined) {
+      writeFileSync(join(work, 'word', 'settings.xml'), settingsXml, 'utf8');
+    }
     execFileSync('zip', ['-q', '-X', '-r', docxPath, '.'], { cwd: work, stdio: 'pipe' });
   } finally {
     rmSync(work, { recursive: true, force: true });
@@ -277,5 +282,67 @@ test('throws a clear error when a placeholder has no matching directory in smart
       '</w:drawing></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
     assert.throws(() => injectSmartArtParts(docx, join(dir, 'smartart')), /no SmartArt parts found/);
+  });
+});
+
+// --- repositionTocAfterTitle (spec §1.10/§2.2, "Lot 3") ---
+
+/** A Pandoc-shaped TOC field block, as it actually appears at the top of the
+ * body — confirmed against a real `pandoc --toc` run, not invented. */
+const TOC_BLOCK =
+  '<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents" /><w:docPartUnique /></w:docPartObj></w:sdtPr>' +
+  '<w:sdtContent><w:p><w:pPr><w:pStyle w:val="TOCHeading" /></w:pPr><w:r><w:t>Table of Contents</w:t></w:r></w:p>' +
+  '<w:p><w:r><w:fldChar w:fldCharType="begin" /><w:instrText>TOC \\o "1-2" \\h \\z \\u</w:instrText>' +
+  '<w:fldChar w:fldCharType="separate" /><w:fldChar w:fldCharType="end" /></w:r></w:p></w:sdtContent></w:sdt>';
+
+const HEADING1 = '<w:p><w:pPr><w:pStyle w:val="Heading1" /></w:pPr><w:r><w:t>Titre</w:t></w:r></w:p>';
+
+test('repositionTocAfterTitle: moves the TOC field from the top of the body to right after the first Heading1', () => {
+  const xml = `<w:document><w:body>${TOC_BLOCK}${HEADING1}<w:p><w:r><w:t>Reste</w:t></w:r></w:p></w:body></w:document>`;
+  const out = repositionTocAfterTitle(xml);
+  const h1Idx = out.indexOf('Heading1');
+  const tocIdx = out.indexOf('docPartGallery');
+  assert.ok(h1Idx < tocIdx, 'the TOC field must now come after the Heading1 paragraph');
+  assert.ok(out.indexOf('Reste') > tocIdx, 'content after the title must still come after the TOC');
+});
+
+test('repositionTocAfterTitle: a no-op when there is no TOC field', () => {
+  const xml = `<w:document><w:body>${HEADING1}</w:body></w:document>`;
+  assert.equal(repositionTocAfterTitle(xml), xml);
+});
+
+test('repositionTocAfterTitle: leaves the TOC at the top (not dropped) when there is no Heading1 to anchor after', () => {
+  const xml = `<w:document><w:body>${TOC_BLOCK}<w:p><w:r><w:t>No heading here</w:t></w:r></w:p></w:body></w:document>`;
+  assert.equal(repositionTocAfterTitle(xml), xml);
+});
+
+// --- postProcessDocx({ toc }) (spec §1.10/§2.2, "Lot 3") ---
+
+const MINIMAL_SETTINGS =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:settings>';
+
+test('postProcessDocx: without toc, settings.xml is left untouched (not even read)', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'doc.docx');
+    buildMinimalDocx(docx, `<w:document><w:body>${HEADING1}</w:body></w:document>`, MINIMAL_SETTINGS);
+    postProcessDocx(docx);
+    const settings = execFileSync('unzip', ['-p', docx, 'word/settings.xml'], { encoding: 'utf8' });
+    assert.equal(settings, MINIMAL_SETTINGS);
+  });
+});
+
+test('postProcessDocx: with toc, settings.xml gets w:updateFields and the TOC field moves after the title', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'doc.docx');
+    const documentXml = `<w:document><w:body>${TOC_BLOCK}${HEADING1}</w:body></w:document>`;
+    buildMinimalDocx(docx, documentXml, MINIMAL_SETTINGS);
+    postProcessDocx(docx, { toc: true });
+
+    const settings = execFileSync('unzip', ['-p', docx, 'word/settings.xml'], { encoding: 'utf8' });
+    assert.match(settings, /<w:updateFields w:val="true" \/>/);
+
+    const document = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(document.indexOf('Heading1') < document.indexOf('docPartGallery'));
   });
 });

@@ -43,6 +43,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
+import { patchSettings } from './referenceDocBuilder.mjs';
 
 /** Extended namespaces Word declares on the document root, prefix -> URI. */
 const EXTENDED_NS = {
@@ -143,26 +144,79 @@ export function renumberDrawingIds(documentXml) {
 }
 
 /**
+ * Move a Pandoc-generated TOC field (spec §1.10/§2.2, "Lot 3", `--toc`) from
+ * where Pandoc always puts it — the very top of the body, before any
+ * heading — to right after the document's first Heading1 paragraph, per the
+ * spec's own wording ("sommaire automatique sous le H1"). Confirmed
+ * empirically that Pandoc's placement needed this fix at all: a real
+ * `pandoc --toc` run puts the `<w:sdt>` TOC field before the title, not
+ * under it, and Pandoc has no flag to change that.
+ *
+ * A no-op (returns `documentXml` unchanged) when there is no TOC field
+ * (`--toc` wasn't used) or no Heading1 paragraph to anchor after — in the
+ * latter case the TOC is left at Pandoc's own default position rather than
+ * silently dropped. Safe to always run, TOC or not: this is why
+ * `postProcessDocx` composes it unconditionally instead of taking a flag.
+ */
+export function repositionTocAfterTitle(documentXml) {
+  const tocMatch = documentXml.match(/<w:sdt>[\s\S]*?<w:docPartGallery w:val="Table of Contents"[\s\S]*?<\/w:sdt>/);
+  if (!tocMatch) return documentXml;
+  const tocBlock = tocMatch[0];
+  const withoutToc = documentXml.replace(tocBlock, '');
+  const headingMatch = withoutToc.match(/<w:p>[\s\S]*?<w:pStyle w:val="Heading1"[\s\S]*?<\/w:p>/);
+  if (!headingMatch) return documentXml;
+  const insertAt = withoutToc.indexOf(headingMatch[0]) + headingMatch[0].length;
+  return withoutToc.slice(0, insertAt) + tocBlock + withoutToc.slice(insertAt);
+}
+
+/**
  * Post-process a .docx file in place: read `word/document.xml`, apply the
- * corrections above, and write the entry back into the archive.
+ * corrections above, and write the entry back into the archive. When `toc`
+ * is true (spec §1.10/§2.2, "Lot 3"), also patches `word/settings.xml` to
+ * add `<w:updateFields w:val="true" />` — confirmed empirically that this
+ * has to happen here, on the *final* generated `.docx`, rather than on the
+ * reference doc (`referenceDocBuilder.mjs`'s `buildReferenceDoc`): Pandoc
+ * synthesizes its own `word/settings.xml` from scratch and does not carry
+ * over the reference document's, unlike `sectPr`/`theme1.xml`/`styles.xml`.
  *
  * @param docxPath - Path to the .docx to patch.
+ * @param options.toc - Whether a TOC was requested for this export.
  */
-export function postProcessDocx(docxPath) {
+export function postProcessDocx(docxPath, { toc = false } = {}) {
   const archive = resolve(docxPath);
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-post-'));
   try {
-    // Extract only the part we touch, preserving its path inside the archive so
-    // `zip` puts it back exactly where it came from.
-    execFileSync('unzip', ['-o', '-q', archive, 'word/document.xml', '-d', dir], { stdio: 'pipe' });
-    const entryPath = join(dir, 'word', 'document.xml');
-    const original = readFileSync(entryPath, 'utf8');
-    const patched = renumberDrawingIds(injectNamespaces(original));
-    if (patched === original) return;
-    writeFileSync(entryPath, patched, 'utf8');
-    // Replace that single entry; every other part of Pandoc's archive is left
-    // byte-for-byte untouched.
-    execFileSync('zip', ['-q', '-X', archive, 'word/document.xml'], { cwd: dir, stdio: 'pipe' });
+    // Extract only the parts we touch, preserving their path inside the
+    // archive so `zip` puts them back exactly where they came from.
+    const entries = toc ? ['word/document.xml', 'word/settings.xml'] : ['word/document.xml'];
+    execFileSync('unzip', ['-o', '-q', archive, ...entries, '-d', dir], { stdio: 'pipe' });
+
+    const documentPath = join(dir, 'word', 'document.xml');
+    const originalDocument = readFileSync(documentPath, 'utf8');
+    const patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
+    let changed = false;
+    if (patchedDocument !== originalDocument) {
+      writeFileSync(documentPath, patchedDocument, 'utf8');
+      changed = true;
+    }
+
+    if (toc) {
+      const settingsPath = join(dir, 'word', 'settings.xml');
+      const originalSettings = readFileSync(settingsPath, 'utf8');
+      const patchedSettings = patchSettings(originalSettings, { toc });
+      if (patchedSettings !== originalSettings) {
+        writeFileSync(settingsPath, patchedSettings, 'utf8');
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+    // Replace only the entries that actually changed; every other part of
+    // Pandoc's archive is left byte-for-byte untouched.
+    execFileSync('zip', ['-q', '-X', archive, 'word/document.xml', ...(toc ? ['word/settings.xml'] : [])], {
+      cwd: dir,
+      stdio: 'pipe',
+    });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

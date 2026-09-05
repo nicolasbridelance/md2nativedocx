@@ -492,9 +492,37 @@ de la spec, §5.
       multi-plateforme avant de considérer le lot terminé** (option 1 retenue par le mainteneur,
       "à tester" — filet de secours "pastilles `w:shd` custom" documenté dans la spec si ça
       échoue sur une plateforme donnée).
-- [ ] **Lot 3 — sommaire automatique (TOC)** (spec §1.10, §2.2) : flag `--toc`/`--toc-depth`
-      Pandoc + `<w:updateFields w:val="true"/>` dans `settings.xml` (sinon TOC visible seulement
-      après F9 dans Word). Dépend du Lot 1 (même builder).
+- [x] **Lot 3 — sommaire automatique (TOC), livré (2026-09-05)** (spec §1.10, §2.2) :
+      `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` → `--toc`/`--toc-depth=N` Pandoc, plus
+      `<w:updateFields w:val="true" />` dans `settings.xml` (sinon TOC visible vide jusqu'à F9).
+      - **Piège trouvé et corrigé en vérifiant empiriquement, pas juste écrit d'après la spec** :
+        contrairement à `sectPr`/`theme1.xml`/`styles.xml` (confirmés repris tels quels du
+        `reference.docx` par Pandoc, voir Lot 1 ci-dessus), Pandoc **synthétise son propre
+        `word/settings.xml` à partir de rien** — un canari inséré dans le `settings.xml` du
+        `reference.docx` ne survit pas dans le `.docx` généré, testé et confirmé. Le patch
+        `updateFields` a donc dû être déplacé de `referenceDocBuilder.mjs` (qui patch le gabarit
+        *avant* Pandoc, inutile ici) vers `postprocess.mjs` (qui patch le `.docx` *final*, déjà
+        son rôle établi). Conséquence positive inattendue : le TOC fonctionne donc pleinement même
+        avec un `referenceDocument` custom (`settings.xml` patché est celui de Pandoc, pas celui du
+        gabarit) — pas besoin du garde-fou "ignoré si custom" du Lot 1 pour ce lot.
+      - **Deuxième écart trouvé par rendu réel** : Pandoc place toujours le champ TOC tout en haut
+        du corps, avant le titre — alors que la spec demande explicitement le placement "sous le
+        H1", et Pandoc n'a pas de flag pour ça. Corrigé par `repositionTocAfterTitle()`
+        (`postprocess.mjs`) : déplace le bloc `<w:sdt>` du TOC juste après le premier paragraphe
+        `Heading1` (chirurgie XML ciblée par regex, même niveau que les corrections déjà
+        appliquées à `document.xml` dans ce module) ; laisse le TOC à sa position Pandoc par
+        défaut plutôt que de le supprimer si aucun H1 n'est trouvé.
+      - Vérifié par rendu LibreOffice réel (PNG + PDF) : le champ TOC apparaît bien après le titre,
+        mais son contenu reste vide ("Table of Contents" sans entrées) — LibreOffice n'évalue pas
+        le champ à l'export headless, contrairement à un vrai Word qui, avec `updateFields`,
+        proposera/effectuera la mise à jour à l'ouverture. **Non vérifié dans un vrai Word** que
+        les entrées se peuplent bien à l'ouverture — même catégorie que les autres items "à tester
+        dans un vrai Word" déjà ouverts dans ce fichier.
+      - Tests : 3 nouveaux tests `postprocess.test.mjs` (`repositionTocAfterTitle` pur + intégration
+        `postProcessDocx({ toc: true })` réelle unzip/zip), 3 `reference-doc-builder.test.mjs`
+        (`patchSettings` pur), 2 `cli.test.mjs` bout-en-bout (TOC placé après le H1 + fonctionne
+        avec un `referenceDocument` custom). VS Code : `md2nativedocx.toc.enabled`/`.toc.depth`.
+        401 tests au total, tous verts ; `test:visual` 35/35 inchangé.
 - [ ] **Lot 4 — panneau de configuration Activity Bar + Sidebar** (spec §3) : nouveau View
       Container + Webview View (`registerWebviewViewProvider`), réglages groupés
       pédagogiquement (mise en page / typographie / structure / tableaux paysage / emoji /
