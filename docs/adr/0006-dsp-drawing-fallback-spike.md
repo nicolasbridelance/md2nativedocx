@@ -1,12 +1,13 @@
 # ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** **Hypothèse infirmée par test Word réel (2026-09-05).** `cycle-with-drawing.docx`
-  refuse toujours de s'ouvrir dans Word, message identique à l'incident d'origine ("Word a
-  rencontré une erreur lors de l'ouverture du fichier"). Le Milestone 1 (geometry engine complet)
-  **ne démarre pas** tant que la vraie cause n'est pas trouvée — voir "Suite" en bas de ce
-  document pour la piste de bissection en cours.
+- **Statut :** **Hypothèse `dsp:drawing` infirmée, ET localisée au contenu du diagramme
+  (2026-09-05).** `cycle-with-drawing.docx` refuse de s'ouvrir (même erreur que l'incident
+  d'origine) — round 1. `cycle-graft.docx` (nos 5 parties diagramme greffées dans le vrai fichier
+  Word, tout le reste inchangé) **échoue aussi** — round 2, ce qui prouve que le problème est dans
+  le **contenu** de nos parties diagramme, pas dans l'enveloppe produite par notre pipeline CLI.
+  Round 3 (isolation data+layout vs colors+quickStyle) en cours, voir "Suite".
 - **Date :** 2026-09-05
-- **Décideur :** Nicolas Bridelance (mainteneur) — test réel effectué, résultat négatif rapporté.
+- **Décideur :** Nicolas Bridelance (mainteneur) — 2 tests réels effectués, résultats négatifs rapportés.
 
 ## Contexte
 
@@ -58,35 +59,37 @@ LibreOffice. C'est la seule question que ce spike ne peut pas trancher lui-même
 
 ## Décision
 
-**Hypothèse infirmée.** Résultat du test réel : même message d'erreur qu'à l'incident d'origine.
-Le `dsp:drawing` seul ne suffit pas — soit il manque autre chose en plus, soit il ne joue aucun
-rôle et la vraie cause est ailleurs. Pas de nouvelle implémentation avant d'avoir isolé la cause
-réelle par bissection (voir "Suite").
+**Hypothèse `dsp:drawing` infirmée (round 1).** Résultat du test réel : même message d'erreur
+qu'à l'incident d'origine.
 
-## Suite — bissection en cours (2026-09-05, après le résultat négatif)
+**Round 2 — localisé au contenu du diagramme, pas à l'enveloppe du document.** `cycle-graft.docx`
+(`docs/adr/spikes/spike-dsp-drawing/round2-graft/`) greffe nos 5 parties diagramme dans une copie
+du vrai fichier Word (`handmade_samples/cycle-simple.docx`), tout le reste (document.xml, rels,
+styles, settings — tout ce qu'un vrai Word a lui-même écrit) resté intact. **Échoue avec la même
+erreur.** Ça prouve que le problème n'est ni dans `postProcessDocx`/`injectSmartArtParts`/le
+`reference.docx` généré, ni dans quoi que ce soit que notre pipeline CLI assemble autour du
+diagramme — il est **forcément** dans le contenu même de nos parties diagramme
+(`data`/`layout`/`colors`/`quickStyle`/`drawing`).
 
-Deux hypothèses restent à trancher, qui pointent dans des directions très différentes :
-1. **Le contenu de nos 4-5 parties diagramme est structurellement invalide** pour Word (au-delà
-   de ce que le schéma XML brut ou LibreOffice peuvent détecter) — par exemple le `layoutDef`
-   personnalisé lui-même (`dgm:alg type="cycle"`) pourrait violer une contrainte que Word valide
-   strictement et LibreOffice tolère, indépendamment de `dsp:drawing`.
-2. **Quelque chose dans le document autour du diagramme** (racine `w:document`, `mc:Ignorable`,
-   `rsid`, `w:compat`, etc. — générés par notre pipeline CLI, pas par le traducteur SmartArt
-   lui-même) est ce qui fait échouer l'ouverture, sans rapport avec le contenu du diagramme.
+## Suite — Round 3, isolation en cours (2026-09-05)
 
-**Test de bissection décisif** : greffer nos propres 5 parties diagramme (data/layout/colors/
-quickStyle/drawing, celles de ce spike) **dans une copie du vrai fichier Word**
-(`handmade_samples/cycle-simple.docx`), à la place des siennes, en conservant tout le reste du
-fichier réel (document.xml, rels, styles, settings — tout ce qu'un vrai Word a lui-même écrit).
-- **Si cette copie s'ouvre** : le problème est isolé au **contenu du diagramme** (hypothèse 1) —
-  it faut alors comparer notre `layoutDef`/`dataModel` ligne à ligne contre un exemple connu plus
-  strictement, pas juste vérifier le XML bien formé.
-- **Si elle échoue aussi** : le problème est dans **l'enveloppe du document** produite par notre
-  pipeline (hypothèse 2) — `postProcessDocx`/`injectSmartArtParts`/le `reference.docx` généré, pas
-  le contenu du diagramme lui-même.
+`data.xml`/`layout.xml` sont couplés entre eux (les points de présentation de `data.xml`
+référencent les noms de `layoutNode` de `layout.xml`) — pas testables séparément l'un de l'autre.
+`colors.xml`/`quickStyle.xml` ne sont couplés à `data.xml` que par un nom de style partagé
+(`presStyleLbl="node1"`, qui coïncide avec notre propre convention) — eux sont testables
+indépendamment. Deux tests construits (`docs/adr/spikes/spike-dsp-drawing/round3-isolate/`,
+détail dans son propre `README.md`) :
+- **`cycle-isolate-a.docx`** : vrai fichier Word, mais **notre** `data1.xml` + `layout1.xml`
+  (`colors`/`quickStyle` réels conservés, pas de partie `drawing`). S'ouvre → `data`/`layout` pas
+  en cause. Échoue → `layout1.xml` (le `dgm:layoutDef` personnalisé, suspect n°1 depuis le début)
+  ou `data1.xml` est la cause.
+- **`cycle-isolate-b.docx`** : vrai fichier Word, mais **nos** `colors1.xml` + `quickStyle1.xml`
+  (`data`/`layout`/`drawing` réels conservés). Biais connu et assumé : le vrai `data1.xml`
+  référence un `presStyleLbl="sibTrans2D1"` (les flèches de connexion) que nos `colors`/`quickStyle`
+  ne définissent pas — un échec ici ne serait pas une preuve définitive contre notre format
+  `colors`/`quickStyle`, seulement contre cette référence de style spécifique.
 
-Voir `docs/adr/spikes/spike-dsp-drawing/round2-graft/` pour ce test, construit et remis au
-mainteneur en parallèle de la mise à jour de cet ADR.
+Remis au mainteneur pour test réel des deux fichiers en une fois.
 
 ## Conséquences
 
