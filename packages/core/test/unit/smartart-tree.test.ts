@@ -108,16 +108,23 @@ test('data references the root and every child exactly once', () => {
   assert.deepEqual(new Set(texts), new Set(['Root', 'Left', 'Right']));
 });
 
-test('the doc point gets a presOf onto p-root (the mirror LibreOffice needs)', () => {
+test('the doc point gets a presOf onto the root presentation point (the mirror LibreOffice needs)', () => {
   // Without this connector the whole diagram renders blank under LibreOffice
   // -- discovered this session by rendering this generator's actual output,
   // not just asserting on the XML string. See TREE_LAYOUT_XML's doc comment
   // and chain.ts's identical fix for the shared root cause.
   const ast = treeFlowchart('graph TD\n  A --> B\n  A --> C');
   const { dataXml } = generateTree(ast);
+  // modelIds are plain sequential integers (ST_ModelId, ECMA-376 §21.4,
+  // rejects an arbitrary string like the old "p-root" scheme -- see the
+  // doc comment on buildTreeDataXml), so this checks the *structure*
+  // instead of a literal id: the doc point's presOf must target whichever
+  // pres point is presName="root".
+  const rootPresId = dataXml.match(/<dgm:pt modelId="(\d+)" type="pres"><dgm:prSet presAssocID="0" presName="root"/)?.[1];
+  assert.ok(rootPresId, 'expected a presName="root" presentation point associated with the doc point');
   assert.ok(
-    dataXml.includes('type="presOf" srcId="0" destId="p-root"'),
-    'doc point (modelId 0) must have a presOf onto p-root'
+    dataXml.includes(`type="presOf" srcId="0" destId="${rootPresId}"`),
+    'doc point (modelId 0) must have a presOf onto the root presentation point',
   );
 });
 

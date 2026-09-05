@@ -795,43 +795,37 @@ fermée, pas un cas de labo.
 - ✅ **Mitigation immédiate — SmartArt off par défaut (2026-09-03)** : `smartArtEnabled`
       (`MD2NATIVEDOCX_ENABLE_SMARTART` opt-in), `md2nativedocx.smartArt.enabled` à `default: false`.
       Détail complet : `docs/history/TODO_ARCHIVE.md`.
-- [ ] **Cause racine probable identifiée, pas encore corrigée** : échantillon Word réel fourni par
-      le mainteneur (`handmade_samples/cycle-simple.docx`, Insertion → SmartArt → Cycle simple dans
-      Word) diffé contre notre sortie. Différence structurelle majeure : le fichier Word réel a une
-      **5e partie**, `word/diagrams/drawingN.xml` (`dsp:drawing` — un arbre de formes concrètes
-      *pré-calculées*, `dsp:sp`/`a:xfrm` avec positions absolues réelles, pas l'algorithme abstrait),
-      référencée depuis `data1.xml` via `<dgm:extLst><a:ext uri="http://schemas.microsoft.com/
-      office/drawing/2008/diagram"><dsp:dataModelExt relId="rIdX" .../></a:ext></dgm:extLst>`, plus
-      la relation `.../relationships/diagramDrawing` et l'override de content-type
-      `application/vnd.ms-office.drawingml.diagramDrawing+xml`. Notre générateur (`chain.ts`/
-      `tree.ts`/`cycle.ts`) n'émet **aucune** de ces 4 choses — c'était déjà une question ouverte
-      dans `docs/adr/spikes/spike-smartart/spike.md` ("Whether the dgm:extLst/dsp:dataModelExt
-      placement... are what real Word actually expects"), jamais tranchée faute d'échantillon.
-      Hypothèse à confirmer : Word refuse d'ouvrir un `dgm:dataModel` avec un `layoutDef` personnalisé
-      (non un des siens, référencé par URN Microsoft comme `urn:microsoft.com/office/officeart/
-      2005/8/layout/cycle2` dans l'échantillon réel) s'il n'a pas ce filet de sécurité pré-rendu à
-      afficher. Bonne nouvelle : le générateur `wpc:wpc`/`wps:wsp` existant (chemin OOXML-only)
-      calcule déjà exactement ce dont un `dsp:drawing` a besoin (mêmes coordonnées de layout,
-      logique de rendu de formes très proche du schéma `dsp:sp`) — pas besoin de réinventer un
-      moteur de rendu, juste un nouvel émetteur XML `dsp:*` alimenté par les mêmes données. Ne pas
-      réactiver `smartArt.enabled` par défaut avant que ce filet soit implémenté et re-testé en Word
-      réel sur `chain`/`tree`/`cycle` tous les trois (aucun des trois n'a de signal Word réel positif
-      sur la sortie de production — `chain` a seulement un échantillon isolé fait main, ADR 0004
-      "Round 5").
-      - **Spike dédié réalisé (2026-09-05)** — `docs/adr/0006-dsp-drawing-fallback-spike.md`,
-        `docs/adr/spikes/spike-dsp-drawing/` : reproduit le cas exact de l'incident (cycle à 3
-        nœuds) via la vraie CLI de production, puis ajouté à la main la 5e partie manquante.
-        Confirme précisément que `dsp:sp/@modelId` doit référencer un point de **présentation**
-        (`p-main{N}`, celui portant `presStyleLbl="node1"`), jamais un point de contenu — vérifié
-        par intersection directe des ids de `handmade_samples/cycle-simple.docx`. Trouvaille
-        inattendue en testant sous LibreOffice : une fois le `dsp:drawing` ajouté, LibreOffice
-        **affiche le rendu pré-calculé au lieu de ré-exécuter l'algorithme en direct** — pas le
-        comportement d'une extension "ignorable", plutôt celui d'un cache faisant autorité,
-        signal positif supplémentaire pour l'hypothèse ci-dessus. **`cycle-with-drawing.docx` du
-        spike remis au mainteneur pour test en vrai Word** — seul moyen de trancher, ce sandbox
-        n'a que LibreOffice. Le Milestone 1 (geometry engine réel, câblage
-        `postprocess.mjs`/`md2nativedocx-core.mjs` pour la 5e partie) démarre une fois ce test
-        revenu positif.
+- [x] **Cause réelle trouvée et corrigée (2026-09-05)** — détail complet round par round dans
+      `docs/adr/0006-dsp-drawing-fallback-spike.md` (9 rounds, 7 tests Word réels). Résumé :
+      l'hypothèse initiale (5e partie `dsp:drawing` manquante, ci-dessous en historique) s'est
+      révélée **fausse** après test réel — trois autres hypothèses structurelles devinées par
+      comparaison manuelle contre `handmade_samples/cycle-simple.docx` ont échoué à leur tour
+      (éléments `presOf`/`constrLst`/`ruleLst` manquants sur `dgm:layoutNode` ; `adjLst`/`r:blip`
+      manquants sur `dgm:shape` ; points de contenu `parTrans`/`sibTrans` absents). La bonne
+      méthode, trouvée en changeant d'approche plutôt qu'en devinant une 4e fois : le **SDK Open
+      XML de Microsoft** (`DocumentFormat.OpenXml`, .NET, déjà disponible dans ce sandbox) expose
+      `OpenXmlValidator`, qui valide contre le même schéma que Word et donne le détail exact de
+      chaque violation. Utilisé sur notre propre sortie, il a immédiatement pointé la vraie cause :
+      **`modelId`/`srcId`/`destId` est un type union (`ST_ModelId`, ECMA-376 §21.4) qui n'accepte
+      qu'un entier non signé ou un GUID, jamais une chaîne libre** — nos trois générateurs
+      utilisaient des ids comme `"p-root"`/`"c1"`/`"pp3b"` pour les points de présentation et les
+      connexions (les points de contenu, déjà numériques, passaient). Corrigé dans
+      `packages/core/src/smartart/{chain,tree,cycle}.ts` (ids remplacés par des entiers
+      séquentiels), confirmé sans erreur de schéma restante par le même validateur, sans
+      régression LibreOffice/`test:visual`/tests unitaires (2 tests mis à jour, vérifiaient
+      littéralement l'ancienne chaîne `"p-root"`). **En attente de la confirmation Word réelle
+      finale** avant de réactiver `smartArt.enabled` par défaut. Outil du validateur conservé dans
+      `docs/adr/spikes/spike-dsp-drawing/round9-modelid-fix/` — à utiliser en premier pour tout
+      futur "Word refuse d'ouvrir le fichier", avant toute comparaison manuelle.
+      - **Historique de l'hypothèse initiale (infirmée), gardé pour mémoire** : un échantillon
+        Word réel (`handmade_samples/cycle-simple.docx`, Insertion → SmartArt → Cycle simple)
+        diffé contre notre sortie avait montré une 5e partie manquante, `word/diagrams/drawingN.xml`
+        (`dsp:drawing`, un arbre de formes pré-calculées), faisant penser que Word refusait tout
+        `layoutDef` personnalisé sans ce filet de sécurité. Un spike dédié (ADR 0006, rounds 0-1)
+        a bien confirmé le câblage exact de cette 5e partie et un comportement LibreOffice
+        surprenant (le rendu pré-calculé prime sur l'algorithme en direct une fois présent), mais
+        le test Word réel a montré que l'ajouter seul ne suffisait pas — l'hypothèse était fausse,
+        la vraie cause était ailleurs (voir ci-dessus).
 - ✅ **Deuxième reproduction, involontaire, du même bug (2026-09-04)** — un fixture de test
       généré avec SmartArt forcé a retouché le même bug non corrigé ; corrigé en régénérant avec
       les réglages par défaut, ne change rien à l'état du chantier (toujours non corrigé). Détail

@@ -367,6 +367,22 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
   const childIds = children.map((_, i) => String(i + 2));
   const incomingLabel = incomingLabelByNodeId(flowchart);
 
+  // ST_ModelId (ECMA-376 §21.4) only accepts an unsigned integer or a GUID
+  // -- never an arbitrary string like this module's former "p-root"/"c1"/
+  // "po0"/"pp4-3" scheme. Found with the Open XML SDK's OpenXmlValidator
+  // (the validator real Word enforces strictly); this, not any missing
+  // dsp:drawing fallback, was the actual cause of TODO.md's "Incident
+  // SmartArt 'cycle' cassé en Word réel" (ADR 0006) -- same authoring
+  // pattern shared by chain.ts/cycle.ts, fixed identically in all three.
+  let nextModelId = children.length + 2;
+  const newModelId = () => String(nextModelId++);
+  const pRootId = newModelId();
+  const pLevel1Id = newModelId();
+  const pLevel1MainId = newModelId();
+  const pLevel1ChildrenId = newModelId();
+  const pLevel2CompositeIds = new Map(childIds.map((id) => [id, newModelId()]));
+  const pLevel2MainIds = new Map(childIds.map((id) => [id, newModelId()]));
+
   const rootPt =
     `<dgm:pt modelId="${rootId}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(root.fill)}` +
     `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
@@ -385,43 +401,43 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
     .join('');
 
   const presPts =
-    `<dgm:pt modelId="p-root" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-    `<dgm:pt modelId="p-level1" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-    `<dgm:pt modelId="p-level1main" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Main" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="1"/><dgm:spPr/></dgm:pt>` +
-    `<dgm:pt modelId="p-level1children" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Children" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pRootId}" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pLevel1Id}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pLevel1MainId}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Main" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="1"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pLevel1ChildrenId}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Children" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
     childIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="p-level2composite-${id}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-          `<dgm:pt modelId="p-level2main-${id}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2Main" presStyleLbl="node2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pLevel2CompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+          `<dgm:pt modelId="${pLevel2MainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2Main" presStyleLbl="node2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('');
 
   const parOfCxns =
-    `<dgm:cxn modelId="c1" type="parOf" srcId="${docId}" destId="${rootId}" srcOrd="0" destOrd="0"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${rootId}" srcOrd="0" destOrd="0"/>` +
     childIds
-      .map((id, i) => `<dgm:cxn modelId="c${id}" type="parOf" srcId="${rootId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
+      .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${rootId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
       .join('');
 
   const presOfCxns =
-    `<dgm:cxn modelId="po${docId}" type="presOf" srcId="${docId}" destId="p-root" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
-    `<dgm:cxn modelId="po${rootId}" type="presOf" srcId="${rootId}" destId="p-level1main" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${docId}" destId="${pRootId}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${rootId}" destId="${pLevel1MainId}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
     childIds
       .map(
         (id) =>
-          `<dgm:cxn modelId="po${id}" type="presOf" srcId="${id}" destId="p-level2main-${id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
+          `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pLevel2MainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
       )
       .join('');
 
   const presParOfCxns =
-    `<dgm:cxn modelId="pp1" type="presParOf" srcId="p-root" destId="p-level1" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
-    `<dgm:cxn modelId="pp2" type="presParOf" srcId="p-level1" destId="p-level1main" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
-    `<dgm:cxn modelId="pp3" type="presParOf" srcId="p-level1" destId="p-level1children" srcOrd="1" destOrd="0" presId="${layoutUrn}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pLevel1Id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel1Id}" destId="${pLevel1MainId}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel1Id}" destId="${pLevel1ChildrenId}" srcOrd="1" destOrd="0" presId="${layoutUrn}"/>` +
     childIds
       .map(
         (id, i) =>
-          `<dgm:cxn modelId="pp4-${id}" type="presParOf" srcId="p-level1children" destId="p-level2composite-${id}" srcOrd="${i}" destOrd="0" presId="${layoutUrn}"/>` +
-          `<dgm:cxn modelId="pp5-${id}" type="presParOf" srcId="p-level2composite-${id}" destId="p-level2main-${id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
+          `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel1ChildrenId}" destId="${pLevel2CompositeIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${layoutUrn}"/>` +
+          `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel2CompositeIds.get(id)}" destId="${pLevel2MainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
       )
       .join('');
 

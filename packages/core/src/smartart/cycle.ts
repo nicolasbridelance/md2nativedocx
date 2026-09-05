@@ -179,6 +179,24 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
   const nodeIds = nodes.map((_, i) => String(i + 1));
   const incomingLabel = incomingLabelByNodeId(flowchart);
 
+  // ST_ModelId (ECMA-376 §21.4) only accepts an unsigned integer or a GUID
+  // -- never an arbitrary string. Content point ids above were already
+  // numeric ("0", "1", "2"...) and passed; every presentation point and
+  // connection id below used to be a custom string ("p-root", "c1", "po0",
+  // "pp1a"...), which is schema-invalid. Found with the Open XML SDK's
+  // OpenXmlValidator (the same validator/schema real Word enforces
+  // strictly, which is why this was never caught by LibreOffice or by
+  // manual XML-well-formedness checks) -- this, not the presence/absence of
+  // any dsp:drawing fallback, was the actual cause of TODO.md's "Incident
+  // SmartArt 'cycle' cassé en Word réel". ADR 0004 "Round 3"'s finding that
+  // "modelId format has no effect on rendering" was only ever verified
+  // under LibreOffice, which does not validate against the schema at all.
+  let nextModelId = nodes.length + 1;
+  const newModelId = () => String(nextModelId++);
+  const pRootId = newModelId();
+  const pCompositeIds = new Map(nodeIds.map((id) => [id, newModelId()]));
+  const pMainIds = new Map(nodeIds.map((id) => [id, newModelId()]));
+
   const contentPts = nodes
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
@@ -196,33 +214,33 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
     .join('');
 
   const presPts =
-    `<dgm:pt modelId="p-root" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pRootId}" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
     nodeIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="p-composite${id}" type="pres"><dgm:prSet presAssocID="${id}" presName="composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-          `<dgm:pt modelId="p-main${id}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pCompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+          `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('');
 
   const parOfCxns = nodeIds
-    .map((id, i) => `<dgm:cxn modelId="c${id}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
+    .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
     .join('');
 
   const presOfCxns =
-    `<dgm:cxn modelId="po${docId}" type="presOf" srcId="${docId}" destId="p-root" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${docId}" destId="${pRootId}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
     nodeIds
       .map(
         (id) =>
-          `<dgm:cxn modelId="po${id}" type="presOf" srcId="${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
+          `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
       )
       .join('');
 
   const presParOfCxns = nodeIds
     .map(
       (id, i) =>
-        `<dgm:cxn modelId="pp${id}a" type="presParOf" srcId="p-root" destId="p-composite${id}" srcOrd="${i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
-        `<dgm:cxn modelId="pp${id}b" type="presParOf" srcId="p-composite${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pCompositeIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pCompositeIds.get(id)}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
     )
     .join('');
 

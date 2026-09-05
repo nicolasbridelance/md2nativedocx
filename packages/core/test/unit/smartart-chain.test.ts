@@ -138,7 +138,8 @@ test('every content node gets a presOf-bearing Main presentation point (the mirr
   const { dataXml } = generateChain(ast);
   const presOfCount = (dataXml.match(/type="presOf"/g) ?? []).length;
   const presParOfCount = (dataXml.match(/type="presParOf"/g) ?? []).length;
-  // One per content node, plus the doc point's own presOf onto p-root: without
+  // One per content node, plus the doc point's own presOf onto the root
+  // presentation point: without
   // it, LibreOffice renders the whole diagram blank (confirmed by rendering
   // this generator's actual output under headless LibreOffice, not just
   // asserting on the XML string -- see chain.ts's buildChainDataXml doc comment).

@@ -1,14 +1,18 @@
-# ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
+# ADR 0006 — Spike puis correctif réel : la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** **URN innocentée (round 5) ; deux correctifs structurels testés et insuffisants
-  (rounds 4 et 6) ; round 7 en test (2026-09-05).** Round 3 a localisé le problème à `data`/
-  `layout` (`colors`/`quickStyle` innocentés). Round 4 (`presOf`/`constrLst`/`ruleLst` manquants
-  sur `dgm:layoutNode`) et round 6 (`adjLst`/`r:blip` manquants sur `dgm:shape`) **échouent tous
-  les deux**, y compris cumulés. Round 5 a innocenté l'URN elle-même (pas de liste fermée). Round 7
-  teste une troisième piste, plus structurelle : des points de contenu `parTrans`/`sibTrans`
-  requis sur chaque connexion parent-enfant, entièrement absents de notre modèle de données.
+- **Statut :** **Cause réelle trouvée et corrigée (round 9, 2026-09-05).** Rounds 1-7 (résumé plus
+  bas) ont chacun deviné puis infirmé une hypothèse structurelle par comparaison manuelle. Round 9
+  a utilisé le vrai validateur Microsoft (Open XML SDK, `OpenXmlValidator` — même schéma que Word)
+  au lieu de continuer à deviner : `modelId`/`srcId`/`destId` doivent être un entier non signé ou
+  un GUID (`ST_ModelId`, ECMA-376 §21.4), jamais une chaîne libre. Nos trois générateurs
+  (`chain`/`tree`/`cycle`) utilisaient des ids comme `"p-root"`/`"c1"`/`"pp3b"` pour les points de
+  présentation et les connexions — 34 violations de schéma détectées immédiatement par le
+  validateur, corrigées dans les trois modules (ids remplacés par des entiers séquentiels).
+  **Corrigé dans `packages/core`, tests mis à jour, en attente de confirmation Word réelle finale**
+  (fichiers remis au mainteneur).
 - **Date :** 2026-09-05
-- **Décideur :** Nicolas Bridelance (mainteneur) — 6 rounds de tests réels effectués à ce jour.
+- **Décideur :** Nicolas Bridelance (mainteneur) — 7 rounds de tests réels au total, le dernier en
+  attente de confirmation.
 
 ## Contexte
 
@@ -162,9 +166,55 @@ points `parTrans`/`sibTrans` et attributs correspondants à `data.xml`, sans nou
 présentation pour eux — notre `layoutDef` n'a pas de `forEach` sur `ptType="sibTrans"`). Remis au
 mainteneur.
 
+**Résultat (2026-09-05) : échoue encore, même erreur.** Trois hypothèses structurelles devinées par
+comparaison manuelle (rounds 1, 4, 6, 7 — en comptant `dsp:drawing`), toutes infirmées. À ce stade,
+deviner élément par élément avait un mauvais rendement — voir round 9 pour le changement de
+méthode qui a effectivement trouvé la cause.
+
+## Round 9 — le vrai validateur Open XML SDK, pas une comparaison manuelle de plus (2026-09-05)
+
+Le mainteneur a posé la question qui a débloqué le chantier : Microsoft (ou un tiers) ne
+distribue-t-il pas un validateur avec le détail précis de l'erreur de schéma ? Oui —
+`DocumentFormat.OpenXml.Validation.OpenXmlValidator` (SDK Open XML, .NET), qui valide contre le
+**même schéma que Word** et donne le chemin XPath + la description de chaque violation. `.NET`
+était déjà installé dans ce sandbox. Outil et détail complet :
+`docs/adr/spikes/spike-dsp-drawing/round9-modelid-fix/`.
+
+Vérifié d'abord sur `handmade_samples/cycle-simple.docx` (0 erreur, confirmant que l'outil valide
+correctement) avant de l'utiliser sur notre propre sortie — **53 erreurs**, dont un groupe massif
+et homogène : `modelId`/`srcId`/`destId` n'est pas une chaîne libre, c'est un type union
+(`ST_ModelId`, ECMA-376 §21.4) qui n'accepte qu'un **entier non signé ou un GUID**. Nos points de
+contenu (`"0"`, `"1"`, `"2"`...) passaient déjà ; tous nos points de présentation et connexions
+(`"p-root"`, `"p-composite1"`, `"c1"`, `"po0"`, `"pp1a"`...) échouaient — 34 des 53 erreurs, le
+reste (17) étant du bruit préexistant dans `styles.xml`/`numbering.xml`/`settings.xml`, présent
+même dans un export **sans** SmartArt (donc déjà toléré par Word, sans rapport avec cet incident —
+confirmé en validant aussi un export non-SmartArt).
+
+**Correctif** : `packages/core/src/smartart/{chain,tree,cycle}.ts` — tous les `modelId` de points
+de présentation et de connexions remplacés par des entiers séquentiels (compteur partagé,
+continuant après les ids de points de contenu déjà numériques), même motif corrigé identiquement
+dans les trois générateurs.
+
+**Vérification** : `dotnet run` sur `cycle`/`chain`/`tree` (tailles 3 et 5-6 nœuds) → 0 erreur liée
+au diagramme dans tous les cas. Rendu LibreOffice inchangé. 2 tests `packages/core` mis à jour (ils
+vérifiaient littéralement la chaîne `"p-root"`, désormais une vérification structurelle). 449 tests
+du monorepo verts, lint/typecheck propres, `test:visual` 35/35 à 0,000 % de diff. Fichiers
+`cycle-fixed.docx`/`chain-fixed.docx`/`tree-fixed.docx` remis au mainteneur pour la confirmation
+Word réelle finale.
+
+**Note pour plus tard, sans lien direct avec ce bug** : ADR 0004 "Round 3" avait conclu "le format
+du `modelId` n'a pas d'effet sur le rendu" — vrai, mais seulement vérifié sous LibreOffice, qui ne
+valide contre aucun schéma. Toute conclusion de ce type tirée uniquement d'un test LibreOffice
+devrait être qualifiée comme telle dès le départ, pas présentée comme une confirmation générale.
+
 ## Conséquences
 
-- Le script `build-spike.mjs` reste réutilisable pour `chain`/`tree` une fois la vraie cause
-  trouvée et corrigée sur `cycle` (le motif d'écriture des `layoutNode` est partagé par les trois
-  générateurs, vérifié).
-- Aucune modification de code de production à ce stade — uniquement des dossiers spike.
+- **Le validateur Open XML SDK (`docs/adr/spikes/spike-dsp-drawing/round9-modelid-fix/`) est
+  l'outil à utiliser en premier pour tout futur problème "Word refuse d'ouvrir le fichier"** —
+  avant toute comparaison manuelle ou hypothèse devinée. Aurait résolu cet incident en un seul
+  round au lieu de sept.
+- Le script `build-spike.mjs` (rounds 0-8) reste dans l'historique de ce spike comme trace de la
+  méthode par élimination qui a précédé le round 9, mais n'est plus la voie à suivre pour du
+  diagnostic futur.
+- Correctif appliqué en code de production (`packages/core`), pas seulement dans des dossiers
+  spike — voir TODO.md pour le suivi.

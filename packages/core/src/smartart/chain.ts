@@ -261,11 +261,20 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
  * `forEach`, but LibreOffice does not execute `forEach`/`presOf` and only
  * displays whatever presentation mirror is already present in the data).
  *
- * modelIds are synthetic (`"0"`, `"1"`, `"2"`, ... for content nodes; `"p-*"`
- * for presentation nodes) rather than derived from the Mermaid node ids —
- * simpler to keep XML-attribute-safe, and ADR 0004 "Round 3" confirmed
- * modelId format has no effect on rendering. Node text is the only
- * user-controlled content and is XML-escaped (rule #2).
+ * modelIds are synthetic sequential integers (content nodes `"0"`, `"1"`,
+ * `"2"`... continued by presentation points and connections) rather than
+ * derived from the Mermaid node ids — simpler to keep XML-attribute-safe.
+ * Must be numeric (or a GUID): `ST_ModelId` (ECMA-376 §21.4) rejects an
+ * arbitrary string like the `"p-root"`/`"c1"`/`"po0"` scheme this module
+ * used before — a real schema violation (found with the Open XML SDK's
+ * `OpenXmlValidator`, the validator real Word enforces strictly) that this
+ * project's own tooling never caught: not well-formedness (still valid
+ * XML), not LibreOffice (renders it anyway, no schema validation at all).
+ * This — not any missing `dsp:drawing` fallback — was the actual cause of
+ * TODO.md's "Incident SmartArt 'cycle' cassé en Word réel" (ADR 0006).
+ * ADR 0004 "Round 3"'s finding that "modelId format has no effect on
+ * rendering" was only ever verified under LibreOffice. Node text is the
+ * only user-controlled content and is XML-escaped (rule #2).
  *
  * Includes a `presOf` connector from the `doc` point itself to `p-root` (in
  * addition to the per-node `presOf`s onto each `p-main*`) even though the
@@ -294,6 +303,12 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
   const nodeIds = nodes.map((_, i) => String(i + 1));
   const incomingLabel = incomingLabelByNodeId(flowchart);
 
+  let nextModelId = nodes.length + 1;
+  const newModelId = () => String(nextModelId++);
+  const pRootId = newModelId();
+  const pCompositeIds = new Map(nodeIds.map((id) => [id, newModelId()]));
+  const pMainIds = new Map(nodeIds.map((id) => [id, newModelId()]));
+
   const contentPts = nodes
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
@@ -311,33 +326,33 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     .join('');
 
   const presPts =
-    `<dgm:pt modelId="p-root" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pRootId}" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
     nodeIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="p-composite${id}" type="pres"><dgm:prSet presAssocID="${id}" presName="composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-          `<dgm:pt modelId="p-main${id}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pCompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
+          `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('');
 
   const parOfCxns = nodeIds
-    .map((id, i) => `<dgm:cxn modelId="c${id}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
+    .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
     .join('');
 
   const presOfCxns =
-    `<dgm:cxn modelId="po${docId}" type="presOf" srcId="${docId}" destId="p-root" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${docId}" destId="${pRootId}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
     nodeIds
       .map(
         (id) =>
-          `<dgm:cxn modelId="po${id}" type="presOf" srcId="${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
+          `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
       )
       .join('');
 
   const presParOfCxns = nodeIds
     .map(
       (id, i) =>
-        `<dgm:cxn modelId="pp${id}a" type="presParOf" srcId="p-root" destId="p-composite${id}" srcOrd="${i}" destOrd="0" presId="${layoutUrn}"/>` +
-        `<dgm:cxn modelId="pp${id}b" type="presParOf" srcId="p-composite${id}" destId="p-main${id}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pCompositeIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${layoutUrn}"/>` +
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pCompositeIds.get(id)}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
     )
     .join('');
 
