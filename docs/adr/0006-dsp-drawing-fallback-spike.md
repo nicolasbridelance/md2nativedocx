@@ -1,14 +1,14 @@
 # ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** **Cause localisée au `layout1.xml`/`data1.xml` personnalisés, nouvelle hypothèse
-  concrète en test (2026-09-05).** Round 1 (`dsp:drawing`) et round 2 (greffe complète) ont
-  échoué. **Round 3 tranche** : `cycle-isolate-a.docx` (nos `data`+`layout` seuls) **échoue**,
-  `cycle-isolate-b.docx` (nos `colors`+`quickStyle` seuls) **s'ouvre** — le problème est
-  spécifiquement dans `data.xml`/`layout.xml`. Comparaison ligne à ligne avec le fichier réel a
-  trouvé une nouvelle piste concrète (éléments `presOf`/`constrLst`/`ruleLst` requis mais absents
-  de nos `layoutNode`) — round 4 en test.
+- **Statut :** **Cause localisée à `layout1.xml`/`data1.xml` (round 3), mais 2 hypothèses
+  structurelles infirmées (rounds 1 et 4) — round 5 teste maintenant l'hypothèse "URN non
+  reconnue = refus" (2026-09-05).** Round 3 : `cycle-isolate-a.docx` (nos `data`+`layout` seuls)
+  **échoue**, `cycle-isolate-b.docx` (nos `colors`+`quickStyle` seuls) **s'ouvre**. Round 4
+  (ajout de `presOf`/`constrLst`/`ruleLst` manquants) **échoue aussi**, sur les deux variantes
+  testées (greffe et pipeline complet). Round 5 isole la variable la plus évidente restante : un
+  seul changement (l'URN du layout) dans une copie par ailleurs intacte du vrai fichier Word.
 - **Date :** 2026-09-05
-- **Décideur :** Nicolas Bridelance (mainteneur) — 3 rounds de tests réels effectués à ce jour.
+- **Décideur :** Nicolas Bridelance (mainteneur) — 4 rounds de tests réels effectués à ce jour.
 
 ## Contexte
 
@@ -110,13 +110,28 @@ exactement le genre d'écart qu'un validateur XML strict (Word) rejette et qu'un
 Deux fichiers construits (`docs/adr/spikes/spike-dsp-drawing/round4-schema-fix/`, détail dans son
 `README.md`) : `cycle-round4-graft.docx` (patch minimal greffé dans le vrai fichier, isolation la
 plus propre) et `cycle-round4-standalone.docx` (diagramme complet produit par notre propre
-pipeline CLI, seul le `layoutDef` patché — **si celui-ci s'ouvre seul, tout le plan `dsp:drawing`/
-Milestone 1 devient inutile**, ce trou de schéma étant la vraie cause, bien plus petite que prévu).
-Remis au mainteneur.
+pipeline CLI, seul le `layoutDef` patché).
+
+**Résultat (2026-09-05) : les deux échouent, même erreur.** Hypothèse infirmée : les éléments
+`presOf`/`constrLst`/`ruleLst` manquants n'étaient pas (ou pas seuls) la cause.
+
+## Round 5 — isoler l'URN elle-même (2026-09-05)
+
+Deux hypothèses structurelles infirmées (rounds 1 et 4) sans qu'aucun round n'ait encore testé la
+variable la plus évidente **seule** : à chaque fois, on a mélangé "notre contenu" (data+layout
+entiers) avec le fichier réel, jamais changé une seule chose à la fois dans le fichier réel
+lui-même. Round 5 : `handmade_samples/cycle-simple.docx`, **inchangé sauf un seul attribut** —
+l'URN (`uniqueId`/`loTypeId`) qui distingue notre `layoutDef` de celui de Word
+(`urn:microsoft.com/.../cycle2` → `urn:md2nativedocx/smartart-layout/cycle1`, notre convention,
+décision de licence ADR 0004). Tout le reste (chaque élément, chaque attribut, `colors`/
+`quickStyle`/`drawing`/`document.xml`) reste strictement ce qu'un vrai Word a écrit.
+
+`docs/adr/spikes/spike-dsp-drawing/round5-urn-only/` (`build-round5.mjs` → `cycle-urn-only.docx`),
+détail et interprétation des deux issues possibles dans son `README.md`. Remis au mainteneur.
 
 ## Conséquences
 
 - Le script `build-spike.mjs` reste réutilisable pour `chain`/`tree` une fois la vraie cause
-  trouvée et corrigée sur `cycle` (round 4 ci-dessus concerne déjà les trois générateurs, même
-  motif d'écriture confirmé partagé).
+  trouvée et corrigée sur `cycle` (le motif d'écriture des `layoutNode` est partagé par les trois
+  générateurs, vérifié).
 - Aucune modification de code de production à ce stade — uniquement des dossiers spike.
