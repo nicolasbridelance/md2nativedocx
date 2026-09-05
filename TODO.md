@@ -818,6 +818,20 @@ fermée, pas un cas de labo.
       réel sur `chain`/`tree`/`cycle` tous les trois (aucun des trois n'a de signal Word réel positif
       sur la sortie de production — `chain` a seulement un échantillon isolé fait main, ADR 0004
       "Round 5").
+      - **Spike dédié réalisé (2026-09-05)** — `docs/adr/0006-dsp-drawing-fallback-spike.md`,
+        `docs/adr/spikes/spike-dsp-drawing/` : reproduit le cas exact de l'incident (cycle à 3
+        nœuds) via la vraie CLI de production, puis ajouté à la main la 5e partie manquante.
+        Confirme précisément que `dsp:sp/@modelId` doit référencer un point de **présentation**
+        (`p-main{N}`, celui portant `presStyleLbl="node1"`), jamais un point de contenu — vérifié
+        par intersection directe des ids de `handmade_samples/cycle-simple.docx`. Trouvaille
+        inattendue en testant sous LibreOffice : une fois le `dsp:drawing` ajouté, LibreOffice
+        **affiche le rendu pré-calculé au lieu de ré-exécuter l'algorithme en direct** — pas le
+        comportement d'une extension "ignorable", plutôt celui d'un cache faisant autorité,
+        signal positif supplémentaire pour l'hypothèse ci-dessus. **`cycle-with-drawing.docx` du
+        spike remis au mainteneur pour test en vrai Word** — seul moyen de trancher, ce sandbox
+        n'a que LibreOffice. Le Milestone 1 (geometry engine réel, câblage
+        `postprocess.mjs`/`md2nativedocx-core.mjs` pour la 5e partie) démarre une fois ce test
+        revenu positif.
 - ✅ **Deuxième reproduction, involontaire, du même bug (2026-09-04)** — un fixture de test
       généré avec SmartArt forcé a retouché le même bug non corrigé ; corrigé en régénérant avec
       les réglages par défaut, ne change rien à l'état du chantier (toujours non corrigé). Détail
