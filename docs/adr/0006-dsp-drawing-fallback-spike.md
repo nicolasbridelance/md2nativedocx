@@ -1,14 +1,14 @@
 # ADR 0006 — Spike : `dsp:drawing` fallback pour corriger la corruption Word de SmartArt (Milestone 0)
 
-- **Statut :** **Cause localisée à `layout1.xml`/`data1.xml` (round 3), mais 2 hypothèses
-  structurelles infirmées (rounds 1 et 4) — round 5 teste maintenant l'hypothèse "URN non
-  reconnue = refus" (2026-09-05).** Round 3 : `cycle-isolate-a.docx` (nos `data`+`layout` seuls)
-  **échoue**, `cycle-isolate-b.docx` (nos `colors`+`quickStyle` seuls) **s'ouvre**. Round 4
-  (ajout de `presOf`/`constrLst`/`ruleLst` manquants) **échoue aussi**, sur les deux variantes
-  testées (greffe et pipeline complet). Round 5 isole la variable la plus évidente restante : un
-  seul changement (l'URN du layout) dans une copie par ailleurs intacte du vrai fichier Word.
+- **Statut :** **URN innocentée (round 5) — cause toujours dans le contenu structurel de
+  `layout1.xml`/`data1.xml`, round 6 en test (2026-09-05).** Round 3 a localisé le problème à
+  `data`/`layout` (`colors`/`quickStyle` innocentés). Round 4 (`presOf`/`constrLst`/`ruleLst`
+  manquants sur `dgm:layoutNode`) insuffisant seul. **Round 5 : le fichier réel, seule l'URN du
+  layout changée, s'ouvre normalement** — Word n'a pas de liste fermée d'URN reconnues, ce n'est
+  pas une limite dure. Round 6 teste un nouveau candidat (éléments/attributs manquants sur
+  `dgm:shape`, même famille de problème que round 4 mais sur un autre type).
 - **Date :** 2026-09-05
-- **Décideur :** Nicolas Bridelance (mainteneur) — 4 rounds de tests réels effectués à ce jour.
+- **Décideur :** Nicolas Bridelance (mainteneur) — 5 rounds de tests réels effectués à ce jour.
 
 ## Contexte
 
@@ -128,6 +128,23 @@ décision de licence ADR 0004). Tout le reste (chaque élément, chaque attribut
 
 `docs/adr/spikes/spike-dsp-drawing/round5-urn-only/` (`build-round5.mjs` → `cycle-urn-only.docx`),
 détail et interprétation des deux issues possibles dans son `README.md`. Remis au mainteneur.
+
+**Résultat (2026-09-05) : `cycle-urn-only.docx` s'ouvre normalement.** L'URN elle-même n'a aucune
+importance pour Word — pas de liste fermée de layouts reconnus. La cause reste entièrement dans le
+contenu structurel de `layout1.xml`/`data1.xml`.
+
+## Round 6 — éléments/attributs manquants sur `dgm:shape` (2026-09-05)
+
+Nouvelle comparaison structurelle, cette fois sur `dgm:shape` (pas `dgm:layoutNode` comme au
+round 4) : les 4 `dgm:shape` du fichier réel ont toutes (1) un enfant `<dgm:adjLst/>` — les nôtres
+sont toujours auto-fermantes, sans aucun enfant — et (2) une déclaration `xmlns:r=".../
+relationships"` + un attribut `r:blip=""` vide, absents chez nous. Même famille de problème que
+round 4 (élément/attribut requis par le schéma, contenu vide toléré mais absence non tolérée par
+Word), mais sur un type complexe différent (`CT_Shape`, pas `CT_LayoutNode`).
+
+`docs/adr/spikes/spike-dsp-drawing/round6-shape-adjlst/` (`build-round6.mjs` →
+`cycle-round6-graft.docx`, cumule le correctif du round 4 toujours appliqué + ce nouveau
+correctif). Remis au mainteneur.
 
 ## Conséquences
 
