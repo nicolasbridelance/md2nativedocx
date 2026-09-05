@@ -699,6 +699,39 @@ de la spec, §5.
       depuis le repo apt (limitation documentée dans `setup.sh` — voir tâche de suivi ci-dessous).
       ⚠️ Toute modif de `.devcontainer/`/`.vscode/` = revue humaine obligatoire (voir
       AGENTS.md → Codespaces). PR séparée, **non mergée**.
+- [x] **Validateur Open XML SDK adopté comme pratique standard (2026-09-05)** — ADR 0007, suite à
+      l'incident SmartArt (ADR 0006). `scripts/oxml-validator/` (wrapper C# autour de
+      `DocumentFormat.OpenXml.Validation.OpenXmlValidator`, sortie `--json`) +
+      `npm run test:oxml-validate` (`scripts/test-oxml-validate.mjs`, dégradation propre si
+      `dotnet` absent, même motif que `test:visual`/`test:extension-host`). Documenté dans
+      `AGENTS.md` ("Diagnosing 'Word won't open the file'") et `TESTING.md` (8e chapitre).
+      **Hors scope, tracé séparément ci-dessous** : les 17 erreurs de schéma préexistantes dans
+      `packages/cli/assets/reference.docx` (`styles.xml`/`numbering.xml`/`settings.xml` —
+      trouvées par le validateur, déjà tolérées par Word aujourd'hui, sans lien avec l'incident
+      SmartArt).
+- [ ] **Suivi — corriger les 17 erreurs de schéma préexistantes de `reference.docx`** : trouvées
+      en construisant `test:oxml-validate` (`dotnet run -- <fichier>.docx` sur n'importe quel
+      export, même sans SmartArt). Exemples : `w:nsid` de `numbering.xml` avec une valeur
+      hexBinary de mauvaise longueur, plusieurs `w:rPr`/`w:pPr` de `styles.xml` avec un enfant
+      inattendu (`w:b`/`w:i`/`w:spacing`/`w:tcBorders`), `w:settings` avec un `w:zoom` inattendu.
+      Déjà tolérées par Word en pratique (ce n'est pas un bug d'ouverture, juste un écart de
+      schéma) — pas urgent, mais maintenant qu'on a l'outil pour les voir, à nettoyer un jour pour
+      que `test:oxml-validate` puisse un jour rapporter un vrai "0 erreur" total, pas seulement
+      "0 sous `/word/diagrams/`".
+- [ ] **Suivi — PR séparée `.devcontainer/`/`ci.yml` pour le SDK `.NET`** (ADR 0007 partie C,
+      confirmée avec le mainteneur, non fusionnée automatiquement) : ajouter `.NET` à
+      `.devcontainer/setup.sh` + `actions/setup-dotnet@v4` (version pinnée) dans `ci.yml`, et
+      câbler `npm run test:oxml-validate` dans le job principal (rapide, pas besoin de le réserver
+      au planning/releases comme `test:visual`).
+- [ ] **Suivi — auto-provisioning `.NET` en production** (ADR 0007 partie D, le plus gros
+      chantier) : `packages/vscode-extension/src/dotnetProvisioner.ts` (miroir de
+      `pandocProvisioner.ts` — runtime `.NET` officiel, pas des binaires natifs maison, voir la
+      nuance architecturale de l'ADR), `scripts/bundle-oxml-validator.mjs` (empaquette notre DLL
+      validateur *framework-dependent* dans le `.vsix`), câblage dans
+      `packages/cli/bin/md2nativedocx.mjs` (rapport de conformité dans le `.log` via
+      `writeExportLog()`, jamais un échec si le validateur est indisponible), réglage
+      `md2nativedocx.wordCompatibilityCheck.enabled`. Dépend de la PR `.NET` ci-dessus pour
+      construire le DLL au moment du `npm run package`.
 - [ ] **Tâche de suivi — pinning LibreOffice** : décider si on épingle la version de LibreOffice
       dans `setup.sh` (via un repo/pinning apt dédié) ou si on garde la version du repo apt.
       Actuellement non pinné (limitation documentée dans `setup.sh`). À trancher avant de

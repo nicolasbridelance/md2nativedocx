@@ -100,6 +100,13 @@ instead of manually installing them each session. Keep these versions in sync wi
 pinned in `.github/workflows/ci.yml` — drift between "works in my Codespace" and "fails in CI"
 wastes everyone's time.
 
+The `.NET` SDK (for `scripts/oxml-validator/`, see "Diagnosing 'Word won't open the file'" below)
+is **not yet** part of this list — `test:oxml-validate` degrades gracefully without it, and adding
+it to `.devcontainer/`/`ci.yml` is tracked as a separate, human-reviewed change (see the Codespaces
+security note right below: this file's own rule is that the agent never bundles a
+`.devcontainer/`/`ci.yml` change into an unrelated diff). If it's present on `PATH` already
+(e.g. a Codespace prebuilt after that change lands), the test picks it up automatically.
+
 **Security: `.devcontainer/` and `.vscode/` are executable, not just configuration.** Codespaces
 automatically runs whatever a repository's `devcontainer.json` (`postCreateCommand`, lifecycle
 hooks) and `.vscode/` config specify — including when a codespace is opened on a pull request
@@ -134,13 +141,14 @@ already-working commands to assume:
 | `npm run test --workspaces` | unit + golden-file tests (spec §9) |
 | `npm run test:fuzz -w packages/core` | property-based tests on the parser/translator boundary |
 | `npm run test:visual` | LibreOffice-headless render + pixel-diff regression (spec §9) |
+| `npm run test:oxml-validate` | Open XML **schema** validation against generated `.docx` files (`.NET` SDK required) — see "Diagnosing 'Word won't open the file'" below |
 
-See `TESTING.md` for the full picture: why testing is split into seven chapters, what each one
+See `TESTING.md` for the full picture: why testing is split into eight chapters, what each one
 actually catches that the others can't, and where each one lives on disk — this table is just
 the commands.
 
-A PR that doesn't pass all of the above (except `test:visual`, which needs a real environment and
-may run only in CI) should not be described as done.
+A PR that doesn't pass all of the above (except `test:visual`/`test:oxml-validate`, which need a
+real environment and may run only in CI) should not be described as done.
 
 ---
 
@@ -246,11 +254,44 @@ codebase — note it here as a reminder for the maintainer, not as a task to exe
 
 ---
 
+## Diagnosing "Word won't open the file"
+
+**Run `npm run test:oxml-validate` (or `dotnet run --project scripts/oxml-validator -- <file>.docx`
+directly) before comparing any XML by hand.** A `.docx` can be a valid ZIP, well-formed XML, every
+id unique, and render correctly under LibreOffice, and still be rejected outright by real Word —
+LibreOffice performs no schema validation at all, and "well-formed" is a much weaker guarantee than
+"schema-valid". `scripts/oxml-validator/` wraps Microsoft's own Open XML SDK
+(`DocumentFormat.OpenXml.Validation.OpenXmlValidator`), which validates against the **exact schema
+real Word enforces** and reports the XPath + description of every violation.
+
+This rule exists because of a real, expensive lesson: the SmartArt "cycle" corruption incident
+(`docs/adr/0006-dsp-drawing-fallback-spike.md`) went through **7 rounds** of hand-authored
+structural hypotheses — each plausible, each individually tested in a real Word install by the
+maintainer, each wrong — before the actual cause (an invalid `modelId` scheme, `ST_ModelId` per
+ECMA-376 §21.4 only accepts an unsigned integer or a GUID, never an arbitrary string) was found in
+a single pass by running this validator. Read that ADR's round-by-round history once if you want
+a concrete sense of how expensive guessing is compared to validating.
+
+`scripts/oxml-validator/` requires the `.NET` SDK; skips gracefully (not a failure) when
+unavailable, same convention as `test:visual` without LibreOffice. Errors under `/word/diagrams/*`
+are this project's own SmartArt/diagram output and must be zero; errors elsewhere are known
+pre-existing noise inherited from `packages/cli/assets/reference.docx` (tracked in `TODO.md`, not
+something a diagram-focused fix needs to also resolve).
+
+---
+
 ## Licensing
 
 - **License: CC0 1.0 Universal.** `LICENSE` at repo root must contain the verbatim legal text from
   <https://creativecommons.org/publicdomain/zero/1.0/legalcode> — copied exactly, never paraphrased
   or summarized. Use SPDX identifier `CC0-1.0` in `package.json`'s `license` field.
+- **`DocumentFormat.OpenXml` (Microsoft's Open XML SDK, used by `scripts/oxml-validator/`) is
+  MIT-licensed** (verified from the NuGet package's own `.nuspec`). Currently a dev/CI-only tool
+  invoked as a separate `dotnet` subprocess, not linked into any shipped package — no different in
+  kind from Pandoc below. If it becomes a runtime dependency of the CLI/VS Code extension (ADR
+  0007: auto-provisioning the `.NET` runtime the same way `pandocProvisioner.ts` auto-provisions
+  Pandoc), the same arm's-length subprocess model applies and this note should move to reflect
+  that, same as the Pandoc entry below did when its provisioner shipped.
 - **Pandoc is GPL-2.0-or-later** (verified directly from `jgm/pandoc`'s `COPYRIGHT`/`COPYING.md` —
   earlier text in this file said GPL-3.0, which was incorrect) and is invoked as an external
   subprocess, not linked into this codebase. Arm's-length process invocation is generally
