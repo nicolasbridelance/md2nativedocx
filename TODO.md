@@ -709,17 +709,35 @@ de la spec, §5.
       `packages/cli/assets/reference.docx` (`styles.xml`/`numbering.xml`/`settings.xml` —
       trouvées par le validateur, déjà tolérées par Word aujourd'hui, sans lien avec l'incident
       SmartArt).
-- [ ] **Suivi — corriger les 17 erreurs de schéma préexistantes de `reference.docx`** : trouvées
-      en construisant `test:oxml-validate` (`dotnet run -- <fichier>.docx` sur n'importe quel
-      export, même sans SmartArt). Exemples : `w:nsid` de `numbering.xml` avec une valeur
-      hexBinary de mauvaise longueur, plusieurs `w:rPr`/`w:pPr` de `styles.xml` avec un enfant
-      inattendu (`w:b`/`w:i`/`w:spacing`/`w:tcBorders`), `w:settings` avec un `w:zoom` inattendu.
-      Déjà tolérées par Word en pratique (ce n'est pas un bug d'ouverture, juste un écart de
-      schéma) — pas urgent, mais maintenant qu'on a l'outil pour les voir, à nettoyer un jour pour
-      que `test:oxml-validate` puisse un jour rapporter un vrai "0 erreur" total, pas seulement
-      "0 sous `/word/diagrams/`".
-- [ ] **Suivi — PR séparée `.devcontainer/`/`ci.yml` pour le SDK `.NET`, ouverte** (ADR 0007 partie
-      C, confirmée avec le mainteneur, non fusionnée automatiquement) : branche
+- [x] **Investigation des erreurs de schéma préexistantes — classées "pas notre bug", fermé
+      (2026-09-06)** : root-cause isolée en deux temps maintenant que `dotnet` est disponible dans
+      ce sandbox (PR #7 mergée, voir ci-dessous). (1) `dotnet run -- packages/cli/assets/
+      reference.docx --json` seul (sans passer par un export réel) : 8 erreurs, toutes dans
+      `styles.xml`/`settings.xml` (jamais dans `document.xml` du fichier généré — le corps de
+      `reference.docx` n'est de toute façon jamais copié dans la sortie, seuls
+      `theme1.xml`/`styles.xml`/`settings.xml`/`numbering.xml` le sont). (2) Comparé au
+      `reference.docx` **vanilla** de Pandoc lui-même (`pandoc --print-default-data-file
+      reference.docx`, aucune modification de ce projet) : **les 8 mêmes erreurs y sont déjà
+      présentes à l'identique** (`w:b`/`w:i`/`w:spacing`/`w:tcBorders`/`w:qFormat` mal ordonnés
+      dans `styles.xml`, `w:doNotTrackMoves` mal ordonné dans `settings.xml`). Confirmé une
+      deuxième fois avec un export **complètement nu** (`pandoc list.md -o list.docx`, zéro
+      `--reference-doc`, zéro code de ce projet impliqué) : mêmes styles.xml, plus en prime le
+      `w:nsid` de `numbering.xml` à la mauvaise longueur hexBinary et le `w:pStyle` mal ordonné
+      dans les `w:pPr` des items de liste — Pandoc **synthétise ces éléments lui-même** au moment
+      de générer une liste numérotée, indépendamment de tout `reference.docx`. **Conclusion : la
+      totalité des erreurs `test:oxml-validate` rapporte hors `/word/diagrams/` viennent du
+      générateur `.docx` de Pandoc lui-même (bug/quirk amont, présent même à vide), pas de ce
+      dépôt.** Pandoc génère des millions de `.docx` ouverts sans souci dans Word depuis une
+      décennie malgré ça — tolérance confirmée en pratique, pas juste supposée. Item fermé sans
+      changement de code : patcher `reference.docx` pour masquer un défaut de Pandoc serait hors
+      du périmètre documenté dans `packages/cli/assets/README.md` ("ne pas toucher à autre chose
+      que `theme1.xml`/`styles.xml` `docDefaults`/headings") et referait courir le risque déjà
+      vécu sur l'incident SmartArt (réordonner de l'XML à la main sans se tromper). À rouvrir
+      seulement si Pandoc lui-même publie un fix upstream à absorber, ou si un vrai test Word
+      détecte un jour un problème concret (aucun signalé à ce jour).
+- [x] **Suivi — PR #7 `.devcontainer`/`ci.yml` pour le SDK `.NET` : mergée (2026-09-06)**. `.NET
+      10.0.200` disponible dans ce sandbox — a permis l'investigation ci-dessus. Ancien texte
+      (préservé pour mémoire) : branche
       `devcontainer/add-dotnet-sdk`, **PR #7** sur GitHub, en attente de revue humaine. `.NET
       10.0.200` (pinné) ajouté à `.devcontainer/setup.sh` via `dotnet-install.sh` officiel (même
       approche tarball OS-indépendante que Pandoc, pas un paquet apt comme LibreOffice) +

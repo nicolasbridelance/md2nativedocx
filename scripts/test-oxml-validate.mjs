@@ -16,11 +16,12 @@
  * Errors are split into two buckets:
  *   - `/word/diagrams/*` (our own SmartArt translator's output) — must be
  *     zero, this is what this test actually gates on.
- *   - Everything else — known pre-existing schema noise inherited from
- *     `packages/cli/assets/reference.docx` (styles.xml/numbering.xml/
- *     settings.xml), present even without SmartArt and already tolerated by
- *     real Word today (tracked separately in TODO.md, not this test's job
- *     to fix). Printed for visibility, never failed on.
+ *   - Everything else — schema noise confirmed (2026-09-06, see TODO.md) to come from Pandoc's
+ *     own `.docx` writer itself, not this project: identical errors (styles.xml/settings.xml
+ *     ordering, numbering.xml nsid length, document.xml pStyle/table property quirks) appear in
+ *     Pandoc's own unmodified default reference.docx and even in a bare `pandoc foo.md -o
+ *     foo.docx` with zero involvement of this codebase. Already tolerated by real Word today.
+ *     Printed for visibility, never failed on — not this test's job to fix.
  *
  * Requires the .NET SDK (`dotnet` on PATH); skips with exit 0 when
  * unavailable, matching how `test-visual.mjs` skips without LibreOffice and
@@ -145,7 +146,7 @@ function main() {
   if (knownOtherErrorTotal > 0) {
     console.log(
       `test:oxml-validate: ${knownOtherErrorTotal} pre-existing schema error(s) outside word/diagrams/ ` +
-        `(reference.docx template, not this test's scope — see TODO.md).`,
+        `(Pandoc's own .docx writer, not this project — see TODO.md).`,
     );
   }
 
