@@ -92,6 +92,42 @@ open it in Word and check:
       fixed this session (font size and cloud/hexagon/bang label width weren't accounting for the
       diagram's overall scale-to-fit-page factor).
 
+---
+
+## Round 2 — 2026-09-06: Phase 8 settings + SmartArt fixes re-check
+
+New fixtures added this round (previous 9 above are historical — some of their items have since
+been confirmed in later sessions; check `TODO.md`/`HANDOVER.md` for the current status of each
+before assuming an unchecked box above is still actually open). These 3 cover ground the fixtures
+above never touched: export-customization settings (Phase 8, `export_customization_SPEC.md`) and
+the two most recent SmartArt real-Word findings (`modelId` corruption fix, `axis="self"` bullet-
+list fix).
+
+### `combined-settings-demo.docx` — Phase 8 settings combined into one file
+- [ ] **TOC**: lists all 7 sections after opening/refreshing fields (not empty).
+- [ ] **Emoji**: ✅/⚠️/❌/🚀 render in color; surrounding bold/italic text unaffected.
+- [ ] **Landscape table**: the 8-column table sits on its own landscape page; the section right
+      after it is back in portrait.
+- [ ] **Footer**: a page number, incrementing across pages.
+- [ ] **Typography**: headings in Georgia, body in Calibri 11pt, 1.5 line spacing, justified.
+- [ ] **Accent color**: headings are green (`#2E7D32`), not the default blue.
+- [ ] **Margins "moderate"**: compare against Word's own "Moderate" preset in Page Setup — same or
+      different? (`referenceDocBuilder.mjs`'s `MARGIN_PRESETS_TWIPS` is an unverified assumption,
+      see `TODO.md`.)
+
+### `smartart-tree-recheck.docx` — re-confirm the `axis="self"` fix
+- [ ] Root box ("A") shows only "A" — **not** a bulleted "B C D" list on top of the 3 correctly
+      separate child boxes below.
+
+### `smartart-cycle-recheck.docx` — sanity check after the `modelId` fix
+- [ ] Opens without error; A/B/C render correctly (no connector between them — expected, not yet
+      built for `cycle.ts`).
+
+### Drag-and-drop connector test — reuse `medium-realistic.docx` above
+- [ ] Click a shape, drag it: the connected arrow follows and stays attached (this specific check
+      was never explicitly confirmed/recorded in Round 1 above, despite being item 1's first
+      bullet on every fixture).
+
 ## Recording the result
 
 Once done, either:
