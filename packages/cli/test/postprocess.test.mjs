@@ -372,7 +372,7 @@ test('forceEmojiColorFont: splits a mixed run at grapheme boundaries, forcing th
   const out = forceEmojiColorFont(run);
   assert.equal(out, [
     '<w:r><w:t xml:space="preserve">Statut : </w:t></w:r>',
-    '<w:r><w:rPr><w:rFonts w:ascii="Segoe UI Emoji" w:hAnsi="Segoe UI Emoji" w:eastAsia="Segoe UI Emoji" w:cs="Segoe UI Emoji"/></w:rPr><w:t xml:space="preserve">✅</w:t></w:r>',
+    '<w:r><w:rPr><w:rFonts w:ascii="Segoe UI Emoji" w:hAnsi="Segoe UI Emoji" w:eastAsia="Segoe UI Emoji" w:cs="Segoe UI Emoji"/></w:rPr><w:t xml:space="preserve">✅️</w:t></w:r>',
     '<w:r><w:t xml:space="preserve"> fait</w:t></w:r>',
   ].join(''));
 });
@@ -380,14 +380,22 @@ test('forceEmojiColorFont: splits a mixed run at grapheme boundaries, forcing th
 test('forceEmojiColorFont: preserves an existing rPr (e.g. bold) on both the plain and the emoji segment', () => {
   const run = '<w:r><w:rPr><w:bCs /><w:b /></w:rPr><w:t xml:space="preserve">✅ fait</w:t></w:r>';
   const out = forceEmojiColorFont(run);
-  assert.match(out, /^<w:r><w:rPr><w:rFonts[^>]*\/><w:bCs \/><w:b \/><\/w:rPr><w:t xml:space="preserve">✅<\/w:t><\/w:r>/);
+  assert.match(out, /^<w:r><w:rPr><w:rFonts[^>]*\/><w:bCs \/><w:b \/><\/w:rPr><w:t xml:space="preserve">✅️<\/w:t><\/w:r>/);
   assert.match(out, /<w:r><w:rPr><w:bCs \/><w:b \/><\/w:rPr><w:t xml:space="preserve"> fait<\/w:t><\/w:r>$/);
 });
 
-test('forceEmojiColorFont: a multi-codepoint emoji (variation selector) is not split from its base character', () => {
+test('forceEmojiColorFont: a multi-codepoint emoji (variation selector) is not split from its base character, and no second selector is appended', () => {
   const run = '<w:r><w:t xml:space="preserve">⚠️ attention</w:t></w:r>';
   const out = forceEmojiColorFont(run);
-  assert.ok(out.includes('>⚠️<'), 'the base + variation selector must stay in the same <w:t>');
+  assert.ok(out.includes('>⚠️<'), 'the base + variation selector must stay in the same <w:t>, unchanged');
+});
+
+test('forceEmojiColorFont: a bare single-codepoint pictograph with no variation selector gets one appended (real-Word-only bug, 2026-09-06 — ✅/❌ rendered monochrome, ⚠️/🚀 did not)', () => {
+  const run = '<w:r><w:t xml:space="preserve">✅ et ❌ et 🚀</w:t></w:r>';
+  const out = forceEmojiColorFont(run);
+  assert.ok(out.includes('✅️'), 'bare ✅ must gain an explicit emoji-presentation selector');
+  assert.ok(out.includes('❌️'), 'bare ❌ must gain an explicit emoji-presentation selector');
+  assert.ok(out.includes('🚀️'), '🚀 has no ambiguous presentation but gets one too (harmless, kept simple/uniform)');
 });
 
 test('forceEmojiColorFont: a regional-indicator flag pair is classified as emoji even though neither half is Extended_Pictographic alone', () => {

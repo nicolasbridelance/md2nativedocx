@@ -104,20 +104,18 @@ the two most recent SmartArt real-Word findings (`modelId` corruption fix, `axis
 list fix).
 
 ### `combined-settings-demo.docx` — Phase 8 settings combined into one file
-- [x] **TOC**: fields dialog appeared on open; TOC itself stayed empty until a manual right-click
-      → refresh, at which point it correctly listed all 7 sections. **Open question sent to the
-      maintainer** (`TODO.md`'s "Retours en attente de clarification"): did clicking through that
-      dialog actually attempt a refresh that just didn't populate the TOC, or was the dialog
-      dismissed/declined before the TOC was even checked? Determines whether the auto-refresh
-      mechanism has a real bug or is working as designed (manual refresh always required regardless
-      of the dialog).
-- [x] **Emoji**: NOT all 4 rendered in color (real Word, Windows) — ⚠️ did, ✅/❌ reportedly did not.
-      Generated XML double-checked and confirmed correct: all 4 emoji get an identical
-      `<w:rFonts w:ascii="Segoe UI Emoji" .../>` forced, no code-level difference between them.
-      Logged in `TODO.md`, likely a per-glyph Segoe UI Emoji coverage/substitution quirk on this
-      specific Windows install rather than a bug in this project — **needs the maintainer to confirm
-      exactly which of ✅/⚠️/❌/🚀 were monochrome plus their Word/Windows version** before this can
-      be closed either way.
+- [x] **TOC — resolved, not a bug.** The file was in Protected View (downloaded from the internet);
+      clicking "Enable Editing" surfaces the fields-update dialog, accepting it correctly populates
+      all 7 sections. The initial "empty" observation was Protected View, not a broken auto-refresh.
+- [x] **Emoji — root-caused and fixed same day.** Confirmed: ✅/❌ stayed monochrome, ⚠️/🚀 rendered
+      in color, all 4 confirmed tagged "Segoe UI Emoji" directly in Word. Matches each character's
+      Unicode makeup exactly: ⚠️ already carries an explicit VARIATION SELECTOR-16, 🚀 has no
+      monochrome glyph variant to fall back to, while ✅/❌ are Dingbats-heritage characters with
+      *both* a monochrome and color glyph in Segoe UI Emoji — Unicode's own
+      `Default_Emoji_Presentation=Yes` says they should default to color, but this Word/Segoe
+      combination doesn't honor that reliably without the selector spelled out explicitly. Fixed:
+      `postprocess.mjs` now appends U+FE0F to any bare single-code-point pictograph lacking one.
+      **Needs re-verification**: regenerate and confirm ✅/❌ now render in color too.
 - [x] **Landscape table**: the 8-column table sits on its own landscape page; the section right
       after it is back in portrait. Confirmed correct.
 - [x] **Footer**: not explicitly called out as broken — assumed fine (see general page-number
@@ -156,6 +154,8 @@ re-open in real Word:
 - [ ] `quadrant.docx`/`venn.docx`/`mindmap.docx` open without error (the actual corruption fix).
 - [ ] `combined-settings-demo.docx`'s margins now show as "Modérées" (named preset), not
       "Personnalisées".
+- [ ] `combined-settings-demo.docx`'s ✅/❌ now render in color too (the emoji fix — regenerated
+      the same day, includes the explicit U+FE0F variation-selector fix).
 
 ## Recording the result
 

@@ -291,7 +291,7 @@ test('Lot 2: emoji color font is forced by default, opt-out via MD2NATIVEDOCX_EM
     assert.equal(runCli([md, '-o', docxDefault]).code, 0);
     const defaultXml = execFileSync('unzip', ['-p', docxDefault, 'word/document.xml'], { encoding: 'utf8' });
     assert.ok(defaultXml.includes('Segoe UI Emoji'), 'default (no env var) must force the emoji font');
-    assert.ok(defaultXml.includes('<w:t xml:space="preserve">✅</w:t>'), 'the emoji must be split into its own run');
+    assert.ok(defaultXml.includes('<w:t xml:space="preserve">✅️</w:t>'), 'the emoji must be split into its own run (with an explicit emoji-presentation selector appended, 2026-09-06)');
     assert.ok(defaultXml.includes('fait'), 'the surrounding bold text must survive unchanged');
 
     const { code } = runCli([md, '-o', docxOptOut], { env: { ...process.env, MD2NATIVEDOCX_EMOJI_FONT: '0' } });

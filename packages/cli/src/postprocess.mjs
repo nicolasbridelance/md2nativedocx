@@ -193,17 +193,52 @@ function isEmojiGrapheme(cluster) {
   return false;
 }
 
+/**
+ * Force *emoji* presentation (not text/monochrome presentation) on a single
+ * bare pictographic code point by appending VARIATION SELECTOR-16 (U+FE0F).
+ *
+ * **Real-Word-only bug, found via maintainer testing (2026-09-06)**: of
+ * ✅/⚠️/❌/🚀 in one document, ⚠️ and 🚀 rendered in color but ✅/❌ stayed
+ * monochrome, despite all 4 receiving the identical `w:rFonts` "Segoe UI
+ * Emoji" forcing (confirmed by re-inspecting the generated XML — no
+ * code-level difference existed between them before this fix). The pattern
+ * matches each character's own makeup exactly: ⚠️ (U+26A0 + an *already
+ * present* U+FE0F) and 🚀 (U+1F680, a Miscellaneous-Symbols-and-Pictographs
+ * character with no monochrome/"text" glyph variant to begin with) were
+ * unambiguous; ✅ (U+2705) and ❌ (U+274C) are bare Dingbats-heritage code
+ * points that *do* have both a monochrome and a color glyph in Segoe UI
+ * Emoji — Unicode's own `Default_Emoji_Presentation=Yes` property says
+ * these should render as color without needing an explicit selector, but
+ * this Word/Segoe UI Emoji combination evidently doesn't honor that
+ * reliably and needs U+FE0F spelled out, same as any character whose
+ * default presentation is text.
+ *
+ * Scoped deliberately narrow — only a grapheme cluster that is *exactly one*
+ * Unicode code point and doesn't already end in a variation selector: a
+ * multi-code-point cluster is either already disambiguated (⚠️'s existing
+ * U+FE0F) or a composed sequence (ZWJ combos, regional-indicator flag
+ * pairs) where inserting U+FE0F elsewhere isn't a documented, tested fix
+ * and risks breaking cluster recognition instead.
+ */
+const VARIATION_SELECTOR_16 = '\uFE0F';
+function ensureEmojiPresentation(cluster) {
+  const codePoints = [...cluster];
+  if (codePoints.length !== 1 || !EXTENDED_PICTOGRAPHIC_RE.test(cluster)) return cluster;
+  return cluster + VARIATION_SELECTOR_16;
+}
+
 /** Split `text` into consecutive `{ text, emoji }` segments, merging adjacent
  * grapheme clusters of the same classification. */
 function segmentEmoji(text) {
   const segments = [];
   for (const { segment } of GRAPHEME_SEGMENTER.segment(text)) {
     const emoji = isEmojiGrapheme(segment);
+    const normalized = emoji ? ensureEmojiPresentation(segment) : segment;
     const last = segments[segments.length - 1];
     if (last && last.emoji === emoji) {
-      last.text += segment;
+      last.text += normalized;
     } else {
-      segments.push({ text: segment, emoji });
+      segments.push({ text: normalized, emoji });
     }
   }
   return segments;

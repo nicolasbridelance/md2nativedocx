@@ -1044,27 +1044,33 @@ seulement sur SmartArt et 2 fixtures flowchart (`minimal`/`decision`).
 
 ## Retours en attente de clarification (checklist Round 2, 2026-09-06)
 
-- [ ] **Emoji pas tous coloriés en vrai Word** (`combined-settings-demo.docx`, Windows) : XML généré
-      vérifié correct — les 4 emoji (✅⚠️❌🚀) reçoivent chacun un `<w:rFonts>` "Segoe UI Emoji"
-      identique, aucune différence de traitement entre eux côté code. Pas reproductible ici (pas de
-      vrai Word). Hypothèse la plus probable : disponibilité/couverture de glyphes couleur
-      différente selon le point de code dans l'installation Segoe UI Emoji de cette machine
-      Windows précise, pas un bug de notre côté — mais pas confirmé. Besoin du mainteneur :
-      lesquels précisément (parmi ✅/⚠️/❌/🚀) sont restés monochromes, version de Word/Windows.
-- [ ] **La boîte de dialogue "Ce document contient des champs qui peuvent faire référence à
-      d'autres fichiers"** à l'ouverture de `combined-settings-demo.docx` : très probablement le
-      comportement standard de Word pour *tout* document avec `<w:updateFields w:val="true"/>`
-      (ajouté pour l'auto-rafraîchissement du TOC), indépendamment du type de champ réellement
-      présent — Word ne peut pas savoir sans les exécuter s'ils référencent un contenu externe.
-      Bénin mais mérite d'être documenté dans la description du réglage `toc.enabled` pour ne pas
-      surprendre l'utilisateur. **Non confirmé formellement** (pas de vrai Word ici) : à vérifier
-      que ce n'est pas spécifique à notre structure de champ TOC.
-- [ ] **Le TOC restait vide au premier lancement malgré `updateFields`, besoin d'un clic droit
-      manuel** : confirme le doute déjà noté dans le Lot 3 (jamais vérifié en vrai Word jusqu'ici) —
-      mais reste à clarifier si le mainteneur a répondu "Oui" à la boîte de dialogue ci-dessus avant
-      de constater le TOC vide (auquel cas notre mécanisme d'auto-rafraîchissement ne tient pas sa
-      promesse malgré le dialogue) ou s'il a répondu "Non"/fermé la boîte (auquel cas c'est attendu :
-      pas de refus = pas de mise à jour). Question posée au mainteneur, réponse en attente.
+- [x] **Emoji pas tous coloriés en vrai Word — cause trouvée et corrigée (2026-09-06)** :
+      confirmé par le mainteneur — ✅/❌ restaient monochromes, ⚠️/🚀 s'affichaient en couleur, les 4
+      bien en "Segoe UI Emoji" (vérifié dans Word directement). Corrélation exacte avec la
+      composition Unicode de chaque caractère : ⚠️ porte déjà un sélecteur de présentation
+      VARIATION SELECTOR-16 (U+FE0F) dans le texte source, 🚀 n'a tout simplement aucune variante
+      "texte" monochrome (bloc Transport-and-Map), alors que ✅ (U+2705) et ❌ (U+274C) sont des
+      caractères hérités des Dingbats qui possèdent les deux variantes dans Segoe UI Emoji —
+      `Default_Emoji_Presentation=Yes` d'Unicode dit qu'ils devraient s'afficher en couleur sans
+      sélecteur explicite, mais cette combinaison Word/Segoe ne le respecte visiblement pas de
+      façon fiable. Corrigé : `postprocess.mjs`'s `forceEmojiColorFont()` ajoute désormais U+FE0F à
+      tout pictogramme classé comme emoji dont le graphème ne fait qu'un seul point de code et n'a
+      pas déjà de sélecteur — délibérément restreint à ce cas précis (pas les séquences ZWJ ni les
+      paires d'indicateurs régionaux/drapeaux, où ajouter un sélecteur n'est ni documenté ni testé).
+      Vérifié : 0 nouvelle erreur de schéma (`test:oxml-validate`), rendu LibreOffice/Noto
+      inchangé (35/35 `test:visual`), 2 tests existants mis à jour (assertion exacte incluait
+      littéralement `✅` sans le sélecteur) + 1 nouveau test de régression dédié. **Reste non
+      vérifiable ici** : confirmation finale que ✅/❌ s'affichent bien en couleur en vrai Word après
+      ce fix (fixture `combined-settings-demo.docx` régénérée, à re-tester).
+- [x] **La boîte de dialogue "champs qui peuvent faire référence à d'autres fichiers"** : confirmé
+      par le mainteneur — en cliquant "Activer la modification" (le fichier étant en mode protégé
+      car téléchargé), la boîte de dialogue de mise à jour des champs apparaît et **le TOC se peuple
+      correctement**. Comportement standard de Word (mode protégé + `updateFields`), pas un bug —
+      fermé.
+- [x] **Le TOC restait vide au premier lancement** — résolu par la clarification ci-dessus : le
+      "vide au lancement" constaté la première fois correspondait au mode protégé (avant le clic sur
+      "Activer la modification"), pas à un échec du mécanisme d'auto-rafraîchissement lui-même, qui
+      fonctionne bien une fois la modification activée. Fermé, pas de bug.
 - [ ] **Connecteurs non attachés sur 2 arêtes précises d'un graphe biparti quasi-complet**
       (`crossing-stress-bipartite.docx`, item 5) : A1→B3 et A3→B2 ne suivent pas leurs boîtes quand
       on les déplace, alors que les autres arêtes du même fichier restent bien attachées. Fixture
