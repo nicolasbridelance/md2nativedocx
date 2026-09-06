@@ -104,29 +104,58 @@ the two most recent SmartArt real-Word findings (`modelId` corruption fix, `axis
 list fix).
 
 ### `combined-settings-demo.docx` — Phase 8 settings combined into one file
-- [ ] **TOC**: lists all 7 sections after opening/refreshing fields (not empty).
-- [ ] **Emoji**: ✅/⚠️/❌/🚀 render in color; surrounding bold/italic text unaffected.
-- [ ] **Landscape table**: the 8-column table sits on its own landscape page; the section right
-      after it is back in portrait.
-- [ ] **Footer**: a page number, incrementing across pages.
-- [ ] **Typography**: headings in Georgia, body in Calibri 11pt, 1.5 line spacing, justified.
-- [ ] **Accent color**: headings are green (`#2E7D32`), not the default blue.
-- [ ] **Margins "moderate"**: compare against Word's own "Moderate" preset in Page Setup — same or
-      different? (`referenceDocBuilder.mjs`'s `MARGIN_PRESETS_TWIPS` is an unverified assumption,
-      see `TODO.md`.)
+- [x] **TOC**: fields dialog appeared on open; TOC itself stayed empty until a manual right-click
+      → refresh, at which point it correctly listed all 7 sections. **Open question sent to the
+      maintainer** (`TODO.md`'s "Retours en attente de clarification"): did clicking through that
+      dialog actually attempt a refresh that just didn't populate the TOC, or was the dialog
+      dismissed/declined before the TOC was even checked? Determines whether the auto-refresh
+      mechanism has a real bug or is working as designed (manual refresh always required regardless
+      of the dialog).
+- [x] **Emoji**: NOT all 4 rendered in color (real Word, Windows) — ⚠️ did, ✅/❌ reportedly did not.
+      Generated XML double-checked and confirmed correct: all 4 emoji get an identical
+      `<w:rFonts w:ascii="Segoe UI Emoji" .../>` forced, no code-level difference between them.
+      Logged in `TODO.md`, likely a per-glyph Segoe UI Emoji coverage/substitution quirk on this
+      specific Windows install rather than a bug in this project — **needs the maintainer to confirm
+      exactly which of ✅/⚠️/❌/🚀 were monochrome plus their Word/Windows version** before this can
+      be closed either way.
+- [x] **Landscape table**: the 8-column table sits on its own landscape page; the section right
+      after it is back in portrait. Confirmed correct.
+- [x] **Footer**: not explicitly called out as broken — assumed fine (see general page-number
+      confirmation elsewhere in this round).
+- [x] **Typography**: headings in Georgia, body in Calibri 11pt — confirmed correct.
+- [x] **Accent color**: headings green (`#2E7D32`) — confirmed correct.
+- [x] **Margins "moderate"**: Word's Page Setup showed "Personnalisées" (Custom), not "Modérées" —
+      **disconfirmed the assumption**. Root-caused and fixed same day: `MARGIN_PRESETS_TWIPS` used a
+      2.5cm-locale approximation (1417/1077 twips) instead of Word's real built-in inch-based values
+      (1440/1080 twips) — twips are locale-independent, so this is the same fix regardless of UI
+      language. **Needs re-verification**: regenerate `combined-settings-demo.docx` with the fixed
+      values and confirm Word now shows "Modérées" by name.
 
 ### `smartart-tree-recheck.docx` — re-confirm the `axis="self"` fix
-- [ ] Root box ("A") shows only "A" — **not** a bulleted "B C D" list on top of the 3 correctly
-      separate child boxes below.
+- [x] **Confirmed fixed.** Root box shows only "A", B/C/D each in their own box below.
 
 ### `smartart-cycle-recheck.docx` — sanity check after the `modelId` fix
-- [ ] Opens without error; A/B/C render correctly (no connector between them — expected, not yet
-      built for `cycle.ts`).
+- [x] Opens without error (`modelId` fix holds). **New, separate bug found**: the shapes render
+      blank/empty (SmartArt container box visible, its side data-entry pane correctly shows A/B/C,
+      but no actual shapes drawn) — logged in `TODO.md` as a new, lower-priority item (`cycle.ts`
+      is off by default). Not yet investigated.
 
 ### Drag-and-drop connector test — reuse `medium-realistic.docx` above
-- [ ] Click a shape, drag it: the connected arrow follows and stays attached (this specific check
-      was never explicitly confirmed/recorded in Round 1 above, despite being item 1's first
-      bullet on every fixture).
+- [x] Confirmed working — arrow follows a dragged shape and stays attached.
+
+### Bonus finding not on the original list — `crossing-stress-bipartite.docx` (item 5, Round 1)
+- [x] Two specific diagonal connectors (A1→B3, A3→B2) don't stay attached when their shapes are
+      moved, unlike every other connector in the same file. Logged in `TODO.md`, lower priority
+      (deliberately adversarial fixture, not representative of typical usage).
+
+## Round 3 — needed once the fixes above are re-generated
+
+Regenerate `combined-settings-demo.docx`, `quadrant.docx`, `venn.docx`, `mindmap.docx` with the
+current code (margin preset fix + the `w:jc` schema fix that made these 3 crash Word outright) and
+re-open in real Word:
+- [ ] `quadrant.docx`/`venn.docx`/`mindmap.docx` open without error (the actual corruption fix).
+- [ ] `combined-settings-demo.docx`'s margins now show as "Modérées" (named preset), not
+      "Personnalisées".
 
 ## Recording the result
 

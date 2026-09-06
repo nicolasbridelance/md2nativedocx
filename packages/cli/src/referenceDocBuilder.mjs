@@ -56,19 +56,26 @@ export const PAGE_SIZES_TWIPS = {
 };
 
 /**
- * Word margin presets in twips. "Normal" here is the 2.5cm the spec's own
- * catalog (§1.3) states for a metric locale, not the 1in/1440-twip value an
- * English-locale Word writes for its own "Normal" preset — **unverified
- * against a real Word**, same category of assumption
- * `packages/cli/assets/README.md` already documents for the Aptos font
- * reconstruction (no Word install available to confirm). Flagged in
- * TODO.md alongside that one, to verify together.
+ * Word margin presets in twips — Word's own actual built-in values (1 inch
+ * = 1440 twips exactly), **not** the 2.5cm/1417-twip approximation the spec's
+ * catalog (§1.3) originally stated for a metric locale. That approximation
+ * was flagged from the start as an unverified assumption; **disconfirmed by
+ * a real Word test (2026-09-06)**: with the old 1417/1077 values, Word's own
+ * Page Setup dialog showed the margins as "Personnalisées" (Custom), not
+ * "Modérées" (Moderate) — proof the values didn't match any of Word's named
+ * presets. Twips are locale-independent (Word always stores/recognizes the
+ * same internal values regardless of whether its UI displays cm or inches),
+ * so the fix is the same set of numbers everywhere, not a locale-specific
+ * one: Normal/Wide use whole inches (1"=1440), Moderate's left/right use
+ * 0.75in=1080, matching Word's real built-in "Normal"/"Moderate"/"Wide"
+ * margin presets (verified against Word's own Page Setup dialog). `narrow`
+ * (0.5in=720) already matched and needed no change.
  */
 export const MARGIN_PRESETS_TWIPS = {
-  normal: { top: 1417, right: 1417, bottom: 1417, left: 1417 },
+  normal: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
   narrow: { top: 720, right: 720, bottom: 720, left: 720 },
-  moderate: { top: 1417, right: 1077, bottom: 1417, left: 1077 },
-  wide: { top: 1417, right: 2880, bottom: 1417, left: 2880 },
+  moderate: { top: 1440, right: 1080, bottom: 1440, left: 1080 },
+  wide: { top: 1440, right: 2880, bottom: 1440, left: 2880 },
 };
 
 /** `w:spacing/@w:line` (in 240ths of a line) for each named preset. `'default'`

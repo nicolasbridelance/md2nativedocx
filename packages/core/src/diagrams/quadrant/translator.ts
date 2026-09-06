@@ -105,6 +105,20 @@ interface TextOptions {
 }
 
 /**
+ * `TextOptions.align`'s `'l'`/`'ctr'`/`'r'` values are a DrawingML-shorthand
+ * naming convention internal to this module — this maps them to the actual
+ * `ST_Jc` values `<w:jc>` requires (`'left'`/`'center'`/`'right'`).
+ * **Real bug, found in real Word only** (2026-09-06): the short codes were
+ * being written directly as `w:jc`'s `w:val`, which real Word's schema
+ * validator rejects outright (`ST_Jc` has no `'l'`/`'ctr'`/`'r'` member) —
+ * this corrupted every `.docx` containing a `quadrantChart` (LibreOffice
+ * never validates schemas, so it rendered fine there and the bug went
+ * undetected until a real-Word test). Confirmed root-caused with
+ * `scripts/oxml-validator/` before writing this fix, not guessed.
+ */
+const WORD_JC: Record<'l' | 'ctr' | 'r', 'left' | 'center' | 'right'> = { l: 'left', ctr: 'center', r: 'right' };
+
+/**
  * `opts.sizeHalfPt` is the *base* (unscaled) size — always run through
  * {@link scaledFontSizeHalfPt} here, never emitted raw. `x`/`y`/`w`/`h` are
  * the caller's responsibility to have already scaled (via `scale()` below):
@@ -140,7 +154,7 @@ function textBox(
     '  </wps:spPr>',
     '  <wps:txbx>',
     '    <w:txbxContent>',
-    `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${opts.align ?? 'l'}"/></w:pPr>` +
+    `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${WORD_JC[opts.align ?? 'l']}"/></w:pPr>` +
       `<w:r><w:rPr>${boldAttr}${italicAttr} <w:color w:val="${opts.color}"/>` +
       `<w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,

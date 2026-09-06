@@ -99,6 +99,15 @@ test('4+ sets fall back to a non-overlapping row and append a visible degradatio
   assert.ok(xml.includes('more than 3 sets'));
 });
 
+test('every <w:jc> uses a valid ST_Jc value (real-Word-only schema bug, 2026-09-06 — used to write the literal "ctr")', () => {
+  const xml = translate(TWO_SET);
+  const jcValues = [...xml.matchAll(/<w:jc w:val="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(jcValues.length > 0, 'sanity: sample must contain at least one <w:jc>');
+  for (const value of jcValues) {
+    assert.ok(['left', 'center', 'right', 'both'].includes(value as string), `invalid ST_Jc value: ${value}`);
+  }
+});
+
 test('zero sets renders a visible note, not a silent blank canvas', () => {
   const xml = translateVennToOoxml({ sets: [], unions: [] });
   assert.ok(xml.includes('no sets to render'));

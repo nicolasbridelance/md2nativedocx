@@ -1,7 +1,10 @@
 md2nativedocx export log
-Date: 2026-09-04T20:34:08.672Z
-Input: /tmp/quadrant-wv.md
+Date: 2026-09-06T10:59:45.091Z
+Input: /workspaces/mermaid2docx/test-corpus/word-verification/quadrant.md
 Output: /workspaces/mermaid2docx/test-corpus/word-verification/quadrant.docx
 Warnings: 0
 
 No warnings.
+
+--- Word compatibility check ---
+Not checked (md2nativedocx.wordCompatibilityCheck is off, or this is a standalone CLI export).

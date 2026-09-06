@@ -102,10 +102,10 @@ end
 -- vars are always set together by the CLI.
 local PAGE_W = env_twips('MD2NATIVEDOCX_PAGE_W_TWIPS', 11906)
 local PAGE_H = env_twips('MD2NATIVEDOCX_PAGE_H_TWIPS', 16838)
-local MARGIN_TOP = env_twips('MD2NATIVEDOCX_MARGIN_TOP_TWIPS', 1417)
-local MARGIN_RIGHT = env_twips('MD2NATIVEDOCX_MARGIN_RIGHT_TWIPS', 1417)
-local MARGIN_BOTTOM = env_twips('MD2NATIVEDOCX_MARGIN_BOTTOM_TWIPS', 1417)
-local MARGIN_LEFT = env_twips('MD2NATIVEDOCX_MARGIN_LEFT_TWIPS', 1417)
+local MARGIN_TOP = env_twips('MD2NATIVEDOCX_MARGIN_TOP_TWIPS', 1440)
+local MARGIN_RIGHT = env_twips('MD2NATIVEDOCX_MARGIN_RIGHT_TWIPS', 1440)
+local MARGIN_BOTTOM = env_twips('MD2NATIVEDOCX_MARGIN_BOTTOM_TWIPS', 1440)
+local MARGIN_LEFT = env_twips('MD2NATIVEDOCX_MARGIN_LEFT_TWIPS', 1440)
 
 local function sectpr_paragraph(w, h, orient_attr)
   return '<w:p><w:pPr><w:sectPr><w:pgSz w:w="' .. w .. '" w:h="' .. h .. '"' .. orient_attr .. '/>' ..

@@ -62,6 +62,15 @@ test('labels are XML-escaped', () => {
   assert.ok(xml.includes('A &amp; B'));
 });
 
+test('every <w:jc> uses a valid ST_Jc value (real-Word-only schema bug, 2026-09-06 — used to write the literal "ctr")', () => {
+  const xml = translate(SAMPLE);
+  const jcValues = [...xml.matchAll(/<w:jc w:val="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(jcValues.length > 0, 'sanity: sample must contain at least one <w:jc>');
+  for (const value of jcValues) {
+    assert.ok(['left', 'center', 'right', 'both'].includes(value as string), `invalid ST_Jc value: ${value}`);
+  }
+});
+
 test('a null-root chart renders a visible note, not a silent blank canvas', () => {
   const chart: MindmapChart = { root: null };
   const xml = translateMindmapToOoxml(chart);

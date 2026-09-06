@@ -992,6 +992,96 @@ fermée, pas un cas de labo.
 
 ---
 
+## Incident `quadrantChart`/`venn-beta`/`mindmap` cassés en Word réel (2026-09-06)
+
+Round 2 de la checklist `test-corpus/word-verification/` (retour du mainteneur, vrai Word Windows) :
+les 3 items 7/8/9 échouent — `quadrant.docx`/`venn.docx`/`mindmap.docx` refusent tous de s'ouvrir
+("Word a rencontré une erreur lors de l'ouverture du fichier"). Ces 3 types sont **activés par
+défaut** (contrairement à SmartArt) — c'était donc un vrai bug de corruption par défaut pour
+n'importe quel utilisateur exportant l'un de ces 3 diagrammes, découvert seulement maintenant car
+`test:oxml-validate` (l'outil construit précisément pour ce genre de "Word refuse d'ouvrir le
+fichier", voir l'incident SmartArt ci-dessus) n'avait **jamais tourné sur leur propre sortie** —
+seulement sur SmartArt et 2 fixtures flowchart (`minimal`/`decision`).
+
+- [x] **Cause trouvée et corrigée le jour même** — `dotnet run --project scripts/oxml-validator --
+      quadrant.docx --json` a immédiatement pointé la vraie cause (même méthode que l'incident
+      SmartArt : validateur d'abord, comparaison manuelle jamais). `<w:jc>` (WordprocessingML,
+      `ST_Jc`) recevait des codes courts façon DrawingML (`l`/`ctr`/`r`) au lieu des valeurs longues
+      exigées (`left`/`center`/`right`) — confusion entre les deux vocabulaires d'alignement dans
+      `packages/core/src/diagrams/{quadrant,venn,mindmap}/translator.ts`. LibreOffice ne valide
+      aucun schéma donc ne voyait rien ; Word rejette le fichier entier. Corrigé : `venn.ts`/
+      `mindmap.ts` (toujours centré) passent directement à `"center"` ; `quadrant.ts` (alignement
+      variable) gagne une table `WORD_JC` qui traduit les 3 codes courts. Reconfirmé par le
+      validateur (0 erreur sous `wpc:wpc`, contre 13/8/18 avant) et par rendu LibreOffice réel (35/35
+      `test:visual`, 2 baselines mises à jour pour un micro-décalage de texte désormais correctement
+      aligné). 3 nouveaux tests de non-régression (un par module) qui vérifient qu'aucun `<w:jc>`
+      émis n'est autre chose qu'une valeur `ST_Jc` valide.
+- [x] **Angle mort méthodologique corrigé, pas juste le bug lui-même** — `scripts/
+      test-oxml-validate.mjs` élargi : (1) `quadrant`/`venn`/`mindmap` ajoutés à
+      `PLAIN_FIXTURE_NAMES` (tournent maintenant à chaque `npm run test:oxml-validate`/CI comme
+      SmartArt et les 2 fixtures flowchart) ; (2) surtout, la classification "sortie de ce projet vs
+      bruit Pandoc" ne filtrait que `/word/diagrams/*` (les parties SmartArt) — **le canevas OOXML
+      simple (`wpc:wpc`), utilisé par flowchart ET les 3 nouveaux types, est inline dans
+      `document.xml`** et aurait été classé silencieusement comme "bruit Pandoc préexistant, juste
+      affiché, jamais en échec" par l'ancien filtre. Élargi à `e.Path.includes('wpc:wpc')` en plus de
+      `/word/diagrams/`. Vérifié en rejouant le bug (translators non corrigés, stash temporaire) :
+      l'ancien filtre laissait passer le test, le nouveau le fait échouer avec 13/8/18 erreurs
+      listées — preuve que ce garde-fou aurait attrapé le bug avant tout envoi au mainteneur.
+      **Répond directement à la remarque du mainteneur** ("rendre le check dotnet par défaut...
+      pour identifier les soucis") de façon plus robuste qu'un flag CLI par défaut : c'est maintenant
+      dans la suite automatisée, ne dépend plus de la discipline d'un développeur qui penserait à
+      lancer la commande.
+- [ ] **Suivi — pourquoi le check de compatibilité Word (`wordCompatibilityCheck.enabled`) n'a pas
+      attrapé ça avant l'envoi** : son défaut `true` ne s'applique qu'à l'extension VS Code
+      empaquetée (qui fournit son propre chemin de DLL) — le CLI nu (utilisé pour générer ces
+      fixtures) ne lance jamais le check tant que `MD2NATIVEDOCX_OXML_VALIDATOR_DLL` n'est pas
+      positionné à la main. Le point ci-dessus (élargissement de `test:oxml-validate`) couvre le cas
+      qui a réellement mordu cette fois ; reste une question ouverte séparée, pas encore tranchée :
+      faire aussi tourner le check par défaut dans le CLI nu en phase de dev (auto-détection d'un
+      `dotnet`/validateur déjà construit localement, sur le même principe que l'auto-provisioning
+      Pandoc) — plus lourd (un `dotnet build` à chaque export) et pas encore évalué comme
+      rentable face au coût.
+
+## Retours en attente de clarification (checklist Round 2, 2026-09-06)
+
+- [ ] **Emoji pas tous coloriés en vrai Word** (`combined-settings-demo.docx`, Windows) : XML généré
+      vérifié correct — les 4 emoji (✅⚠️❌🚀) reçoivent chacun un `<w:rFonts>` "Segoe UI Emoji"
+      identique, aucune différence de traitement entre eux côté code. Pas reproductible ici (pas de
+      vrai Word). Hypothèse la plus probable : disponibilité/couverture de glyphes couleur
+      différente selon le point de code dans l'installation Segoe UI Emoji de cette machine
+      Windows précise, pas un bug de notre côté — mais pas confirmé. Besoin du mainteneur :
+      lesquels précisément (parmi ✅/⚠️/❌/🚀) sont restés monochromes, version de Word/Windows.
+- [ ] **La boîte de dialogue "Ce document contient des champs qui peuvent faire référence à
+      d'autres fichiers"** à l'ouverture de `combined-settings-demo.docx` : très probablement le
+      comportement standard de Word pour *tout* document avec `<w:updateFields w:val="true"/>`
+      (ajouté pour l'auto-rafraîchissement du TOC), indépendamment du type de champ réellement
+      présent — Word ne peut pas savoir sans les exécuter s'ils référencent un contenu externe.
+      Bénin mais mérite d'être documenté dans la description du réglage `toc.enabled` pour ne pas
+      surprendre l'utilisateur. **Non confirmé formellement** (pas de vrai Word ici) : à vérifier
+      que ce n'est pas spécifique à notre structure de champ TOC.
+- [ ] **Le TOC restait vide au premier lancement malgré `updateFields`, besoin d'un clic droit
+      manuel** : confirme le doute déjà noté dans le Lot 3 (jamais vérifié en vrai Word jusqu'ici) —
+      mais reste à clarifier si le mainteneur a répondu "Oui" à la boîte de dialogue ci-dessus avant
+      de constater le TOC vide (auquel cas notre mécanisme d'auto-rafraîchissement ne tient pas sa
+      promesse malgré le dialogue) ou s'il a répondu "Non"/fermé la boîte (auquel cas c'est attendu :
+      pas de refus = pas de mise à jour). Question posée au mainteneur, réponse en attente.
+- [ ] **Connecteurs non attachés sur 2 arêtes précises d'un graphe biparti quasi-complet**
+      (`crossing-stress-bipartite.docx`, item 5) : A1→B3 et A3→B2 ne suivent pas leurs boîtes quand
+      on les déplace, alors que les autres arêtes du même fichier restent bien attachées. Fixture
+      délibérément adversariale (12 croisements géométriques déjà documentés,
+      `docs/mvp-acceptance-report.md` §1) — pas représentative d'un flowchart typique, mais un vrai
+      bug de rattachement magnétique (`stCxn`/`endCxn`) potentiellement lié à un indice de site de
+      connexion mal choisi dans un graphe très dense. Pas encore investigué (priorité plus basse que
+      l'incident ci-dessus, qui affecte des diagrammes non adversariaux par défaut).
+- [ ] **`smartart-cycle-recheck.docx` : forme vierge, conteneur SmartArt visible mais aucune boîte
+      dessinée** (le volet de données latéral montre bien A/B/C, donc le modèle de données est
+      intact) — différent du bug de corruption (le fichier s'ouvre, `smartart-tree-recheck.docx` lui
+      confirme le fix `axis="self"` correctement). `smartArt.enabled` reste `false` par défaut donc
+      priorité plus basse ; probablement un souci de géométrie/contrainte propre à `cycle.ts`'s
+      `layoutDef`, pas encore investigué.
+
+---
+
 ## Règles non négociables (rappel — voir AGENTS.md)
 
 1. Rester dans le scope : tout ce qui n'est pas diagramme → OOXML est délégué à Pandoc.

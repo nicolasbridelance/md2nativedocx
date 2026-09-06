@@ -130,7 +130,7 @@ function textBox(
     '  </wps:spPr>',
     '  <wps:txbx>',
     '    <w:txbxContent>',
-    `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="ctr"/></w:pPr>` +
+    `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>` +
       `<w:r><w:rPr>${boldAttr}${italicAttr} <w:color w:val="${opts.color}"/>` +
       `<w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,

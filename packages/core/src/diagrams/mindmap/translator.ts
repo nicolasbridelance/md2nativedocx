@@ -184,7 +184,7 @@ function nodeShape(
     style(),
     '  <wps:txbx>',
     '    <w:txbxContent>',
-    '      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="ctr"/></w:pPr>',
+    '      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
     '        <w:r>',
     `          <w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>`,
     `          <w:t xml:space="preserve">${escapeXml(label)}</w:t>`,

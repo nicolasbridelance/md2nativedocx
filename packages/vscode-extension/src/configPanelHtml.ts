@@ -741,9 +741,9 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
     const scale = 0.9;
     page.style.width = (w * scale) + 'px';
     page.style.height = (h * scale) + 'px';
-    const marginsCm = { normal: 2.5, narrow: 1.27, moderate: 1.9, wide: 5.08 };
+    const marginsCm = { normal: 2.54, narrow: 1.27, moderate: 1.91, wide: 5.08 };
     const preset = val('layout.margins');
-    const m = preset === 'custom' ? Number(val('layout.marginsCustomTop')) || 2.5 : (marginsCm[preset] ?? 2.5);
+    const m = preset === 'custom' ? Number(val('layout.marginsCustomTop')) || 2.54 : (marginsCm[preset] ?? 2.54);
     page.style.padding = (m * scale * 10) + 'px';
     const heading = page.querySelector('h3');
     const body = page.querySelector('p');

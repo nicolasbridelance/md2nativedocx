@@ -91,6 +91,15 @@ test('a chart with no points still renders the grid and quadrant labels', () => 
   assert.equal(shapeCount, 4); // 4 quadrant rects, 0 point dots
 });
 
+test('every <w:jc> uses a valid ST_Jc value, never the DrawingML-shorthand internal align codes (real-Word-only schema bug, 2026-09-06)', () => {
+  const xml = translate(SAMPLE);
+  const jcValues = [...xml.matchAll(/<w:jc w:val="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(jcValues.length > 0, 'sanity: sample must contain at least one <w:jc>');
+  for (const value of jcValues) {
+    assert.ok(['left', 'center', 'right', 'both'].includes(value as string), `invalid ST_Jc value: ${value}`);
+  }
+});
+
 test('is a pure function: identical input produces byte-identical output', () => {
   assert.equal(translate(SAMPLE), translate(SAMPLE));
 });

@@ -384,7 +384,7 @@ test('buildReferenceDoc: landscapeTables alone (no pageSize/orientation/margins)
   try {
     const documentXml = execFileSync('unzip', ['-p', result.path, 'word/document.xml'], { encoding: 'utf8' });
     assert.match(documentXml, /<w:pgSz w:w="11906" w:h="16838"\/>/, 'must default to A4 portrait, not stay empty');
-    assert.match(documentXml, /<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417"/, 'must default to the "normal" margin preset');
+    assert.match(documentXml, /<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/, 'must default to the "normal" margin preset');
   } finally {
     rmSync(result.dir, { recursive: true, force: true });
   }

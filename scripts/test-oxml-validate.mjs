@@ -52,8 +52,15 @@ const SMARTART_FIXTURES = [
 
 /** A couple of ordinary (non-SmartArt) fixtures too, reusing the existing
  * visual-regression corpus — regresses on any future schema issue in the
- * base translator/reference.docx path, not just SmartArt. */
-const PLAIN_FIXTURE_NAMES = ['minimal', 'decision'];
+ * base translator/reference.docx path, not just SmartArt. `quadrant`/`venn`/
+ * `mindmap` added 2026-09-06 after a real Word test found all 3 produced a
+ * `.docx` Word outright refused to open (`<w:jc w:val="l"/"ctr"/"r">` —
+ * DrawingML-shorthand alignment codes written into a WordprocessingML
+ * `ST_Jc` attribute, which has no such members) — LibreOffice performs no
+ * schema validation, so `test:visual` alone never had a chance to catch
+ * this, and this test never previously ran against these 3 diagram types'
+ * own output. Exactly the gap this addition closes. */
+const PLAIN_FIXTURE_NAMES = ['minimal', 'decision', 'quadrant', 'venn', 'mindmap'];
 
 function findDotnet() {
   try {
@@ -90,8 +97,18 @@ function validate(docxPath) {
     if (!stdout) throw err;
   }
   const report = JSON.parse(stdout.trim().split('\n').pop());
-  const diagramErrors = report.errors.filter((e) => e.Part?.startsWith('/word/diagrams/'));
-  const otherErrors = report.errors.filter((e) => !e.Part?.startsWith('/word/diagrams/'));
+  // "This project's own diagram output" isn't only SmartArt's separate
+  // `word/diagrams/*.xml` parts — the plain (non-SmartArt) OOXML canvas
+  // (`wpc:wpc`/`wps:`/flowchart, quadrant, venn, mindmap alike) is inlined
+  // straight into `word/document.xml` instead. A real bug (2026-09-06:
+  // quadrant/venn/mindmap writing DrawingML-shorthand alignment codes into
+  // a WordprocessingML `w:jc`, corrupting the file for real Word) lived
+  // entirely inside a `wpc:wpc` element and would have been silently
+  // bucketed as "known Pandoc noise" by a `/word/diagrams/`-only filter —
+  // exactly the class of regression this widened check exists to catch.
+  const isOwnDiagramOutput = (e) => e.Part?.startsWith('/word/diagrams/') || e.Path?.includes('wpc:wpc');
+  const diagramErrors = report.errors.filter(isOwnDiagramOutput);
+  const otherErrors = report.errors.filter((e) => !isOwnDiagramOutput(e));
   return { diagramErrors, otherErrors };
 }
 
