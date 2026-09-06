@@ -157,6 +157,15 @@ re-open in real Word:
 - [ ] `combined-settings-demo.docx`'s ✅/❌ now render in color too (the emoji fix — regenerated
       the same day, includes the explicit U+FE0F variation-selector fix).
 
+## `emoji-review.docx` — extensive emoji-presentation review (not pass/fail, exploratory)
+
+31 emoji/symbols in a table, deliberately including pairs of the *same* character with and without
+an explicit U+FE0F selector (rows 10/11 = ⚠️/⚠, 12/13 = ⚙️/⚙, 30/31 = ©️/©) to isolate exactly what
+the fix normalizes, plus 2 keycap sequences (1️⃣/#️⃣, rows 24/25) that are a known, already-documented
+gap (`postprocess.mjs`'s own doc comment) — expected to stay unforced/whatever Word's default does
+with them, not a new bug if they look different from the rest. For each row, just note color vs.
+monochrome vs. missing/tofu. No checklist to fill in — freeform feedback is enough.
+
 ## Recording the result
 
 Once done, either:
