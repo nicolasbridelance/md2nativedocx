@@ -197,21 +197,32 @@ function isEmojiGrapheme(cluster) {
  * Force *emoji* presentation (not text/monochrome presentation) on a single
  * bare pictographic code point by appending VARIATION SELECTOR-16 (U+FE0F).
  *
- * **Real-Word-only bug, found via maintainer testing (2026-09-06)**: of
- * ✅/⚠️/❌/🚀 in one document, ⚠️ and 🚀 rendered in color but ✅/❌ stayed
- * monochrome, despite all 4 receiving the identical `w:rFonts` "Segoe UI
- * Emoji" forcing (confirmed by re-inspecting the generated XML — no
- * code-level difference existed between them before this fix). The pattern
- * matches each character's own makeup exactly: ⚠️ (U+26A0 + an *already
- * present* U+FE0F) and 🚀 (U+1F680, a Miscellaneous-Symbols-and-Pictographs
- * character with no monochrome/"text" glyph variant to begin with) were
- * unambiguous; ✅ (U+2705) and ❌ (U+274C) are bare Dingbats-heritage code
- * points that *do* have both a monochrome and a color glyph in Segoe UI
- * Emoji — Unicode's own `Default_Emoji_Presentation=Yes` property says
- * these should render as color without needing an explicit selector, but
- * this Word/Segoe UI Emoji combination evidently doesn't honor that
- * reliably and needs U+FE0F spelled out, same as any character whose
- * default presentation is text.
+ * **Origin story, corrected 2026-09-06 — read this before trusting the name
+ * of this function.** First real-Word test (✅/⚠️/❌/🚀, one document): ⚠️/🚀
+ * rendered in color, ✅/❌ stayed monochrome despite identical `w:rFonts`
+ * forcing. Hypothesis at the time: ⚠️ already had U+FE0F in its own text and
+ * 🚀 has no monochrome glyph to begin with, so *adding* U+FE0F to bare ✅/❌
+ * should fix them. **A broader 31-symbol real-Word review disproved this**:
+ * ✔️/✖️ (U+2714/U+2716) already carried an explicit U+FE0F in the *original*
+ * source and still rendered monochrome — proof the selector alone does not
+ * reliably force color in this Word/Segoe UI Emoji combination, contrary to
+ * Unicode's own `Default_Emoji_Presentation` model. The actual empirical
+ * split (same review) doesn't line up with Unicode block or any property
+ * this code can query: monochrome = {U+2705 ✅, U+274C ❌, U+2714 ✔,
+ * U+2716 ✖, U+2B50 ⭐, U+2611 ☑} (plus keycap sequences, a separate,
+ * already-known gap below); every other tested symbol — including several
+ * in the *same* Miscellaneous Symbols block as ☑ (U+2600 ☀, U+2601 ☁,
+ * U+26A0 ⚠, U+2699 ⚙, U+2708 ✈, U+260E ☎, U+26A1 ⚡) — rendered in color.
+ * This looks like a fixed, Microsoft-curated list of legacy Wingdings-
+ * heritage "checklist" symbols Word/Segoe UI Emoji keeps monochrome by
+ * design (plausibly for compatibility with documents that use them as
+ * plain checkbox/bullet glyphs, not as colorful emoji) — not a font-
+ * resolution bug this project's OOXML output can fix by itself. **This
+ * function is kept anyway** (harmless, more explicit/correct Unicode text
+ * regardless of whether Word's glyph selection responds to it), but do NOT
+ * assume it "fixes" ✅/❌/✔/✖/⭐/☑ — it doesn't, as far as real-Word testing
+ * has shown. See TODO.md for the full, up-to-date empirical table and
+ * whether anyone has since found an actual workaround.
  *
  * Scoped deliberately narrow — only a grapheme cluster that is *exactly one*
  * Unicode code point and doesn't already end in a variation selector: a

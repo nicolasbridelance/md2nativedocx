@@ -1044,24 +1044,32 @@ seulement sur SmartArt et 2 fixtures flowchart (`minimal`/`decision`).
 
 ## Retours en attente de clarification (checklist Round 2, 2026-09-06)
 
-- [x] **Emoji pas tous coloriés en vrai Word — cause trouvée et corrigée (2026-09-06)** :
-      confirmé par le mainteneur — ✅/❌ restaient monochromes, ⚠️/🚀 s'affichaient en couleur, les 4
-      bien en "Segoe UI Emoji" (vérifié dans Word directement). Corrélation exacte avec la
-      composition Unicode de chaque caractère : ⚠️ porte déjà un sélecteur de présentation
-      VARIATION SELECTOR-16 (U+FE0F) dans le texte source, 🚀 n'a tout simplement aucune variante
-      "texte" monochrome (bloc Transport-and-Map), alors que ✅ (U+2705) et ❌ (U+274C) sont des
-      caractères hérités des Dingbats qui possèdent les deux variantes dans Segoe UI Emoji —
-      `Default_Emoji_Presentation=Yes` d'Unicode dit qu'ils devraient s'afficher en couleur sans
-      sélecteur explicite, mais cette combinaison Word/Segoe ne le respecte visiblement pas de
-      façon fiable. Corrigé : `postprocess.mjs`'s `forceEmojiColorFont()` ajoute désormais U+FE0F à
-      tout pictogramme classé comme emoji dont le graphème ne fait qu'un seul point de code et n'a
-      pas déjà de sélecteur — délibérément restreint à ce cas précis (pas les séquences ZWJ ni les
-      paires d'indicateurs régionaux/drapeaux, où ajouter un sélecteur n'est ni documenté ni testé).
-      Vérifié : 0 nouvelle erreur de schéma (`test:oxml-validate`), rendu LibreOffice/Noto
-      inchangé (35/35 `test:visual`), 2 tests existants mis à jour (assertion exacte incluait
-      littéralement `✅` sans le sélecteur) + 1 nouveau test de régression dédié. **Reste non
-      vérifiable ici** : confirmation finale que ✅/❌ s'affichent bien en couleur en vrai Word après
-      ce fix (fixture `combined-settings-demo.docx` régénérée, à re-tester).
+- [x] **Emoji pas tous coloriés en vrai Word — hypothèse initiale infirmée par une revue plus
+      large, vraie cause probablement hors de portée côté `.docx` (2026-09-06)** : le fix U+FE0F
+      (ci-dessous, conservé mais requalifié) reposait sur une corrélation à 4 échantillons
+      (✅/❌ monochromes, ⚠️/🚀 en couleur) qui semblait pointer vers "sélecteur de présentation
+      manquant". Une revue de 31 symboles en vrai Word (demandée par le mainteneur, table dédiée
+      `test-corpus/word-verification/emoji-review.docx`) **infirme cette hypothèse** :
+      `✔️`/`✖️` (U+2714/U+2716) portaient déjà U+FE0F dans le texte source d'origine et restent
+      monochromes quand même — la preuve que le sélecteur seul ne force pas la couleur de façon
+      fiable dans cette combinaison Word/Segoe UI Emoji. Le vrai partage empirique observé :
+      **restent monochromes** = `✅` U+2705, `❌` U+274C, `✔` U+2714, `✖` U+2716, `⭐` U+2B50,
+      `☑` U+2611 (+ les séquences keycap, lacune déjà connue séparément) ; **tout le reste testé
+      s'affiche en couleur**, y compris plusieurs symboles du *même bloc Unicode* que `☑`
+      (`☀`/`☁`/`⚠`/`⚙`/`✈`/`☎`/`⚡`, tous dans Miscellaneous Symbols U+2600-U+26FF). Aucune propriété
+      Unicode interrogeable depuis le code (bloc, `Default_Emoji_Presentation`, présence de
+      sélecteur) n'explique ce partage précis — tout indique une liste figée, probablement décidée
+      par Microsoft lui-même, de symboles hérités de l'ère Wingdings (coches/croix/étoile/case à
+      cocher, utilisés couramment comme puces de liste fonctionnelles dans des documents bureautiques
+      plutôt que comme emoji expressifs) volontairement gardés monochromes — pas un bug de
+      résolution de police que ce projet peut corriger depuis la sortie `.docx`. Le fix U+FE0F est
+      **conservé** (inoffensif, texte Unicode plus explicite/correct dans l'absolu) mais son
+      commentaire de code et la description du réglage `emoji.forceColorFont` ont été corrigés pour
+      ne plus prétendre qu'il règle ✅/❌/✔/✖/⭐/☑ — il ne le fait pas, d'après les tests réels à ce
+      jour. **Pas de piste de correction connue pour l'instant** ; à rouvrir seulement si quelqu'un
+      trouve un vrai contournement documenté (ex. une substitution de caractère vers un équivalent
+      SMP qui s'afficherait fiablement en couleur, si un tel équivalent existe et reste sémantiquement
+      correct — pas encore recherché).
 - [x] **La boîte de dialogue "champs qui peuvent faire référence à d'autres fichiers"** : confirmé
       par le mainteneur — en cliquant "Activer la modification" (le fichier étant en mode protégé
       car téléchargé), la boîte de dialogue de mise à jour des champs apparaît et **le TOC se peuple
