@@ -32,6 +32,8 @@
   },
   "overrides": {
     "serialize-javascript": "^7.0.7",
-    "diff": "^8.0.3"
+    "diff": "^8.0.3",
+    "adm-zip": "^0.6.0",
+    "qs": "^6.16.0"
   }
 }
