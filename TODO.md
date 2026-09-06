@@ -1066,10 +1066,22 @@ seulement sur SmartArt et 2 fixtures flowchart (`minimal`/`decision`).
       **conservé** (inoffensif, texte Unicode plus explicite/correct dans l'absolu) mais son
       commentaire de code et la description du réglage `emoji.forceColorFont` ont été corrigés pour
       ne plus prétendre qu'il règle ✅/❌/✔/✖/⭐/☑ — il ne le fait pas, d'après les tests réels à ce
-      jour. **Pas de piste de correction connue pour l'instant** ; à rouvrir seulement si quelqu'un
-      trouve un vrai contournement documenté (ex. une substitution de caractère vers un équivalent
-      SMP qui s'afficherait fiablement en couleur, si un tel équivalent existe et reste sémantiquement
-      correct — pas encore recherché).
+      jour.
+      **Recherche web faite (2026-09-06), pas de contournement propre trouvé** : confirme le
+      mécanisme général (U+FE0F force la présentation emoji, U+FE0E force le texte — Unicode
+      classe bien `✔`/`✖`/`☑` comme "texte par défaut sauf sélecteur explicite", mais `✅`/`⭐`
+      sont documentés comme "couleur par défaut", donc leur rendu monochrome ici est *encore plus*
+      hors norme), mais rien de spécifique à "générer du `.docx` par programme" ne donne de
+      contournement propre. Une piste existe (insérer ces symboles via la police Wingdings/Segoe
+      UI Symbol à un point de code "Private Use Area" plutôt que le caractère Unicode standard —
+      documentée pour un usage manuel dans Word, `support.microsoft.com`) mais **délibérément pas
+      retenue** : remplacerait un texte Unicode portable/copiable/accessible par un mapping
+      police-dépendant et fragile, pour un problème purement cosmétique sur une poignée de
+      symboles hérités — coût jugé disproportionné par rapport au bénéfice. **Fermé comme
+      limitation documentée**, pas de suivi prévu sauf si une piste plus propre apparaît.
+      Sources consultées : [Emoji Variation Selector — CodeJam](https://www.codejam.info/2021/11/emoji-variation-selector.html),
+      [Check mark sometimes black/white, sometimes green — Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/5150507/check-mark-is-sometimes-in-black-and-white-and-som),
+      [Insert a check mark symbol — Microsoft Support](https://support.microsoft.com/en-us/office/insert-a-check-mark-symbol-9f39c129-236e-45be-8c91-263b43dc1e1a).
 - [x] **La boîte de dialogue "champs qui peuvent faire référence à d'autres fichiers"** : confirmé
       par le mainteneur — en cliquant "Activer la modification" (le fichier étant en mode protégé
       car téléchargé), la boîte de dialogue de mise à jour des champs apparaît et **le TOC se peuple
