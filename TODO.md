@@ -247,9 +247,44 @@ ADR 0001/0002 — condensé dans `docs/history/TODO_ARCHIVE.md`.
 
 ## Phase 4 — Add-in Word (Office.js)
 
-- [ ] Taskpane avec zone de collage Mermaid.
-- [ ] Appel au même module core (bundlé navigateur) — raison du choix TypeScript.
-- [ ] Insertion via `context.document.body.insertOoxml(xmlString, Word.InsertLocation.replace)`.
+Cadrage fonctionnel (conversion Word↔Markdown, deux modes CLI/Add-in) : `docs/specs/FUTURE_wordextension.md`.
+Cadrage technique du sens inverse OOXML→Mermaid (architecture, risques, futur-proofing) :
+`docs/specs/FUTURE_docx2mermaid_SPEC.md`. Cadrage de la coquille add-in elle-même (ruban vs menu
+contextuel, ce que la plateforme Office.js permet réellement, plan de spikes) : **nouveau**,
+`docs/adr/0008-word-addin-ribbon-platform-spike.md`. Statut au 2026-09-06 : recherche plateforme
+faite, rien codé — **session dédiée à venir**, à démarrer par les 3 spikes ci-dessous.
+
+- [x] **Recherche plateforme Office Add-ins faite (2026-09-06)**, décision de pivot prise —
+      détail complet et sources : ADR 0008. Résumé : clic droit natif "Copy as MD" **possible**
+      (`OfficeMenu id="ContextMenuText"`, mais seulement sur sélection existante) ; clic droit natif
+      "Paste MD" **impossible** (pas d'équivalent Word du `ContextMenuCell` d'Excel pour un curseur
+      sans sélection) ; entrée native dans "Enregistrer sous" **impossible** (aucun point
+      d'extension du manifeste pour ça). **Décision : un ruban dédié** (5 boutons — Charger,
+      Enregistrer sous, Couper/Copier/Coller en MD) plutôt que de dépendre du menu contextuel natif,
+      qui n'aurait couvert qu'une partie du besoin.
+- [ ] **Spike 1 (bloquant, nécessite un vrai Word — pas faisable depuis ce sandbox Linux)** :
+      `navigator.clipboard.readText()` fonctionne-t-il de façon fiable depuis un function command
+      Office.js dans le vrai Word desktop ? C'est le point de risque n°1 de "Coller en MD". Si non,
+      filet de sécurité prévu : boîte de dialogue avec zone de collage manuel (Ctrl+V), réutilisable
+      aussi pour "Charger un .md" qui a de toute façon besoin d'un sélecteur de fichier.
+- [ ] **Spike 2 (nécessite un vrai Word)** : forme réelle de l'OOXML renvoyé par
+      `range.getOoxml()` sur une sélection Word ordinaire (titres/listes/tableaux/gras-italique) —
+      condition préalable pour dimensionner le nouveau convertisseur OOXML→Markdown qu'exigent
+      "Copier en MD"/"Enregistrer sous .md" (le moteur actuel ne va que dans le sens
+      Markdown→OOXML, voir `FUTURE_docx2mermaid_SPEC.md`).
+- [ ] **Spike 3 (nécessite un vrai Word)** : rendu/comportement visuel des 5 boutons du ruban dans
+      un vrai Word desktop (pas juste Word Online).
+- [ ] **Scaffold du projet** (`npm create office-addin`, TypeScript, Word, add-in commands) avec
+      dès le départ les 3 outils d'autonomie retenus (détail ADR 0008) : `office-addin-manifest
+      validate` (schéma du manifeste), `office-addin-mock` (tests unitaires des appels Office.js
+      sans Word), réutilisation du validateur `dotnet` déjà dans ce repo (`scripts/oxml-validator/`)
+      sur les fragments OOXML produits avant `insertOoxml`. Un harnais minimal (un bouton qui log
+      les 3 spikes d'un coup dans un panneau copiable) doit accompagner le scaffold pour que la
+      vérification humaine dans un vrai Word se limite à "clique une fois, colle le résultat".
+- [ ] **Ordre de construction recommandé une fois les spikes tranchés** : Coller en MD (réutilise
+      le moteur existant tel quel, le moins cher) → Copier en MD (bouton ruban + nouveau
+      convertisseur OOXML→Markdown) → Couper en MD (extension triviale de Copier) → Enregistrer
+      sous/Charger un .md (réutilisent respectivement Copier/Coller à l'échelle du document entier).
 
 ## Phase 5+ — Autres types de diagrammes
 
@@ -421,461 +456,73 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 
 ## Phase 8 — Personnalisation de l'export + panneau de configuration VS Code
 
-Cadrage complet dans `docs/specs/export_customization_SPEC.md`. Origine : échange avec le
-mainteneur (2026-09-04) sur la mise en page Word (tableaux en paysage, polices/marges/TOC
-configurables) et sur la perte de couleur des emoji/badges (✅/⚠️) à l'ouverture dans Word. Pas
-encore priorisé par rapport à la Phase 6/7 en cours (Slides/SmartArt) — voir "Questions ouvertes"
-de la spec, §5.
+Cadrage complet : `docs/specs/export_customization_SPEC.md`. Détail complet de chaque lot
+(root-cause, décisions de conception, comptes de tests) : `docs/history/TODO_ARCHIVE.md`, section
+"Phase 8".
 
-- [x] **Lot 1 (sous-ensemble solide) — réglages de mise en page/typo via `reference.docx` généré
-      dynamiquement (2026-09-05)** : 1.1-1.8 + 1.14 (format/orientation/marges, polices titre+corps,
-      taille, interligne, justification, couleur d'accent) livrés et vérifiés en rendu réel
-      (LibreOffice headless). 1.11 (style de tableau, sous-spécifié dans la spec) et 1.13 (pied de
-      page numéroté, demande une nouvelle partie `word/footer*.xml` + relation + content-type type
-      `injectSmartArtParts`) restent **hors scope de cette passe**, fast-follow explicite du même
-      Lot 1 — pas une régression de périmètre, décidé avec le mainteneur avant de commencer. **1.13
-      livré séparément le même jour, voir entrée dédiée juste en dessous.** 1.11 reste ouvert,
-      fusionné avec le Lot 6 (optionnel) faute de presets concrets à choisir.
-      - Nouveau module `packages/cli/src/referenceDocBuilder.mjs` : même pattern
-        `execFileSync('unzip'/'zip', [...])` que `postprocess.mjs` — **aucune nouvelle dépendance
-        npm**. Fonctions pures testables séparément (`resolvePageSize`/`resolveMargins`/
-        `resolveLineSpacing`/`patchTheme`/`patchStyles`/`patchSectPr`) + orchestrateur
-        `buildReferenceDoc()` qui ne patch que les parties XML réellement concernées par les
-        options données (pas de réécriture globale), retourne `null` (no-op) quand rien n'est réglé.
-      - **Validé empiriquement avant d'écrire le module** (le point le plus risqué du plan) : Pandoc
-        `--reference-doc` reprend bien tel quel le `<w:sectPr>` du gabarit fourni (testé avec des
-        valeurs custom distinctives, round-trippées via un vrai `pandoc`) ; les styles `BodyText`/
-        `FirstParagraph` que Pandoc applique aux paragraphes réels n'écrasent pas `w:line`/`w:jc`,
-        donc patcher `w:docDefaults` dans `styles.xml` suffit à propager interligne/justification
-        au corps de texte généré.
-      - **Dépendance cachée `MAX_DRAWING_CX`/`MAX_DRAWING_CY` (spec §2.4) rendue dynamique** —
-        escaladé et confirmé avec le mainteneur avant de le faire (changement de l'API publique de
-        `packages/core`, voir AGENTS.md → "Escalate to a human") : `TranslateOptions` gagne deux
-        champs optionnels additifs `maxDrawingCx`/`maxDrawingCy` (EMU), défaut inchangé si absents.
-        Câblage bout en bout : CLI calcule la zone utile réelle (page × orientation × marges) via
-        `resolveMaxDrawingExtentEmu()`, la passe par `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY` (même
-        convention qu'un env var par réglage, comme `MD2NATIVEDOCX_SMARTART_DIR`) au subprocess
-        Pandoc, que `md2nativedocx-core.mjs` (le pont Lua→core, un par bloc `` ```mermaid ``) relit
-        et transmet à `translateToOoxml()`. Scope volontairement limité au pipeline flowchart
-        (`ooxml-translator.ts`) — les 3 types non-flowchart (`quadrant`/`venn`/`mindmap`,
-        `translator/canvas.ts`) gardent leur propre constante figée, non touchée par cette passe.
-      - **Conflit avec `md2nativedocx.referenceDocument` custom (spec §2.1/§5, option (a) confirmée
-        avec le mainteneur)** : un gabarit custom gagne toujours, les réglages Lot 1 sont
-        silencieusement ignorés pour lui (on ne connaît pas sa mise en page). Note info (pas un
-        warning compté — préfixe `md2nativedocx (info): ` distinct du `md2nativedocx: ` que
-        `extractWarnings` compte) écrite côté CLI ; dupliquée côté extension VS Code
-        (`outputChannel`, car le stderr du CLI n'est lu qu'en cas d'échec, jamais sur un export
-        réussi) pour rester visible dans les deux cas d'usage.
-      - VS Code : 11 nouveaux réglages `md2nativedocx.layout.*`/`md2nativedocx.typography.*`
-        (`package.json` + `package.nls.json`, anglais uniquement — pas de traduction dans les 5
-        locales existantes, gap connu, fallback anglais standard de VS Code). `extension.ts` lit
-        chaque réglage via `.inspect()` (pas `.get()`) pour ne transmettre au CLI que ce que
-        l'utilisateur a **explicitement** touché — sinon la valeur par défaut du schéma (ex. `A4`)
-        aurait été envoyée à chaque export, changeant silencieusement le comportement par défaut de
-        tous les utilisateurs existants (aujourd'hui : page size implicite de Word/Pandoc, jamais
-        A4 forcé). **Suivi noté pour le Lot 4** (panneau Activity Bar/Sidebar, pas encore construit) :
-        griser les réglages Lot 1 dans le panneau custom quand `referenceDocument` est fourni,
-        demandé par le mainteneur en même temps que la confirmation de l'option (a) — pas
-        implémentable avant que le panneau lui-même existe.
-      - Tests : `packages/cli/test/reference-doc-builder.test.mjs` (25 tests, fonctions pures +
-        `buildReferenceDoc` intégration réelle unzip/zip), 3 nouveaux tests bout-en-bout dans
-        `cli.test.mjs` (env vars → `.docx` réel, re-scaling du diagramme sous petite page, conflit
-        `referenceDocument`), 2 nouveaux tests `packages/core` (`maxDrawingCx`/`maxDrawingCy`
-        override + défaut inchangé si omis). 391 tests au total sur le monorepo (64 cli + 291 core +
-        11 pandoc-filter + 25 vscode-extension), tous verts ; `test:visual` 35/35 à 0,000 % de diff
-        (comportement par défaut prouvé strictement inchangé) ; lint + typecheck propres partout.
-      - Assumption non vérifiée en vrai Word, flaguée comme telle (même catégorie que l'Aptos/
-        `packages/cli/assets/README.md`) : les valeurs twips des presets de marges (`normal`
-        notamment, 2,5cm/1417 twips — la valeur que la spec elle-même énonce, pas forcément celle
-        qu'un vrai Word en locale métrique écrit pour son propre preset "Normales").
-- [x] **Lot 1 fast-follow — 1.13 pied de page avec numéro de page, livré (2026-09-05)** (spec
-      §1.13) : `md2nativedocx.layout.footerPageNumber`/`MD2NATIVEDOCX_FOOTER_PAGE_NUMBER`, patch du
-      `reference.docx` généré (pas du `.docx` final).
-      - **Vérifié empiriquement avant d'écrire le code, comme pour le Lot 3** : contrairement à
-        `settings.xml` (qui n'est PAS repris, voir Lot 3 ci-dessous), Pandoc reprend bel et bien tel
-        quel un pied de page (partie `word/footer1.xml` + relation + `w:footerReference` dans
-        `sectPr`) fourni via `--reference-doc` — testé avec un canari (`PAGE` field), confirmé
-        survivant dans le `.docx` généré et rendu correctement par LibreOffice. Donc, à la
-        différence du TOC, ce réglage patch bien le gabarit (`referenceDocBuilder.mjs`), pas le
-        document final — et suit la même règle de conflit que les autres réglages du Lot 1 (ignoré
-        silencieusement si `referenceDocument` custom fourni), sans garde-fou spécial à ajouter.
-      - Nouvelles fonctions pures `patchRelsForFooter()`/`patchContentTypesForFooter()` +
-        constante `FOOTER_PAGE_NUMBER_XML` (un champ `PAGE` centré minimal) dans
-        `referenceDocBuilder.mjs`, `patchSectPr()` étendu avec un paramètre `footerRId` optionnel
-        (élément `w:footerReference` en premier enfant de `sectPr`, ordre confirmé contre un vrai
-        `sectPr` traité par Pandoc, pas juste lu dans le schéma). `nextRelationshipId()` calcule le
-        premier `rIdN` libre plutôt qu'un id fixe — `reference.docx` a déjà `rId1`-`rId8` plus un
-        `rId30` décoratif (hyperlien externe dans son contenu de démonstration, jamais atteint la
-        sortie réelle) qui aurait collisionné avec un id naïf comme `rId9`.
-      - **Piège rencontré et déjà documenté ailleurs dans le code, retrouvé ici** : `unzip` traite
-        `[Content_Types].xml` comme un motif glob (classe de caractères) et échoue silencieusement
-        ("filename not matched") sans échappement — même piège que celui déjà noté dans
-        `postprocess.mjs`'s `injectSmartArtParts` (2026-09-03), corrigé de la même façon
-        (`\[Content_Types\].xml` côté `unzip`, littéral côté `zip`).
-      - 1.11 (style de tableau) reste seul hors scope du Lot 1, faute de presets concrets à choisir
-        dans la spec — fusionné avec le Lot 6 (optionnel) ci-dessous plutôt que de deviner un
-        catalogue de styles.
-      - Tests : 9 nouveaux `reference-doc-builder.test.mjs` (fonctions pures + intégration
-        `buildReferenceDoc({footerPageNumber:true})` réelle unzip/zip vérifiant la cohérence
-        partie/relation/content-type/sectPr), 1 `cli.test.mjs` bout-en-bout. 418 tests au total,
-        tous verts ; `test:visual` 35/35 inchangé.
-- [x] **Lot 2 — rendu couleur des emoji/badges, mécanique livrée (2026-09-05)** (spec §1.15,
-      §2.5) : `postprocess.mjs` gagne `forceEmojiColorFont()`, appliquée par défaut dans
-      `postProcessDocx()` (réglage `md2nativedocx.emoji.forceColorFont`/`MD2NATIVEDOCX_EMOJI_FONT`,
-      défaut actif, `=0`/`false` désactive).
-      - **Écart avec la description initiale de la spec, trouvé en vérifiant contre un vrai
-        `pandoc`** : Pandoc met une phrase entière mélangeant texte et emoji dans un **seul**
-        `<w:r>` (pas un run par caractère) — forcer la police sur le run entier aurait aussi changé
-        la police du texte normal environnant. Implémenté à la place : découpage aux frontières de
-        *graphème* (`Intl.Segmenter`, ES2018+, aucune dépendance ajoutée) — pas caractère par
-        caractère, un emoji est souvent plusieurs points de code (base + sélecteur de variation
-        `⚠️`, ou séquence ZWJ) qu'il ne faut pas séparer. Classification par
-        `\p{Extended_Pictographic}` (répond à la question "liste précise à établir" que la spec
-        laissait ouverte) + cas spécial pour les paires d'indicateurs régionaux (drapeaux, aucune
-        des deux moitiés n'est `Extended_Pictographic` seule). Gras/italique du run d'origine
-        préservés sur les deux segments (texte et emoji) ; seul le segment emoji reçoit
-        `w:rFonts`, inséré en premier enfant de `w:rPr` (ordre exigé par le schéma `CT_RPr`) plutôt
-        qu'ajouté en fin. Portée volontairement limitée aux runs de forme exacte `<w:r>(<w:rPr>...)?
-        <w:t>texte</w:t></w:r>` (celle que Pandoc émet réellement, vérifié) — tout le reste (run
-        avec `<w:drawing>`, plusieurs `<w:t>`, etc.) laissé intact plutôt que deviné.
-      - **Validation empirique multi-étapes, pas juste unitaire** : ①  d'abord testé dans ce
-        Codespace (aucune police emoji installée par défaut) → tofu (glyphes manquants) identique
-        avec et sans le patch — pas une régression du patch, juste l'absence totale de police emoji
-        dans ce sandbox. ② `fonts-noto-color-emoji` installé ad hoc dans la session (comme
-        LibreOffice/Xvfb en leur temps, voir plus bas dans ce fichier) + alias fontconfig temporaire
-        `Segoe UI Emoji` → `Noto Color Emoji` (mécanisme identique à
-        `test-corpus/visual/fontconfig/fonts.conf`) : rendu réel confirmé — ✅/⚠️/❌ en couleur,
-        texte environnant et gras intacts. Confirme que le levier OOXML (forcer `rFonts`) est le
-        bon ; ne remplace pas un vrai test **Word** (toujours "à tester", voir décision du
-        mainteneur ci-dessus) puisque la substitution de police y est différente (Windows a
-        nativement Segoe UI Emoji, macOS/Linux dépendent d'une substitution non garantie).
-      - Confirmé sans impact sur le rendu des diagrammes Mermoid eux-mêmes : le texte des formes
-        DrawingML utilise `a:t`/`a:r` (pas `w:t`/`w:r`), hors du scope du regex — `test:visual`
-        35/35 à 0,000 % de diff après ce changement.
-      - Tests : 8 nouveaux `postprocess.test.mjs` (fonction pure + intégration
-        `postProcessDocx({emojiFont})`), 1 `cli.test.mjs` bout-en-bout (défaut actif + opt-out).
-        410 tests au total, tous verts.
-- [x] **Lot 3 — sommaire automatique (TOC), livré (2026-09-05)** (spec §1.10, §2.2) :
-      `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` → `--toc`/`--toc-depth=N` Pandoc, plus
-      `<w:updateFields w:val="true" />` dans `settings.xml` (sinon TOC visible vide jusqu'à F9).
-      - **Piège trouvé et corrigé en vérifiant empiriquement, pas juste écrit d'après la spec** :
-        contrairement à `sectPr`/`theme1.xml`/`styles.xml` (confirmés repris tels quels du
-        `reference.docx` par Pandoc, voir Lot 1 ci-dessus), Pandoc **synthétise son propre
-        `word/settings.xml` à partir de rien** — un canari inséré dans le `settings.xml` du
-        `reference.docx` ne survit pas dans le `.docx` généré, testé et confirmé. Le patch
-        `updateFields` a donc dû être déplacé de `referenceDocBuilder.mjs` (qui patch le gabarit
-        *avant* Pandoc, inutile ici) vers `postprocess.mjs` (qui patch le `.docx` *final*, déjà
-        son rôle établi). Conséquence positive inattendue : le TOC fonctionne donc pleinement même
-        avec un `referenceDocument` custom (`settings.xml` patché est celui de Pandoc, pas celui du
-        gabarit) — pas besoin du garde-fou "ignoré si custom" du Lot 1 pour ce lot.
-      - **Deuxième écart trouvé par rendu réel** : Pandoc place toujours le champ TOC tout en haut
-        du corps, avant le titre — alors que la spec demande explicitement le placement "sous le
-        H1", et Pandoc n'a pas de flag pour ça. Corrigé par `repositionTocAfterTitle()`
-        (`postprocess.mjs`) : déplace le bloc `<w:sdt>` du TOC juste après le premier paragraphe
-        `Heading1` (chirurgie XML ciblée par regex, même niveau que les corrections déjà
-        appliquées à `document.xml` dans ce module) ; laisse le TOC à sa position Pandoc par
-        défaut plutôt que de le supprimer si aucun H1 n'est trouvé.
-      - Vérifié par rendu LibreOffice réel (PNG + PDF) : le champ TOC apparaît bien après le titre,
-        mais son contenu reste vide ("Table of Contents" sans entrées) — LibreOffice n'évalue pas
-        le champ à l'export headless, contrairement à un vrai Word qui, avec `updateFields`,
-        proposera/effectuera la mise à jour à l'ouverture. **Non vérifié dans un vrai Word** que
-        les entrées se peuplent bien à l'ouverture — même catégorie que les autres items "à tester
-        dans un vrai Word" déjà ouverts dans ce fichier.
-      - Tests : 3 nouveaux tests `postprocess.test.mjs` (`repositionTocAfterTitle` pur + intégration
-        `postProcessDocx({ toc: true })` réelle unzip/zip), 3 `reference-doc-builder.test.mjs`
-        (`patchSettings` pur), 2 `cli.test.mjs` bout-en-bout (TOC placé après le H1 + fonctionne
-        avec un `referenceDocument` custom). VS Code : `md2nativedocx.toc.enabled`/`.toc.depth`.
-        401 tests au total, tous verts ; `test:visual` 35/35 inchangé.
-- [x] **Lot 4 — panneau de configuration Activity Bar + Sidebar, livré (2026-09-05)** (spec §3) :
-      nouveau View Container (icône = `icon.svg` existant, réutilisé tel quel — un SVG à formes
-      pleines convient au masquage monochrome de l'Activity Bar, pas besoin d'une icône dédiée) +
-      Webview View (`registerWebviewViewProvider`), réglages groupés pédagogiquement.
-      - **Portée volontairement réduite à ce qui existe réellement** : seuls 4 groupes construits
-        (Mise en page, Typographie, Structure du document — TOC + pied de page, Emoji &amp;
-        badges, Avancé) — pas de groupe "Tableaux en paysage" (1.9, Lot 5 pas commencé) ni de
-        contrôles pour le style de tableau/numérotation des titres (1.11/1.12, jamais spécifiés
-        concrètement) : un toggle pour un réglage inexistant serait un contrôle mort, contraire au
-        principe "zéro config inutile" d'`UX_SPEC.md`. Pas une réduction de scope improvisée — la
-        spec elle-même place le Lot 4 après les Lots 1-3 précisément pour cette raison ("le
-        panneau ne fait qu'exposer des réglages qui doivent déjà exister").
-      - **Séparation logique pure/glue vscode**, même philosophie que `mermaidBlocks.ts` +
-        `extension.ts` : `packages/vscode-extension/src/configPanelHtml.ts` (aucun import
-        `vscode`, `buildConfigPanelHtml()` testable en `node:test` sans Extension Development
-        Host) construit tout le HTML ; `configPanel.ts` (le `WebviewViewProvider`) ne fait que
-        lire/écrire `vscode.workspace.getConfiguration('md2nativedocx')` et appeler la fonction
-        pure. Écoute `vscode.workspace.onDidChangeConfiguration` pour rester synchronisé si les
-        réglages changent ailleurs (settings.json natif) — aucune double source de vérité (§3.4).
-      - **"Pas de texte dupliqué entre les deux surfaces" (§3.2) implémenté littéralement**, pas
-        approximé : `configPanel.ts` relit directement `package.nls.json` (via
-        `context.extensionUri`) et sert exactement les mêmes chaînes `markdownDescription` que
-        `contributes.configuration` en tooltip (backticks/liens markdown légèrement nettoyés pour
-        un `title` HTML natif, pas de rendu markdown tenté). Un tooltip qui divergerait du texte du
-        panneau natif `Ctrl+,` serait un vrai bug de cohérence, pas juste une redite.
-      - **Sécurité** : CSP stricte (`default-src 'none'`, script nonce, aucune ressource externe —
-        même logique que "jamais de relation OOXML externe" appliquée ici à un webview) ; toute
-        valeur libre affichée (police, couleur, chemin du gabarit custom) est échappée en HTML
-        avant insertion — testé explicitement par injection XSS (`<script>` dans un champ police).
-      - Grisage des contrôles Lot 1 (mise en page/typo, y compris le pied de page) quand
-        `md2nativedocx.referenceDocument` est fourni, TOC/emoji restant actifs — demandé par le
-        mainteneur en même temps que la confirmation de l'option (a) lors du Lot 1.
-      - Aperçu Niveau 1 (mini-page CSS : format/orientation/marges/police/taille/interligne/
-        justification, recalculé côté client à chaque changement) — pas de tentative pour
-        1.9/1.15, conforme à la recommandation propre de la spec §3.3.
-      - **Vérifié en Extension Development Host réel** (`xvfb-run`, déjà installé ad hoc dans
-        cette session — aucune modif `.devcontainer/`), pas seulement en test unitaire : le
-        container/la vue se déclarent avec les bons ids, et le webview se résout sans exception
-        une fois révélé (`workbench.view.extension.md2nativedocx` puis
-        `md2nativedocx.configView.focus`). Aucune vérification visuelle à l'œil possible dans ce
-        sandbox (pas d'UI VS Code interactive) — reste à faire manuellement.
-      - Escalade `AGENTS.md` traitée : point d'entrée ajouté à `docs/specs/UX_SPEC.md` (tableau
-        "Points d'entrée", Partie 1) plutôt que laissé implicite.
-      - Tests : 12 nouveaux `configPanelHtml.test.ts` (fonctions pures — groupes, échappement XSS,
-        grisage conditionnel, cohérence `describe()`), 2 nouveaux `test/suite/extension.test.ts`
-        (réels). 430 tests unitaires + 7 tests Extension Development Host au total, tous verts ;
-        `test:visual` 35/35 inchangé.
-- [x] **Lot 5 — tableaux en section paysage dédiée, livré (2026-09-05)** (spec §1.9, §2.3) :
-      spike dédié réalisé d'abord (`docs/adr/0005-landscape-table-section-spike.md`), puis option
-      (a) de ce spike implémentée en entier (solution complète, pas le périmètre réduit (b)).
-      - Piège documenté par la spec **confirmé et précisé par rendu réel** (pas juste lu) : le
-        paragraphe inséré avant le `Header` porte les réglages **portrait** (ceux de la section qui
-        se termine là), celui inséré après le `Table` porte les réglages **paysage** (ceux de la
-        section qui vient de s'ouvrir) — l'inverse d'une lecture littérale naïve de "bascule avant
-        le Header". Nouveau filtre Lua `Pandoc(doc)` (lookahead direct `Header`→`Table`, blocs non
-        adjacents = hors scope assumé) — `md2nativedocx.lua` doit maintenant retourner **une liste
-        de deux filtres** (`{mermaid_filter, landscape_table_filter}`) plutôt qu'un seul jeu de
-        fonctions globales : un `Pandoc(doc)` défini dans la même table qu'un `CodeBlock` ferait
-        ignorer ce dernier par Pandoc (comportement documenté de l'API Lua, pas un bug) — piège non
-        prévu par le spike, trouvé en écrivant l'implémentation réelle.
-      - **Piège supplémentaire du spike (section vide = page blanche) corrigé sans logique de
-        fusion côté Lua** : le filtre émet la paire portrait/paysage indépendamment pour chaque
-        `Header`→`Table` trouvé, sans essayer de fusionner les paires contiguës ni de détecter la
-        fin de document — deux nouvelles fonctions pures dans `postprocess.mjs`
-        (`collapseAdjacentSectionBreaks`/`collapseTrailingLandscapeSection`) nettoient les deux cas
-        généralement, après coup, sur le XML final. Un paragraphe ne portant qu'un `sectPr` est une
-        forme que Pandoc lui-même n'émet jamais (confirmé), donc reconnaissable sans ambiguïté.
-        **Bug trouvé et corrigé pendant l'implémentation (pas anticipé par le spike)** : la première
-        version de ces regex utilisait une capture `[\s\S]*?` non bornée pour le contenu du
-        `sectPr`, qui a **avalé un `Header`+`Table` entier** en cherchant la *prochaine* occurrence
-        du motif de fermeture au lieu de la sienne propre — `.docx` corrompu, trouvé en testant
-        vraiment le pipeline CLI de bout en bout (pas juste en lisant le XML). Corrigé en restreignant
-        la capture aux seuls enfants auto-fermants (`<w:pgSz/>`/`<w:pgMar/>`), qui ne peuvent
-        structurellement jamais contenir un `<w:p>`/`<w:tbl>` imbriqué.
-      - **Dépendance cachée trouvée en testant le pipeline réel (pas dans le spike)** : le paragraphe
-        "retour au portrait" a besoin de connaître le format de page *réellement* actif — le laisser
-        par défaut (aucun réglage Lot 1 touché) exposait un vrai bug : le filtre suppose A4 (le
-        défaut de ce projet) alors que le `reference.docx` non patché de Pandoc retombe sur son
-        propre défaut Letter/A4 dépendant de l'environnement, désynchronisant silencieusement les
-        sections portrait du reste du document. Corrigé : activer `landscapeTables` seul (sans
-        toucher page/marges) force maintenant un `sectPr` explicite A4/marges normales dans le
-        `reference.docx` généré (`referenceDocBuilder.mjs`, `buildReferenceDoc`) — **changement de
-        comportement réel et assumé, pas silencieux** : un utilisateur voulant un autre format doit
-        combiner ce réglage avec ceux du Lot 1, comme n'importe quel autre réglage de ce lot déjà.
-      - Câblage : `MD2NATIVEDOCX_LANDSCAPE_TABLES` + 6 variables d'env de géométrie (page/marges en
-        twips, même convention que `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY`) transmises au filtre Lua ;
-        réglage VS Code `md2nativedocx.layout.landscapeTables` (groupé avec le reste du Lot 1 pour
-        la règle de conflit `referenceDocument`, pas avec TOC/emoji), exposé dans le panneau Lot 4
-        (groupe "Mise en page") — la doc-comment de `configPanelHtml.ts` qui excluait spécifiquement
-        1.9 de ce panneau ("pas de contrôle pour un réglage qui n'existe pas encore") mise à jour en
-        conséquence.
-      - Tests : 9 nouveaux `postprocess.test.mjs` (incluant un test de non-régression sur le bug de
-        capture ci-dessus), 4 nouveaux `filter.test.mjs` (bout-en-bout via un vrai `pandoc`), 1
-        `reference-doc-builder.test.mjs`, 4 `cli.test.mjs` (les 3 scénarios du spike + le défaut
-        off), 2 `configPanelHtml.test.ts`. 449 tests unitaires + 7 tests Extension Development Host
-        au total, tous verts ; `test:visual` 35/35 à 0,000 % de diff (comportement par défaut prouvé
-        strictement inchangé) ; lint + typecheck propres partout.
-- [ ] Lot 6 (optionnel, non demandé explicitement) — numérotation automatique des titres (1.12),
-      raffinements de style de tableau (1.11).
-- [x] **Panneau de config redesigné + 2 nouveaux réglages + un vrai bug corrigé (2026-09-06)** —
-      retour du mainteneur après la passe Lot 1-5 ci-dessus (`A3` manquant, polices en texte libre
-      sans suggestion, `justify` sans `right`/`center`, sélecteur de couleur peu convivial,
-      structure plate sans repli).
-      - **Bug réel trouvé en creusant "peut-on ajouter d'autres couleurs personnalisables ?"** :
-        `accentColor` ne patchait que `theme1.xml` (`a:accent1`) — chaque style qui référence cette
-        couleur (`Heading1`-`9`, `Hyperlink`) garde en plus un `w:val` littéral de secours
-        (`w:themeColor="accent1" w:val="4472C4"`), jamais mis à jour. Confirmé par rendu réel
-        (couleurs de pixels échantillonnées, pas juste l'XML relu) : **LibreOffice ignore
-        purement et simplement le thème patché et affiche l'ancien bleu** pour les titres et les
-        liens — un vrai défaut préexistant, pas juste un risque théorique, découvert en implémentant
-        la demande du mainteneur plutôt que signalé par lui. Corrigé
-        (`referenceDocBuilder.mjs`'s nouvelle `patchAccentColorFallbacks()`) : réécrit le `w:val` de
-        tout `w:color` référençant `themeColor="accent1"`, y compris les variantes `themeShade`
-        (`Title`/`TOCHeading`) — celles-ci perdent leur teinte plus foncée calculée par Word
-        (simplification documentée : reproduire exactement l'algorithme de shade de Word n'a pas été
-        tenté) mais restent cohérentes avec la couleur choisie plutôt que de rester bleu. Reverifié
-        par rendu réel après fix : titres + lien hypertexte bien dans la couleur custom.
-      - **`A3` ajouté** à `layout.pageSize` (`PAGE_SIZES_TWIPS.A3 = {w:16838,h:23811}`, valeur
-        standard).
-      - **`justify` étendu** à `right`/`center` (en plus de `left`/`both`) — `patchStyles()`
-        généralisé (un seul `JUSTIFY_VALUES` set plutôt qu'un `if === 'both'` en dur).
-      - **Nouveau réglage `typography.tableHeaderColor`** (hex, vide = pas de remplissage) — patch
-        le `<w:tblStylePr w:type="firstRow">` du style de table `Table` par défaut de Pandoc (déjà
-        présent avec juste une bordure basse, jamais de remplissage) via un nouveau `<w:shd>`.
-      - **Panneau (`configPanelHtml.ts`) redesigné** : "Réglages rapides" toujours visibles en haut
-        (macro "modèle de police" — 4 presets Word 2007/2016/2025/LibreOffice qui posent
-        `headingFont`+`bodyFont` ensemble ; macro "mise en page" — 4 presets page+orientation+marges
-        ; pastilles de couleur d'accent cliquables) + chaque groupe (Mise en page/Typographie/
-        Structure/Emoji/Avancé) devient un `<details>` replié par défaut avec son propre bouton
-        "Réinitialiser cette section", plus un bouton global "Tout réinitialiser" — les deux
-        n'écrivent que `undefined` sur les clés concernées (`configPanel.ts`'s nouveau message
-        `reset`) et laissent le mécanisme déjà existant (`onDidChangeConfiguration` → re-rendu
-        complet du panneau) faire le travail de rafraîchissement, pas de re-synchronisation DOM
-        manuelle nécessaire. Police (titre/corps) : liste déroulante de polices courantes
-        Word/LibreOffice + une option "Personnalisé…" qui révèle le champ texte existant (jamais
-        une liste validée — ni ce poste ni, surtout, la machine qui ouvrira le `.docx` plus tard, ne
-        peut être interrogée sur ses polices installées). Couleur d'accent et couleur d'en-tête de
-        tableau : champ hex existant conservé + `<input type=color>` natif (zéro dépendance) +
-        pastilles d'exemple, les 3 synchronisés en JS. Nouveau bouton "Parcourir…" pour
-        `referenceDocument` (`vscode.window.showOpenDialog`, filtré `.docx`) plutôt qu'un chemin
-        tapé à la main.
-      - **Délibérément pas fait, demande explicite du mainteneur d'en garder trace séparément** :
-        une couleur personnalisable pour le fond des boîtes de sous-graphe dans les diagrammes
-        (`SUBGRAPH_FILL`/`SUBGRAPH_LINE`, `packages/core/src/translator/ooxml-translator.ts`) —
-        toucherait l'API publique de `packages/core`, même catégorie d'escalade que
-        `maxDrawingCx`/`maxDrawingCy` en son temps (voir plus haut dans ce fichier). Pas commencé.
-      - **Aussi pas fait, hors du périmètre demandé cette passe** : le manque de multilinguisme du
-        panneau lui-même (labels codés en dur en français, indépendants de la langue de VS Code) et
-        des réglages Phase 8 dans les 5 `package.nls.<locale>.json` traduits (0 occurrence de
-        `layout.pageSize` etc. trouvée en grep) — diagnostiqué cette session, chantier à part vu sa
-        taille (traduire 5 fichiers + apprendre à `configPanel.ts` à préférer
-        `package.nls.<locale>.json` à `package.nls.json` quand il existe), pas inclus dans cette
-        passe.
-      - Tests : `packages/cli/test/reference-doc-builder.test.mjs` (+8 tests : A3 dans la boucle
-        `resolvePageSize`, `justify` right/center, fix `accentColor`/shaded variants,
-        `tableHeaderColor`, idempotence), `packages/vscode-extension/test/unit/configPanelHtml.test.ts`
-        (+8 tests : détails repliés + boutons reset, A3/right/center, presets police/page avec
-        reverse-match vers "custom", dropdown police avec champ manuel conditionnel, couleur d'en-tête
-        de tableau, bouton Parcourir). Vérifié aussi par rendu réel LibreOffice (pas juste les tests
-        unitaires) : accentColor sur titre+lien, tableHeaderColor, justify=right, pageSize=A3, tous
-        corrects sur un export réel. 471 tests monorepo au total (112 cli + 293 core + 15 pandoc-filter +
-        51 vscode-extension), tous verts ; lint + typecheck propres partout.
-      - **Reste à faire** : re-vérification en vrai Word demandée au mainteneur (voir
-        `test-corpus/word-verification/CHECKLIST.md` "Round 2", en particulier le préréglage de
-        marges "moderate" contre le vrai preset Word).
+- [x] Lot 1 (2026-09-05) : réglages de mise en page/typo (page/orientation/marges, polices,
+      interligne, justification, couleur d'accent) via un `reference.docx` généré dynamiquement
+      (`packages/cli/src/referenceDocBuilder.mjs`). `TranslateOptions` a gagné
+      `maxDrawingCx`/`maxDrawingCy` (changement d'API publique, escaladé et confirmé). 1.11 (style
+      de tableau) hors scope, fusionné au Lot 6.
+- [x] Lot 1 fast-follow 1.13 (2026-09-05) : pied de page numéroté.
+- [x] Lot 2 (2026-09-05) : rendu couleur des emoji/badges (`forceEmojiColorFont`, découpage par
+      graphème `Intl.Segmenter`). Non vérifié en vrai Word au moment du fix — hypothèse infirmée
+      depuis, voir "Retours en attente de clarification" plus bas.
+- [x] Lot 3 (2026-09-05) : sommaire automatique (TOC), placé sous le H1 par chirurgie XML
+      (`repositionTocAfterTitle`). Auto-population à l'ouverture confirmée depuis en vrai Word (mode
+      protégé, voir "Retours en attente de clarification").
+- [x] Lot 4 (2026-09-05) : panneau de configuration Activity Bar + Sidebar, zéro texte dupliqué
+      avec `contributes.configuration` (relit `package.nls.json` directement), CSP stricte +
+      échappement XSS testé.
+- [x] Lot 5 (2026-09-05) : tableaux en section paysage dédiée
+      (`docs/adr/0005-landscape-table-section-spike.md`), option complète implémentée.
+- [x] Panneau redesigné + 2 réglages + un vrai bug corrigé (2026-09-06) : couleur d'accent ne
+      patchait pas les `w:val` de secours des styles (`Heading1`-`9`/`Hyperlink`) — corrigé
+      (`patchAccentColorFallbacks()`). `A3` ajouté, `justify` étendu à right/center,
+      `typography.tableHeaderColor` ajouté, presets police/mise en page + sélecteur de couleur
+      natif dans le panneau.
+- [ ] Lot 6 (optionnel) — numérotation automatique des titres (1.12), raffinements de style de
+      tableau (1.11).
+- [ ] **Escaladé, pas commencé** : couleur de fond des boîtes de sous-graphe personnalisable
+      (toucherait l'API publique de `packages/core`) — demande explicite du mainteneur de garder
+      une trace séparée.
+- [ ] **Gap l10n connu** : les réglages Phase 8 et le panneau lui-même ne sont traduits dans aucune
+      des 5 locales existantes.
+- [ ] Re-vérification en vrai Word demandée au mainteneur (marges "moderate" notamment) —
+      `test-corpus/word-verification/CHECKLIST.md` "Round 2".
 
 ---
 
 ## CI/CD & environnement
 
-- [x] `.github/workflows/ci.yml` : typecheck + lint + test (unit/golden) + `npm audit`
-      (fail high/critical) + secret scan + CodeQL. `test:visual` sur schedule/release branches
-      (flag explicite du trade-off).
-- [x] `.github/workflows/codeql.yml` : SAST GitHub natif.
-- [x] `.devcontainer/devcontainer.json` : provisioning Pandoc/Lua/LibreOffice, synchronisés
-      avec `ci.yml`. Pandoc 3.1.3 et Lua 5.4 sont **version-pinnés** ; LibreOffice est installé
-      depuis le repo apt (limitation documentée dans `setup.sh` — voir tâche de suivi ci-dessous).
-      ⚠️ Toute modif de `.devcontainer/`/`.vscode/` = revue humaine obligatoire (voir
-      AGENTS.md → Codespaces). PR séparée, **non mergée**.
-- [x] **Validateur Open XML SDK adopté comme pratique standard (2026-09-05)** — ADR 0007, suite à
-      l'incident SmartArt (ADR 0006). `scripts/oxml-validator/` (wrapper C# autour de
-      `DocumentFormat.OpenXml.Validation.OpenXmlValidator`, sortie `--json`) +
-      `npm run test:oxml-validate` (`scripts/test-oxml-validate.mjs`, dégradation propre si
-      `dotnet` absent, même motif que `test:visual`/`test:extension-host`). Documenté dans
-      `AGENTS.md` ("Diagnosing 'Word won't open the file'") et `TESTING.md` (8e chapitre).
-      **Hors scope, tracé séparément ci-dessous** : les 17 erreurs de schéma préexistantes dans
-      `packages/cli/assets/reference.docx` (`styles.xml`/`numbering.xml`/`settings.xml` —
-      trouvées par le validateur, déjà tolérées par Word aujourd'hui, sans lien avec l'incident
-      SmartArt).
-- [x] **Investigation des erreurs de schéma préexistantes — classées "pas notre bug", fermé
-      (2026-09-06)** : root-cause isolée en deux temps maintenant que `dotnet` est disponible dans
-      ce sandbox (PR #7 mergée, voir ci-dessous). (1) `dotnet run -- packages/cli/assets/
-      reference.docx --json` seul (sans passer par un export réel) : 8 erreurs, toutes dans
-      `styles.xml`/`settings.xml` (jamais dans `document.xml` du fichier généré — le corps de
-      `reference.docx` n'est de toute façon jamais copié dans la sortie, seuls
-      `theme1.xml`/`styles.xml`/`settings.xml`/`numbering.xml` le sont). (2) Comparé au
-      `reference.docx` **vanilla** de Pandoc lui-même (`pandoc --print-default-data-file
-      reference.docx`, aucune modification de ce projet) : **les 8 mêmes erreurs y sont déjà
-      présentes à l'identique** (`w:b`/`w:i`/`w:spacing`/`w:tcBorders`/`w:qFormat` mal ordonnés
-      dans `styles.xml`, `w:doNotTrackMoves` mal ordonné dans `settings.xml`). Confirmé une
-      deuxième fois avec un export **complètement nu** (`pandoc list.md -o list.docx`, zéro
-      `--reference-doc`, zéro code de ce projet impliqué) : mêmes styles.xml, plus en prime le
-      `w:nsid` de `numbering.xml` à la mauvaise longueur hexBinary et le `w:pStyle` mal ordonné
-      dans les `w:pPr` des items de liste — Pandoc **synthétise ces éléments lui-même** au moment
-      de générer une liste numérotée, indépendamment de tout `reference.docx`. **Conclusion : la
-      totalité des erreurs `test:oxml-validate` rapporte hors `/word/diagrams/` viennent du
-      générateur `.docx` de Pandoc lui-même (bug/quirk amont, présent même à vide), pas de ce
-      dépôt.** Pandoc génère des millions de `.docx` ouverts sans souci dans Word depuis une
-      décennie malgré ça — tolérance confirmée en pratique, pas juste supposée. Item fermé sans
-      changement de code : patcher `reference.docx` pour masquer un défaut de Pandoc serait hors
-      du périmètre documenté dans `packages/cli/assets/README.md` ("ne pas toucher à autre chose
-      que `theme1.xml`/`styles.xml` `docDefaults`/headings") et referait courir le risque déjà
-      vécu sur l'incident SmartArt (réordonner de l'XML à la main sans se tromper). À rouvrir
-      seulement si Pandoc lui-même publie un fix upstream à absorber, ou si un vrai test Word
-      détecte un jour un problème concret (aucun signalé à ce jour).
-- [x] **Suivi — PR #7 `.devcontainer`/`ci.yml` pour le SDK `.NET` : mergée (2026-09-06)**. `.NET
-      10.0.200` disponible dans ce sandbox — a permis l'investigation ci-dessus. Ancien texte
-      (préservé pour mémoire) : branche
-      `devcontainer/add-dotnet-sdk`, **PR #7** sur GitHub, en attente de revue humaine. `.NET
-      10.0.200` (pinné) ajouté à `.devcontainer/setup.sh` via `dotnet-install.sh` officiel (même
-      approche tarball OS-indépendante que Pandoc, pas un paquet apt comme LibreOffice) +
-      `actions/setup-dotnet@v4` dans `ci.yml` + `npm run test:oxml-validate` câblé dans le job
-      principal.
-- [x] **Auto-provisioning `.NET` en production, implémenté et vérifié (2026-09-05)** (ADR 0007
-      partie D) : `packages/vscode-extension/src/dotnetProvisioner.ts` (miroir de
-      `pandocProvisioner.ts`, manifeste construit à partir des métadonnées de release
-      **officielles** de Microsoft, jamais inventées — empreintes SHA-512, pas SHA-256 comme
-      Pandoc, trouvaille faite en inspectant un vrai téléchargement), `scripts/
-      bundle-oxml-validator.mjs` (empaquette notre DLL validateur *framework-dependent*, ~8,3 Mo,
-      dans le `.vsix`), câblage dans `packages/cli/bin/md2nativedocx.mjs`
-      (`runWordCompatibilityCheck()`, section dédiée du `.log`, opt-in via
-      `MD2NATIVEDOCX_OXML_VALIDATOR_DLL`, jamais un échec d'export si indisponible), réglage
-      `md2nativedocx.wordCompatibilityCheck.enabled` (défaut `true`, exposé aussi dans le panneau
-      Lot 4). **Vérifié bout en bout dans un environnement sans aucun `.NET`** (`env -i`) :
-      téléchargement + vérification SHA-512 + exécution réelle du DLL, `errorCount: 0` correct.
-      458 tests du monorepo verts, lint/typecheck propres, `test:visual` 35/35 inchangé. Reste à
-      faire par le mainteneur : confirmation finale sur une vraie machine sans `.NET` via
-      l'extension packagée, une fois la PR `.NET` (ci-dessus) fusionnée pour pouvoir construire le
-      DLL au moment du `npm run package`.
-- [ ] **Tâche de suivi — pinning LibreOffice** : décider si on épingle la version de LibreOffice
-      dans `setup.sh` (via un repo/pinning apt dédié) ou si on garde la version du repo apt.
-      Actuellement non pinné (limitation documentée dans `setup.sh`). À trancher avant de
-      fiabiliser `test:visual` en CI. **Recommandation (2026-08-07, pas d'exécution — modifier
-      `.devcontainer/setup.sh` est en zone d'escalade obligatoire, voir `AGENTS.md`)** : garder
-      la version du repo apt pour l'instant plutôt qu'un pinning dédié, MAIS avec une réserve
-      importante à vérifier avant de trancher définitivement — l'environnement où `test:visual` a
-      été développé cette session tourne en réalité sous **Ubuntu 24.04** (LibreOffice 24.2.7.2
-      installé), alors que `.devcontainer/devcontainer.json` déclare une image **Debian bookworm**
-      (`typescript-node:1-22-bookworm`) et que le job CI `visual` tourne sur `ubuntu-latest`. Si
-      le Codespace réellement construit depuis `devcontainer.json` résout une version LibreOffice
-      différente de celle d'Ubuntu (dépôts apt Debian vs Ubuntu, pas garantis alignés), les
-      baselines `test-corpus/visual/baseline/*.png` générées dans un environnement pourraient ne
-      pas correspondre pixel-pour-pixel à un rendu dans l'autre — le seuil de tolérance actuel
-      (1 %, `scripts/test-visual.mjs`) absorbe le bruit d'anti-aliasing mais pas forcément un
-      changement de version de moteur de rendu. À vérifier empiriquement (comparer la version
-      LibreOffice résolue dans un vrai Codespace lancé depuis `devcontainer.json` face à celle de
-      `ubuntu-latest` en CI) avant de considérer `test:visual` fiable d'un environnement à l'autre.
-      **Preuve empirique trouvée (2026-09-04, voir l'entrée "Corpus visuel" plus haut)** : dans
-      l'environnement de cette session, `node scripts/test-visual.mjs` échoue sur 11/24 fixtures
-      préexistantes (2 à 9 % de pixels différents) contre leurs baselines déjà commitées, alors
-      qu'aucune régression de code ne les touche ; inspection visuelle de `decision` montre la même
-      géométrie mais une police différente (plus épaisse/serif dans la baseline commitée) — exactement
-      le scénario "environnement de rendu différent" que cette tâche anticipait sans preuve jusque-là.
-      Reste à trancher (pinning ou non) ; en attendant, ne pas faire confiance à un échec `test:visual`
-      isolé comme preuve de régression sans comparaison visuelle directe.
-- [x] **Drift des baselines visuelles corrigé (2026-09-04) — pas par pinning LibreOffice, par pinning
-      des polices de substitution.** Root cause affinée : ce n'est pas la version de LibreOffice qui
-      variait mais la police de repli choisie pour les familles que `reference.docx` déclare et
-      qu'aucune distro Linux ne fournit (`Aptos`/`Aptos Display` dans le thème actuel ; `Calibri`/
-      `Cambria` dans d'anciens `reference.docx`) — cette substitution dépend de fontconfig et de
-      l'ordre d'énumération des polices installées, qui diffère d'un environnement à l'autre même à
-      version LibreOffice identique. Preuve trouvée en comparant visuellement `decision` et
-      `long-labels` : l'ancienne baseline (police de repli plus large) tronquait carrément le texte
-      dans les boîtes ("Choix" → "Choi", une ligne de `long-labels` coupée) — donc ce n'était pas
-      qu'un problème cosmétique, la police de repli non pinnée provoquait un vrai bug de rendu
-      (débordement/troncature) sur certaines fixtures. Fix : `test-corpus/visual/fontconfig/fonts.conf`
-      (nouveau fichier, commité) force `Aptos`/`Aptos Display`/`Calibri`→`Liberation Sans` et
-      `Cambria`→`Liberation Serif` via une règle fontconfig `<match>`, chargé uniquement pour le
-      sous-processus `soffice` que lance `scripts/test-visual.mjs` (`FONTCONFIG_FILE`, n'affecte pas
-      la config système). Liberation Sans/Serif est une dépendance apt automatique de
-      `libreoffice-writer` sur Debian **et** Ubuntu (vérifié) — aucune installation de police
-      supplémentaire nécessaire dans `setup.sh`/`ci.yml`, donc aucune modification en zone
-      d'escalade (`.devcontainer/`). Les 32 baselines régénérées avec `--update-baseline` (24
-      d'origine + 8 fixtures ajoutées depuis) ; `test:visual` repasse maintenant à 0,000 % de diff
-      sur les 32/32, déterministe. La tâche "pinning LibreOffice" ci-dessus reste ouverte en tant que
-      telle (aucune preuve que la *version* de LibreOffice elle-même dérive, seulement la police) —
-      mais elle n'est plus urgente : la substitution de police pinnée absorbe la cause réelle
-      observée jusqu'ici.
-- [x] `test:visual` : rendu LibreOffice headless → export image → pixel-diff avec seuil, corpus
-      20–30 diagrammes (du 3-nœuds au 50-nœuds avec sous-graphes) — 32 fixtures actuellement.
+- [x] `.github/workflows/ci.yml`/`codeql.yml` : typecheck + lint + test + `npm audit` + secret scan
+      + CodeQL. `test:visual` sur schedule/release.
+- [x] `.devcontainer/devcontainer.json` : Pandoc/Lua pinnés, LibreOffice non pinné (voir item ouvert
+      ci-dessous). Toute modif = revue humaine obligatoire (AGENTS.md → Codespaces).
+- [x] Validateur Open XML SDK adopté (2026-09-05, ADR 0007) : `scripts/oxml-validator/` +
+      `npm run test:oxml-validate`. 17 erreurs de schéma préexistantes dans `reference.docx`
+      **investiguées et classées "pas notre bug" (2026-09-06)** — confirmées identiques dans le
+      `reference.docx` vanilla de Pandoc et dans un export nu sans aucun code de ce projet ; Pandoc
+      génère ces `.docx` sans souci dans Word depuis une décennie malgré ça. Fermé sans changement
+      de code.
+- [x] Auto-provisioning `.NET` en production (2026-09-05, ADR 0007 partie D) — vérifié bout en bout
+      dans un environnement sans aucun `.NET`.
+- [x] PR #7 `.devcontainer`/`ci.yml` pour le SDK `.NET` : mergée (2026-09-06).
+- [ ] **Pinning LibreOffice — toujours pas tranché.** Non pinné aujourd'hui (limitation documentée
+      dans `setup.sh`). Risque identifié : l'environnement de dev (Ubuntu 24.04) diffère de l'image
+      déclarée (`devcontainer.json`, Debian bookworm) et du CI (`ubuntu-latest`) — un dépôt apt
+      Debian vs Ubuntu n'est pas garanti aligné en version LibreOffice. **Cause du drift déjà
+      trouvée et corrigée (2026-09-04) — pas la version de LibreOffice, la police de
+      substitution** : `test-corpus/visual/fontconfig/fonts.conf` pin `Aptos`/`Calibri`/`Cambria`
+      vers Liberation Sans/Serif pour le sous-processus `soffice` uniquement (`FONTCONFIG_FILE`,
+      aucune modif `.devcontainer/`) — a aussi corrigé un vrai bug de troncature de texte, pas
+      juste un défaut cosmétique. La question du pinning de *version* LibreOffice reste ouverte en
+      tant que telle mais n'est plus urgente, la cause réelle observée jusqu'ici étant absorbée.
+- [x] `test:visual` : rendu LibreOffice headless → pixel-diff, 32 fixtures.
+
+Détail complet (root-cause, preuves empiriques) : `docs/history/TODO_ARCHIVE.md`, section
+"CI/CD & environnement".
 
 ---
 
@@ -908,189 +555,53 @@ de la spec, §5.
       `packages/core` toujours verts, aucune régression.
 - [x] **SmartArt désactivé par défaut (2026-09-03)** — voir "Incident cycle" ci-dessous.
 
-## Incident SmartArt "cycle" cassé en Word réel (2026-09-03)
+## Incident SmartArt "cycle" cassé en Word réel (2026-09-03) — clos
 
-Un cycle à 3 nœuds (`A-->B-->C-->A`), le cas le plus simple possible, produisait un `.docx` que
-Word refuse d'ouvrir ("erreur lors de l'ouverture du fichier"). `cycle.ts` (comme `chain.ts`/
-`tree.ts`) n'avait jamais été testé en Word réel, seulement sous LibreOffice headless — la table de
-compliance (`docs/markdown-mermaid-compliance-table.md`) affichait "✅ Full" sur cette seule base, corrigée
-depuis (§2 point 5 ajouté). Comme `smartArt.enabled` valait `true` par défaut (CLI et extension déjà
-publiée 0.3.0), c'était un bug de corruption par défaut pour tout flowchart utilisateur en boucle
-fermée, pas un cas de labo.
+Un cycle à 3 nœuds produisait un `.docx` que Word refusait d'ouvrir ; `smartArt.enabled` est passé
+à `false` par défaut en mitigation immédiate. Cause réelle trouvée le 2026-09-05 après 9 rounds
+(`docs/adr/0006-dsp-drawing-fallback-spike.md`) : `modelId`/`srcId`/`destId` est un type union
+(`ST_ModelId`) qui n'accepte qu'un entier ou un GUID, jamais une chaîne libre (`"p-root"`, etc.) —
+trouvé par l'**Open XML SDK Validator** de Microsoft, pas par comparaison manuelle (3 hypothèses
+manuelles précédentes avaient toutes échoué). **Leçon méthodologique adoptée depuis** : lancer le
+validateur en premier pour tout futur "Word refuse d'ouvrir le fichier", avant toute comparaison
+manuelle — voir `AGENTS.md`. Confirmé ouvert en vrai Word par le mainteneur (2026-09-05). Un second
+bug trouvé une fois le fichier ouvrable (`tree` affichait le texte des enfants dupliqué dans la
+boîte racine, `axis="desOrSelf"` au lieu de `axis="self"`) — corrigé, en attente de reconfirmation
+en vrai Word.
 
-- ✅ **Mitigation immédiate — SmartArt off par défaut (2026-09-03)** : `smartArtEnabled`
-      (`MD2NATIVEDOCX_ENABLE_SMARTART` opt-in), `md2nativedocx.smartArt.enabled` à `default: false`.
-      Détail complet : `docs/history/TODO_ARCHIVE.md`.
-- [x] **Cause réelle trouvée et corrigée (2026-09-05)** — détail complet round par round dans
-      `docs/adr/0006-dsp-drawing-fallback-spike.md` (9 rounds, 7 tests Word réels). Résumé :
-      l'hypothèse initiale (5e partie `dsp:drawing` manquante, ci-dessous en historique) s'est
-      révélée **fausse** après test réel — trois autres hypothèses structurelles devinées par
-      comparaison manuelle contre `handmade_samples/cycle-simple.docx` ont échoué à leur tour
-      (éléments `presOf`/`constrLst`/`ruleLst` manquants sur `dgm:layoutNode` ; `adjLst`/`r:blip`
-      manquants sur `dgm:shape` ; points de contenu `parTrans`/`sibTrans` absents). La bonne
-      méthode, trouvée en changeant d'approche plutôt qu'en devinant une 4e fois : le **SDK Open
-      XML de Microsoft** (`DocumentFormat.OpenXml`, .NET, déjà disponible dans ce sandbox) expose
-      `OpenXmlValidator`, qui valide contre le même schéma que Word et donne le détail exact de
-      chaque violation. Utilisé sur notre propre sortie, il a immédiatement pointé la vraie cause :
-      **`modelId`/`srcId`/`destId` est un type union (`ST_ModelId`, ECMA-376 §21.4) qui n'accepte
-      qu'un entier non signé ou un GUID, jamais une chaîne libre** — nos trois générateurs
-      utilisaient des ids comme `"p-root"`/`"c1"`/`"pp3b"` pour les points de présentation et les
-      connexions (les points de contenu, déjà numériques, passaient). Corrigé dans
-      `packages/core/src/smartart/{chain,tree,cycle}.ts` (ids remplacés par des entiers
-      séquentiels), confirmé sans erreur de schéma restante par le même validateur, sans
-      régression LibreOffice/`test:visual`/tests unitaires (2 tests mis à jour, vérifiaient
-      littéralement l'ancienne chaîne `"p-root"`). **Confirmé par le mainteneur en vrai Word
-      (2026-09-05) : le fichier s'ouvre.** L'incident de corruption est clos. Outil du validateur
-      conservé dans `docs/adr/spikes/spike-dsp-drawing/round9-modelid-fix/` — à utiliser en premier
-      pour tout futur "Word refuse d'ouvrir le fichier", avant toute comparaison manuelle.
-      - **Historique de l'hypothèse initiale (infirmée), gardé pour mémoire** : un échantillon
-        Word réel (`handmade_samples/cycle-simple.docx`, Insertion → SmartArt → Cycle simple)
-        diffé contre notre sortie avait montré une 5e partie manquante, `word/diagrams/drawingN.xml`
-        (`dsp:drawing`, un arbre de formes pré-calculées), faisant penser que Word refusait tout
-        `layoutDef` personnalisé sans ce filet de sécurité. Un spike dédié (ADR 0006, rounds 0-1)
-        a bien confirmé le câblage exact de cette 5e partie et un comportement LibreOffice
-        surprenant (le rendu pré-calculé prime sur l'algorithme en direct une fois présent), mais
-        le test Word réel a montré que l'ajouter seul ne suffisait pas — l'hypothèse était fausse,
-        la vraie cause était ailleurs (voir ci-dessus).
-- ✅ **Deuxième reproduction, involontaire, du même bug (2026-09-04)** — un fixture de test
-      généré avec SmartArt forcé a retouché le même bug non corrigé ; corrigé en régénérant avec
-      les réglages par défaut, ne change rien à l'état du chantier (toujours non corrigé). Détail
-      complet : `docs/history/TODO_ARCHIVE.md`.
-- [x] **Nouveau bug trouvé en vrai Word une fois la corruption corrigée, corrigé (2026-09-05)** —
-      le fichier s'ouvre maintenant, mais `tree` affichait un artefact : la boîte racine ("A")
-      montrait aussi une liste à puces des enfants ("• B • C • D") **en plus** des 3 vraies boîtes
-      B/C/D déjà correctement affichées en dessous. **Root cause, un angle mort méthodologique
-      important, pas juste un bug isolé** : `level1Main`/`level2Main` déclaraient
-      `<dgm:presOf axis="desOrSelf" .../>` dans le `layoutDef`. LibreOffice n'exécute jamais
-      `forEach`/`presOf` en direct (il affiche seulement le miroir de présentation qu'on a
-      pré-calculé à la main dans `data.xml`, ADR 0004 "Round 5") — donc cette ligne n'a **aucun
-      effet visible sous LibreOffice**, quelle que soit sa valeur. Le vrai Word, lui, sait
-      résoudre `forEach`/`presOf` dynamiquement, et évalué en direct sur la racine,
-      `axis="desOrSelf"` correspond à la racine **et à tous ses descendants** — d'où le texte des
-      3 enfants qui se retrouve mélangé dans la boîte de la racine. Un `level2Main` (feuille, donc
-      sans descendant à ce jour) ne montrait rien d'anormal par comparaison, mais la même ligne y
-      est tout aussi incorrecte en principe (latent, pas encore visible tant que
-      `tree.ts` reste limité à la profondeur 2). **Corrigé** : `axis="self"` à la place, dans les
-      3 générateurs (`chain.ts`/`cycle.ts` avaient la même ligne, jamais visiblement buggée faute
-      de vraie imbrication parent-enfant dans leur modèle de données, mais corrigée quand même —
-      `axis="self"` est la sémantique correcte partout, pas seulement celle qui ne plantait pas).
-      **Implication plus large, à retenir pour la suite du chantier SmartArt** : toute la suite de
-      tests actuelle (`test:visual`, LibreOffice) est structurellement aveugle à cette classe de
-      bug — un défaut de requête `presOf`/`forEach` dynamique ne peut être détecté que par un vrai
-      test dans Word, jamais par le rendu LibreOffice ni par le validateur de schéma (ce n'est pas
-      une violation de schéma, c'est une sémantique de requête mal choisie). **En attente de
-      re-confirmation en vrai Word** (fichiers régénérés remis au mainteneur) avant de considérer
-      ce point clos.
-      - **Signalé au passage, pas traité maintenant** : `chain`/`cycle` n'ont toujours pas de
-        connecteurs dessinés entre les boîtes (limite déjà documentée dans leurs propres doc
-        comments) et le style visuel général (couleurs plates `accent1`) ne ressemble pas à un
-        SmartArt "vanilla" créé à la main dans Word (dont les quickstyles par défaut ont souvent
-        des dégradés/effets 3D) — décision délibérée liée à la licence (ADR 0004 : ne pas
-        redistribuer les quickstyles/styles réels de Microsoft), pas un oubli. À rouvrir
-        séparément si le mainteneur veut investir dans un rendu plus proche du natif, plutôt que
-        mélangé à ce correctif.
+Détail round par round : `docs/adr/0006-dsp-drawing-fallback-spike.md` et
+`docs/history/TODO_ARCHIVE.md`, section "Incident SmartArt cycle".
 
 ---
 
-## Incident `quadrantChart`/`venn-beta`/`mindmap` cassés en Word réel (2026-09-06)
+## Incident `quadrantChart`/`venn-beta`/`mindmap` cassés en Word réel (2026-09-06) — clos
 
-Round 2 de la checklist `test-corpus/word-verification/` (retour du mainteneur, vrai Word Windows) :
-les 3 items 7/8/9 échouent — `quadrant.docx`/`venn.docx`/`mindmap.docx` refusent tous de s'ouvrir
-("Word a rencontré une erreur lors de l'ouverture du fichier"). Ces 3 types sont **activés par
-défaut** (contrairement à SmartArt) — c'était donc un vrai bug de corruption par défaut pour
-n'importe quel utilisateur exportant l'un de ces 3 diagrammes, découvert seulement maintenant car
-`test:oxml-validate` (l'outil construit précisément pour ce genre de "Word refuse d'ouvrir le
-fichier", voir l'incident SmartArt ci-dessus) n'avait **jamais tourné sur leur propre sortie** —
-seulement sur SmartArt et 2 fixtures flowchart (`minimal`/`decision`).
+Round 2 de la checklist Word réelle : les 3 types (activés par défaut, contrairement à SmartArt)
+produisaient un `.docx` refusé par Word — jamais passés par `test:oxml-validate` jusqu'ici. Cause
+trouvée le jour même par le validateur (même méthode que l'incident SmartArt) : `<w:jc>` recevait
+des codes courts DrawingML (`l`/`ctr`/`r`) au lieu des valeurs `ST_Jc` longues
+(`left`/`center`/`right`). Corrigé dans les 3 traducteurs. **Angle mort méthodologique corrigé en
+plus du bug** : `test:oxml-validate` ne classait que `/word/diagrams/*` comme "sortie de ce
+projet" — élargi à `wpc:wpc` (le canevas OOXML simple, utilisé par ces 3 types et par flowchart),
+qui était jusque-là silencieusement classé "bruit Pandoc préexistant".
 
-- [x] **Cause trouvée et corrigée le jour même** — `dotnet run --project scripts/oxml-validator --
-      quadrant.docx --json` a immédiatement pointé la vraie cause (même méthode que l'incident
-      SmartArt : validateur d'abord, comparaison manuelle jamais). `<w:jc>` (WordprocessingML,
-      `ST_Jc`) recevait des codes courts façon DrawingML (`l`/`ctr`/`r`) au lieu des valeurs longues
-      exigées (`left`/`center`/`right`) — confusion entre les deux vocabulaires d'alignement dans
-      `packages/core/src/diagrams/{quadrant,venn,mindmap}/translator.ts`. LibreOffice ne valide
-      aucun schéma donc ne voyait rien ; Word rejette le fichier entier. Corrigé : `venn.ts`/
-      `mindmap.ts` (toujours centré) passent directement à `"center"` ; `quadrant.ts` (alignement
-      variable) gagne une table `WORD_JC` qui traduit les 3 codes courts. Reconfirmé par le
-      validateur (0 erreur sous `wpc:wpc`, contre 13/8/18 avant) et par rendu LibreOffice réel (35/35
-      `test:visual`, 2 baselines mises à jour pour un micro-décalage de texte désormais correctement
-      aligné). 3 nouveaux tests de non-régression (un par module) qui vérifient qu'aucun `<w:jc>`
-      émis n'est autre chose qu'une valeur `ST_Jc` valide.
-- [x] **Angle mort méthodologique corrigé, pas juste le bug lui-même** — `scripts/
-      test-oxml-validate.mjs` élargi : (1) `quadrant`/`venn`/`mindmap` ajoutés à
-      `PLAIN_FIXTURE_NAMES` (tournent maintenant à chaque `npm run test:oxml-validate`/CI comme
-      SmartArt et les 2 fixtures flowchart) ; (2) surtout, la classification "sortie de ce projet vs
-      bruit Pandoc" ne filtrait que `/word/diagrams/*` (les parties SmartArt) — **le canevas OOXML
-      simple (`wpc:wpc`), utilisé par flowchart ET les 3 nouveaux types, est inline dans
-      `document.xml`** et aurait été classé silencieusement comme "bruit Pandoc préexistant, juste
-      affiché, jamais en échec" par l'ancien filtre. Élargi à `e.Path.includes('wpc:wpc')` en plus de
-      `/word/diagrams/`. Vérifié en rejouant le bug (translators non corrigés, stash temporaire) :
-      l'ancien filtre laissait passer le test, le nouveau le fait échouer avec 13/8/18 erreurs
-      listées — preuve que ce garde-fou aurait attrapé le bug avant tout envoi au mainteneur.
-      **Répond directement à la remarque du mainteneur** ("rendre le check dotnet par défaut...
-      pour identifier les soucis") de façon plus robuste qu'un flag CLI par défaut : c'est maintenant
-      dans la suite automatisée, ne dépend plus de la discipline d'un développeur qui penserait à
-      lancer la commande.
-- [ ] **Suivi — pourquoi le check de compatibilité Word (`wordCompatibilityCheck.enabled`) n'a pas
-      attrapé ça avant l'envoi** : son défaut `true` ne s'applique qu'à l'extension VS Code
-      empaquetée (qui fournit son propre chemin de DLL) — le CLI nu (utilisé pour générer ces
-      fixtures) ne lance jamais le check tant que `MD2NATIVEDOCX_OXML_VALIDATOR_DLL` n'est pas
-      positionné à la main. Le point ci-dessus (élargissement de `test:oxml-validate`) couvre le cas
-      qui a réellement mordu cette fois ; reste une question ouverte séparée, pas encore tranchée :
-      faire aussi tourner le check par défaut dans le CLI nu en phase de dev (auto-détection d'un
-      `dotnet`/validateur déjà construit localement, sur le même principe que l'auto-provisioning
-      Pandoc) — plus lourd (un `dotnet build` à chaque export) et pas encore évalué comme
-      rentable face au coût.
+- [ ] **Suivi ouvert** : le check de compatibilité Word (`wordCompatibilityCheck.enabled`) ne
+      s'applique qu'à l'extension VS Code empaquetée, jamais au CLI nu en dev — question de
+      rentabilité d'un `dotnet build` à chaque export, pas encore tranchée.
+
+Détail complet : `docs/history/TODO_ARCHIVE.md`, section "Incident quadrant/venn/mindmap".
 
 ## Retours en attente de clarification (checklist Round 2, 2026-09-06)
 
-- [x] **Emoji pas tous coloriés en vrai Word — hypothèse initiale infirmée par une revue plus
-      large, vraie cause probablement hors de portée côté `.docx` (2026-09-06)** : le fix U+FE0F
-      (ci-dessous, conservé mais requalifié) reposait sur une corrélation à 4 échantillons
-      (✅/❌ monochromes, ⚠️/🚀 en couleur) qui semblait pointer vers "sélecteur de présentation
-      manquant". Une revue de 31 symboles en vrai Word (demandée par le mainteneur, table dédiée
-      `test-corpus/word-verification/emoji-review.docx`) **infirme cette hypothèse** :
-      `✔️`/`✖️` (U+2714/U+2716) portaient déjà U+FE0F dans le texte source d'origine et restent
-      monochromes quand même — la preuve que le sélecteur seul ne force pas la couleur de façon
-      fiable dans cette combinaison Word/Segoe UI Emoji. Le vrai partage empirique observé :
-      **restent monochromes** = `✅` U+2705, `❌` U+274C, `✔` U+2714, `✖` U+2716, `⭐` U+2B50,
-      `☑` U+2611 (+ les séquences keycap, lacune déjà connue séparément) ; **tout le reste testé
-      s'affiche en couleur**, y compris plusieurs symboles du *même bloc Unicode* que `☑`
-      (`☀`/`☁`/`⚠`/`⚙`/`✈`/`☎`/`⚡`, tous dans Miscellaneous Symbols U+2600-U+26FF). Aucune propriété
-      Unicode interrogeable depuis le code (bloc, `Default_Emoji_Presentation`, présence de
-      sélecteur) n'explique ce partage précis — tout indique une liste figée, probablement décidée
-      par Microsoft lui-même, de symboles hérités de l'ère Wingdings (coches/croix/étoile/case à
-      cocher, utilisés couramment comme puces de liste fonctionnelles dans des documents bureautiques
-      plutôt que comme emoji expressifs) volontairement gardés monochromes — pas un bug de
-      résolution de police que ce projet peut corriger depuis la sortie `.docx`. Le fix U+FE0F est
-      **conservé** (inoffensif, texte Unicode plus explicite/correct dans l'absolu) mais son
-      commentaire de code et la description du réglage `emoji.forceColorFont` ont été corrigés pour
-      ne plus prétendre qu'il règle ✅/❌/✔/✖/⭐/☑ — il ne le fait pas, d'après les tests réels à ce
-      jour.
-      **Recherche web faite (2026-09-06), pas de contournement propre trouvé** : confirme le
-      mécanisme général (U+FE0F force la présentation emoji, U+FE0E force le texte — Unicode
-      classe bien `✔`/`✖`/`☑` comme "texte par défaut sauf sélecteur explicite", mais `✅`/`⭐`
-      sont documentés comme "couleur par défaut", donc leur rendu monochrome ici est *encore plus*
-      hors norme), mais rien de spécifique à "générer du `.docx` par programme" ne donne de
-      contournement propre. Une piste existe (insérer ces symboles via la police Wingdings/Segoe
-      UI Symbol à un point de code "Private Use Area" plutôt que le caractère Unicode standard —
-      documentée pour un usage manuel dans Word, `support.microsoft.com`) mais **délibérément pas
-      retenue** : remplacerait un texte Unicode portable/copiable/accessible par un mapping
-      police-dépendant et fragile, pour un problème purement cosmétique sur une poignée de
-      symboles hérités — coût jugé disproportionné par rapport au bénéfice. **Fermé comme
-      limitation documentée**, pas de suivi prévu sauf si une piste plus propre apparaît.
-      Sources consultées : [Emoji Variation Selector — CodeJam](https://www.codejam.info/2021/11/emoji-variation-selector.html),
-      [Check mark sometimes black/white, sometimes green — Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/5150507/check-mark-is-sometimes-in-black-and-white-and-som),
-      [Insert a check mark symbol — Microsoft Support](https://support.microsoft.com/en-us/office/insert-a-check-mark-symbol-9f39c129-236e-45be-8c91-263b43dc1e1a).
-- [x] **La boîte de dialogue "champs qui peuvent faire référence à d'autres fichiers"** : confirmé
-      par le mainteneur — en cliquant "Activer la modification" (le fichier étant en mode protégé
-      car téléchargé), la boîte de dialogue de mise à jour des champs apparaît et **le TOC se peuple
-      correctement**. Comportement standard de Word (mode protégé + `updateFields`), pas un bug —
-      fermé.
-- [x] **Le TOC restait vide au premier lancement** — résolu par la clarification ci-dessus : le
-      "vide au lancement" constaté la première fois correspondait au mode protégé (avant le clic sur
-      "Activer la modification"), pas à un échec du mécanisme d'auto-rafraîchissement lui-même, qui
-      fonctionne bien une fois la modification activée. Fermé, pas de bug.
+- [x] **Emoji pas tous coloriés en vrai Word — fermé comme limitation documentée (2026-09-06)** :
+      hypothèse initiale (sélecteur U+FE0F manquant) infirmée par une revue de 31 symboles en vrai
+      Word. Partage empirique réel : `✅ ❌ ✔ ✖ ⭐ ☑` (+ keycaps) restent monochromes quel que soit
+      le sélecteur, tout le reste s'affiche en couleur — aucune propriété Unicode interrogeable
+      n'explique ce partage, probablement une liste Microsoft figée (héritage Wingdings). Recherche
+      web faite, pas de contournement propre trouvé sans sacrifier la portabilité du texte. Le fix
+      U+FE0F est conservé (inoffensif) mais sa documentation ne prétend plus régler ces 6 symboles.
+- [x] **TOC vide au premier lancement — pas un bug, fermé** : mode protégé de Word (fichier
+      téléchargé) ; se peuple correctement après "Activer la modification".
 - [ ] **Connecteurs non attachés sur 2 arêtes précises d'un graphe biparti quasi-complet**
       (`crossing-stress-bipartite.docx`, item 5) : A1→B3 et A3→B2 ne suivent pas leurs boîtes quand
       on les déplace, alors que les autres arêtes du même fichier restent bien attachées. Fixture
