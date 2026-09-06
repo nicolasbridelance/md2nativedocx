@@ -86,6 +86,7 @@ export interface LayoutOptions {
   lineSpacing?: string;
   justify?: string;
   accentColor?: string;
+  tableHeaderColor?: string;
   footerPageNumber?: boolean;
   /** Mirrors `md2nativedocx.layout.landscapeTables` (spec §1.9/§2.3, "Lot 5").
    * Grouped with the rest of Lot 1 (not TOC/emoji): the CLI needs the
@@ -152,6 +153,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (layout.lineSpacing) env.MD2NATIVEDOCX_LINE_SPACING = layout.lineSpacing;
     if (layout.justify) env.MD2NATIVEDOCX_JUSTIFY = layout.justify;
     if (layout.accentColor) env.MD2NATIVEDOCX_ACCENT_COLOR = layout.accentColor;
+    if (layout.tableHeaderColor) env.MD2NATIVEDOCX_TABLE_HEADER_COLOR = layout.tableHeaderColor;
     if (layout.footerPageNumber === true) env.MD2NATIVEDOCX_FOOTER_PAGE_NUMBER = '1';
     if (layout.landscapeTables === true) env.MD2NATIVEDOCX_LANDSCAPE_TABLES = '1';
   }

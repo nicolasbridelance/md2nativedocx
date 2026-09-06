@@ -24,7 +24,7 @@ const REFERENCE_DOC = fileURLToPath(new URL('../assets/reference.docx', import.m
 // --- resolvePageSize ---
 
 test('resolvePageSize: portrait keeps width < height for every known format', () => {
-  for (const pageSize of ['A4', 'Letter', 'Legal']) {
+  for (const pageSize of ['A3', 'A4', 'Letter', 'Legal']) {
     const { w, h, orientation } = resolvePageSize(pageSize, 'portrait');
     assert.equal(orientation, 'portrait');
     assert.ok(w < h, `${pageSize} portrait should have w < h`);
@@ -141,15 +141,55 @@ test('patchStyles: line spacing preserves w:after while changing w:line/w:lineRu
   assert.ok(out.includes('<w:spacing w:after="160" w:line="480" w:lineRule="auto" />'));
 });
 
-test('patchStyles: justify "both" inserts w:jc, justify "left"/undefined is a no-op', () => {
-  const justified = patchStyles(STYLES_FIXTURE, { justify: 'both' });
-  assert.ok(justified.includes('<w:jc w:val="both" />'));
+test('patchStyles: justify "both"/"right"/"center" insert w:jc, "left"/undefined is a no-op', () => {
+  for (const justify of ['both', 'right', 'center']) {
+    const out = patchStyles(STYLES_FIXTURE, { justify });
+    assert.ok(out.includes(`<w:jc w:val="${justify}" />`));
+  }
   const untouched = patchStyles(STYLES_FIXTURE, { justify: 'left' });
   assert.equal(untouched, STYLES_FIXTURE);
 });
 
 test('patchStyles: no options is a byte-identical no-op', () => {
   assert.equal(patchStyles(STYLES_FIXTURE, {}), STYLES_FIXTURE);
+});
+
+const STYLES_FIXTURE_ACCENT_TABLE =
+  '<w:styles>' +
+  '<w:style w:type="paragraph" w:styleId="Heading1"><w:rPr><w:color w:val="4472C4" w:themeColor="accent1"/></w:rPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="Title"><w:rPr><w:color w:val="2E5395" w:themeColor="accent1" w:themeShade="B5"/></w:rPr></w:style>' +
+  '<w:style w:type="character" w:styleId="Hyperlink"><w:rPr><w:color w:val="4472C4" w:themeColor="accent1"/></w:rPr></w:style>' +
+  '<w:style w:type="table" w:default="1" w:styleId="Table">' +
+  '<w:tblStylePr w:type="firstRow"><w:tcPr><w:tcBorders><w:bottom w:val="single"/></w:tcBorders></w:tcPr></w:tblStylePr>' +
+  '</w:style>' +
+  '</w:styles>';
+
+test('patchStyles: accentColor rewrites every themeColor="accent1" literal fallback, including shaded variants', () => {
+  const out = patchStyles(STYLES_FIXTURE_ACCENT_TABLE, { accentColor: 'ff00aa' });
+  const matches = [...out.matchAll(/w:themeColor="accent1"/g)];
+  assert.equal(matches.length, 3, 'Heading1 + Title + Hyperlink should all still reference accent1');
+  assert.ok(!out.includes('4472C4'), 'plain accent1 fallbacks must be replaced');
+  assert.ok(!out.includes('2E5395'), 'shaded accent1 fallback must be replaced too (flattened, not re-shaded)');
+  assert.ok((out.match(/w:val="FF00AA"/g) || []).length === 3, 'all 3 colors rewritten to the new accent, uppercased');
+});
+
+test('patchStyles: an invalid accentColor leaves themeColor="accent1" fallbacks untouched', () => {
+  const out = patchStyles(STYLES_FIXTURE_ACCENT_TABLE, { accentColor: 'nope' });
+  assert.ok(out.includes('4472C4'));
+});
+
+test('patchStyles: tableHeaderColor adds w:shd to the Table style\'s firstRow tcPr without disturbing tcBorders', () => {
+  const out = patchStyles(STYLES_FIXTURE_ACCENT_TABLE, { tableHeaderColor: 'abcdef' });
+  assert.match(out, /<w:shd w:val="clear" w:color="auto" w:fill="ABCDEF"\/>/);
+  assert.ok(out.includes('<w:tcBorders><w:bottom w:val="single"/></w:tcBorders>'), 'existing borders must survive');
+});
+
+test('patchStyles: tableHeaderColor replaces (not duplicates) an existing w:shd', () => {
+  const once = patchStyles(STYLES_FIXTURE_ACCENT_TABLE, { tableHeaderColor: '111111' });
+  const twice = patchStyles(once, { tableHeaderColor: '222222' });
+  assert.equal((twice.match(/<w:shd\b/g) || []).length, 1);
+  assert.ok(twice.includes('w:fill="222222"'));
+  assert.ok(!twice.includes('w:fill="111111"'));
 });
 
 // --- patchSectPr ---

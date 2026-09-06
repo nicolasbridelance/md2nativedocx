@@ -145,6 +145,7 @@ function layoutOptionsSetting(): LayoutOptions | undefined {
     lineSpacing: explicitSetting<string>(config, 'typography.lineSpacing'),
     justify: explicitSetting<string>(config, 'typography.justify'),
     accentColor: trimmedOrUndefined(explicitSetting<string>(config, 'typography.accentColor')),
+    tableHeaderColor: trimmedOrUndefined(explicitSetting<string>(config, 'typography.tableHeaderColor')),
     footerPageNumber: explicitSetting<boolean>(config, 'layout.footerPageNumber'),
     landscapeTables: explicitSetting<boolean>(config, 'layout.landscapeTables'),
   };

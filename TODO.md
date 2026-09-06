@@ -685,6 +685,72 @@ de la spec, §5.
         strictement inchangé) ; lint + typecheck propres partout.
 - [ ] Lot 6 (optionnel, non demandé explicitement) — numérotation automatique des titres (1.12),
       raffinements de style de tableau (1.11).
+- [x] **Panneau de config redesigné + 2 nouveaux réglages + un vrai bug corrigé (2026-09-06)** —
+      retour du mainteneur après la passe Lot 1-5 ci-dessus (`A3` manquant, polices en texte libre
+      sans suggestion, `justify` sans `right`/`center`, sélecteur de couleur peu convivial,
+      structure plate sans repli).
+      - **Bug réel trouvé en creusant "peut-on ajouter d'autres couleurs personnalisables ?"** :
+        `accentColor` ne patchait que `theme1.xml` (`a:accent1`) — chaque style qui référence cette
+        couleur (`Heading1`-`9`, `Hyperlink`) garde en plus un `w:val` littéral de secours
+        (`w:themeColor="accent1" w:val="4472C4"`), jamais mis à jour. Confirmé par rendu réel
+        (couleurs de pixels échantillonnées, pas juste l'XML relu) : **LibreOffice ignore
+        purement et simplement le thème patché et affiche l'ancien bleu** pour les titres et les
+        liens — un vrai défaut préexistant, pas juste un risque théorique, découvert en implémentant
+        la demande du mainteneur plutôt que signalé par lui. Corrigé
+        (`referenceDocBuilder.mjs`'s nouvelle `patchAccentColorFallbacks()`) : réécrit le `w:val` de
+        tout `w:color` référençant `themeColor="accent1"`, y compris les variantes `themeShade`
+        (`Title`/`TOCHeading`) — celles-ci perdent leur teinte plus foncée calculée par Word
+        (simplification documentée : reproduire exactement l'algorithme de shade de Word n'a pas été
+        tenté) mais restent cohérentes avec la couleur choisie plutôt que de rester bleu. Reverifié
+        par rendu réel après fix : titres + lien hypertexte bien dans la couleur custom.
+      - **`A3` ajouté** à `layout.pageSize` (`PAGE_SIZES_TWIPS.A3 = {w:16838,h:23811}`, valeur
+        standard).
+      - **`justify` étendu** à `right`/`center` (en plus de `left`/`both`) — `patchStyles()`
+        généralisé (un seul `JUSTIFY_VALUES` set plutôt qu'un `if === 'both'` en dur).
+      - **Nouveau réglage `typography.tableHeaderColor`** (hex, vide = pas de remplissage) — patch
+        le `<w:tblStylePr w:type="firstRow">` du style de table `Table` par défaut de Pandoc (déjà
+        présent avec juste une bordure basse, jamais de remplissage) via un nouveau `<w:shd>`.
+      - **Panneau (`configPanelHtml.ts`) redesigné** : "Réglages rapides" toujours visibles en haut
+        (macro "modèle de police" — 4 presets Word 2007/2016/2025/LibreOffice qui posent
+        `headingFont`+`bodyFont` ensemble ; macro "mise en page" — 4 presets page+orientation+marges
+        ; pastilles de couleur d'accent cliquables) + chaque groupe (Mise en page/Typographie/
+        Structure/Emoji/Avancé) devient un `<details>` replié par défaut avec son propre bouton
+        "Réinitialiser cette section", plus un bouton global "Tout réinitialiser" — les deux
+        n'écrivent que `undefined` sur les clés concernées (`configPanel.ts`'s nouveau message
+        `reset`) et laissent le mécanisme déjà existant (`onDidChangeConfiguration` → re-rendu
+        complet du panneau) faire le travail de rafraîchissement, pas de re-synchronisation DOM
+        manuelle nécessaire. Police (titre/corps) : liste déroulante de polices courantes
+        Word/LibreOffice + une option "Personnalisé…" qui révèle le champ texte existant (jamais
+        une liste validée — ni ce poste ni, surtout, la machine qui ouvrira le `.docx` plus tard, ne
+        peut être interrogée sur ses polices installées). Couleur d'accent et couleur d'en-tête de
+        tableau : champ hex existant conservé + `<input type=color>` natif (zéro dépendance) +
+        pastilles d'exemple, les 3 synchronisés en JS. Nouveau bouton "Parcourir…" pour
+        `referenceDocument` (`vscode.window.showOpenDialog`, filtré `.docx`) plutôt qu'un chemin
+        tapé à la main.
+      - **Délibérément pas fait, demande explicite du mainteneur d'en garder trace séparément** :
+        une couleur personnalisable pour le fond des boîtes de sous-graphe dans les diagrammes
+        (`SUBGRAPH_FILL`/`SUBGRAPH_LINE`, `packages/core/src/translator/ooxml-translator.ts`) —
+        toucherait l'API publique de `packages/core`, même catégorie d'escalade que
+        `maxDrawingCx`/`maxDrawingCy` en son temps (voir plus haut dans ce fichier). Pas commencé.
+      - **Aussi pas fait, hors du périmètre demandé cette passe** : le manque de multilinguisme du
+        panneau lui-même (labels codés en dur en français, indépendants de la langue de VS Code) et
+        des réglages Phase 8 dans les 5 `package.nls.<locale>.json` traduits (0 occurrence de
+        `layout.pageSize` etc. trouvée en grep) — diagnostiqué cette session, chantier à part vu sa
+        taille (traduire 5 fichiers + apprendre à `configPanel.ts` à préférer
+        `package.nls.<locale>.json` à `package.nls.json` quand il existe), pas inclus dans cette
+        passe.
+      - Tests : `packages/cli/test/reference-doc-builder.test.mjs` (+8 tests : A3 dans la boucle
+        `resolvePageSize`, `justify` right/center, fix `accentColor`/shaded variants,
+        `tableHeaderColor`, idempotence), `packages/vscode-extension/test/unit/configPanelHtml.test.ts`
+        (+8 tests : détails repliés + boutons reset, A3/right/center, presets police/page avec
+        reverse-match vers "custom", dropdown police avec champ manuel conditionnel, couleur d'en-tête
+        de tableau, bouton Parcourir). Vérifié aussi par rendu réel LibreOffice (pas juste les tests
+        unitaires) : accentColor sur titre+lien, tableHeaderColor, justify=right, pageSize=A3, tous
+        corrects sur un export réel. 471 tests monorepo au total (112 cli + 293 core + 15 pandoc-filter +
+        51 vscode-extension), tous verts ; lint + typecheck propres partout.
+      - **Reste à faire** : re-vérification en vrai Word demandée au mainteneur (voir
+        `test-corpus/word-verification/CHECKLIST.md` "Round 2", en particulier le préréglage de
+        marges "moderate" contre le vrai preset Word).
 
 ---
 

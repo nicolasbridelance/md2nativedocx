@@ -87,6 +87,7 @@ function readLayoutOptionsFromEnv() {
     lineSpacing: str('MD2NATIVEDOCX_LINE_SPACING'),
     justify: str('MD2NATIVEDOCX_JUSTIFY'),
     accentColor: str('MD2NATIVEDOCX_ACCENT_COLOR'),
+    tableHeaderColor: str('MD2NATIVEDOCX_TABLE_HEADER_COLOR'),
     // Lot 1 fast-follow (spec §1.13): footer with a page number. Patches the
     // *reference* doc (unlike TOC's updateFields, see tocEnabled's doc
     // comment below) — confirmed empirically that Pandoc DOES carry over a

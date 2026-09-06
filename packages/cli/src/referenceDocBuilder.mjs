@@ -49,6 +49,7 @@ import { join } from 'node:path';
  * OOXML values used verbatim by Word/LibreOffice — not an assumption, unlike
  * the margin presets below. */
 export const PAGE_SIZES_TWIPS = {
+  A3: { w: 16838, h: 23811 },
   A4: { w: 11906, h: 16838 },
   Letter: { w: 12240, h: 15840 },
   Legal: { w: 12240, h: 20160 },
@@ -176,35 +177,108 @@ export function patchTheme(themeXml, { headingFont, bodyFont, accentColor } = {}
   return out;
 }
 
+/** `w:jc`'s (`ST_Jc`) own valid values that this project's `justify` setting
+ * maps onto 1:1 — `'left'` (the setting's default) intentionally has no
+ * entry here since it means "don't write a `w:jc` at all, Word's own
+ * default is already left-aligned", same as before `right`/`center` existed. */
+const JUSTIFY_VALUES = new Set(['both', 'right', 'center']);
+
 /**
- * Patch `word/styles.xml`'s `<w:docDefaults>` block: base font size, line
- * spacing, and default justification. Scoped to that one block (extracted,
- * transformed, spliced back) so a `w:sz`/`w:spacing` elsewhere in the
- * stylesheet (e.g. a heading style's own override) is never touched.
+ * Patch `word/styles.xml`'s `<w:docDefaults>` block (base font size, line
+ * spacing, default justification) and, independently, the literal `w:val`
+ * color fallback on every style that references the theme's `accent1`
+ * (`w:themeColor="accent1"`) plus the `Table` style's header-row shading.
+ *
+ * The `docDefaults` part is scoped to that one block (extracted, transformed,
+ * spliced back) so a `w:sz`/`w:spacing` elsewhere in the stylesheet (e.g. a
+ * heading style's own override) is never touched. The accent/table-header
+ * parts operate on the whole document since the styles they touch
+ * (`Heading1`-`Heading9`, `Hyperlink`, `Table`) live outside `docDefaults`.
  */
-export function patchStyles(stylesXml, { fontSizeHalfPt, lineSpacing, justify } = {}) {
-  const match = stylesXml.match(/<w:docDefaults>[\s\S]*?<\/w:docDefaults>/);
-  if (!match) return stylesXml;
-  let block = match[0];
+export function patchStyles(stylesXml, { fontSizeHalfPt, lineSpacing, justify, accentColor, tableHeaderColor } = {}) {
+  let out = stylesXml;
 
-  if (fontSizeHalfPt !== undefined) {
-    block = block
-      .replace(/<w:sz w:val="\d+"\s*\/>/, `<w:sz w:val="${fontSizeHalfPt}" />`)
-      .replace(/<w:szCs w:val="\d+"\s*\/>/, `<w:szCs w:val="${fontSizeHalfPt}" />`);
+  const match = out.match(/<w:docDefaults>[\s\S]*?<\/w:docDefaults>/);
+  if (match) {
+    let block = match[0];
+
+    if (fontSizeHalfPt !== undefined) {
+      block = block
+        .replace(/<w:sz w:val="\d+"\s*\/>/, `<w:sz w:val="${fontSizeHalfPt}" />`)
+        .replace(/<w:szCs w:val="\d+"\s*\/>/, `<w:szCs w:val="${fontSizeHalfPt}" />`);
+    }
+
+    if (lineSpacing) {
+      block = block.replace(
+        /<w:spacing w:after="(\d+)" w:line="\d+" w:lineRule="auto"\s*\/>/,
+        `<w:spacing w:after="$1" w:line="${lineSpacing.line}" w:lineRule="${lineSpacing.rule}" />`,
+      );
+    }
+
+    if (JUSTIFY_VALUES.has(justify)) {
+      block = block.replace(/(<w:pPrDefault>\s*<w:pPr>)/, `$1<w:jc w:val="${justify}" />`);
+    }
+
+    out = out.replace(match[0], block);
   }
 
-  if (lineSpacing) {
-    block = block.replace(
-      /<w:spacing w:after="(\d+)" w:line="\d+" w:lineRule="auto"\s*\/>/,
-      `<w:spacing w:after="$1" w:line="${lineSpacing.line}" w:lineRule="${lineSpacing.rule}" />`,
-    );
+  if (accentColor) {
+    out = patchAccentColorFallbacks(out, accentColor);
+  }
+  if (tableHeaderColor) {
+    out = patchTableHeaderColor(out, tableHeaderColor);
   }
 
-  if (justify === 'both') {
-    block = block.replace(/(<w:pPrDefault>\s*<w:pPr>)/, `$1<w:jc w:val="both" />`);
-  }
+  return out;
+}
 
-  return stylesXml.replace(match[0], block);
+/**
+ * `Heading1`-`Heading9`/`Hyperlink`/`Title`/`TOCHeading` each carry a
+ * `<w:color w:themeColor="accent1" w:val="4472C4" .../>` — `w:val` is a
+ * cached literal fallback for a renderer that doesn't resolve theme colors
+ * live. Real Word resolves `w:themeColor` dynamically (so patching just
+ * `theme1.xml`'s `a:accent1`, which {@link patchTheme} already does, is in
+ * principle enough there), but **LibreOffice does not**: rendering a
+ * document with a patched theme but an unpatched literal fallback, the
+ * heading/hyperlink color visibly stayed the old default blue — confirmed by
+ * sampling actual rendered pixel colors, not just reading the XML. Patching
+ * every such literal `w:val` here (regardless of renderer) makes the
+ * accent color correct everywhere, not just in implementations that bother
+ * with live theme resolution.
+ *
+ * `Title`/`TOCHeading` use a *shaded* variant (`w:themeShade`, a darker tint
+ * of accent1) — recomputing Word's exact shade algorithm isn't attempted
+ * here; those two also just get the flat custom color instead of a computed
+ * darker tint, a deliberate, documented simplification (consistent color,
+ * slightly less tonal variety, rather than risking a wrong-guessed formula).
+ */
+function patchAccentColorFallbacks(stylesXml, accentColor) {
+  const safe = validHexColor(accentColor);
+  if (!safe) return stylesXml;
+  return stylesXml.replace(
+    /<w:color\s+[^>]*\bw:themeColor="accent1"[^>]*\/>/g,
+    (tag) => tag.replace(/w:val="[0-9A-Fa-f]{6}"/, `w:val="${safe}"`),
+  );
+}
+
+/**
+ * Shades the header row of every table (the `Table` style's
+ * `<w:tblStylePr w:type="firstRow">` conditional formatting — the same block
+ * Pandoc's default template already ships with just a bottom border, no
+ * fill) with a user-chosen background color. Adds a `<w:shd>` if none is
+ * present yet, or replaces an existing one — idempotent either way.
+ */
+function patchTableHeaderColor(stylesXml, tableHeaderColor) {
+  const safe = validHexColor(tableHeaderColor);
+  if (!safe) return stylesXml;
+  return stylesXml.replace(
+    /(<w:style[^>]*\bw:styleId="Table"[^>]*>[\s\S]*?<w:tblStylePr w:type="firstRow">[\s\S]*?<w:tcPr>)([\s\S]*?)(<\/w:tcPr>)/,
+    (whole, open, inner, close) => {
+      const shd = `<w:shd w:val="clear" w:color="auto" w:fill="${safe}"/>`;
+      const nextInner = /<w:shd\b[^>]*\/>/.test(inner) ? inner.replace(/<w:shd\b[^>]*\/>/, shd) : `${inner}${shd}`;
+      return `${open}${nextInner}${close}`;
+    },
+  );
 }
 
 /**
@@ -322,7 +396,7 @@ export function patchSettings(settingsXml, { toc } = {}) {
 export function buildReferenceDoc(basePath, rawOptions = {}) {
   const {
     pageSize, orientation, margins, marginsCustomCm,
-    headingFont, bodyFont, fontSizePt, lineSpacing, justify, accentColor,
+    headingFont, bodyFont, fontSizePt, lineSpacing, justify, accentColor, tableHeaderColor,
     footerPageNumber, landscapeTables,
   } = rawOptions;
 
@@ -346,7 +420,12 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
     pageSize !== undefined || orientation !== undefined || margins !== undefined || needsFooter || landscapeTables === true;
   const needsTheme = headingFont !== undefined || bodyFont !== undefined || accentColor !== undefined;
   const resolvedLineSpacing = resolveLineSpacing(lineSpacing);
-  const needsStyles = fontSizePt !== undefined || resolvedLineSpacing !== null || justify === 'both';
+  const needsStyles =
+    fontSizePt !== undefined ||
+    resolvedLineSpacing !== null ||
+    JUSTIFY_VALUES.has(justify) ||
+    accentColor !== undefined ||
+    tableHeaderColor !== undefined;
 
   if (!needsSectPr && !needsTheme && !needsStyles) return null;
 
@@ -380,7 +459,13 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
       const fontSizeHalfPt = fontSizePt !== undefined ? resolveFontSizeHalfPt(fontSizePt) : undefined;
       writeFileSync(
         p,
-        patchStyles(readFileSync(p, 'utf8'), { fontSizeHalfPt, lineSpacing: resolvedLineSpacing, justify }),
+        patchStyles(readFileSync(p, 'utf8'), {
+          fontSizeHalfPt,
+          lineSpacing: resolvedLineSpacing,
+          justify,
+          accentColor,
+          tableHeaderColor,
+        }),
         'utf8',
       );
     }

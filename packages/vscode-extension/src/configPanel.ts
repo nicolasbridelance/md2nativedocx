@@ -85,6 +85,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       lineSpacing: config.get<string>('typography.lineSpacing', 'default'),
       justify: config.get<string>('typography.justify', 'left'),
       accentColor: config.get<string>('typography.accentColor', ''),
+      tableHeaderColor: config.get<string>('typography.tableHeaderColor', ''),
       tocEnabled: config.get<boolean>('toc.enabled', false),
       tocDepth: config.get<number>('toc.depth', 3),
       emojiForceColorFont: config.get<boolean>('emoji.forceColorFont', true),
@@ -102,14 +103,57 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
 
   private handleMessage(message: unknown): void {
     if (!message || typeof message !== 'object') return;
-    const msg = message as { type?: string; key?: string; value?: unknown; scope?: string };
+    const msg = message as {
+      type?: string;
+      key?: string;
+      value?: unknown;
+      scope?: string;
+      updates?: { key: string; value: unknown }[];
+      keys?: string[];
+    };
     if (msg.type === 'scope') {
       if (msg.scope === 'user' || msg.scope === 'workspace') this.scope = msg.scope;
       return;
     }
+    const target = msg.scope === 'workspace' ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+    const config = vscode.workspace.getConfiguration('md2nativedocx');
     if (msg.type === 'update' && typeof msg.key === 'string') {
-      const target = msg.scope === 'workspace' ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
-      void vscode.workspace.getConfiguration('md2nativedocx').update(msg.key, msg.value, target);
+      void config.update(msg.key, msg.value, target);
+      return;
     }
+    // A macro control (font/page preset) writes several real settings at
+    // once from a single dropdown pick — one `update` per key, same target.
+    if (msg.type === 'updateMany' && Array.isArray(msg.updates)) {
+      for (const { key, value } of msg.updates) {
+        if (typeof key === 'string') void config.update(key, value, target);
+      }
+      return;
+    }
+    // "Reset this section" / "Reset all" — `undefined` removes the override
+    // at this target, falling back to the schema default (or a broader
+    // scope's value), same as clicking the native gear icon's "Reset
+    // Setting" in Settings UI.
+    if (msg.type === 'reset' && Array.isArray(msg.keys)) {
+      for (const key of msg.keys) {
+        if (typeof key === 'string') void config.update(key, undefined, target);
+      }
+      return;
+    }
+    if (msg.type === 'browseReferenceDocument') {
+      void this.browseReferenceDocument(target);
+      return;
+    }
+  }
+
+  private async browseReferenceDocument(target: vscode.ConfigurationTarget): Promise<void> {
+    const picked = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      filters: { 'Word document': ['docx'] },
+      openLabel: 'Utiliser comme gabarit',
+    });
+    const uri = picked?.[0];
+    if (!uri) return;
+    const path = vscode.workspace.asRelativePath(uri, false);
+    await vscode.workspace.getConfiguration('md2nativedocx').update('referenceDocument', path, target);
   }
 }

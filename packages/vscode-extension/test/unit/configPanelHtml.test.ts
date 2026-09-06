@@ -19,6 +19,7 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     lineSpacing: 'default',
     justify: 'left',
     accentColor: '',
+    tableHeaderColor: '',
     tocEnabled: false,
     tocDepth: 3,
     emojiForceColorFont: true,
@@ -110,6 +111,66 @@ test('buildConfigPanelHtml hides the custom-margins grid unless margins is "cust
 test('buildConfigPanelHtml reflects the scope toggle', () => {
   const html = buildConfigPanelHtml(baseState({ scope: 'workspace' }), describe, 'n');
   assert.match(html, /value="workspace" checked/);
+});
+
+// --- 2026-09-06 redesign: macros, collapsible groups, reset, font/color pickers ---
+
+test('buildConfigPanelHtml renders each group as a closed <details> with its own reset button', () => {
+  const html = buildConfigPanelHtml(baseState(), describe, 'n');
+  const detailsCount = (html.match(/<details class="group">/g) || []).length;
+  assert.equal(detailsCount, 5, 'one <details> per group, none pre-opened');
+  assert.ok(!html.includes('<details class="group" open'), 'groups must be closed by default');
+  assert.equal((html.match(/class="reset-btn"/g) || []).length, 5, 'one reset button per group');
+  assert.ok(html.includes('id="reset-all"'), 'a global reset-all button must exist');
+});
+
+test('buildConfigPanelHtml includes A3 in the page size options and right/center in justify', () => {
+  const html = buildConfigPanelHtml(baseState(), describe, 'n');
+  assert.match(html, /<option value="A3">/);
+  assert.match(html, /<option value="right">/);
+  assert.match(html, /<option value="center">/);
+});
+
+test('buildConfigPanelHtml includes the font preset macro, pre-selecting a match and falling back to custom', () => {
+  const matched = buildConfigPanelHtml(baseState({ headingFont: 'Cambria', bodyFont: 'Calibri' }), describe, 'n');
+  assert.match(matched, /<option value="word2007"[^>]* selected>/);
+  const custom = buildConfigPanelHtml(baseState({ headingFont: 'Papyrus', bodyFont: '' }), describe, 'n');
+  assert.match(custom, /<option value="custom" selected>/);
+});
+
+test('buildConfigPanelHtml includes the page preset macro, pre-selecting a match and falling back to custom', () => {
+  const matched = buildConfigPanelHtml(
+    baseState({ pageSize: 'A3', orientation: 'landscape', margins: 'normal' }),
+    describe,
+    'n',
+  );
+  assert.match(matched, /<option value="presentation-a3"[^>]* selected>/);
+  const custom = buildConfigPanelHtml(baseState({ pageSize: 'Legal', orientation: 'landscape', margins: 'wide' }), describe, 'n');
+  assert.match(custom, /id="page-preset"[^>]*>[\s\S]*?<option value="custom" selected>/);
+});
+
+test('buildConfigPanelHtml shows the manual font field only when the value is not a curated choice', () => {
+  const known = buildConfigPanelHtml(baseState({ headingFont: 'Georgia' }), describe, 'n');
+  const knownStart = known.indexOf('data-choice-target="typography.headingFont"');
+  assert.match(known.slice(knownStart, knownStart + 900), /class="manual-font hidden"/, 'a curated font value should hide the manual input');
+
+  const custom = buildConfigPanelHtml(baseState({ headingFont: 'Papyrus' }), describe, 'n');
+  const customStart = custom.indexOf('data-choice-target="typography.headingFont"');
+  const customSlice = custom.slice(customStart, customStart + 900);
+  assert.match(customSlice, /<option value="__custom__" selected>/);
+  assert.match(customSlice, /class="manual-font"\/>/, 'an uncurated value should show the manual input (no "hidden" class)');
+});
+
+test('buildConfigPanelHtml renders tableHeaderColor as a color row with swatches, escaping the hex value', () => {
+  const html = buildConfigPanelHtml(baseState({ tableHeaderColor: 'abcdef' }), describe, 'n');
+  assert.match(html, /data-key="typography\.tableHeaderColor" value="abcdef"/);
+  assert.match(html, /data-color-for="typography\.tableHeaderColor" value="#abcdef"/);
+  assert.ok(html.includes('data-swatch-for="typography.tableHeaderColor"'));
+});
+
+test('buildConfigPanelHtml includes a "Parcourir…" button for referenceDocument', () => {
+  const html = buildConfigPanelHtml(baseState(), describe, 'n');
+  assert.ok(html.includes('id="browse-reference-doc"'));
 });
 
 test('every tooltip is produced via the injected describe() function (single source of truth, spec §3.2)', () => {

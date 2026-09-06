@@ -112,7 +112,7 @@
         },
         "md2nativedocx.layout.pageSize": {
           "type": "string",
-          "enum": ["A4", "Letter", "Legal"],
+          "enum": ["A3", "A4", "Letter", "Legal"],
           "default": "A4",
           "markdownDescription": "%configuration.layout.pageSize.markdownDescription%"
         },
@@ -195,7 +195,7 @@
         },
         "md2nativedocx.typography.justify": {
           "type": "string",
-          "enum": ["left", "both"],
+          "enum": ["left", "right", "center", "both"],
           "default": "left",
           "markdownDescription": "%configuration.typography.justify.markdownDescription%"
         },
@@ -204,6 +204,12 @@
           "default": "",
           "pattern": "^$|^[0-9A-Fa-f]{6}$",
           "markdownDescription": "%configuration.typography.accentColor.markdownDescription%"
+        },
+        "md2nativedocx.typography.tableHeaderColor": {
+          "type": "string",
+          "default": "",
+          "pattern": "^$|^[0-9A-Fa-f]{6}$",
+          "markdownDescription": "%configuration.typography.tableHeaderColor.markdownDescription%"
         },
         "md2nativedocx.layout.footerPageNumber": {
           "type": "boolean",
