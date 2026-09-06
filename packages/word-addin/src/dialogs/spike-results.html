@@ -1,0 +1,97 @@
+<!-- Résultats des 3 spikes ADR 0008 — panneau copiable ouvert par le bouton [Dev] du ruban. -->
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>Résultats des spikes — ADR 0008</title>
+    <style>
+      body {
+        font-family: Segoe UI, -apple-system, sans-serif;
+        margin: 0;
+        padding: 16px;
+        color: #201f1e;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 4px;
+      }
+      .timestamp {
+        color: #605e5c;
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      .spike {
+        margin-bottom: 12px;
+        padding: 8px 10px;
+        border-left: 4px solid #8a8886;
+        background: #f3f2f1;
+      }
+      .spike.ok {
+        border-left-color: #107c10;
+      }
+      .spike.fail {
+        border-left-color: #a4262c;
+      }
+      .spike h2 {
+        font-size: 13px;
+        margin: 0 0 4px;
+      }
+      .spike pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+        margin: 4px 0 0;
+      }
+      .reminder {
+        font-size: 12px;
+        background: #fff4ce;
+        border-left: 4px solid #ffb900;
+        padding: 8px 10px;
+        margin-bottom: 16px;
+      }
+      button {
+        font-size: 13px;
+        padding: 6px 14px;
+        cursor: pointer;
+      }
+      #copy-status {
+        font-size: 12px;
+        color: #107c10;
+        margin-left: 8px;
+      }
+      #raw {
+        width: 100%;
+        box-sizing: border-box;
+        height: 160px;
+        font-family: Consolas, monospace;
+        font-size: 11px;
+        margin-top: 16px;
+      }
+      #no-data {
+        display: none;
+      }
+    </style>
+</head>
+
+<body>
+  <h1>Résultats des spikes — ADR 0008</h1>
+  <div class="timestamp" id="timestamp"></div>
+
+  <div id="no-data">
+    <p>Aucun résultat trouvé (ni dans l'URL, ni dans localStorage). Cliquez de nouveau sur le
+    bouton "[Dev] Vérifier les spikes" du ruban.</p>
+  </div>
+
+  <div id="results"></div>
+
+  <div>
+    <button id="copy-btn">Copier tout (JSON)</button>
+    <span id="copy-status"></span>
+  </div>
+  <textarea id="raw" readonly></textarea>
+</body>
+
+</html>

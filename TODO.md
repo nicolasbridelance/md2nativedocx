@@ -250,9 +250,11 @@ ADR 0001/0002 — condensé dans `docs/history/TODO_ARCHIVE.md`.
 Cadrage fonctionnel (conversion Word↔Markdown, deux modes CLI/Add-in) : `docs/specs/FUTURE_wordextension.md`.
 Cadrage technique du sens inverse OOXML→Mermaid (architecture, risques, futur-proofing) :
 `docs/specs/FUTURE_docx2mermaid_SPEC.md`. Cadrage de la coquille add-in elle-même (ruban vs menu
-contextuel, ce que la plateforme Office.js permet réellement, plan de spikes) : **nouveau**,
+contextuel, ce que la plateforme Office.js permet réellement, plan de spikes) :
 `docs/adr/0008-word-addin-ribbon-platform-spike.md`. Statut au 2026-09-06 : recherche plateforme
-faite, rien codé — **session dédiée à venir**, à démarrer par les 3 spikes ci-dessous.
+faite, **scaffold codé** (`packages/word-addin/`) — **bloqué sur les 3 spikes ci-dessous, qui
+demandent la main du mainteneur dans un vrai Word desktop** (voir "Comment lancer les spikes"
+après la liste).
 
 - [x] **Recherche plateforme Office Add-ins faite (2026-09-06)**, décision de pivot prise —
       détail complet et sources : ADR 0008. Résumé : clic droit natif "Copy as MD" **possible**
@@ -274,17 +276,44 @@ faite, rien codé — **session dédiée à venir**, à démarrer par les 3 spik
       Markdown→OOXML, voir `FUTURE_docx2mermaid_SPEC.md`).
 - [ ] **Spike 3 (nécessite un vrai Word)** : rendu/comportement visuel des 5 boutons du ruban dans
       un vrai Word desktop (pas juste Word Online).
-- [ ] **Scaffold du projet** (`npm create office-addin`, TypeScript, Word, add-in commands) avec
-      dès le départ les 3 outils d'autonomie retenus (détail ADR 0008) : `office-addin-manifest
-      validate` (schéma du manifeste), `office-addin-mock` (tests unitaires des appels Office.js
-      sans Word), réutilisation du validateur `dotnet` déjà dans ce repo (`scripts/oxml-validator/`)
-      sur les fragments OOXML produits avant `insertOoxml`. Un harnais minimal (un bouton qui log
-      les 3 spikes d'un coup dans un panneau copiable) doit accompagner le scaffold pour que la
-      vérification humaine dans un vrai Word se limite à "clique une fois, colle le résultat".
+- [x] **Scaffold du projet codé (2026-09-06)** : `packages/word-addin/` (nouveau membre du
+      workspace npm), généré via `generator-office` (TypeScript, Word, add-in commands) puis
+      adapté à la décision de l'ADR — plus de taskpane, un ruban à 6 boutons. Les 3 outils
+      d'autonomie retenus sont bien wired-in : `npm run validate` (`office-addin-manifest
+      validate`), `npm test` (unitaire via `office-addin-mock`, sans Word — voir
+      `test/unit/spikes.test.ts`), `npm run lint`/`typecheck`/`build` (webpack+babel). Le
+      validateur `dotnet` (`scripts/oxml-validator/`) n'est pas encore branché : rien ne produit
+      d'OOXML tant que "Coller en MD" n'est pas codé, voir l'ordre de construction plus bas.
+      Manifeste : 5 boutons de production (`Charger`, `Enregistrer sous`, `Couper`, `Copier`,
+      `Coller en MD`) avec des handlers **stub** qui ne font rien d'autre que prouver le câblage
+      bout-en-bout (manifeste → `Office.actions.associate` → handler → `event.completed()`) —
+      volontairement aucune logique de production tant que les spikes n'ont pas tranché (règle de
+      l'ADR §5) — plus un 6ᵉ bouton temporaire `[Dev] Vérifier les spikes` qui exécute les spikes
+      1 et 2 et ouvre un panneau copiable (`spike-results.html`) avec le résultat. Icône : mirroir
+      horizontal de `packages/vscode-extension/icon.svg` (même diamant scindé graphe/texte, sens
+      inversé — ce module va dans le sens texte→graphe).
+- [ ] **Spike 3 bis** : confirmer que `npm run lint`/`typecheck`/`test`/`build`/`validate` restent
+      verts après toute modification du scaffold (déjà vérifié une première fois le 2026-09-06).
 - [ ] **Ordre de construction recommandé une fois les spikes tranchés** : Coller en MD (réutilise
       le moteur existant tel quel, le moins cher) → Copier en MD (bouton ruban + nouveau
       convertisseur OOXML→Markdown) → Couper en MD (extension triviale de Copier) → Enregistrer
       sous/Charger un .md (réutilisent respectivement Copier/Coller à l'échelle du document entier).
+      Retirer le bouton `[Dev] Vérifier les spikes` une fois les spikes tranchés et les 5 boutons
+      réellement implémentés.
+
+**Comment lancer les spikes (à faire par le mainteneur, vrai Word desktop requis) :**
+
+```
+cd packages/word-addin
+npm run start   # office-addin-debugging : trust le certif dev-certs au premier lancement,
+                # ouvre Word et sideload l'add-in automatiquement
+```
+
+Onglet Accueil → groupe "Md2Docx" → bouton **[Dev] Vérifier les spikes**. Une boîte de dialogue
+s'ouvre avec le résultat des spikes 1 (presse-papiers) et 2 (`getOoxml()`), plus un bouton "Copier
+tout (JSON)". Pour le spike 3, confirmer à l'œil que les 5 autres boutons s'affichent et répondent
+au clic. Reporter les 3 résultats dans `docs/adr/0008-word-addin-ribbon-platform-spike.md` (statut
+en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sideloading.
 
 ## Phase 5+ — Autres types de diagrammes
 

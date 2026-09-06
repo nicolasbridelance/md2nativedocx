@@ -1,86 +1,107 @@
-# Handover — 2026-09-06 (planification add-in Word)
+# Handover — 2026-09-06 (add-in Word : scaffold codé, bloqué sur les spikes)
 
-One entry point for picking this project back up. Written at the end of a **planning-only**
-session — no code changed, no tests run. Supersedes the earlier 2026-09-05 handover for "what to
-do next"; check `git log`/`TODO.md` for anything newer than this file's date.
+One entry point for picking this project back up. Supersedes the earlier 2026-09-06 "planning-only"
+handover (same day, follow-up session) — that session only researched and decided; this one wrote
+the actual scaffold. Check `git log`/`TODO.md` for anything newer than this file's date.
 
 ## What happened this session
 
-The maintainer asked to scope a Word add-in around a ribbon with 5 buttons (Charger/Enregistrer
-sous/Couper/Copier/Coller en Markdown), replacing the one-line taskpane plan that had sat in
-`TODO.md`'s Phase 4 since the project started. Before committing to that shape, the Office
-Add-ins platform was researched against current Microsoft Learn docs (fetched 2026-09-06, not
-recalled from training data) — this changed the plan in two concrete ways, not just added detail:
+Picking up straight from ADR 0008 (ruban à 5 boutons décidé, rien codé, 3 spikes bloquants
+identifiés — full reasoning there, not repeated here), this session scaffolded the actual add-in
+project:
 
-- **Native right-click "Copy as MD" is genuinely buildable** (`OfficeMenu id="ContextMenuText"`),
-  but only when text is selected — no equivalent exists for "Paste MD" (cursor, no selection) or
-  for adding an entry to Word's native "Save As" dialog. Both are hard platform limits, not
-  implementation difficulty — confirmed by reading Microsoft's own manifest reference, not
-  assumed.
-- **Decision made**: a dedicated ribbon (5 buttons) instead of a menu-contextuel/ribbon mix, since
-  only 1 of the 5 actions could have lived in the native context menu anyway. Full reasoning,
-  sources, and the clipboard-risk breakdown (write is low-risk, read from a hidden function-command
-  runtime is the actual open question): **`docs/adr/0008-word-addin-ribbon-platform-spike.md`**
-  (new this session).
-
-All of this is now written into the repo (it started out only in the agent's personal memory,
-which is not part of the repo and invisible to a fresh session — caught and corrected mid-session
-when the maintainer asked "did you write all the documentation?"):
-
-- `docs/adr/0008-word-addin-ribbon-platform-spike.md` — the platform research, the ribbon decision,
-  the 3 required spikes, and the tooling plan (full detail, read this first).
-- `TODO.md`, "Phase 4 — Add-in Word (Office.js)" — rewritten from a 3-bullet stub into the actual
-  plan: pointers to ADR 0008 + the two pre-existing specs (`FUTURE_wordextension.md`,
-  `FUTURE_docx2mermaid_SPEC.md`), the 3 spikes as checkboxes, the scaffold/tooling step, and the
-  recommended build order (Coller → Copier → Couper → Enregistrer sous/Charger).
-- `TODO.md` also got a general cleanup this session (unrelated to the add-in, done at the
-  maintainer's request while preparing this handover): Phase 8, CI/CD, both closed incidents, and
-  the closed half of "Retours en attente de clarification" were condensed to short pointers, with
-  their full original text preserved verbatim in `docs/history/TODO_ARCHIVE.md`. `TODO.md` went
-  from 1127 to ~640 lines; nothing was deleted, only moved. If something you expect to find in
-  `TODO.md` looks shorter than you remember, it's in the archive under the matching section name.
+- **`packages/word-addin/`** — new npm workspace member, generated via `generator-office`
+  (`npm create office-addin` equivalent; TypeScript, Word host, add-in-commands project type),
+  then adapted to the ADR's decision: the generated taskpane was deleted entirely (no taskpane in
+  this design), the manifest rewritten for a dedicated ribbon group "Md2Docx" with **6 buttons**:
+  the 5 production buttons from the ADR (Charger `.md`, Enregistrer sous `.md`, Couper/Copier/
+  Coller en MD) plus one temporary dev-only button, `[Dev] Vérifier les spikes`.
+- **The 5 production buttons are stub handlers only** — each just logs "not implemented, blocked
+  on ADR 0008 spikes" and calls `event.completed()`. This is deliberate, not an oversight: ADR
+  0008 §5 says no production logic should be written on top of clipboard/`getOoxml()` behavior
+  until spikes 1-2 have run in a real Word desktop, and that hasn't happened yet.
+- **The spike harness button is real, working code** (`src/commands/commands.word.ts`'s
+  `runSpike1Clipboard`/`runSpike2Ooxml`/`collectSpikeResults`): it round-trips
+  `navigator.clipboard.writeText()`/`readText()`, calls `range.getOoxml()` on the current
+  selection via `Word.run`, and opens a dialog (`src/dialogs/spike-results.html`) rendering both
+  results plus a reminder to eyeball spike 3, with a "Copier tout (JSON)" button. Spike 3 (do the
+  5 buttons render/behave right?) isn't something code can check — the harness just prompts for a
+  manual look.
+- **The 3 autonomy tools from ADR 0008 §6 are wired in**, two of them proven working this session:
+  `office-addin-manifest validate manifest.xml` passes; `office-addin-mock`-based unit tests
+  (`test/unit/spikes.test.ts`, 4 tests, `npm test`) exercise the spike-harness logic without any
+  Office app open — including a hand-rolled `navigator.clipboard` stub, since the Clipboard API is
+  a Web API office-addin-mock doesn't cover. The third tool, the repo's existing `dotnet`
+  OOXML validator (`scripts/oxml-validator/`), is **not yet connected** — nothing in this package
+  produces OOXML yet (that starts with "Coller en MD", still blocked on spike 1).
+- **Icon**: `packages/word-addin/assets/icon.svg` is a horizontal mirror of
+  `packages/vscode-extension/icon.svg` (maintainer's suggestion, mid-session) — same split-diamond
+  graph/text mark, flipped left-right since this add-in is the reverse direction (Word → Markdown,
+  "text → graph" vs the VS Code extension's "graph → text"). Rasterized to the 5 PNG sizes the
+  manifest needs (16/32/64/80/128) plus `logo-filled.png` via `rsvg-convert`.
+- **Verified green this session**: `npm run validate` (manifest), `npm run typecheck`, `npm test`
+  (4/4), `npm run build` (webpack production), `npm run lint` (office-addin-lint — one real
+  finding fixed along the way, see below), all from `packages/word-addin/`; also confirmed the
+  whole monorepo's `npm run typecheck --workspaces`, `npm run test --workspaces`, and
+  `npm run build --workspaces` still pass with the new package included, and `npm run lint`
+  (root) still passes.
+- **Two non-obvious fixes made along the way, worth knowing about if you touch this package**:
+  - Root's `eslint .` (ESLint 8) crashed outright (`TypeError: Converting circular structure to
+    JSON`) when it tried to cascade into `packages/word-addin/.eslintrc.json`, because that
+    config's `eslint-plugin-office-addins@4.0.10` plugin is built against newer
+    `@typescript-eslint/utils` internals incompatible with ESLint 8's config validator — not just
+    noisy findings, a hard crash. Fixed by adding `"root": true` to the package's own
+    `.eslintrc.json` (stops the cascade) **and** excluding `packages/word-addin/` from the root
+    `.eslintrc.cjs` `ignorePatterns` (belt and suspenders — root's `eslint .` still walks the
+    directory tree even with the nested config's own `root: true`). Lint that package on its own
+    via `npm run lint -w packages/word-addin` (`office-addin-lint check`).
+  - `eslint-plugin-office-addins`'s `load-object-before-read` rule flags `ooxml.value` (in
+    `runSpike2Ooxml`) as needing an explicit `.load()` call first — this is a **false positive**:
+    `range.getOoxml()` returns an `OfficeExtension.ClientResult<string>`, whose `.value` is
+    populated by `context.sync()` alone (no `.load()` exists or is needed for it, per Microsoft's
+    own samples). The rule's static `getFunctions.json` list flags every Office.js method starting
+    with `get*` by name regardless of return type, so it can't distinguish a `ClientResult`-
+    returning method from a loadable `Range`/collection getter. Suppressed with a scoped
+    `eslint-disable-next-line` and an explanatory comment right above it — don't "fix" this by
+    adding a real `.load()` call, that would be wrong for the actual Office.js API.
 
 ## What's already in place from *before* this session (don't re-derive it)
 
+- `docs/adr/0008-word-addin-ribbon-platform-spike.md` — the platform research, the ribbon decision,
+  the 3 required spikes, and the tooling plan.
 - `docs/specs/FUTURE_wordextension.md` — functional spec for the reverse direction (Word→Markdown
   text/tables/lists, SmartArt/shapes→Mermaid), two usage modes (CLI/file, and Office.js add-in
   clipboard).
 - `docs/specs/FUTURE_docx2mermaid_SPEC.md` — technical architecture for the OOXML→Mermaid diagram
-  reconstruction specifically: risks (unanchored connectors, copy-paste ID duplication, new read-
-  side security surface), and futur-proofing already flagged for the *forward* translator
-  (`cNvPr`/`descr` carrying the original Mermaid id — already implemented, see `packages/core`'s
-  translator).
-- The existing `scripts/oxml-validator/` (dotnet, ADR 0007) — reusable as-is for validating any
-  OOXML fragment the new reverse converter or the forward engine would hand to `insertOoxml`.
+  reconstruction specifically.
+- The existing `scripts/oxml-validator/` (dotnet, ADR 0007) — reusable as-is once a converter
+  exists that hands fragments to `insertOoxml` (not yet the case).
 
 ## Not done / where a fresh session should start
 
-Nothing is coded. `TODO.md`'s Phase 4 section is the punch list; in order:
-
-1. **Scaffold the add-in project** (`npm create office-addin`, TypeScript, Word, add-in commands),
-   with `office-addin-manifest validate` and `office-addin-mock` wired in from the start, plus a
-   minimal one-click spike harness (logs all 3 spikes' results to a copyable panel).
-2. **Run the 3 spikes in a real Word desktop** (not Word Online) — this needs the maintainer's
+1. **Run the 3 spikes in a real Word desktop (not Word Online)** — this needs the maintainer's
    hands, it cannot be done from this Linux sandbox (no headless Word, no Microsoft 365
-   credentials, no supported E2E automation pattern for Word — all confirmed by research this
-   session, see ADR 0008 §5):
-   - Does `navigator.clipboard.readText()` work from a function command in real Word desktop?
-   - What does `range.getOoxml()` actually return for ordinary Word content (headings/lists/
-     tables/bold-italic)?
-   - Do the 5 ribbon buttons render/behave as expected?
-3. **Build in this order** (cheapest/lowest-risk first): Coller en MD (reuses the existing
-   Markdown→OOXML engine wholesale) → Copier en MD (needs the new OOXML→Markdown reverse
-   converter, scoped by spike 2) → Couper en MD (trivial extension of Copier) → Enregistrer
-   sous/Charger un `.md` (reuse Copier/Coller at whole-document scope).
+   credentials, no supported E2E automation pattern for Word). Instructions are in `TODO.md`
+   under "Comment lancer les spikes": `cd packages/word-addin && npm run start`, click
+   **[Dev] Vérifier les spikes** on the Md2Docx ribbon group, read the dialog, report the 3
+   results back into ADR 0008 (spike 1: clipboard write+read from a function command; spike 2:
+   real shape of `getOoxml()`'s output; spike 3: do the 5 buttons render/behave correctly).
+2. **Build in this order once spikes are decided** (cheapest/lowest-risk first): Coller en MD
+   (reuses the existing Markdown→OOXML engine, once bundled for a browser runtime) → Copier en MD
+   (needs the new OOXML→Markdown reverse converter, scoped by spike 2) → Couper en MD (trivial
+   extension of Copier) → Enregistrer sous/Charger un `.md` (reuse Copier/Coller at whole-document
+   scope). Remove the `[Dev] Vérifier les spikes` button once the 5 real buttons are implemented.
+3. Wire the `dotnet` `scripts/oxml-validator/` into the new OOXML-producing path (Coller en MD)
+   once it exists — it isn't connected to anything in `packages/word-addin` yet.
 
 ## Where to look for more
 
-- `docs/adr/0008-word-addin-ribbon-platform-spike.md` — everything from this session, in full.
-- `TODO.md`, "Phase 4 — Add-in Word (Office.js)" — the punch list derived from it.
+- `docs/adr/0008-word-addin-ribbon-platform-spike.md` — the platform research and ribbon decision.
+- `TODO.md`, "Phase 4 — Add-in Word (Office.js)" — the punch list, including spike-running
+  instructions and current status per item.
+- `packages/word-addin/` — the scaffold itself; `src/commands/commands.word.ts` is the one file
+  that matters most (5 stubs + the real spike-harness logic).
 - `docs/specs/FUTURE_wordextension.md` / `FUTURE_docx2mermaid_SPEC.md` — the reverse-conversion
-  specs this plan builds on, written in earlier sessions.
-- `docs/history/TODO_ARCHIVE.md` — full detail of everything condensed out of `TODO.md` this
-  session (Phase 8, CI/CD, both incidents, closed clarification items), plus all prior history.
-- Previous handover content (Phase 8 shipped work, what's verified vs. still "à tester dans un
-  vrai Word") is preserved in git history (`git log -- HANDOVER.md`) — not repeated here since this
-  session didn't touch that code.
+  specs this plan builds on.
+- `docs/history/TODO_ARCHIVE.md` — pre-Phase-4 history condensed out of `TODO.md` in the prior
+  session (Phase 8, CI/CD, closed incidents), unrelated to this work.

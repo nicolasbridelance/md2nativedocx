@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
+  <Id>4271efc9-4be5-4c0e-8c9f-07bb53564022</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>md2nativedocx</ProviderName>
+  <DefaultLocale>fr-FR</DefaultLocale>
+  <DisplayName DefaultValue="Md2Docx Ribbon"/>
+  <Description DefaultValue="Charger, enregistrer, couper, copier et coller du contenu Word en Markdown, depuis un ruban dédié (ADR 0008)."/>
+  <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://github.com/nicolasbridelance/md2nativedocx"/>
+  <AppDomains>
+    <AppDomain>https://www.contoso.com</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Document"/>
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:3000/commands.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
+          </GetStarted>
+          <FunctionFile resid="Commands.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Md2DocxGroup">
+                <Label resid="Md2DocxGroup.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16x16"/>
+                  <bt:Image size="32" resid="Icon.32x32"/>
+                  <bt:Image size="80" resid="Icon.80x80"/>
+                </Icon>
+
+                <!-- The 5 production buttons decided in ADR 0008. Stub handlers only for now —
+                     see docs/adr/0008-word-addin-ribbon-platform-spike.md §5: no production logic
+                     until spikes 1-2 have run in a real Word desktop. -->
+                <Control xsi:type="Button" id="LoadMdButton">
+                  <Label resid="LoadMdButton.Label"/>
+                  <Supertip>
+                    <Title resid="LoadMdButton.Label"/>
+                    <Description resid="LoadMdButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>loadMarkdown</FunctionName>
+                  </Action>
+                </Control>
+
+                <Control xsi:type="Button" id="SaveAsMdButton">
+                  <Label resid="SaveAsMdButton.Label"/>
+                  <Supertip>
+                    <Title resid="SaveAsMdButton.Label"/>
+                    <Description resid="SaveAsMdButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>saveAsMarkdown</FunctionName>
+                  </Action>
+                </Control>
+
+                <Control xsi:type="Button" id="CutMdButton">
+                  <Label resid="CutMdButton.Label"/>
+                  <Supertip>
+                    <Title resid="CutMdButton.Label"/>
+                    <Description resid="CutMdButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>cutAsMarkdown</FunctionName>
+                  </Action>
+                </Control>
+
+                <Control xsi:type="Button" id="CopyMdButton">
+                  <Label resid="CopyMdButton.Label"/>
+                  <Supertip>
+                    <Title resid="CopyMdButton.Label"/>
+                    <Description resid="CopyMdButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>copyAsMarkdown</FunctionName>
+                  </Action>
+                </Control>
+
+                <Control xsi:type="Button" id="PasteMdButton">
+                  <Label resid="PasteMdButton.Label"/>
+                  <Supertip>
+                    <Title resid="PasteMdButton.Label"/>
+                    <Description resid="PasteMdButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>pasteMarkdown</FunctionName>
+                  </Action>
+                </Control>
+
+                <!-- Dev-only spike harness (ADR 0008 §6). Remove once spikes 1-3 have run in a
+                     real Word desktop and the 5 buttons above are actually implemented. -->
+                <Control xsi:type="Button" id="RunSpikesButton">
+                  <Label resid="RunSpikesButton.Label"/>
+                  <Supertip>
+                    <Title resid="RunSpikesButton.Label"/>
+                    <Description resid="RunSpikesButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>runSpikes</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="Md2Docx Ribbon"/>
+        <bt:String id="Md2DocxGroup.Label" DefaultValue="Md2Docx"/>
+        <bt:String id="LoadMdButton.Label" DefaultValue="Charger .md"/>
+        <bt:String id="SaveAsMdButton.Label" DefaultValue="Enregistrer sous .md"/>
+        <bt:String id="CutMdButton.Label" DefaultValue="Couper en MD"/>
+        <bt:String id="CopyMdButton.Label" DefaultValue="Copier en MD"/>
+        <bt:String id="PasteMdButton.Label" DefaultValue="Coller en MD"/>
+        <bt:String id="RunSpikesButton.Label" DefaultValue="[Dev] Vérifier les spikes"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Onglet Accueil, groupe Md2Docx : 5 boutons pas encore implémentés (bloqués sur les spikes de l'ADR 0008) et un bouton [Dev] Vérifier les spikes pour les exécuter."/>
+        <bt:String id="LoadMdButton.Tooltip" DefaultValue="Charger un fichier .md dans le document (pas encore implémenté — ADR 0008)."/>
+        <bt:String id="SaveAsMdButton.Tooltip" DefaultValue="Enregistrer le document en .md (pas encore implémenté — ADR 0008)."/>
+        <bt:String id="CutMdButton.Tooltip" DefaultValue="Couper la sélection et la mettre en Markdown dans le presse-papiers (pas encore implémenté — ADR 0008)."/>
+        <bt:String id="CopyMdButton.Tooltip" DefaultValue="Copier la sélection en Markdown dans le presse-papiers (pas encore implémenté — ADR 0008)."/>
+        <bt:String id="PasteMdButton.Tooltip" DefaultValue="Coller du Markdown depuis le presse-papiers (pas encore implémenté — ADR 0008)."/>
+        <bt:String id="RunSpikesButton.Tooltip" DefaultValue="Exécute les spikes 1 (presse-papiers) et 2 (getOoxml) et ouvre un panneau copiable avec les résultats. Bouton temporaire, voir ADR 0008 §6."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

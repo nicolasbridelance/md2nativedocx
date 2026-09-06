@@ -1,9 +1,14 @@
 # ADR 0008 — Add-in Word : ruban dédié plutôt que menu contextuel natif, plan de spikes
 
-- **Statut :** Recherche plateforme faite et décision de pivot prise (2026-09-06). **Rien codé** —
-  session dédiée à venir. Les 3 spikes listés en §4 nécessitent un vrai Word (desktop, pas Word
-  Online) et ne peuvent pas être exécutés depuis ce sandbox Linux (pas de Word installable, pas
-  d'identifiants Microsoft 365, pas de pattern d'automatisation E2E supporté pour Word).
+- **Statut :** Recherche plateforme faite et décision de pivot prise (2026-09-06). **Scaffold codé
+  le même jour** (`packages/word-addin/` — 5 boutons de production en stub + un bouton `[Dev]
+  Vérifier les spikes` qui exécute réellement les spikes 1 et 2 et affiche le résultat dans un
+  panneau copiable, voir `TODO.md`/`HANDOVER.md`). **Toujours bloqué sur les 3 spikes du §5**, qui
+  nécessitent un vrai Word (desktop, pas Word Online) et ne peuvent pas être exécutés depuis ce
+  sandbox Linux (pas de Word installable, pas d'identifiants Microsoft 365, pas de pattern
+  d'automatisation E2E supporté pour Word) — le bouton `[Dev]` existe précisément pour que cette
+  vérification humaine se limite à "lancer `npm run start`, cliquer une fois, coller le résultat
+  ici".
 - **Date :** 2026-09-06
 - **Décideur :** Nicolas Bridelance (mainteneur).
 
