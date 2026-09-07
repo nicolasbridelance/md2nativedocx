@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, copyFileSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createReadStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -61,6 +61,18 @@ export class PandocProvisionError extends Error {}
 
 export type PandocProvisionProgress = { phase: 'downloading'; fraction: number } | { phase: 'extracting' };
 
+/** Lets an IT department mirror the Pandoc release internally
+ * (`md2nativedocx.pandoc.downloadUrl`/`.sha256`) for a network that only
+ * allows an internal allowlist — `github.com` may not be reachable at all.
+ * The hash is still mandatory: this only relocates *where* the archive is
+ * fetched from, never removes the integrity check on what gets extracted
+ * and executed. Both fields must be provided together; `downloadUrl` must
+ * be `https://` (never allow a downgrade to plaintext HTTP). */
+export interface PandocDownloadOverride {
+  downloadUrl: string;
+  sha256: string;
+}
+
 /** `${process.platform}-${process.arch}`, or `null` if this exact pair has no
  * entry in {@link PANDOC_MANIFEST} — callers should fall back to requiring a
  * system-installed Pandoc in that case. */
@@ -98,7 +110,7 @@ function isPandocOnPath(): Promise<boolean> {
   });
 }
 
-async function downloadFile(url: string, destPath: string, onFraction?: (fraction: number) => void): Promise<void> {
+async function downloadViaFetch(url: string, destPath: string, onFraction?: (fraction: number) => void): Promise<void> {
   const response = await fetch(url, { redirect: 'follow' });
   if (!response.ok || !response.body) {
     throw new PandocProvisionError(`Download failed: HTTP ${response.status} for ${url}`);
@@ -122,36 +134,100 @@ async function downloadFile(url: string, destPath: string, onFraction?: (fractio
   }
 }
 
-async function provisionForPlatform(
+/** Fallback for `downloadViaFetch`: Node's global `fetch` ignores
+ * `HTTP_PROXY`/`HTTPS_PROXY` and the OS-level proxy configuration, which
+ * breaks on a typical corporate network. `curl` (present natively on
+ * Windows 10 1803+, macOS, and virtually every Linux distro — no new
+ * dependency, same reasoning as the `tar` call above) reads the system
+ * proxy and certificate store, so it succeeds in cases `fetch` can't. No
+ * fine-grained progress in this path — only reported once curl finishes. */
+async function downloadViaCurl(url: string, destPath: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    execFile('curl', ['-fL', '--proto', '=https', '--tlsv1.2', '-o', destPath, url], (err, _stdout, stderr) => {
+      if (err) {
+        reject(new PandocProvisionError(`curl download failed for ${url}: ${stderr || err.message}`));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function downloadFile(url: string, destPath: string, onFraction?: (fraction: number) => void): Promise<void> {
+  try {
+    await downloadViaFetch(url, destPath, onFraction);
+  } catch (fetchErr) {
+    try {
+      await downloadViaCurl(url, destPath);
+    } catch (curlErr) {
+      const fetchDetail = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      const curlDetail = curlErr instanceof Error ? curlErr.message : String(curlErr);
+      throw new PandocProvisionError(
+        `Download failed via fetch (${fetchDetail}) and via curl fallback (${curlDetail}) — ` +
+          `this network may require a proxy. See md2nativedocx.pandoc.downloadUrl to point at an internal mirror.`,
+      );
+    }
+  }
+}
+
+/** Platform keys whose cached binary was already re-verified once during
+ * this VS Code session (module-level — an extension host process lives for
+ * one session). A corporate EDR can quarantine/truncate a file *after* it
+ * was written and verified (async scan-on-write), so trusting `existsSync`
+ * forever would let a poisoned cache look "ready" until the export itself
+ * fails with a confusing error. Re-hashing the ~140MB binary is cheap
+ * relative to a whole VS Code session, but too slow to redo on every single
+ * export — once per session is the same tradeoff the source report
+ * recommended. */
+const reverifiedThisSession = new Set<string>();
+
+/** Drive a full download+verify+extract+cleanup provisioning cycle from the
+ * unit tests with a mock archive and a failing `rmSync` (missing_pandoc_bugfix.md
+ * §2/§9). Exported behind the public-API surface so the unit tests can reach
+ * it, while {@link ensurePandoc} stays the only entry point callers use. */
+export async function provisionForPlatform(
   cacheRootDir: string,
   platformKey: string,
   onProgress?: (event: PandocProvisionProgress) => void,
+  override?: PandocDownloadOverride,
 ): Promise<string> {
   const spec = PANDOC_MANIFEST[platformKey];
   if (!spec) {
     throw new PandocProvisionError(`No Pandoc manifest entry for platform "${platformKey}".`);
   }
+  if (override && !override.downloadUrl.startsWith('https://')) {
+    throw new PandocProvisionError('md2nativedocx.pandoc.downloadUrl must start with "https://".');
+  }
+  const downloadUrl = override?.downloadUrl ?? RELEASE_BASE_URL + spec.asset;
+  const expectedArchiveHash = override?.sha256 ?? spec.sha256;
+
   const dir = join(cacheRootDir, 'pandoc', PANDOC_VERSION, platformKey);
   const binPath = join(dir, platformKey.startsWith('win32') ? 'pandoc.exe' : 'pandoc');
   const sentinelPath = join(dir, '.verified');
 
   if (existsSync(binPath) && existsSync(sentinelPath)) {
-    return binPath;
+    if (reverifiedThisSession.has(binPath) || (await isCachedBinaryIntact(binPath, sentinelPath))) {
+      reverifiedThisSession.add(binPath);
+      return binPath;
+    }
+    // Cache was tampered with, truncated, or quarantined after being
+    // written — wipe it and fall through to a full, fresh provisioning
+    // rather than surfacing a confusing failure at export time.
+    rmSync(dir, { recursive: true, force: true });
   }
 
   mkdirSync(dir, { recursive: true });
   const tmpRoot = mkdtempSync(join(tmpdir(), 'md2nativedocx-pandoc-'));
   try {
-    const archivePath = join(tmpRoot, spec.asset);
+    const archiveName = downloadUrl.split('/').pop() || spec.asset;
+    const archivePath = join(tmpRoot, archiveName);
     onProgress?.({ phase: 'downloading', fraction: 0 });
-    await downloadFile(RELEASE_BASE_URL + spec.asset, archivePath, (fraction) =>
-      onProgress?.({ phase: 'downloading', fraction }),
-    );
+    await downloadFile(downloadUrl, archivePath, (fraction) => onProgress?.({ phase: 'downloading', fraction }));
 
-    const actualHash = await sha256File(archivePath);
-    if (actualHash !== spec.sha256) {
+    const actualArchiveHash = await sha256File(archivePath);
+    if (actualArchiveHash !== expectedArchiveHash) {
       throw new PandocProvisionError(
-        `Downloaded Pandoc archive failed checksum verification (expected ${spec.sha256}, got ${actualHash}) — refusing to run it.`,
+        `Downloaded Pandoc archive failed checksum verification (expected ${expectedArchiveHash}, got ${actualArchiveHash}) — refusing to run it.`,
       );
     }
 
@@ -174,10 +250,37 @@ async function provisionForPlatform(
     if (process.platform !== 'win32') {
       chmodSync(binPath, 0o755);
     }
-    writeFileSync(sentinelPath, actualHash);
+    // The sentinel stores the hash of the *installed* binary (not the
+    // archive above) so a later session can detect this exact file being
+    // corrupted/replaced in place — see isCachedBinaryIntact.
+    writeFileSync(sentinelPath, await sha256File(binPath));
+    reverifiedThisSession.add(binPath);
     return binPath;
   } finally {
-    rmSync(tmpRoot, { recursive: true, force: true });
+    try {
+      rmSync(tmpRoot, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup only: a transient lock on the temp dir (e.g. an
+      // EDR/antivirus scanning the freshly-extracted binary) must never
+      // undo a provisioning that already succeeded and was verified above —
+      // `finally` re-throwing here would silently discard the `return`.
+    }
+  }
+}
+
+/** Cheap existence/size check always; a full re-hash against the sentinel
+ * only the first time a given `binPath` is seen this session (see
+ * {@link reverifiedThisSession}). Exported so the unit tests can exercise the
+ * "cached binary corrupted/quarantined after write" path directly
+ * (missing_pandoc_bugfix.md §9). */
+export async function isCachedBinaryIntact(binPath: string, sentinelPath: string): Promise<boolean> {
+  try {
+    if (statSync(binPath).size === 0) return false;
+    const expectedHash = readFileSync(sentinelPath, 'utf8').trim();
+    const actualHash = await sha256File(binPath);
+    return actualHash === expectedHash;
+  } catch {
+    return false;
   }
 }
 
@@ -197,6 +300,7 @@ let inFlight: Promise<string> | null = null;
 export async function ensurePandoc(
   cacheRootDir: string,
   onProgress?: (event: PandocProvisionProgress) => void,
+  override?: PandocDownloadOverride,
 ): Promise<string> {
   if (await isPandocOnPath()) {
     return 'pandoc';
@@ -208,7 +312,7 @@ export async function ensurePandoc(
   }
 
   if (!inFlight) {
-    inFlight = provisionForPlatform(cacheRootDir, platformKey, onProgress).finally(() => {
+    inFlight = provisionForPlatform(cacheRootDir, platformKey, onProgress, override).finally(() => {
       inFlight = null;
     });
   }

@@ -11,6 +11,7 @@ import {
   resolveBlockForCursor,
   resolveOxmlValidatorDll,
   PandocMissingError,
+  PandocBlockedByPolicyError,
   BlockNotFoundError,
   ExportFailedError,
   type ExportResult,
@@ -183,21 +184,27 @@ async function resolveExportableUri(uri: vscode.Uri | undefined): Promise<vscode
 async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
   const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
-  await runExportFlow(async (progress) => {
-    const pandocBin = await resolvePandocBin(progress);
-    const referenceDoc = referenceDocumentSetting();
-    const smartArtEnabled = smartArtEnabledSetting();
-    const layout = layoutOptionsSetting();
-    warnIfLayoutOptionsIgnored(referenceDoc, layout);
-    const toc = tocEnabledSetting();
-    const tocDepth = tocDepthSetting();
-    const emojiFont = emojiFontEnabledSetting();
-    const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
-    const options = { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
-    return isMermaidFilePath(uri.fsPath)
-      ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
-      : exportDocument(uri.fsPath, outputDirectorySetting(), options);
-  });
+  await runExportFlow(
+    async (progress) => {
+      const pandocBin = await resolvePandocBin(progress);
+      const referenceDoc = referenceDocumentSetting();
+      const smartArtEnabled = smartArtEnabledSetting();
+      const layout = layoutOptionsSetting();
+      warnIfLayoutOptionsIgnored(referenceDoc, layout);
+      const toc = tocEnabledSetting();
+      const tocDepth = tocDepthSetting();
+      const emojiFont = emojiFontEnabledSetting();
+      const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
+      const options = { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
+      return isMermaidFilePath(uri.fsPath)
+        ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
+        : exportDocument(uri.fsPath, outputDirectorySetting(), options);
+    },
+    // "Réessayer" on a Pandoc-missing toast must restart this exact command
+    // with the same target URI (missing_pandoc_bugfix.md §4) — re-resolving
+    // the URI is fine (it's the active editor in the palette-invoked case).
+    () => handleExportDocument(uri),
+  );
 }
 
 async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): Promise<void> {
@@ -235,27 +242,69 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     }
   }
 
-  await runExportFlow(async (progress) => {
-    const pandocBin = await resolvePandocBin(progress);
-    const referenceDoc = referenceDocumentSetting();
-    const smartArtEnabled = smartArtEnabledSetting();
-    const layout = layoutOptionsSetting();
-    warnIfLayoutOptionsIgnored(referenceDoc, layout);
-    const toc = tocEnabledSetting();
-    const tocDepth = tocDepthSetting();
-    const emojiFont = emojiFontEnabledSetting();
-    const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
-    return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), {
-      pandocBin,
-      referenceDoc,
-      smartArtEnabled,
-      layout,
-      toc,
-      tocDepth,
-      emojiFont,
-      ...wordCompatibilityCheck,
-    });
-  });
+  await runExportFlow(
+    async (progress) => {
+      const pandocBin = await resolvePandocBin(progress);
+      const referenceDoc = referenceDocumentSetting();
+      const smartArtEnabled = smartArtEnabledSetting();
+      const layout = layoutOptionsSetting();
+      warnIfLayoutOptionsIgnored(referenceDoc, layout);
+      const toc = tocEnabledSetting();
+      const tocDepth = tocDepthSetting();
+      const emojiFont = emojiFontEnabledSetting();
+      const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
+      return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), {
+        pandocBin,
+        referenceDoc,
+        smartArtEnabled,
+        layout,
+        toc,
+        tocDepth,
+        emojiFont,
+        ...wordCompatibilityCheck,
+      });
+    },
+    // "Réessayer" on a Pandoc-missing toast must restart this exact command
+    // with the same target URI + block index (missing_pandoc_bugfix.md §4).
+    () => handleExportBlock(uri, blockIndex),
+  );
+}
+
+/** Resolve `md2nativedocx.pandoc.downloadUrl`/`.sha256` into the mirror
+ * override passed to {@link ensurePandoc} (missing_pandoc_bugfix.md §7 — lets
+ * an IT department mirror Pandoc internally for a firewalled network). Both
+ * fields must be set together; `pandocProvisioner.ts` rejects `downloadUrl`
+ * that isn't `https://` and still mandates the hash — this only relocates
+ * *where* the archive is fetched from, never removes the integrity check. */
+function pandocDownloadOverrideSetting(): { downloadUrl: string; sha256: string } | undefined {
+  const config = vscode.workspace.getConfiguration('md2nativedocx');
+  const url = config.get<string>('pandoc.downloadUrl', '').trim();
+  const sha256 = config.get<string>('pandoc.sha256', '').trim();
+  if (!url && !sha256) return undefined;
+  if (!url || !sha256) {
+    outputChannel.appendLine(
+      'md2nativedocx.pandoc.downloadUrl and md2nativedocx.pandoc.sha256 must both be set to use an internal mirror — ignoring the half-configured override.',
+    );
+    return undefined;
+  }
+  return { downloadUrl: url, sha256 };
+}
+
+/** Resolve `mdOrDotnet.downloadUrl`/`.sha512` into the override for
+ * {@link ensureDotnet} — same purpose and same mandatory-hash rule as
+ * {@link pandocDownloadOverrideSetting} (missing_pandoc_bugfix.md §7). */
+function dotnetDownloadOverrideSetting(): { downloadUrl: string; sha512: string } | undefined {
+  const config = vscode.workspace.getConfiguration('md2nativedocx');
+  const url = config.get<string>('dotnet.downloadUrl', '').trim();
+  const sha512 = config.get<string>('dotnet.sha512', '').trim();
+  if (!url && !sha512) return undefined;
+  if (!url || !sha512) {
+    outputChannel.appendLine(
+      'md2nativedocx.dotnet.downloadUrl and md2nativedocx.dotnet.sha512 must both be set to use an internal mirror — ignoring the half-configured override.',
+    );
+    return undefined;
+  }
+  return { downloadUrl: url, sha512 };
 }
 
 /** Resolve a Pandoc binary via {@link ensurePandoc} (prefers `PATH`, else
@@ -275,7 +324,7 @@ async function resolvePandocBin(progress: vscode.Progress<{ message?: string }>)
       } else {
         progress.report({ message: vscode.l10n.t('Setting up Pandoc (one-time download)…') });
       }
-    });
+    }, pandocDownloadOverrideSetting());
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     outputChannel.appendLine(`Automatic Pandoc setup failed, falling back to PATH: ${detail}`);
@@ -305,7 +354,7 @@ async function resolveWordCompatibilityCheck(
       } else {
         progress.report({ message: vscode.l10n.t('Setting up .NET for the Word compatibility check (one-time download)…') });
       }
-    });
+    }, dotnetDownloadOverrideSetting());
     return { dotnetBin, oxmlValidatorDll };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
@@ -331,6 +380,7 @@ type ExportOutcome =
  * actually finished (visible as two stacked notifications in the recording). */
 async function runExportFlow(
   run: (progress: vscode.Progress<{ message?: string }>) => Promise<ExportResult>,
+  retry?: () => Promise<void>,
 ): Promise<void> {
   const outcome = await vscode.window.withProgress<ExportOutcome>(
     { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
@@ -345,7 +395,7 @@ async function runExportFlow(
   );
 
   if (!outcome.ok) {
-    await handleExportError(outcome.error);
+    await handleExportError(outcome.error, retry);
     return;
   }
 
@@ -370,15 +420,45 @@ async function runExportFlow(
   }
 }
 
-async function handleExportError(err: unknown): Promise<void> {
+async function handleExportError(err: unknown, retry?: () => Promise<void>): Promise<void> {
   if (err instanceof PandocMissingError) {
-    const installPandoc = vscode.l10n.t('Install Pandoc');
+    // Always log the real reason before the toast — otherwise the output
+    // channel stays empty and the cause becomes a diagnostic black hole
+    // (missing_pandoc_bugfix.md §3).
+    outputChannel.appendLine(err.details || err.message);
+    const retryAction = vscode.l10n.t('Retry (automatic install)');
+    const installManually = vscode.l10n.t('Install manually (requires admin rights)');
     const choice = await vscode.window.showErrorMessage(
       vscode.l10n.t('Pandoc could not be found on this machine.'),
-      installPandoc,
+      retryAction,
+      installManually,
     );
-    if (choice === installPandoc) {
+    if (choice === retryAction && retry) {
+      // Re-runs the exact export command (document or block) that failed,
+      // which re-invokes resolvePandocBin() -> ensurePandoc() from scratch —
+      // the no-elevation auto-provisioning path, unlike the manual install
+      // link below (missing_pandoc_bugfix.md §4).
+      await retry();
+    } else if (choice === installManually) {
       await vscode.env.openExternal(vscode.Uri.parse('https://pandoc.org/installing.html'));
+    }
+    return;
+  }
+  if (err instanceof PandocBlockedByPolicyError) {
+    // Cause and fix differ fundamentally from a missing binary: retrying
+    // won't help until IT changes the policy, so no "retry" action — only
+    // "copy the technical details" to paste into a support ticket
+    // (missing_pandoc_bugfix.md §6).
+    outputChannel.appendLine(err.details || err.message);
+    const copyDetails = vscode.l10n.t('Copy technical details');
+    const choice = await vscode.window.showErrorMessage(
+      vscode.l10n.t(
+        "Pandoc execution was blocked by your machine's security policy (AppLocker/SmartScreen). Contact your IT support to request an exception.",
+      ),
+      copyDetails,
+    );
+    if (choice === copyDetails) {
+      await vscode.env.clipboard.writeText(`${err.details || err.message}\n\n${err.stack || ''}`);
     }
     return;
   }

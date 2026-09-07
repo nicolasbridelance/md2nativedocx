@@ -16,7 +16,32 @@ export interface ExportResult {
   logPath: string;
 }
 
-export class PandocMissingError extends Error {}
+/** Pandoc required to run the export but the CLI couldn't find any usable
+ * binary. The optional `details` carries the real underlying reason (the
+ * CLI's raw stderr — typically an `ENOENT`) so `extension.ts` can log it and
+ * offer an actionable retry instead of a diagnostic black hole. */
+export class PandocMissingError extends Error {
+  constructor(
+    message: string,
+    public readonly details?: string,
+  ) {
+    super(message);
+  }
+}
+/** Pandoc exists but its execution was blocked by a security policy
+ * (AppLocker / WDAC / SmartScreen on a corporate machine — missing_pandoc_bugfix.md
+ * §6). Distinguished from {@link PandocMissingError} because the cause and
+ * the fix are completely different: retrying won't help, the user must
+ * contact IT. Detected from the CLI's stderr/exit code rather than the
+ * `ENOENT` substring that signals a genuinely missing binary. */
+export class PandocBlockedByPolicyError extends Error {
+  constructor(
+    message: string,
+    public readonly details?: string,
+  ) {
+    super(message);
+  }
+}
 export class ExportFailedError extends Error {
   constructor(
     message: string,
@@ -132,6 +157,18 @@ export interface RunCliOptions {
   oxmlValidatorDll?: string;
 }
 
+/** Heuristic for "the binary exists but its execution was blocked by a
+ * security policy" (missing_pandoc_bugfix.md §6), as opposed to a genuinely
+ * missing binary (ENOENT, handled separately). Signals observed in the wild:
+ * Windows exit code 1260 ("This program is blocked by group policy"), and
+ * EACCES/EPERM in the error message (AppLocker/WDAC/SmartScreen). Kept as a
+ * pure predicate so it's unit-testable without spawning a real process. */
+function isBlockedByPolicy(err: { code?: string | number | null }, stderr: string): boolean {
+  const code = typeof err.code === 'string' ? err.code : String(err.code ?? '');
+  if (code === 'EACCES' || code === 'EPERM' || code === '1260') return true;
+  return /1260|EACCES|EPERM|blocked by group policy/i.test(stderr);
+}
+
 function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
   const cliBin = resolveCliBin();
   const env = { ...process.env };
@@ -175,8 +212,20 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
       const stderr = String(stderrRaw ?? '');
       if (stderr.includes('ENOENT')) {
         // English fallback text — extension.ts shows its own localized string
-        // for this specific, fixed-meaning error instead of err.message.
-        reject(new PandocMissingError('Pandoc could not be found on this machine.'));
+        // for this specific, fixed-meaning error instead of err.message. The
+        // full stderr is carried as `details` so the output channel can log
+        // the real cause (missing binary, blocked by policy, ...) rather than
+        // a diagnostic black hole.
+        reject(new PandocMissingError('Pandoc could not be found on this machine.', stderr));
+        return;
+      }
+      // A binary that exists but is blocked by a security policy (AppLocker /
+      // WDAC / SmartScreen) fails with a different signal than ENOENT: on
+      // Windows, exit code 1260 ("This program is blocked by group policy"),
+      // or an EACCES/EPERM in the error message. Retrying won't help here —
+      // the user must contact IT (missing_pandoc_bugfix.md §6).
+      if (isBlockedByPolicy(err, stderr)) {
+        reject(new PandocBlockedByPolicyError('Pandoc execution was blocked by a security policy.', stderr));
         return;
       }
       // The reason (raw Pandoc/CLI stderr) can't be translated — it's

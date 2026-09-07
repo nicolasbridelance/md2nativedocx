@@ -242,6 +242,28 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%configuration.wordCompatibilityCheck.enabled.markdownDescription%"
+        },
+        "md2nativedocx.pandoc.downloadUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%configuration.pandoc.downloadUrl.markdownDescription%"
+        },
+        "md2nativedocx.pandoc.sha256": {
+          "type": "string",
+          "default": "",
+          "pattern": "^$|^[0-9a-f]{64}$",
+          "markdownDescription": "%configuration.pandoc.sha256.markdownDescription%"
+        },
+        "md2nativedocx.dotnet.downloadUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%configuration.dotnet.downloadUrl.markdownDescription%"
+        },
+        "md2nativedocx.dotnet.sha512": {
+          "type": "string",
+          "default": "",
+          "pattern": "^$|^[0-9a-f]{128}$",
+          "markdownDescription": "%configuration.dotnet.sha512.markdownDescription%"
         }
       }
     },
@@ -283,9 +305,9 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pretest": "tsc -p tsconfig.test.json",
-    "test": "node --test dist-test/test/unit/*.test.js",
-    "pretest:ci": "tsc -p tsconfig.test.json && mkdir -p reports",
-    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/unit/*.test.js",
+  "test": "node --experimental-test-module-mocks --test dist-test/test/unit/*.test.js",
+  "pretest:ci": "tsc -p tsconfig.test.json && mkdir -p reports",
+  "test:ci": "node --experimental-test-module-mocks --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/unit/*.test.js",
     "pretest:extension-host": "tsc -p tsconfig.test.json",
     "test:extension-host": "node scripts/run-extension-host-tests.mjs",
     "bundle": "node scripts/bundle-cli.mjs && node scripts/bundle-oxml-validator.mjs",

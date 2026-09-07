@@ -140,6 +140,45 @@ runtime: downloaded once if not already present, checksum-verified, cached — o
 you already have `.NET`. Turn off `md2nativedocx.wordCompatibilityCheck.enabled` to skip that
 entirely and export exactly as before.
 
+## Deploying in a corporate environment
+
+This extension runs entirely without administrator rights — Pandoc and the `.NET` runtime are
+downloaded into your user profile (VS Code's `globalStorage`), never into `Program Files`, so a
+managed, no-admin-end-user workstation works out of the box. On a corporate network, three things
+may still need IT help:
+
+**Proxies.** Node's built-in downloader tries `fetch` first, then automatically falls back to
+`curl`, which reads your OS-level proxy configuration (WinINet on Windows) and your system
+certificate store — so a plain corporate proxy is handled with no configuration. If even `curl`
+fails, the error message tells you the network likely needs a proxy and points you at the mirror
+settings below.
+
+**Firewall allowlists (fully locked-down networks).** If `github.com` and
+`builds.dotnet.microsoft.com` aren't reachable at all, an IT administrator can point the
+extension at internal mirrors via two pairs of settings in a managed `settings.json` (deployed by
+GPO/Intune, so every machine is pre-configured):
+
+```jsonc
+{
+  // Pandoc: point at an internal copy of a release archive + its SHA-256.
+  "md2nativedocx.pandoc.downloadUrl": "https://artifactory.corp/nexus/pandoc-3.1.3-linux-amd64.tar.gz",
+  "md2nativedocx.pandoc.sha256": "74bc434908e4d858b3edbfd6271d2e9e499477837e5df1d630df4e62f113803d",
+  // .NET runtime: same idea, mirror + SHA-512.
+  "md2nativedocx.dotnet.downloadUrl": "https://artifactory.corp/nexus/dotnet-runtime-10.0.4-linux-x64.tar.gz",
+  "md2nativedocx.dotnet.sha512": "2e2730ca465838f3655c8d0576a2477531a9c764329d9e3c88c8c8b87b2708f981819e939def8bec204b90e98654b3a0f6e47b816f44ebab95b30c5028060d6c"
+}
+```
+
+The `downloadUrl` and `sha256`/`sha512` fields of each pair must be set **together** (a half-set
+override is ignored and the official source is used). The hash is still mandatory — these settings
+only relocate *where* the archive is fetched from, they never turn off the integrity check.
+
+**Security-policy blocking on the machine.** On a restriced workstation (AppLocker / Windows
+Defender Application Control / strict SmartScreen), a downloaded binary may exist but be blocked
+from running. The extension detects this case and shows a distinct message telling the user to
+contact IT for an exception — rather than the generic "Pandoc could not be found" error — with a
+"Copy technical details" action to paste into a support ticket.
+
 ## What this extension doesn't do (yet)
 
 - No shape editing inside VS Code — editing happens in Word once the `.docx` is open.

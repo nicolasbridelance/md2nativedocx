@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, createReadStream, createWriteStream, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, createReadStream, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -95,6 +95,14 @@ export class DotnetProvisionError extends Error {}
 
 export type DotnetProvisionProgress = { phase: 'downloading'; fraction: number } | { phase: 'extracting' };
 
+/** Lets an IT department mirror the .NET runtime internally
+ * (`md2nativedocx.dotnet.downloadUrl`/`.sha512`) — same purpose and same
+ * mandatory-hash rule as `PandocDownloadOverride` in `pandocProvisioner.ts`. */
+export interface DotnetDownloadOverride {
+  downloadUrl: string;
+  sha512: string;
+}
+
 /** `${process.platform}-${process.arch}`, or `null` if this exact pair has
  * no entry in {@link DOTNET_RUNTIME_MANIFEST} — callers should fall back to
  * requiring a system-installed `dotnet` (or skip the compatibility check
@@ -136,7 +144,7 @@ function isDotnetOnPath(): Promise<boolean> {
   });
 }
 
-async function downloadFile(url: string, destPath: string, onFraction?: (fraction: number) => void): Promise<void> {
+async function downloadViaFetch(url: string, destPath: string, onFraction?: (fraction: number) => void): Promise<void> {
   const response = await fetch(url, { redirect: 'follow' });
   if (!response.ok || !response.body) {
     throw new DotnetProvisionError(`Download failed: HTTP ${response.status} for ${url}`);
@@ -160,6 +168,38 @@ async function downloadFile(url: string, destPath: string, onFraction?: (fractio
   }
 }
 
+/** Fallback for `downloadViaFetch` — see the identical helper in
+ * `pandocProvisioner.ts` for why `fetch` alone isn't enough on a corporate
+ * network and why `curl` is a safe zero-dependency fallback. */
+async function downloadViaCurl(url: string, destPath: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    execFile('curl', ['-fL', '--proto', '=https', '--tlsv1.2', '-o', destPath, url], (err, _stdout, stderr) => {
+      if (err) {
+        reject(new DotnetProvisionError(`curl download failed for ${url}: ${stderr || err.message}`));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function downloadFile(url: string, destPath: string, onFraction?: (fraction: number) => void): Promise<void> {
+  try {
+    await downloadViaFetch(url, destPath, onFraction);
+  } catch (fetchErr) {
+    try {
+      await downloadViaCurl(url, destPath);
+    } catch (curlErr) {
+      const fetchDetail = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      const curlDetail = curlErr instanceof Error ? curlErr.message : String(curlErr);
+      throw new DotnetProvisionError(
+        `Download failed via fetch (${fetchDetail}) and via curl fallback (${curlDetail}) — ` +
+          `this network may require a proxy. See md2nativedocx.dotnet.downloadUrl to point at an internal mirror.`,
+      );
+    }
+  }
+}
+
 /** Resolved runtime path: the directory containing `dotnet`/`dotnet.exe`
  * (needed, not just the executable itself, since it must stay next to its
  * sibling `host/`/`shared/` directories — see the module doc comment). */
@@ -167,35 +207,78 @@ function dotnetHostExecutable(dir: string, platformKey: string): string {
   return join(dir, platformKey.startsWith('win32') ? 'dotnet.exe' : 'dotnet');
 }
 
-async function provisionForPlatform(
+/** Same reasoning as `pandocProvisioner.ts`'s identical constant: re-hash
+ * the cached `dotnet` host executable once per session to catch an
+ * EDR/antivirus quarantining or truncating it after the fact, without
+ * paying that cost on every single export. */
+const reverifiedThisSession = new Set<string>();
+
+/** Cheap existence/size check always; a full re-hash of the host executable
+ * against the sentinel only the first time this session (see
+ * {@link reverifiedThisSession}) — mirrors `pandocProvisioner.ts`'s
+ * `isCachedBinaryIntact`. Only the host executable is re-hashed, not the
+ * whole `shared/`/`host/` tree: cheap enough to catch the common failure
+ * mode (the single executable quarantined) without walking a multi-hundred-
+ * file directory tree on every VS Code launch. Exported so the unit tests
+ * can exercise the "cached host quarantined after write" path directly
+ * (missing_pandoc_bugfix.md §9). */
+export async function isCachedRuntimeIntact(hostPath: string, sentinelPath: string): Promise<boolean> {
+  try {
+    if (statSync(hostPath).size === 0) return false;
+    const expectedHash = readFileSync(sentinelPath, 'utf8').trim();
+    const actualHash = await sha512File(hostPath);
+    return actualHash === expectedHash;
+  } catch {
+    return false;
+  }
+}
+
+/** Drive a full download+verify+extract+cleanup provisioning cycle from the
+ * unit tests (missing_pandoc_bugfix.md §2/§9) — exported so the tests can
+ * reach it, mirroring `pandocProvisioner.ts`'s identical export. */
+export async function provisionForPlatform(
   cacheRootDir: string,
   platformKey: string,
   onProgress?: (event: DotnetProvisionProgress) => void,
+  override?: DotnetDownloadOverride,
 ): Promise<string> {
   const spec = DOTNET_RUNTIME_MANIFEST[platformKey];
   if (!spec) {
     throw new DotnetProvisionError(`No .NET runtime manifest entry for platform "${platformKey}".`);
   }
+  if (override && !override.downloadUrl.startsWith('https://')) {
+    throw new DotnetProvisionError('md2nativedocx.dotnet.downloadUrl must start with "https://".');
+  }
+  const downloadUrl = override?.downloadUrl ?? spec.url;
+  const expectedArchiveHash = override?.sha512 ?? spec.sha512;
+
   const dir = join(cacheRootDir, 'dotnet-runtime', DOTNET_RUNTIME_VERSION, platformKey);
   const hostPath = dotnetHostExecutable(dir, platformKey);
   const sentinelPath = join(dir, '.verified');
 
   if (existsSync(hostPath) && existsSync(sentinelPath)) {
-    return hostPath;
+    if (reverifiedThisSession.has(hostPath) || (await isCachedRuntimeIntact(hostPath, sentinelPath))) {
+      reverifiedThisSession.add(hostPath);
+      return hostPath;
+    }
+    // Cache was tampered with, truncated, or quarantined after being
+    // written — wipe it and fall through to a full, fresh provisioning
+    // rather than surfacing a confusing failure at export time.
+    rmSync(dir, { recursive: true, force: true });
   }
 
   mkdirSync(dir, { recursive: true });
   const tmpRoot = mkdtempSync(join(tmpdir(), 'md2nativedocx-dotnet-'));
   try {
-    const assetName = spec.url.split('/').pop() ?? 'dotnet-runtime-archive';
+    const assetName = downloadUrl.split('/').pop() || 'dotnet-runtime-archive';
     const archivePath = join(tmpRoot, assetName);
     onProgress?.({ phase: 'downloading', fraction: 0 });
-    await downloadFile(spec.url, archivePath, (fraction) => onProgress?.({ phase: 'downloading', fraction }));
+    await downloadFile(downloadUrl, archivePath, (fraction) => onProgress?.({ phase: 'downloading', fraction }));
 
-    const actualHash = await sha512File(archivePath);
-    if (actualHash !== spec.sha512) {
+    const actualArchiveHash = await sha512File(archivePath);
+    if (actualArchiveHash !== expectedArchiveHash) {
       throw new DotnetProvisionError(
-        `Downloaded .NET runtime archive failed checksum verification (expected ${spec.sha512}, got ${actualHash}) — refusing to run it.`,
+        `Downloaded .NET runtime archive failed checksum verification (expected ${expectedArchiveHash}, got ${actualArchiveHash}) — refusing to run it.`,
       );
     }
 
@@ -214,10 +297,21 @@ async function provisionForPlatform(
     if (process.platform !== 'win32') {
       chmodSync(hostPath, 0o755);
     }
-    writeFileSync(sentinelPath, actualHash);
+    // The sentinel stores the hash of the *installed* host executable (not
+    // the archive above) so a later session can detect this exact file
+    // being corrupted/replaced in place — see isCachedRuntimeIntact.
+    writeFileSync(sentinelPath, await sha512File(hostPath));
+    reverifiedThisSession.add(hostPath);
     return hostPath;
   } finally {
-    rmSync(tmpRoot, { recursive: true, force: true });
+    try {
+      rmSync(tmpRoot, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup only: a transient lock on the temp dir (e.g. an
+      // EDR/antivirus scanning the freshly-extracted files) must never undo
+      // a provisioning that already succeeded and was verified above —
+      // `finally` re-throwing here would silently discard the `return`.
+    }
   }
 }
 
@@ -240,6 +334,7 @@ let inFlight: Promise<string> | null = null;
 export async function ensureDotnet(
   cacheRootDir: string,
   onProgress?: (event: DotnetProvisionProgress) => void,
+  override?: DotnetDownloadOverride,
 ): Promise<string> {
   if (await isDotnetOnPath()) {
     return 'dotnet';
@@ -251,7 +346,7 @@ export async function ensureDotnet(
   }
 
   if (!inFlight) {
-    inFlight = provisionForPlatform(cacheRootDir, platformKey, onProgress).finally(() => {
+    inFlight = provisionForPlatform(cacheRootDir, platformKey, onProgress, override).finally(() => {
       inFlight = null;
     });
   }
