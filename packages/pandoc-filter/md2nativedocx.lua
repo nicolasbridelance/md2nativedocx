@@ -17,10 +17,27 @@ local core_bin = os.getenv('PANDOC_FILTER_CORE')
   or (debug.getinfo(1, 'S').source:match('^@(.*[/\\])') or '')
     .. 'bin/md2nativedocx-core.mjs'
 
+-- Own temp-path generator, deliberately not os.tmpname(): a real 2026-09-08
+-- incident found os.tmpname() crashing pandoc 3.9.0.2 on Windows with an
+-- access violation inside its embedded Lua runtime (HsLua's binding calls
+-- the C library's tmpnam(), which has long-standing, version-dependent
+-- Windows quirks — MSVCRT's tmpnam() can return a drive-root-relative path
+-- unwritable without elevated rights, and this crash suggests worse than
+-- that in at least this Pandoc build). PID isn't available to a Pandoc Lua
+-- filter, so an incrementing counter is what guarantees uniqueness instead —
+-- sufficient here since every call happens sequentially within one Pandoc
+-- process (this filter is never invoked concurrently with itself).
+local temp_dir = os.getenv('TMPDIR') or os.getenv('TMP') or os.getenv('TEMP') or '/tmp'
+local temp_counter = 0
+local function make_temp_path()
+  temp_counter = temp_counter + 1
+  return temp_dir .. '/md2nativedocx-lua-' .. tostring(os.time()) .. '-' .. tostring(temp_counter) .. '.tmp'
+end
+
 -- File-based bridge: write the diagram to a temp file, invoke the core with a
 -- fixed argument array (no shell interpolation of the diagram), read the XML.
 local function run_core_file(mermaid_text)
-  local tmp = os.tmpname()
+  local tmp = make_temp_path()
   local f = assert(io.open(tmp, 'w'))
   f:write(mermaid_text)
   f:close()

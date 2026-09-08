@@ -292,29 +292,50 @@ let inFlight: Promise<string> | null = null;
  * outside the extension (survives extension updates), verifying it against a
  * pinned SHA-256 before it is ever extracted or executed.
  *
- * Throws {@link PandocProvisionError} on any failure (unsupported platform,
- * network error, checksum mismatch, ...) — callers should catch this and fall
- * back to the existing "Pandoc not found" flow rather than treat a throw as
- * fatal, so automatic setup failing never leaves the user worse off than
- * before it existed. */
+ * Throws {@link PandocProvisionError} only when *neither* this project's own
+ * pinned build nor a `pandoc` on `PATH` are usable — callers should catch
+ * this and fall back to the existing "Pandoc not found" flow rather than
+ * treat a throw as fatal, so automatic setup failing never leaves the user
+ * worse off than before it existed.
+ *
+ * Tries the pinned, tested build FIRST, `PATH` only as a last resort —
+ * deliberately the opposite of this function's original order
+ * (missing_pandoc_bugfix.md §8 flagged the choice but left it undecided).
+ * Forced by a real 2026-09-08 incident: a colleague had a `pandoc 3.9.0.2`
+ * on `PATH` (installed via WinGet, for unrelated reasons) that crashes with
+ * a Windows access violation in its embedded Lua runtime on every export —
+ * see `md2nativedocx.lua`'s `make_temp_path()` — while this project's pinned
+ * {@link PANDOC_VERSION} never exercises that code path at all. A `PATH`
+ * pandoc is an unverified, arbitrary version this project has never tested
+ * against; the whole point of pinning+caching one is a reproducible,
+ * regression-tested build, so it should win whenever it can be provisioned
+ * at all. Cheap in the common case even with this reordering: a
+ * once-cached, already-verified build resolves via a stat (or, at most once
+ * per session, a re-hash) before ever touching the network — see
+ * {@link provisionForPlatform}'s early-return branch. */
 export async function ensurePandoc(
   cacheRootDir: string,
   onProgress?: (event: PandocProvisionProgress) => void,
   override?: PandocDownloadOverride,
 ): Promise<string> {
-  if (await isPandocOnPath()) {
-    return 'pandoc';
-  }
-
   const platformKey = getPlatformKey();
-  if (!platformKey) {
-    throw new PandocProvisionError(`No bundled Pandoc available for this platform (${process.platform}-${process.arch}).`);
+  if (platformKey) {
+    try {
+      if (!inFlight) {
+        inFlight = provisionForPlatform(cacheRootDir, platformKey, onProgress, override).finally(() => {
+          inFlight = null;
+        });
+      }
+      return await inFlight;
+    } catch (err) {
+      if (await isPandocOnPath()) return 'pandoc';
+      throw err;
+    }
   }
 
-  if (!inFlight) {
-    inFlight = provisionForPlatform(cacheRootDir, platformKey, onProgress, override).finally(() => {
-      inFlight = null;
-    });
-  }
-  return inFlight;
+  // No bundled/pinned build exists for this platform at all — PATH is the
+  // only option here, not a deliberate downgrade from a build we chose not
+  // to use.
+  if (await isPandocOnPath()) return 'pandoc';
+  throw new PandocProvisionError(`No bundled Pandoc available for this platform (${process.platform}-${process.arch}).`);
 }
