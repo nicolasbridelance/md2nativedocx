@@ -3,6 +3,23 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- Every export on a plain Windows machine (no Git Bash/WSL/third-party `zip`/`unzip` installed)
+  used to fail outright: the CLI shelled out to `unzip`/`zip`, absent from stock Windows, to patch
+  a handful of entries inside the generated `.docx`. Since `md2nativedocx.layout.pageSize`/
+  `.orientation` default to non-empty values, this ran on every export, not just customized ones.
+  Replaced with `adm-zip` (pure JS, no external binary) in `postprocess.mjs`/
+  `referenceDocBuilder.mjs`. Found via a from-scratch Windows diagnostic report on v0.5.1.
+- The failure above was misdiagnosed by the extension as "Pandoc could not be found on this
+  machine" — `runCli()` classified *any* stderr containing the substring `ENOENT` as Pandoc
+  missing, even though Pandoc itself was fully provisioned and had never run yet. Tightened to key
+  off the CLI's own controlled `md2nativedocx: Pandoc failed (exit ENOENT)` marker.
+- A failure while building the patched reference document used to crash the CLI with a raw,
+  unprefixed Node stack trace (it ran before `main()`'s own error handling existed) instead of the
+  `md2nativedocx: ... failed: ...` message every other CLI error path produces.
+
 ## [0.5.1] — 2026-09-08
 
 ### Fixed

@@ -668,6 +668,41 @@ qui était jusque-là silencieusement classé "bruit Pandoc préexistant".
 
 Détail complet : `docs/history/TODO_ARCHIVE.md`, section "Incident quadrant/venn/mindmap".
 
+## Incident "tout export échoue sur Windows nu" (2026-09-08) — clos
+
+Rapport de diagnostic sur un poste de test Windows "from scratch" (v0.5.1) : le toast affichait
+"Pandoc could not be found on this machine", mais Pandoc/.NET étaient entièrement provisionnés
+(confirmé via le cache disque) — le vrai crash (`spawnSync unzip ENOENT`) venait de
+`buildReferenceDoc()`/`postProcessDocx()`/`injectSmartArtParts()`, qui shell-outaient vers
+`unzip`/`zip`, absents nativement sur Windows. Comme `md2nativedocx.layout.pageSize`/
+`.orientation` ont des valeurs par défaut non vides, ce chemin s'exécute sur **chaque export**, pas
+seulement en cas de personnalisation — donc pas un cas limite corporate mais une régression
+universelle sur Windows nu. Explique pourquoi ça n'avait jamais été vu : toutes les vérifications
+"vrai Word" précédentes généraient le `.docx` dans le devcontainer Linux et ne transféraient que le
+fichier fini vers Windows — c'était la première exécution de bout en bout du CLI empaqueté sur un
+Windows natif.
+
+Trois correctifs, tous poussés le jour même :
+1. `unzip`/`zip` remplacés par `adm-zip` (JS pur, nouvelle dépendance directe de `packages/cli`,
+   approuvée par le mainteneur) dans `postprocess.mjs`/`referenceDocBuilder.mjs` — plus aucun
+   binaire externe pour patcher les entrées du `.docx` (`bd45d66` pour le diagnostic,
+   `6e3a563` pour ce correctif racine).
+2. `buildReferenceDoc()` s'exécutait au chargement du module, avant que `main()` ait un
+   try/catch — toute erreur y produisait un stack trace Node brut au lieu du message
+   `md2nativedocx: ... failed: ...` standard. Enveloppé.
+3. `exportService.ts`'s `runCli()` classait n'importe quel `ENOENT` dans stderr comme "Pandoc
+   manquant" — resserré pour ne matcher que le marqueur contrôlé du CLI
+   (`md2nativedocx: Pandoc failed (exit ENOENT)`), pour ne plus jamais mélanger un `ENOENT`
+   interne non lié à Pandoc (celui-ci, ou un futur) avec l'absence réelle de Pandoc.
+
+Vérifié en reproduisant exactement l'environnement du rapport (PATH réduit à node/pandoc/tar, sans
+`zip`/`unzip`) : l'export réussit et produit un `.docx` valide. Suite complète verte (113 cli + 15
+pandoc-filter + 296 core), typecheck clean.
+
+- [ ] **Suivi ouvert** : re-confirmer sur le vrai poste de test Windows qui a rapporté le bug (pas
+      seulement reproduit en sandbox Linux) avant de considérer le sujet définitivement clos —
+      décider aussi si ça sort en 0.5.2 et si ça se publie sur le Marketplace (pas encore fait).
+
 ## Retours en attente de clarification (checklist Round 2, 2026-09-06)
 
 - [x] **Emoji pas tous coloriés en vrai Word — fermé comme limitation documentée (2026-09-06)** :
