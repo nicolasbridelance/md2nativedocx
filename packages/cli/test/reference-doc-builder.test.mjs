@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import AdmZip from 'adm-zip';
 import { rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
@@ -355,7 +356,13 @@ test('buildReferenceDoc: footerPageNumber adds the footer part + relationship + 
     const listing = execFileSync('unzip', ['-l', result.path], { encoding: 'utf8' });
     assert.ok(listing.includes('word/footer1.xml'), 'the footer part must be a new zip entry');
 
-    const contentTypes = execFileSync('unzip', ['-p', result.path, '\\[Content_Types\\].xml'], { encoding: 'utf8' });
+    // Not execFileSync('unzip', ...) like every other read in this file: on
+    // Windows, unzip's own glob-escaping for the literal brackets in
+    // `[Content_Types].xml` behaves differently than on Unix and fails to
+    // match the entry at all ("filename not matched") — found 2026-09-08 by
+    // the first real Windows CI run. adm-zip reads by exact entry name, no
+    // glob involved, so it isn't affected by that platform divergence.
+    const contentTypes = new AdmZip(result.path).readFile('[Content_Types].xml').toString('utf8');
     assert.ok(contentTypes.includes('/word/footer1.xml'));
 
     const rels = execFileSync('unzip', ['-p', result.path, 'word/_rels/document.xml.rels'], { encoding: 'utf8' });

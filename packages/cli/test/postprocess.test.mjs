@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import AdmZip from 'adm-zip';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -234,7 +235,13 @@ test('replaces placeholders with real rIds and adds the 4 parts/relationships/co
     assert.ok(rels.includes('diagrams/colors1.xml'));
     assert.ok(rels.includes('diagrams/quickStyle1.xml'));
 
-    const contentTypes = execFileSync('unzip', ['-p', docx, '\\[Content_Types\\].xml'], { encoding: 'utf8' });
+    // Not execFileSync('unzip', ...) like the rest of this file: on Windows,
+    // unzip's own glob-escaping for the literal brackets in
+    // `[Content_Types].xml` behaves differently than on Unix and fails to
+    // match the entry at all ("filename not matched") — found 2026-09-08 by
+    // the first real Windows CI run. adm-zip reads by exact entry name, no
+    // glob involved, so it isn't affected by that platform divergence.
+    const contentTypes = new AdmZip(docx).readFile('[Content_Types].xml').toString('utf8');
     assert.ok(contentTypes.includes('diagramData+xml'));
     assert.ok(contentTypes.includes('diagramLayout+xml'));
     assert.ok(contentTypes.includes('diagramColors+xml'));

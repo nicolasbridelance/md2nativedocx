@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import AdmZip from 'adm-zip';
 import { readdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
@@ -273,7 +274,13 @@ test('simple: markdown with a mermaid A --> B dispatches to SmartArt when MD2NAT
     for (const part of ['data1.xml', 'layout1.xml', 'colors1.xml', 'quickStyle1.xml']) {
       assert.ok(entries.includes(`word/diagrams/${part}`), `missing word/diagrams/${part}`);
     }
-    const contentTypes = execFileSync('unzip', ['-p', docx, '\\[Content_Types\\].xml'], { encoding: 'utf8' });
+    // Not execFileSync('unzip', ...) like the rest of this file: on Windows,
+    // unzip's own glob-escaping for the literal brackets in
+    // `[Content_Types].xml` behaves differently than on Unix and fails to
+    // match the entry at all ("filename not matched") — found 2026-09-08 by
+    // the first real Windows CI run. adm-zip reads by exact entry name, no
+    // glob involved, so it isn't affected by that platform divergence.
+    const contentTypes = new AdmZip(docx).readFile('[Content_Types].xml').toString('utf8');
     assert.ok(contentTypes.includes('diagramData+xml'), 'missing diagramData content-type override');
     const rels = execFileSync('unzip', ['-p', docx, 'word/_rels/document.xml.rels'], { encoding: 'utf8' });
     assert.ok(rels.includes('relationships/diagramData'), 'missing diagramData relationship');
