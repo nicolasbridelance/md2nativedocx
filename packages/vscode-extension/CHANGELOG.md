@@ -3,6 +3,17 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.4] — 2026-09-08
+
+### Changed
+- No functional/user-facing changes — release/tooling only, cut to keep the published version
+  aligned with `main` after CI hardening: a macOS CI job (mirroring the Windows one added in
+  0.5.3 — typecheck, the cli/core/pandoc-filter suites, and a real `.vsix` build, all now
+  verified on `macos-latest`), and the packaging pipeline's own Word-compatibility-validator
+  smoke test no longer depends on a local, gitignored fixture file (it generates one on the fly
+  instead) — that dependency meant the packaging step could only ever succeed on a machine that
+  happened to already have that file, CI included.
+
 ## [0.5.3] — 2026-09-08
 
 ### Fixed
