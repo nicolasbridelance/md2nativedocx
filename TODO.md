@@ -554,20 +554,53 @@ phases précédentes.
       Coût jugé faible tant que `packages/cli` reste la seule chose enveloppée (pas de logique
       dupliquée). Dépend en pratique du chantier CLI standalone ci-dessous (le serveur MCP shell-out
       vers le même binaire que celui publié).
-- [ ] **CLI standalone publié** — `packages/cli` existe déjà (`bin/md2nativedocx.mjs`) mais reste
-      `"private": true`, workspace-only : aujourd'hui il n'y a aucun moyen de l'obtenir sans passer
-      par l'extension VS Code ou cloner le repo. Utile indépendamment du MCP (pipelines CI/CD,
-      scripts, hooks Git, environnements sans VS Code) et sert de brique commune au serveur MCP.
-  - [ ] Extraire la logique d'auto-provisioning Pandoc/.NET (aujourd'hui dans
-        `packages/vscode-extension`) vers un endroit partagé (`core` ou `cli`) pour que le CLI
-        publié ait la même robustesse "zéro admin" déjà conquise pour l'extension — voir
-        [[project_corporate_pandoc_reliability_2026-09]].
-  - [ ] Retirer `"private": true`, publier `@md2nativedocx/cli` sur npm (`npm install -g` →
-        binaire global) — couvre déjà la majorité de la valeur.
-  - [ ] Option plus tardive/plus lourde : binaire compilé par OS (Node Single Executable
-        Application ou `pkg`) pour les machines corporate verrouillées sans Node du tout — même
-        motivation que la saga Pandoc corporate, mais pas urgent tant que le besoin n'est pas
-        confirmé.
+- [x] **CLI standalone préparé pour npm (2026-09-08)** — `packages/core`/`pandoc-filter`/`cli` ne
+      sont plus `"private": true`, ont chacun un `README.md`, et `packages/cli/package.json` a
+      gagné `repository`/`homepage`/`keywords`/`engines`. Deux vrais bugs de publication trouvés en
+      vérifiant en conditions réelles (`npm pack` + install dans un dossier hors du monorepo, pas
+      seulement en faisant confiance au hoisting du workspace) :
+  - `pandoc-filter` important `@md2nativedocx/core` sans jamais le déclarer en dépendance (marchait
+    ici uniquement par accident du hoisting npm) — corrigé.
+  - `pandoc-filter`'s `files` excluait `bin/` (le pont JS que le filtre Lua et le CLI utilisent
+    tous les deux) — un package publié tel quel aurait été cassé. Corrigé.
+  - `bin/md2nativedocx.mjs`'s `FILTER_CANDIDATES` (deux chemins relatifs codés en dur pour localiser
+    `md2nativedocx.lua`) ne couvrait ni le monorepo dev ni le bundle vendored VS Code — aucun des
+    deux ne correspond à la disposition `node_modules/@md2nativedocx/` plate d'un vrai
+    `npm install`. Remplacé par `import.meta.resolve()` (résolution native de Node, correcte dans
+    les 3 cas par construction). `scripts/verify-npm-packages.mjs` (câblé en CI) automatise ce
+    test en clean-room pour que ça ne régresse plus jamais silencieusement.
+  - Au passage : `@types/dagre`/`fast-check` dans `packages/core` étaient en `dependencies` alors
+    qu'ils ne servent qu'aux tests/typecheck — déplacés en `devDependencies` (sinon poids mort
+    livré à chaque installeur).
+  - [ ] **Suivi ouvert, bloquant la vraie publication** : aucun identifiant npm dans ce sandbox
+        (`.env` n'a pas de token, le scope `@md2nativedocx` n'existe pas encore sur le registre).
+        Le mainteneur doit créer/fournir un compte npm (perso ou org, gratuit pour un scope public)
+        et un token d'automatisation pour que la publication (`npm publish` dans l'ordre core →
+        pandoc-filter → cli) puisse être faite.
+  - [ ] **Limite connue, pas corrigée** : le CLI standalone n'a pas le provisioning automatique
+        Pandoc de l'extension VS Code — il faut Pandoc 3.1.3+ déjà installé et sur le PATH (documenté
+        dans `packages/cli/README.md`). Extraire cette logique (aujourd'hui dans
+        `packages/vscode-extension`) vers un endroit partagé reste à faire si ce manque devient un
+        vrai problème pour l'audience CI/scripts — voir [[project_corporate_pandoc_reliability_2026-09]].
+- [ ] **Option écartée pour l'instant : binaire compilé par OS.** Discuté avec le mainteneur
+      (2026-09-08) — verdict : pas maintenant, coût réel identifié :
+  - Taille : non-problème (GitHub Releases est gratuit, ~2 Go/fichier de plage) — un binaire Node
+    SEA (Single Executable Application, natif depuis Node 20, zéro nouvelle dépendance) pèse
+    ~80-100 Mo par plateforme, sans commune mesure avec le bundling Pandoc/VSIX déjà écarté plus
+    haut pour la même raison de coût.
+  - Build : maintenant bon marché grâce au matrix CI Windows/macOS/Linux déjà en place (Phase CI
+    2026-09-08) — extension naturelle plutôt que nouveau chantier.
+  - **Le vrai bloqueur : signature de code, coût récurrent réel.** macOS (Gatekeeper) demande un
+    compte Apple Developer (99 $/an) + notarisation ; Windows (SmartScreen) demande un certificat
+    de signature (~100-400 $/an) pour éviter l'avertissement "éditeur non reconnu" à chaque
+    installation — exactement la friction qu'on essaie d'éliminer pour la persona "poste corporate
+    non technique" visée par tout le projet. Sans signature, ça reste utilisable (clic-droit/
+    "Exécuter quand même") mais dégrade l'expérience de premier contact.
+  - Risque d'ingénierie : Node SEA est encore jeune, aspérités ESM/modules natifs connues —
+    probablement un effort de débogage du même ordre que la saga Windows Pandoc/Lua de cette
+    session, une fois testé en vrai sur les 3 OS.
+  - **À reprendre seulement si un vrai besoin confirmé apparaît** (quelqu'un qui n'a vraiment aucun
+    Node et ne peut pas l'installer) plutôt que de payer la facture de signature par anticipation.
 
 ---
 
