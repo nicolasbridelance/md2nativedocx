@@ -525,14 +525,17 @@ Cadrage complet : `docs/specs/export_customization_SPEC.md`. Détail complet de 
 
 ## Phase 9 — Outillage autour du moteur (copy/paste VS Code, MCP, CLI standalone)
 
-Trois idées loguées le 2026-09-08 (discussion avec le mainteneur + retour croisé sur une analyse de
-roadmap produite par Gemini) : pas commencées, pas encore ordonnées entre elles ni contre les
-phases précédentes.
+Idées loguées le 2026-09-08 (discussion avec le mainteneur + retour croisé sur une analyse de
+roadmap produite par Gemini, `docs/roadmap.md`, intégrée ici puis supprimée comme doublon
+2026-09-08). Priorisation tranchée le 2026-09-08 : **Copy as Word passe en actif** ; Paste Word as
+MD reste explicitement différé (dépend du même convertisseur manquant que l'add-in Word).
 
-- [ ] **"Copy as Word" / "Paste Word as MD" côté extension VS Code** — pendant de l'add-in Word
-      (Phase 4) mais porté par l'extension elle-même plutôt que par Office.js : permet de se passer
-      de l'add-in quand il n'est pas installé/autorisé. Contrairement à l'add-in, tourne en Node
-      complet côté extension host — pas contraint au sous-ensemble "bundlable navigateur" du moteur.
+- [ ] **"Copy as Word" côté extension VS Code (actif)** — clic droit sur une sélection dans un
+      `.md`/`.mmd`, copie l'OOXML généré vers le presse-papiers pour un collage natif dans Word.
+      Pendant de l'add-in Word (Phase 4) mais porté par l'extension elle-même plutôt que par
+      Office.js : permet de se passer de l'add-in quand il n'est pas installé/autorisé. Contrairement
+      à l'add-in, tourne en Node complet côté extension host — pas contraint au sous-ensemble
+      "bundlable navigateur" du moteur.
   - [ ] **Spike presse-papiers (bloquant)** : `vscode.env.clipboard` ne fait que du texte brut ; il
         faudrait écrire du `CF_HTML`/RTF sur le presse-papiers OS pour qu'un `Ctrl+V` dans Word colle
         du contenu riche. Vérifier si le module `clipboard` d'Electron est réellement accessible
@@ -543,11 +546,13 @@ phases précédentes.
         formes aplaties/image plutôt que des shapes OOXML natives individuellement sélectionnables
         (ce que l'add-in obtient via `range.insertOoxml()`). À confirmer avant de vendre cette
         feature comme équivalent fonctionnel de l'add-in.
-  - [ ] Sens "Paste Word as MD" : bloqué sur le même trou que l'add-in ("Copier en MD") — aucun
-        convertisseur OOXML/HTML→Markdown n'existe dans le codebase. Cibler `CF_HTML` (plus simple à
-        parser que l'OOXML brut ; Pandoc sait déjà faire `html → markdown`) plutôt que l'OOXML de
-        `getOoxml()`. **Construire ce convertisseur une seule fois pour servir les deux features**
-        (cet outillage VS Code + "Copier/Coller en MD" de l'add-in, Phase 4).
+- [ ] **"Paste Word as MD" côté extension VS Code (différé)** — sens inverse, volontairement pas
+      commencé : bloqué sur le même trou que l'add-in ("Copier en MD", Phase 4) — aucun
+      convertisseur OOXML/HTML→Markdown n'existe dans le codebase. Cibler `CF_HTML` (plus simple à
+      parser que l'OOXML brut ; Pandoc sait déjà faire `html → markdown`) plutôt que l'OOXML de
+      `getOoxml()`. **Construire ce convertisseur une seule fois pour servir les deux features**
+      (cet outillage VS Code + "Copier/Coller en MD" de l'add-in, Phase 4) — à reprendre une fois
+      Copy as Word livré, pas avant.
 - [ ] **Serveur MCP** (`mermaid-to-office-mcp` ou similaire) — wrapper fin autour du CLI existant,
       pas un nouveau moteur. Cas d'usage : un client MCP (Claude Desktop, Claude Code, Cursor...)
       génère du Mermaid puis appelle l'outil pour produire un `.docx`/`.pptx` natif directement.
@@ -604,6 +609,15 @@ phases précédentes.
     session, une fois testé en vrai sur les 3 OS.
   - **À reprendre seulement si un vrai besoin confirmé apparaît** (quelqu'un qui n'a vraiment aucun
     Node et ne peut pas l'installer) plutôt que de payer la facture de signature par anticipation.
+- [ ] **Option écartée pour l'instant : réécrire le moteur en Python (`python-docx`/`python-pptx`).**
+      Proposée dans l'analyse Gemini (`docs/roadmap.md`, supprimée 2026-09-08) comme moyen de
+      découpler le moteur de VS Code/Node. Verdict implicite du 2026-09-08 : le CLI standalone
+      (item ci-dessus) obtient déjà le découplage visé (appelable par l'extension, un futur serveur
+      MCP, du CI/CD, un backend web) **sans réécriture** — juste en publiant `packages/core`/`cli`
+      sur npm. Réécrire en Python doublonnerait tout le traducteur OOXML/DrawingML déjà mûr et
+      testé (golden/fuzz/visuel) sans bénéfice net identifié. À rouvrir seulement si un cas d'usage
+      concret exige spécifiquement l'écosystème Python (ex. intégration dans un pipeline data
+      existant), pas par défaut.
 
 ---
 
