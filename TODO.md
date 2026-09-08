@@ -523,6 +523,54 @@ Cadrage complet : `docs/specs/export_customization_SPEC.md`. Détail complet de 
 
 ---
 
+## Phase 9 — Outillage autour du moteur (copy/paste VS Code, MCP, CLI standalone)
+
+Trois idées loguées le 2026-09-08 (discussion avec le mainteneur + retour croisé sur une analyse de
+roadmap produite par Gemini) : pas commencées, pas encore ordonnées entre elles ni contre les
+phases précédentes.
+
+- [ ] **"Copy as Word" / "Paste Word as MD" côté extension VS Code** — pendant de l'add-in Word
+      (Phase 4) mais porté par l'extension elle-même plutôt que par Office.js : permet de se passer
+      de l'add-in quand il n'est pas installé/autorisé. Contrairement à l'add-in, tourne en Node
+      complet côté extension host — pas contraint au sous-ensemble "bundlable navigateur" du moteur.
+  - [ ] **Spike presse-papiers (bloquant)** : `vscode.env.clipboard` ne fait que du texte brut ; il
+        faudrait écrire du `CF_HTML`/RTF sur le presse-papiers OS pour qu'un `Ctrl+V` dans Word colle
+        du contenu riche. Vérifier si le module `clipboard` d'Electron est réellement accessible
+        depuis l'extension host (process séparé du process principal, jamais testé ici) — sinon,
+        solution de repli à évaluer (binaire externe type `clipboardy`, ou passer par un fichier
+        temporaire + presse-papiers "fichier" du système).
+  - [ ] **Vérifier ce que Word fait réellement d'un collage HTML/RTF** : probable que ça donne des
+        formes aplaties/image plutôt que des shapes OOXML natives individuellement sélectionnables
+        (ce que l'add-in obtient via `range.insertOoxml()`). À confirmer avant de vendre cette
+        feature comme équivalent fonctionnel de l'add-in.
+  - [ ] Sens "Paste Word as MD" : bloqué sur le même trou que l'add-in ("Copier en MD") — aucun
+        convertisseur OOXML/HTML→Markdown n'existe dans le codebase. Cibler `CF_HTML` (plus simple à
+        parser que l'OOXML brut ; Pandoc sait déjà faire `html → markdown`) plutôt que l'OOXML de
+        `getOoxml()`. **Construire ce convertisseur une seule fois pour servir les deux features**
+        (cet outillage VS Code + "Copier/Coller en MD" de l'add-in, Phase 4).
+- [ ] **Serveur MCP** (`mermaid-to-office-mcp` ou similaire) — wrapper fin autour du CLI existant,
+      pas un nouveau moteur. Cas d'usage : un client MCP (Claude Desktop, Claude Code, Cursor...)
+      génère du Mermaid puis appelle l'outil pour produire un `.docx`/`.pptx` natif directement.
+      Coût jugé faible tant que `packages/cli` reste la seule chose enveloppée (pas de logique
+      dupliquée). Dépend en pratique du chantier CLI standalone ci-dessous (le serveur MCP shell-out
+      vers le même binaire que celui publié).
+- [ ] **CLI standalone publié** — `packages/cli` existe déjà (`bin/md2nativedocx.mjs`) mais reste
+      `"private": true`, workspace-only : aujourd'hui il n'y a aucun moyen de l'obtenir sans passer
+      par l'extension VS Code ou cloner le repo. Utile indépendamment du MCP (pipelines CI/CD,
+      scripts, hooks Git, environnements sans VS Code) et sert de brique commune au serveur MCP.
+  - [ ] Extraire la logique d'auto-provisioning Pandoc/.NET (aujourd'hui dans
+        `packages/vscode-extension`) vers un endroit partagé (`core` ou `cli`) pour que le CLI
+        publié ait la même robustesse "zéro admin" déjà conquise pour l'extension — voir
+        [[project_corporate_pandoc_reliability_2026-09]].
+  - [ ] Retirer `"private": true`, publier `@md2nativedocx/cli` sur npm (`npm install -g` →
+        binaire global) — couvre déjà la majorité de la valeur.
+  - [ ] Option plus tardive/plus lourde : binaire compilé par OS (Node Single Executable
+        Application ou `pkg`) pour les machines corporate verrouillées sans Node du tout — même
+        motivation que la saga Pandoc corporate, mais pas urgent tant que le besoin n'est pas
+        confirmé.
+
+---
+
 ## CI/CD & environnement
 
 - [x] `.github/workflows/ci.yml`/`codeql.yml` : typecheck + lint + test + `npm audit` + secret scan
