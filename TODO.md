@@ -753,19 +753,17 @@ core + 15 pandoc-filter + 64 vscode-extension + 4 word-addin), typecheck clean.
 
 - [ ] **Suivi ouvert 1** : re-confirmer avec le collègue concerné que l'auto-update vers 0.5.3
       règle bien le crash sur sa machine réelle.
-- [ ] **Suivi ouvert 2, pas bloquant pour cette publication mais à trancher** : le job CI Windows
-      ne va pas au bout — l'étape "Build the packaged extension (.vsix)" échoue sur un checkout
-      frais parce que `scripts/bundle-oxml-validator.mjs`'s smoke test dépend de
-      `handmade_samples/cycle-simple.docx`, qui est dans `.gitignore` (règle écrite pour "de vrais
-      échantillons SmartArt construits dans Word, contenu Microsoft verbatim, jamais committé" —
-      voir [[feedback_licensing_caution_smartart]]). Publié aujourd'hui uniquement parce que ce
-      fichier existe déjà localement dans le sandbox où la publication a eu lieu — un checkout
-      totalement frais (un nouveau contributeur, un nouveau poste, ou tout run CI futur) n'a pas ce
-      fichier. Pas clair si `cycle-simple.docx` est vraiment du contenu Microsoft sensible ou juste
-      une fixture anodine générée par ce projet lui-même (son nom correspond aux générateurs
-      `cycle.ts` du projet) — à trancher avec le mainteneur avant de committer quoi que ce soit dans
-      `handmade_samples/`. Alternative sans y toucher : faire pointer le smoke-test vers une
-      fixture déjà trackée par git (ex. dans `test-corpus/`).
+- [x] **Suivi ouvert 2, clos (2026-09-08)** : plutôt que de committer `handmade_samples/
+      cycle-simple.docx` ou de le remplacer par une fixture `test-corpus/` statique, investigation
+      plus poussée a trouvé que l'hypothèse même du smoke-test (`errorCount === 0`) ne tient plus
+      pour **aucun** export aujourd'hui : les parties issues du `reference.docx` de Pandoc (styles/
+      numbering/settings) portent ~17 défauts de schéma préexistants et déjà documentés (voir
+      `scripts/test-oxml-validate.mjs`, "bruit Pandoc, pas nous"), vérifié empiriquement (même sur
+      `test-corpus/word-verification/minimal.docx`). Vrai correctif : `bundle-oxml-validator.mjs`
+      génère maintenant un diagramme minimal à la volée via le CLI du projet lui-même au moment du
+      smoke-test (aucune fixture statique, aucune question de licence) et applique la même
+      classification `word/diagrams`/`wpc:wpc` que `test:oxml-validate` au lieu d'un `errorCount`
+      brut. Job CI macOS ajouté au passage (même template que Windows).
 
 ## Retours en attente de clarification (checklist Round 2, 2026-09-06)
 
