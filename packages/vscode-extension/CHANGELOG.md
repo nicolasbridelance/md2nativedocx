@@ -3,6 +3,40 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] — 2026-09-07
+
+### Added
+- Hardened Pandoc/.NET auto-provisioning so the extension works natively on a locked-down corporate
+  workstation with no admin rights (implements `docs/missing_pandoc_bugfix.md` V0.5.0):
+  - `md2nativedocx.pandoc.downloadUrl`/`md2nativedocx.pandoc.sha256` and
+    `md2nativedocx.dotnet.downloadUrl`/`md2nativedocx.dotnet.sha512` settings let IT mirror the
+    binaries internally (hash still mandatory) for networks that block the default download hosts.
+  - `downloadFile()` falls back from `fetch` to `curl` (reads the OS proxy + cert store) for
+    corporate networks.
+  - Cached binaries are re-verified (size + re-hash against the sentinel) once per session; a
+    quarantined/truncated cache is wiped and re-provisioned automatically.
+
+### Changed
+- The Pandoc-missing toast now offers **Retry (automatic install)** ahead of **Install manually
+  (requires admin rights)**, re-running the exact export command and re-invoking the no-elevation
+  auto-provisioning.
+- A new `PandocBlockedByPolicyError` distinguishes "missing" from "blocked by AppLocker/WDAC/
+  SmartScreen" (exit 1260 / EACCES / EPERM), with a dedicated toast and a **Copy technical details**
+  action instead of a retry.
+- `PandocMissingError` now carries the real stderr as details, and the error handler logs it before
+  showing the toast — no more diagnostic black hole.
+- Temp-dir cleanup in `provisionForPlatform()` is now best-effort, so a transient EDR/antivirus lock
+  on the freshly-extracted binary can never silently discard a provisioning that already succeeded.
+
+### Fixed
+- The export CLI is now launched with the editor's own bundled Node/Electron binary
+  (`process.execPath`) instead of a bare `node` resolved from the system `PATH`. On a machine with
+  no Node.js installed (the norm for a non-technical corporate workstation), that spawn used to fail
+  before the child process ever started — with no stderr to inspect, it surfaced as a bare,
+  undiagnosable "spawn node ENOENT", even when Pandoc/.NET were correctly provisioned. This was a
+  separate root cause from the Pandoc-provisioning hardening above, and could make the export fail
+  outright regardless of it.
+
 ## [0.4.0] — 2026-09-05
 
 ### Added

@@ -172,6 +172,17 @@ function isBlockedByPolicy(err: { code?: string | number | null }, stderr: strin
 function runCli(input: string, output: string, cwd: string, options: RunCliOptions = {}): Promise<void> {
   const cliBin = resolveCliBin();
   const env = { ...process.env };
+  // Run the CLI with the editor's own bundled Node/Electron binary
+  // (`process.execPath`) instead of a bare `node` resolved from the system
+  // PATH. A locked-down corporate workstation with no dev tools installed
+  // has no reason to have `node` on PATH at all — and when that spawn itself
+  // fails, there's no child stderr to inspect (the process never started),
+  // so it falls through to a bare, undiagnosable "spawn node ENOENT". VS
+  // Code's own API docs recommend this exact pattern for running Node.js
+  // scripts without depending on a system install (see `vscode.d.ts`'s
+  // `McpStdioServerDefinition.command`). `ELECTRON_RUN_AS_NODE` is a no-op
+  // when `process.execPath` already points at a plain Node binary.
+  env.ELECTRON_RUN_AS_NODE = '1';
   if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
   if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
@@ -204,7 +215,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (options.dotnetBin) env.MD2NATIVEDOCX_DOTNET_BIN = options.dotnetBin;
   }
   return new Promise((resolve, reject) => {
-    execFile('node', [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
+    execFile(process.execPath, [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {
         resolve();
         return;
