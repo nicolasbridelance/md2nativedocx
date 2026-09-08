@@ -148,7 +148,22 @@ if (hasCustomReferenceDoc && hasAnyLayoutOption(rawLayoutOptions)) {
 }
 const layoutOptions = hasCustomReferenceDoc ? {} : rawLayoutOptions;
 
-const generatedReferenceDoc = hasCustomReferenceDoc ? null : buildReferenceDoc(REFERENCE_DOC_PATH, layoutOptions);
+// This runs at module load, before main()'s try/catch exists — without its
+// own try/catch, any failure here (e.g. the 2026-09-08 corporate-Windows
+// incident: buildReferenceDoc() shells out to `unzip`/`zip`, absent from
+// stock Windows, so extraction throws `spawnSync unzip ENOENT`) would crash
+// with a raw, unprefixed Node stack trace instead of the
+// `md2nativedocx: ... failed: ...` message every other CLI error path
+// produces — which is also the only thing exportService.ts's runCli() can
+// key off of to tell "Pandoc itself is missing" apart from "something else
+// inside the CLI failed" (see its own comment on the `ENOENT` check).
+let generatedReferenceDoc = null;
+try {
+  generatedReferenceDoc = hasCustomReferenceDoc ? null : buildReferenceDoc(REFERENCE_DOC_PATH, layoutOptions);
+} catch (err) {
+  process.stderr.write(`md2nativedocx: reference document setup failed: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.exit(1);
+}
 const EFFECTIVE_REFERENCE_DOC_PATH = hasCustomReferenceDoc
   ? referenceDocOverride
   : (generatedReferenceDoc?.path ?? REFERENCE_DOC_PATH);

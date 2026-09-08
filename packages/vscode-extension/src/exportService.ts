@@ -221,7 +221,16 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
         return;
       }
       const stderr = String(stderrRaw ?? '');
-      if (stderr.includes('ENOENT')) {
+      // Match the CLI's own controlled marker (bin/md2nativedocx.mjs's
+      // `execFile(pandocBin, ...)` callback writes exactly this line, with
+      // `err.code` substituted, when spawning `pandoc` itself throws) rather
+      // than a bare `stderr.includes('ENOENT')` substring search. A plain
+      // substring match also fires on any *other* ENOENT inside the CLI —
+      // found 2026-09-08 on a from-scratch Windows machine: buildReferenceDoc()
+      // shelling out to a missing `unzip` produced `spawnSync unzip ENOENT`,
+      // misclassified as "Pandoc missing" even though Pandoc was fully
+      // provisioned (confirmed via the disk cache) and had never even run yet.
+      if (stderr.includes('md2nativedocx: Pandoc failed (exit ENOENT)')) {
         // English fallback text — extension.ts shows its own localized string
         // for this specific, fixed-meaning error instead of err.message. The
         // full stderr is carried as `details` so the output channel can log
