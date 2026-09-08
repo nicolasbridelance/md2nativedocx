@@ -574,9 +574,12 @@ phases précédentes.
     livré à chaque installeur).
   - [ ] **Suivi ouvert, bloquant la vraie publication** : aucun identifiant npm dans ce sandbox
         (`.env` n'a pas de token, le scope `@md2nativedocx` n'existe pas encore sur le registre).
-        Le mainteneur doit créer/fournir un compte npm (perso ou org, gratuit pour un scope public)
-        et un token d'automatisation pour que la publication (`npm publish` dans l'ordre core →
-        pandoc-filter → cli) puisse être faite.
+        **Action mainteneur** : créer un compte npm (perso ou org — un scope public est gratuit
+        dans les deux cas), générer un "Automation" token (npmjs.com → Access Tokens), et l'ajouter
+        à `.env` (racine du repo, déjà gitignored) sous une clé du genre `NPM_TOKEN=...` — même
+        pattern que `VSCE_PAT` déjà utilisé pour publier l'extension VS Code. Une fois le token en
+        place, la publication (`npm publish` dans l'ordre core → pandoc-filter → cli, `npm whoami`
+        pour confirmer l'auth d'abord) peut être faite directement depuis une session ici.
   - [ ] **Limite connue, pas corrigée** : le CLI standalone n'a pas le provisioning automatique
         Pandoc de l'extension VS Code — il faut Pandoc 3.1.3+ déjà installé et sur le PATH (documenté
         dans `packages/cli/README.md`). Extraire cette logique (aujourd'hui dans
