@@ -53,6 +53,20 @@ const luaOut = join(pandocFilterDir, 'md2nativedocx.lua');
 // itself), same reasoning as luaOut mirroring FILTER_CANDIDATES above.
 const referenceDocOut = join(vendorDir, 'assets', 'reference.docx');
 
+// `adm-zip` (added 2026-09-08 to replace the unzip/zip shell-outs, see
+// zipUtils.mjs) is a CJS package. Bundling a CJS dependency tree into ESM
+// output leaves its own internal `require("fs")`/`require("path")` calls in
+// the bundle rather than resolving them at bundle time; the target `.mjs`
+// module has no ambient `require`, so those crashed at runtime with
+// "Dynamic require of ... is not supported" (esbuild's own shim's error for
+// a `require()` call it couldn't satisfy) — caught by this script's own
+// end-to-end smoke test below, not by any unit test. Standard esbuild fix
+// for this exact CJS-into-ESM scenario: inject a real `require` in scope via
+// `createRequire`, so those leftover calls resolve normally.
+const requireShimBanner = {
+  js: "import { createRequire as __md2nativedocxCreateRequire } from 'node:module';\nconst require = __md2nativedocxCreateRequire(import.meta.url);",
+};
+
 await build({
   entryPoints: [cliEntry],
   outfile: cliOut,
@@ -60,6 +74,7 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node18',
+  banner: requireShimBanner,
 });
 
 await build({
