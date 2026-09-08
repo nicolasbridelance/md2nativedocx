@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..');
 const sourceDir = join(root, 'test-corpus', 'corpus', 'source');
-const corpusDir = join(root, 'test-corpus', 'corpus', 'generated');
 const cli = join(root, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 
 /** Extract the Mermaid diagram text from a source file (strip YAML frontmatter). */
@@ -39,17 +38,6 @@ function toMarkdown(file, diagram) {
 function convertTo(markdown, dir, name, env = process.env) {
   const mdPath = join(dir, `${name}.md`);
   const docxPath = join(dir, `${name}.docx`);
-  writeFileSync(mdPath, markdown);
-  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'], env });
-  return docxPath;
-}
-
-/** Convert a diagram to a .docx via the real CLI. The .md envelope is a
- * transient input derived from the .mmd source, so it is written to a temp dir
- * (not persisted); only the .docx artifact is kept in corpusDir. */
-function convert(name, markdown, env = process.env) {
-  const mdPath = join(tmpdir(), `${name}.md`);
-  const docxPath = join(corpusDir, `${name}.docx`);
   writeFileSync(mdPath, markdown);
   execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'], env });
   return docxPath;
@@ -130,15 +118,27 @@ function assertConformantDocx(docxPath, name) {
   assert.ok(!xml.includes('TargetMode="External"'), `${ctx}: external relationship`);
 }
 
-test('corpus: every source diagram regenerates a conformant .docx in corpus/generated/', () => {
+test('corpus: every source diagram regenerates a conformant .docx (structural checks only)', () => {
+  // Ephemeral temp dir, NOT test-corpus/corpus/generated/ — that directory is
+  // a deliberate, human-triggered artifact (scripts/generate-corpus.mjs, for
+  // manual Word validation and test:visual's baselines, see TESTING.md),
+  // regenerated on purpose and reviewed before committing. This test only
+  // asserts the pipeline still produces conformant OOXML for every corpus
+  // source; it used to also write straight into that committed directory,
+  // silently overwriting it on every `npm test` run — the exact bug already
+  // fixed once below for 'mixed-content', now fixed here too.
   const files = readdirSync(sourceDir).filter((f) => f.endsWith('.mmd') || f.endsWith('.md'));
   assert.ok(files.length > 0, 'no corpus sources found');
-  mkdirSync(corpusDir, { recursive: true });
-  for (const file of files) {
-    const diagram = extractDiagram(join(sourceDir, file));
-    const name = basename(file, '.mmd').replace(/\.md$/, '');
-    const docx = convert(name, toMarkdown(file, diagram));
-    assertConformantDocx(docx, name);
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-conformance-'));
+  try {
+    for (const file of files) {
+      const diagram = extractDiagram(join(sourceDir, file));
+      const name = basename(file, '.mmd').replace(/\.md$/, '');
+      const docx = convertTo(toMarkdown(file, diagram), dir, name);
+      assertConformantDocx(docx, name);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 

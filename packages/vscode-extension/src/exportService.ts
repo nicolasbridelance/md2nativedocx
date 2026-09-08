@@ -166,6 +166,17 @@ export interface RunCliOptions {
 function isBlockedByPolicy(err: { code?: string | number | null }, stderr: string): boolean {
   const code = typeof err.code === 'string' ? err.code : String(err.code ?? '');
   if (code === 'EACCES' || code === 'EPERM' || code === '1260') return true;
+  // Same "scope to the CLI's own controlled marker" fix as the ENOENT check
+  // above, and for the same reason: a bare substring/regex scan across the
+  // whole stderr blob would also fire on an unrelated internal CLI failure
+  // whose own message happens to contain "EACCES"/"EPERM"/"1260" (e.g. a
+  // transient antivirus file lock during an unrelated step — the exact class
+  // of error missing_pandoc_bugfix.md §2 already documents as retryable,
+  // which this branch explicitly is not: it never offers a "Retry" action).
+  // Gate on `md2nativedocx: Pandoc failed (exit ...)` actually being present
+  // first, confirming this really is about spawning `pandoc` itself, before
+  // scanning the rest of the message for the supporting code/text.
+  if (!stderr.includes('md2nativedocx: Pandoc failed (exit ')) return false;
   return /1260|EACCES|EPERM|blocked by group policy/i.test(stderr);
 }
 

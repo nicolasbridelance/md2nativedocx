@@ -36,7 +36,7 @@ mock.module('node:child_process', {
 });
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { exportMermaidFile, PandocMissingError, ExportFailedError } = require('../../src/exportService');
+const { exportMermaidFile, PandocMissingError, PandocBlockedByPolicyError, ExportFailedError } = require('../../src/exportService');
 
 function withTempMmd(fn: (mmdPath: string) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-enoent-classification-test-'));
@@ -69,6 +69,42 @@ test('the CLI\'s own "Pandoc failed (exit ENOENT)" marker is still classified as
       () => exportMermaidFile(mmdPath, ''),
       (err: unknown) => {
         assert.ok(err instanceof PandocMissingError);
+        return true;
+      },
+    );
+  }));
+
+// Same bug class, same fix shape, for isBlockedByPolicy(): its text-based
+// signals used to scan the *whole* stderr blob for "EACCES"/"EPERM"/"1260",
+// which would also fire on an unrelated internal CLI failure (e.g. a
+// transient antivirus file lock during an unrelated step, missing_pandoc_
+// bugfix.md §2 — explicitly retryable) even though this branch never offers
+// a "Retry" action. Fixed by gating those signals on the CLI's own
+// `md2nativedocx: Pandoc failed (exit ...)` marker actually being present.
+
+test('an unrelated EACCES inside the CLI is not misclassified as Pandoc blocked by policy', () =>
+  withTempMmd(async (mmdPath) => {
+    mockErr = new Error('Command failed');
+    mockStderr =
+      "md2nativedocx: reference document setup failed: EACCES: permission denied, open 'C:\\\\Temp\\\\reference.docx'\n";
+    await assert.rejects(
+      () => exportMermaidFile(mmdPath, ''),
+      (err: unknown) => {
+        assert.ok(!(err instanceof PandocBlockedByPolicyError), 'must not be classified as blocked by policy');
+        assert.ok(err instanceof ExportFailedError, 'should fall through to the generic ExportFailedError path');
+        return true;
+      },
+    );
+  }));
+
+test('the CLI\'s own "Pandoc failed (exit EACCES)" marker is still classified as blocked by policy', () =>
+  withTempMmd(async (mmdPath) => {
+    mockErr = new Error('Command failed');
+    mockStderr = 'md2nativedocx: Pandoc failed (exit EACCES)\n';
+    await assert.rejects(
+      () => exportMermaidFile(mmdPath, ''),
+      (err: unknown) => {
+        assert.ok(err instanceof PandocBlockedByPolicyError);
         return true;
       },
     );
