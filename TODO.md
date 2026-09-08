@@ -699,9 +699,73 @@ Vérifié en reproduisant exactement l'environnement du rapport (PATH réduit à
 `zip`/`unzip`) : l'export réussit et produit un `.docx` valide. Suite complète verte (113 cli + 15
 pandoc-filter + 296 core), typecheck clean.
 
+- [x] **Publié en 0.5.2 sur le Marketplace (2026-09-08).**
 - [ ] **Suivi ouvert** : re-confirmer sur le vrai poste de test Windows qui a rapporté le bug (pas
-      seulement reproduit en sandbox Linux) avant de considérer le sujet définitivement clos —
-      décider aussi si ça sort en 0.5.2 et si ça se publie sur le Marketplace (pas encore fait).
+      seulement reproduit en sandbox Linux) avant de considérer le sujet définitivement clos.
+
+## Incident crash Pandoc/Lua sur Windows — `os.tmpname()` + spawn Node cassé (2026-09-08) — clos, publié 0.5.3
+
+Un collègue de Nicolas a eu, sur chaque export : `md2nativedocx: Pandoc failed (exit 11)` +
+`Access violation in generated code when reading 0xffffffffffffffff` (stack GHC/HsLua). Un autre
+collègue de l'équipe (via GitHub Copilot, "GHCP") avait déjà patché le fichier `.lua` en direct sur
+la machine du premier avant que le mainteneur ne demande une revue ici — deux bugs réels et
+indépendants, tous les deux dans **notre propre code**, pas Pandoc :
+
+1. `md2nativedocx.lua` appelle `os.tmpname()` pour chaque bloc mermaid — la liaison HsLua vers
+   `tmpnam()` de la libc a un défaut Windows documenté de longue date (peut renvoyer un chemin à la
+   racine du disque) qui, sur au moins une build Pandoc réelle (3.9.0.2, installée via WinGet),
+   crashe purement et simplement plutôt que d'échouer proprement. Corrigé avec les primitives
+   portables propres à Pandoc : `pandoc.system.with_temporary_directory` + `pandoc.path.join`
+   (version de GHCP adoptée telle quelle, meilleure que le premier correctif local du mainteneur —
+   nettoyage garanti y compris en cas d'erreur).
+2. **Deuxième bug, plus fondamental, trouvé en corrigeant le premier** : le filtre Lua invoque son
+   "core bridge" Node via un chemin `.mjs` nu (`core_bin .. ' ' .. tmp`) — ça ne marche que sur Unix
+   (shebang + bit exécutable) ; Windows n'a ni l'un ni l'autre, donc **aucun diagramme n'a jamais pu
+   être rendu sur Windows**, indépendamment du crash ci-dessus (confirmé par le premier vrai run du
+   nouveau job CI Windows : ~20 tests en échec, tous "`w:drawing` manquant"). Corrigé (version de
+   GHCP adoptée) : invocation explicite `"<node>" "<core_bin>" "<tmp>"` sur Windows, avec la double
+   paire de guillemets nécessaire pour contourner le comportement de `cmd /c`. **Pièce manquante du
+   patch de GHCP, ajoutée ici** : `MD2NATIVEDOCX_NODE_BIN` n'était jamais renseigné par notre propre
+   code — retombait silencieusement sur un `node` nu du PATH, réintroduisant un cran plus profond
+   exactement le problème "pas de Node installé" déjà réglé en 0.5.1 pour le spawn extérieur
+   (`exportService.ts` → `process.execPath`). `bin/md2nativedocx.mjs` renseigne maintenant cette
+   variable avec `process.execPath`.
+3. **Troisième correctif, indépendant mais lié** : `ensurePandoc()` vérifiait un pandoc du PATH
+   *avant* notre propre build 3.1.3 pinnée — donc n'importe quel pandoc trouvé sur le PATH (le
+   3.9.0.2 ci-dessus, installé pour une tout autre raison) gagnait silencieusement, sans même que
+   notre téléchargement ne soit tenté. Décision explicitement laissée en suspens dans
+   `missing_pandoc_bugfix.md` §8 — cet incident la tranche : le build pinné passe désormais en
+   premier, le PATH ne sert plus que de dernier recours.
+4. `isBlockedByPolicy()` avait le même défaut de classification trop large que l'`ENOENT` de
+   l'incident précédent (scan de tout le stderr pour "EACCES"/"EPERM"/"1260") — resserré sur le
+   marqueur contrôlé du CLI, même principe.
+
+Job CI Windows (ajouté juste avant cet incident) déterminant pour le diagnostic : a confirmé le
+hang CI de 50+ minutes était bien causé par `os.tmpname()` (plus de hang après le premier correctif
+partiel), puis a directement révélé le bug n°2 (les ~20 échecs "`w:drawing` manquant"), puis un
+dernier problème mineur : `unzip`/`zip -p ... '\[Content_Types\].xml'` (échappement des crochets
+pour le glob) se comporte différemment sur le build Windows d'Info-ZIP — 3 helpers de test
+(`corpus.test.mjs`/`postprocess.test.mjs`/`reference-doc-builder.test.mjs`) basculés sur `adm-zip`
+pour cette lecture précise (code produit non affecté, uniquement des helpers de test).
+
+Publié en **0.5.3** sur le Marketplace (2026-09-08). Suite complète verte partout (113 cli + 296
+core + 15 pandoc-filter + 64 vscode-extension + 4 word-addin), typecheck clean.
+
+- [ ] **Suivi ouvert 1** : re-confirmer avec le collègue concerné que l'auto-update vers 0.5.3
+      règle bien le crash sur sa machine réelle.
+- [ ] **Suivi ouvert 2, pas bloquant pour cette publication mais à trancher** : le job CI Windows
+      ne va pas au bout — l'étape "Build the packaged extension (.vsix)" échoue sur un checkout
+      frais parce que `scripts/bundle-oxml-validator.mjs`'s smoke test dépend de
+      `handmade_samples/cycle-simple.docx`, qui est dans `.gitignore` (règle écrite pour "de vrais
+      échantillons SmartArt construits dans Word, contenu Microsoft verbatim, jamais committé" —
+      voir [[feedback_licensing_caution_smartart]]). Publié aujourd'hui uniquement parce que ce
+      fichier existe déjà localement dans le sandbox où la publication a eu lieu — un checkout
+      totalement frais (un nouveau contributeur, un nouveau poste, ou tout run CI futur) n'a pas ce
+      fichier. Pas clair si `cycle-simple.docx` est vraiment du contenu Microsoft sensible ou juste
+      une fixture anodine générée par ce projet lui-même (son nom correspond aux générateurs
+      `cycle.ts` du projet) — à trancher avec le mainteneur avant de committer quoi que ce soit dans
+      `handmade_samples/`. Alternative sans y toucher : faire pointer le smoke-test vers une
+      fixture déjà trackée par git (ex. dans `test-corpus/`).
 
 ## Retours en attente de clarification (checklist Round 2, 2026-09-06)
 
