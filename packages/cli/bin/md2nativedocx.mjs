@@ -318,6 +318,15 @@ async function main() {
   const pandocEnv = smartArtDir
     ? { ...process.env, MD2NATIVEDOCX_SMARTART_DIR: smartArtDir }
     : { ...process.env };
+  // md2nativedocx.lua's core_command() needs this on Windows (no shebang/
+  // file-association handling there, so it can't invoke a bare .mjs file the
+  // way Unix does) — process.execPath is *this* script's own interpreter,
+  // which is always Node: either a real system Node (standalone CLI usage)
+  // or the VS Code extension's own bundled Electron-as-Node binary (already
+  // spawned with ELECTRON_RUN_AS_NODE=1 by exportService.ts's runCli(),
+  // inherited into process.env above and passed through unchanged). Setting
+  // this unconditionally is harmless on Unix — nothing reads it there.
+  pandocEnv.MD2NATIVEDOCX_NODE_BIN = process.execPath;
   if (maxDrawingExtentEmu) {
     pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CX = String(Math.round(maxDrawingExtentEmu.cx));
     pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CY = String(Math.round(maxDrawingExtentEmu.cy));

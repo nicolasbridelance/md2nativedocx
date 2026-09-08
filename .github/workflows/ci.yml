@@ -103,11 +103,11 @@ jobs:
         with:
           dotnet-version: '10.0.200'
 
-      - name: Install unzip
+      - name: Install unzip and zip
         # Test-only: a handful of test helpers (not shipped product code —
         # the CLI itself has had no unzip/zip dependency since 2026-09-08)
-        # still shell out to `unzip` to inspect a generated .docx.
-        run: choco install unzip -y
+        # still shell out to `unzip`/`zip` to inspect/build a .docx fixture.
+        run: choco install unzip zip -y
 
       - name: Install dependencies
         run: npm ci

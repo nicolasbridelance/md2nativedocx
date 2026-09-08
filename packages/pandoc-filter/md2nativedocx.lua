@@ -17,46 +17,75 @@ local core_bin = os.getenv('PANDOC_FILTER_CORE')
   or (debug.getinfo(1, 'S').source:match('^@(.*[/\\])') or '')
     .. 'bin/md2nativedocx-core.mjs'
 
--- Own temp-path generator, deliberately not os.tmpname(): a real 2026-09-08
--- incident found os.tmpname() crashing pandoc 3.9.0.2 on Windows with an
--- access violation inside its embedded Lua runtime (HsLua's binding calls
--- the C library's tmpnam(), which has long-standing, version-dependent
--- Windows quirks — MSVCRT's tmpnam() can return a drive-root-relative path
--- unwritable without elevated rights, and this crash suggests worse than
--- that in at least this Pandoc build). PID isn't available to a Pandoc Lua
--- filter, so an incrementing counter is what guarantees uniqueness instead —
--- sufficient here since every call happens sequentially within one Pandoc
--- process (this filter is never invoked concurrently with itself).
-local temp_dir = os.getenv('TMPDIR') or os.getenv('TMP') or os.getenv('TEMP') or '/tmp'
-local temp_counter = 0
-local function make_temp_path()
-  temp_counter = temp_counter + 1
-  return temp_dir .. '/md2nativedocx-lua-' .. tostring(os.time()) .. '-' .. tostring(temp_counter) .. '.tmp'
+local is_windows = package.config:sub(1, 1) == '\\'
+
+-- Windows has no `#!/usr/bin/env node` handling and no default association
+-- for `.mjs`, so the bridge must be launched through Node explicitly there —
+-- a bare `core_bin` invocation (below, still used unchanged on Unix) never
+-- worked on Windows at all, confirmed 2026-09-08 by a from-scratch Windows
+-- CI run (every diagram silently dropped: run_core_file failed, the
+-- CodeBlock handler below left the raw ```mermaid text in place instead of
+-- a drawing). `MD2NATIVEDOCX_NODE_BIN` is set by bin/md2nativedocx.mjs to
+-- `process.execPath` (the editor's own bundled Node/Electron binary, same
+-- fix already applied one process up in exportService.ts's runCli() for
+-- 0.5.1) — falls back to a bare `node` only for a standalone `pandoc
+-- --lua-filter` invocation with no CLI wrapping it. The whole command is
+-- wrapped in one extra quote pair because `cmd /c` (what io.popen uses on
+-- Windows) strips the outermost pair when the string starts with a quote —
+-- needed here since `node_bin` itself can contain spaces (e.g. "...\Microsoft
+-- VS Code\Code.exe" when it's the editor's own binary).
+local function core_command(tmp)
+  if not is_windows then
+    return core_bin .. ' ' .. tmp
+  end
+  local node_bin = os.getenv('MD2NATIVEDOCX_NODE_BIN') or 'node'
+  return '""' .. node_bin .. '" "' .. core_bin .. '" "' .. tmp .. '""'
 end
 
 -- File-based bridge: write the diagram to a temp file, invoke the core with a
 -- fixed argument array (no shell interpolation of the diagram), read the XML.
 local function run_core_file(mermaid_text)
-  local tmp = make_temp_path()
-  local f = assert(io.open(tmp, 'w'))
-  f:write(mermaid_text)
-  f:close()
+  local xml, err
+  -- Deliberately not os.tmpname(): a real 2026-09-08 incident found it
+  -- crashing pandoc 3.9.0.2 on Windows with an access violation inside its
+  -- embedded Lua runtime (HsLua's binding calls the C library's tmpnam(),
+  -- which has long-standing, version-dependent Windows quirks — MSVCRT's
+  -- tmpnam() can return a drive-root-relative path unwritable without
+  -- elevated rights, and this crash suggests worse than that in at least
+  -- this Pandoc build). pandoc.system.with_temporary_directory is Pandoc's
+  -- own portable primitive for exactly this — correctly scoped to a real
+  -- OS temp directory on every platform, and guarantees cleanup (including
+  -- on error) without this filter having to track it by hand.
+  pandoc.system.with_temporary_directory('md2nativedocx', function(dir)
+    local tmp = pandoc.path.join({ dir, 'diagram.mmd' })
+    local f = assert(io.open(tmp, 'w'))
+    f:write(mermaid_text)
+    f:close()
 
-  -- The bridge reads the diagram from the file path given as argv[1] and
-  -- writes XML to stdout. We capture stdout via io.popen in read mode; the
-  -- only thing interpolated into the shell string is the trusted binary path
-  -- and the temp file path (which we control), never the diagram text.
-  local cmd = core_bin .. ' ' .. tmp
-  local p = io.popen(cmd, 'r')
-  if not p then
-    os.remove(tmp)
-    return nil, 'md2nativedocx: could not start core bridge'
-  end
-  local xml = p:read('*a')
-  local ok = p:close()
-  os.remove(tmp)
-  if not ok then
-    return nil, 'md2nativedocx: core bridge failed'
+    -- The bridge reads the diagram from the file path given as argv[1] and
+    -- writes XML to stdout. We capture stdout via io.popen in read mode; the
+    -- only thing interpolated into the shell string is the trusted binary
+    -- path and the temp file path (which we control), never the diagram
+    -- text.
+    local p = io.popen(core_command(tmp), 'r')
+    if not p then
+      err = 'md2nativedocx: could not start core bridge'
+      return
+    end
+    local out = p:read('*a')
+    local ok = p:close()
+    if not ok then
+      err = 'md2nativedocx: core bridge failed'
+      return
+    end
+    if out == nil or out == '' then
+      err = 'md2nativedocx: core bridge returned no output (is Node.js on PATH?)'
+      return
+    end
+    xml = out
+  end)
+  if not xml then
+    return nil, err or 'md2nativedocx: core bridge failed'
   end
   return xml
 end
