@@ -40,10 +40,10 @@
  * since {@link buildReferenceDoc} was already the right place to assemble it.
  */
 
-import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
 
 /** Page dimensions in twips (1/20 pt), portrait orientation (w < h). Standard
  * OOXML values used verbatim by Word/LibreOffice — not an assumption, unlike
@@ -440,68 +440,52 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
   const workDocx = join(dir, 'reference.docx');
 
   try {
-    copyFileSync(basePath, workDocx);
-
-    const entries = [];
-    if (needsTheme) entries.push('word/theme/theme1.xml');
-    if (needsStyles) entries.push('word/styles.xml');
-    if (needsSectPr) entries.push('word/document.xml');
-    if (needsFooter) entries.push('word/_rels/document.xml.rels', '[Content_Types].xml');
-
-    // unzip treats `[...]` in a member-name argument as a glob character
-    // class (not a literal bracket), so `[Content_Types].xml` must be
-    // escaped for extraction or it silently fails to match ("filename not
-    // matched") — same pitfall already found and documented in
-    // postprocess.mjs's injectSmartArtParts. `zip` (the write side, below)
-    // does not need the same escaping.
-    const unzipEntries = entries.map((e) => (e === '[Content_Types].xml' ? '\\[Content_Types\\].xml' : e));
-    execFileSync('unzip', ['-o', '-q', workDocx, ...unzipEntries, '-d', dir], { stdio: 'pipe' });
+    const zip = new AdmZip(basePath);
 
     if (needsTheme) {
-      const p = join(dir, 'word', 'theme', 'theme1.xml');
-      writeFileSync(p, patchTheme(readFileSync(p, 'utf8'), { headingFont, bodyFont, accentColor }), 'utf8');
+      const theme = readZipEntry(zip, 'word/theme/theme1.xml');
+      setZipEntry(zip, 'word/theme/theme1.xml', patchTheme(theme, { headingFont, bodyFont, accentColor }));
     }
     if (needsStyles) {
-      const p = join(dir, 'word', 'styles.xml');
+      const styles = readZipEntry(zip, 'word/styles.xml');
       const fontSizeHalfPt = fontSizePt !== undefined ? resolveFontSizeHalfPt(fontSizePt) : undefined;
-      writeFileSync(
-        p,
-        patchStyles(readFileSync(p, 'utf8'), {
+      setZipEntry(
+        zip,
+        'word/styles.xml',
+        patchStyles(styles, {
           fontSizeHalfPt,
           lineSpacing: resolvedLineSpacing,
           justify,
           accentColor,
           tableHeaderColor,
         }),
-        'utf8',
       );
     }
 
     let footerRId;
     if (needsFooter) {
-      const relsPath = join(dir, 'word', '_rels', 'document.xml.rels');
-      const patched = patchRelsForFooter(readFileSync(relsPath, 'utf8'));
+      const rels = readZipEntry(zip, 'word/_rels/document.xml.rels');
+      const patched = patchRelsForFooter(rels);
       footerRId = patched.rId;
-      writeFileSync(relsPath, patched.xml, 'utf8');
+      setZipEntry(zip, 'word/_rels/document.xml.rels', patched.xml);
 
-      const contentTypesPath = join(dir, '[Content_Types].xml');
-      writeFileSync(contentTypesPath, patchContentTypesForFooter(readFileSync(contentTypesPath, 'utf8')), 'utf8');
+      const contentTypes = readZipEntry(zip, '[Content_Types].xml');
+      setZipEntry(zip, '[Content_Types].xml', patchContentTypesForFooter(contentTypes));
 
-      writeFileSync(join(dir, 'word', 'footer1.xml'), FOOTER_PAGE_NUMBER_XML, 'utf8');
-      entries.push('word/footer1.xml');
+      setZipEntry(zip, 'word/footer1.xml', FOOTER_PAGE_NUMBER_XML);
     }
 
     if (needsSectPr) {
-      const p = join(dir, 'word', 'document.xml');
+      const documentXml = readZipEntry(zip, 'word/document.xml');
       const pgSize =
         pageSize !== undefined || orientation !== undefined || landscapeTables === true
           ? resolvePageSize(pageSize, orientation)
           : null;
       const mar = margins !== undefined || landscapeTables === true ? resolveMargins(margins, marginsCustomCm) : null;
-      writeFileSync(p, patchSectPr(readFileSync(p, 'utf8'), { pgSize, margins: mar, footerRId }), 'utf8');
+      setZipEntry(zip, 'word/document.xml', patchSectPr(documentXml, { pgSize, margins: mar, footerRId }));
     }
 
-    execFileSync('zip', ['-q', '-X', workDocx, ...entries], { cwd: dir, stdio: 'pipe' });
+    zip.writeZip(workDocx);
     return { path: workDocx, dir };
   } catch (err) {
     rmSync(dir, { recursive: true, force: true });

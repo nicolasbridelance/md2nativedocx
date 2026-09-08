@@ -16,6 +16,7 @@
     "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs"
   },
   "dependencies": {
-    "@md2nativedocx/pandoc-filter": "0.1.0"
+    "@md2nativedocx/pandoc-filter": "0.1.0",
+    "adm-zip": "^0.6.0"
   }
 }

@@ -39,11 +39,10 @@
  * it does; it is a no-op whenever a document has no SmartArt diagram in it.
  */
 
-import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, mkdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve, dirname } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { patchSettings } from './referenceDocBuilder.mjs';
+import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
 
 /** Extended namespaces Word declares on the document root, prefix -> URI. */
 const EXTENDED_NS = {
@@ -412,44 +411,31 @@ export function collapseTrailingLandscapeSection(documentXml) {
  */
 export function postProcessDocx(docxPath, { toc = false, emojiFont = true } = {}) {
   const archive = resolve(docxPath);
-  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-post-'));
-  try {
-    // Extract only the parts we touch, preserving their path inside the
-    // archive so `zip` puts them back exactly where they came from.
-    const entries = toc ? ['word/document.xml', 'word/settings.xml'] : ['word/document.xml'];
-    execFileSync('unzip', ['-o', '-q', archive, ...entries, '-d', dir], { stdio: 'pipe' });
+  const zip = new AdmZip(archive);
 
-    const documentPath = join(dir, 'word', 'document.xml');
-    const originalDocument = readFileSync(documentPath, 'utf8');
-    let patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
-    patchedDocument = collapseTrailingLandscapeSection(collapseAdjacentSectionBreaks(patchedDocument));
-    if (emojiFont) patchedDocument = forceEmojiColorFont(patchedDocument);
-    let changed = false;
-    if (patchedDocument !== originalDocument) {
-      writeFileSync(documentPath, patchedDocument, 'utf8');
+  const originalDocument = readZipEntry(zip, 'word/document.xml');
+  let patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
+  patchedDocument = collapseTrailingLandscapeSection(collapseAdjacentSectionBreaks(patchedDocument));
+  if (emojiFont) patchedDocument = forceEmojiColorFont(patchedDocument);
+  let changed = false;
+  if (patchedDocument !== originalDocument) {
+    setZipEntry(zip, 'word/document.xml', patchedDocument);
+    changed = true;
+  }
+
+  if (toc) {
+    const originalSettings = readZipEntry(zip, 'word/settings.xml');
+    const patchedSettings = patchSettings(originalSettings, { toc });
+    if (patchedSettings !== originalSettings) {
+      setZipEntry(zip, 'word/settings.xml', patchedSettings);
       changed = true;
     }
-
-    if (toc) {
-      const settingsPath = join(dir, 'word', 'settings.xml');
-      const originalSettings = readFileSync(settingsPath, 'utf8');
-      const patchedSettings = patchSettings(originalSettings, { toc });
-      if (patchedSettings !== originalSettings) {
-        writeFileSync(settingsPath, patchedSettings, 'utf8');
-        changed = true;
-      }
-    }
-
-    if (!changed) return;
-    // Replace only the entries that actually changed; every other part of
-    // Pandoc's archive is left byte-for-byte untouched.
-    execFileSync('zip', ['-q', '-X', archive, 'word/document.xml', ...(toc ? ['word/settings.xml'] : [])], {
-      cwd: dir,
-      stdio: 'pipe',
-    });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
   }
+
+  if (!changed) return;
+  // Replace only the entries that actually changed; every other part of
+  // Pandoc's archive is left byte-for-byte untouched.
+  zip.writeZip(archive);
 }
 
 /**
@@ -513,11 +499,11 @@ function findSmartArtPlaceholderIds(documentXml) {
 }
 
 /** The next unused `word/diagrams/data{N}.xml` number, scanning the archive's existing entries (1 if none). */
-function nextSmartArtPartNumber(archive) {
-  const listing = execFileSync('unzip', ['-l', archive], { encoding: 'utf8' });
+function nextSmartArtPartNumber(zip) {
   let max = 0;
-  for (const match of listing.matchAll(/word\/diagrams\/data(\d+)\.xml/g)) {
-    max = Math.max(max, Number(match[1]));
+  for (const entry of zip.getEntries()) {
+    const match = /^word\/diagrams\/data(\d+)\.xml$/.exec(entry.entryName);
+    if (match) max = Math.max(max, Number(match[1]));
   }
   return max + 1;
 }
@@ -544,89 +530,70 @@ function nextFreeRelId(relsXml, prefix) {
  */
 export function injectSmartArtParts(docxPath, smartArtDir) {
   const archive = resolve(docxPath);
-  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-smartart-'));
-  try {
-    execFileSync('unzip', ['-o', '-q', archive, 'word/document.xml', '-d', dir], { stdio: 'pipe' });
-    const documentPath = join(dir, 'word', 'document.xml');
-    let documentXml = readFileSync(documentPath, 'utf8');
+  const zip = new AdmZip(archive);
+  let documentXml = readZipEntry(zip, 'word/document.xml');
 
-    const ids = findSmartArtPlaceholderIds(documentXml);
-    if (ids.length === 0) return;
+  const ids = findSmartArtPlaceholderIds(documentXml);
+  if (ids.length === 0) return;
 
-    if (!smartArtDir) {
-      throw new Error(
-        'md2nativedocx: document.xml references SmartArt placeholders but no smartArtDir was given'
-      );
-    }
-
-    // unzip treats `[...]` in a member-name argument as a glob character
-    // class (not a literal bracket), so `[Content_Types].xml` must be
-    // escaped or it silently fails to match ("filename not matched") --
-    // found running this end to end, 2026-09-03.
-    execFileSync('unzip', ['-o', '-q', archive, '\\[Content_Types\\].xml', 'word/_rels/document.xml.rels', '-d', dir], {
-      stdio: 'pipe',
-    });
-    const contentTypesPath = join(dir, '[Content_Types].xml');
-    const relsPath = join(dir, 'word', '_rels', 'document.xml.rels');
-    let contentTypes = readFileSync(contentTypesPath, 'utf8');
-    let relsXml = readFileSync(relsPath, 'utf8');
-
-    let nextPartNumber = nextSmartArtPartNumber(archive);
-    const newEntries = [];
-
-    for (const id of ids) {
-      const sourceDir = join(smartArtDir, id);
-      if (!existsSync(sourceDir)) {
-        throw new Error(`md2nativedocx: no SmartArt parts found for diagram "${id}" in ${smartArtDir}`);
-      }
-
-      const n = nextPartNumber++;
-      /** @type {Record<'dm'|'lo'|'qs'|'cs', string>} */
-      const relIds = {};
-      for (const kind of /** @type {const} */ (['dm', 'lo', 'qs', 'cs'])) {
-        const partName = `${SMARTART_PART_STEM[kind]}${n}.xml`;
-        const partPath = `word/diagrams/${partName}`;
-        const xml = readFileSync(join(sourceDir, SMARTART_SOURCE_FILE[kind]), 'utf8');
-
-        const relId = nextFreeRelId(relsXml, `rIdSmartArt${n}${kind.toUpperCase()}`);
-        relIds[kind] = relId;
-        relsXml = relsXml.replace(
-          '</Relationships>',
-          `<Relationship Id="${relId}" Type="${SMARTART_RELTYPE[kind]}" Target="diagrams/${partName}" /></Relationships>`
-        );
-        contentTypes = contentTypes.replace(
-          '</Types>',
-          `<Override PartName="/${partPath}" ContentType="${SMARTART_CONTENTTYPE[kind]}" /></Types>`
-        );
-
-        const diskPath = join(dir, partPath);
-        mkdirSync(dirname(diskPath), { recursive: true });
-        writeFileSync(diskPath, xml, 'utf8');
-        newEntries.push(partPath);
-      }
-
-      for (const kind of /** @type {const} */ (['dm', 'lo', 'qs', 'cs'])) {
-        documentXml = documentXml.split(`SMARTART_PLACEHOLDER:${id}:${kind}`).join(relIds[kind]);
-      }
-    }
-
-    // No rule #3 check here (unlike the from-scratch spike scripts this
-    // logic descends from): `relsXml` is the *real* document's existing
-    // rels file, which may legitimately already contain external
-    // relationships Pandoc itself created for Markdown hyperlinks --
-    // unrelated to anything this function adds. The 4 relationships added
-    // above are always internal (`Target="diagrams/..."`, no `TargetMode`
-    // attribute at all), by construction, not by a runtime check.
-    writeFileSync(documentPath, documentXml, 'utf8');
-    writeFileSync(contentTypesPath, contentTypes, 'utf8');
-    writeFileSync(relsPath, relsXml, 'utf8');
-
-    execFileSync(
-      'zip',
-      ['-q', '-X', archive, 'word/document.xml', '[Content_Types].xml', 'word/_rels/document.xml.rels', ...newEntries],
-      { cwd: dir, stdio: 'pipe' }
+  if (!smartArtDir) {
+    throw new Error(
+      'md2nativedocx: document.xml references SmartArt placeholders but no smartArtDir was given'
     );
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
   }
+
+  let contentTypes = readZipEntry(zip, '[Content_Types].xml');
+  let relsXml = readZipEntry(zip, 'word/_rels/document.xml.rels');
+
+  let nextPartNumber = nextSmartArtPartNumber(zip);
+  const newParts = [];
+
+  for (const id of ids) {
+    const sourceDir = join(smartArtDir, id);
+    if (!existsSync(sourceDir)) {
+      throw new Error(`md2nativedocx: no SmartArt parts found for diagram "${id}" in ${smartArtDir}`);
+    }
+
+    const n = nextPartNumber++;
+    /** @type {Record<'dm'|'lo'|'qs'|'cs', string>} */
+    const relIds = {};
+    for (const kind of /** @type {const} */ (['dm', 'lo', 'qs', 'cs'])) {
+      const partName = `${SMARTART_PART_STEM[kind]}${n}.xml`;
+      const partPath = `word/diagrams/${partName}`;
+      const xml = readFileSync(join(sourceDir, SMARTART_SOURCE_FILE[kind]), 'utf8');
+
+      const relId = nextFreeRelId(relsXml, `rIdSmartArt${n}${kind.toUpperCase()}`);
+      relIds[kind] = relId;
+      relsXml = relsXml.replace(
+        '</Relationships>',
+        `<Relationship Id="${relId}" Type="${SMARTART_RELTYPE[kind]}" Target="diagrams/${partName}" /></Relationships>`
+      );
+      contentTypes = contentTypes.replace(
+        '</Types>',
+        `<Override PartName="/${partPath}" ContentType="${SMARTART_CONTENTTYPE[kind]}" /></Types>`
+      );
+
+      newParts.push([partPath, xml]);
+    }
+
+    for (const kind of /** @type {const} */ (['dm', 'lo', 'qs', 'cs'])) {
+      documentXml = documentXml.split(`SMARTART_PLACEHOLDER:${id}:${kind}`).join(relIds[kind]);
+    }
+  }
+
+  // No rule #3 check here (unlike the from-scratch spike scripts this
+  // logic descends from): `relsXml` is the *real* document's existing
+  // rels file, which may legitimately already contain external
+  // relationships Pandoc itself created for Markdown hyperlinks --
+  // unrelated to anything this function adds. The 4 relationships added
+  // above are always internal (`Target="diagrams/..."`, no `TargetMode`
+  // attribute at all), by construction, not by a runtime check.
+  setZipEntry(zip, 'word/document.xml', documentXml);
+  setZipEntry(zip, '[Content_Types].xml', contentTypes);
+  setZipEntry(zip, 'word/_rels/document.xml.rels', relsXml);
+  for (const [partPath, xml] of newParts) {
+    setZipEntry(zip, partPath, xml);
+  }
+
+  zip.writeZip(archive);
 }
