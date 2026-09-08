@@ -69,6 +69,64 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  # 2026-09-08: the build-test job above has always run on ubuntu-latest only.
+  # That gap is exactly how a universal, on-by-default Windows export failure
+  # (unzip/zip absent from stock Windows) and a separate Windows-only .vsix
+  # bundling bug (a CJS dependency mis-bundled into ESM) both shipped
+  # undetected until a real user's machine hit them. This job closes that
+  # gap: it runs the packages most exercised by that incident (cli/core/
+  # pandoc-filter) on Windows, and — the check that would have caught the
+  # *second* bug on its own — actually builds the packaged .vsix, not just
+  # the source tree. Deliberately narrower than build-test (no lint/fuzz/
+  # oxml-validate): those are OS-independent logic already covered on Linux;
+  # this job's whole purpose is the OS-sensitive surface, not full duplication.
+  build-test-windows:
+    name: Typecheck & test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.1.3'
+
+      - uses: actions/setup-dotnet@v4
+        # Needed to build scripts/oxml-validator/ during `npm run package`
+        # below (packaging always bundles it, see bundle-oxml-validator.mjs).
+        # Version kept in sync with build-test's own setup-dotnet step.
+        with:
+          dotnet-version: '10.0.200'
+
+      - name: Install unzip
+        # Test-only: a handful of test helpers (not shipped product code —
+        # the CLI itself has had no unzip/zip dependency since 2026-09-08)
+        # still shell out to `unzip` to inspect a generated .docx.
+        run: choco install unzip -y
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit + golden tests (cli, core, pandoc-filter)
+        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter
+
+      - name: Build the packaged extension (.vsix)
+        # Exercises the esbuild bundling step end to end — the vendored CLI's
+        # own smoke test (bundle-cli.mjs) runs a real export through it. This
+        # is what would have caught the adm-zip CJS-into-ESM bundling bug.
+        run: npm run package --workspace=md2nativedocx
+
   audit:
     name: npm audit (fail on high/critical)
     runs-on: ubuntu-latest
