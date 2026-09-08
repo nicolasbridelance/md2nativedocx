@@ -3,6 +3,17 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] — 2026-09-08
+
+### Fixed
+- The export CLI is now launched with the editor's own bundled Node/Electron binary
+  (`process.execPath`) instead of a bare `node` resolved from the system `PATH`. On a machine with
+  no Node.js installed (the norm for a non-technical corporate workstation), that spawn used to fail
+  before the child process ever started — with no stderr to inspect, it surfaced as a bare,
+  undiagnosable "spawn node ENOENT", even when Pandoc/.NET were correctly provisioned by 0.5.0. This
+  was a separate root cause from 0.5.0's Pandoc-provisioning hardening, and could make the export
+  fail outright regardless of it.
+
 ## [0.5.0] — 2026-09-07
 
 ### Added
@@ -27,15 +38,6 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   showing the toast — no more diagnostic black hole.
 - Temp-dir cleanup in `provisionForPlatform()` is now best-effort, so a transient EDR/antivirus lock
   on the freshly-extracted binary can never silently discard a provisioning that already succeeded.
-
-### Fixed
-- The export CLI is now launched with the editor's own bundled Node/Electron binary
-  (`process.execPath`) instead of a bare `node` resolved from the system `PATH`. On a machine with
-  no Node.js installed (the norm for a non-technical corporate workstation), that spawn used to fail
-  before the child process ever started — with no stderr to inspect, it surfaced as a bare,
-  undiagnosable "spawn node ENOENT", even when Pandoc/.NET were correctly provisioned. This was a
-  separate root cause from the Pandoc-provisioning hardening above, and could make the export fail
-  outright regardless of it.
 
 ## [0.4.0] — 2026-09-05
 
