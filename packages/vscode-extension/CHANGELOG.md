@@ -3,6 +3,35 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.3] — 2026-09-08
+
+### Fixed
+- Every export crashed on some real Windows machines with an opaque Pandoc access violation
+  ("Access violation in generated code when reading 0xffffffffffffffff") — root-caused to
+  `md2nativedocx.lua` calling `os.tmpname()` for every mermaid block, which has long-standing,
+  version-dependent Windows quirks and crashes outright on at least one real Pandoc build. Replaced
+  with Pandoc's own `pandoc.system.with_temporary_directory`/`pandoc.path.join` primitives.
+- A second, independent Windows bug, uncovered while fixing the first: the Lua filter invoked its
+  Node "core bridge" as a bare `.mjs` path, which only ever worked on Unix (shebang + exec bit) —
+  Windows has neither, so every diagram silently failed to render there regardless of the crash
+  above. Now invoked through Node explicitly on Windows, using the editor's own bundled Node
+  (`process.execPath`, threaded down via a new `MD2NATIVEDOCX_NODE_BIN` env var) rather than an
+  unverified `node` on `PATH` — the same fix already applied one process up in exportService.ts for
+  0.5.1, now applied one process deeper too.
+- `ensurePandoc()` checked a `PATH` pandoc *before* this project's own pinned, tested build — so an
+  arbitrary, unverified system pandoc (found via WinGet, Chocolatey, a prior manual install, ...)
+  silently won over the build this project's own tests actually run against, and could carry its
+  own unrelated bugs (confirmed by the crash above: a `PATH` pandoc 3.9.0.2 crashed where the
+  pinned 3.1.3 build doesn't). Flipped: the pinned build is tried first, `PATH` is now a last
+  resort only when provisioning is exhausted.
+- `isBlockedByPolicy()`'s security-policy detection scanned the *whole* Pandoc-failure stderr for
+  "EACCES"/"EPERM"/"1260", which could misclassify an unrelated internal failure (e.g. a transient
+  antivirus file lock, already known to be retryable) as "blocked by a security policy" — a branch
+  that offers no retry action at all. Scoped to the CLI's own controlled failure marker first.
+- Added a Windows CI job — the actual gap that let both this release's and 0.5.2's bugs ship
+  undetected: nothing had ever run this project's test suite, let alone the packaged `.vsix`
+  itself, on Windows before.
+
 ## [0.5.2] — 2026-09-08
 
 ### Fixed

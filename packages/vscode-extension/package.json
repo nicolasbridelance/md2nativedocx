@@ -2,7 +2,7 @@
   "name": "md2nativedocx",
   "displayName": "md2nativedocx",
   "description": "%extension.description%",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "md2nativedocx",
   "private": true,
   "license": "CC0-1.0",
