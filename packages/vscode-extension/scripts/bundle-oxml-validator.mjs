@@ -17,7 +17,8 @@
  * from in this project's own dev/release environment.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +27,7 @@ const extensionRoot = dirname(here);
 const repoRoot = join(extensionRoot, '..', '..');
 const validatorProject = join(repoRoot, 'scripts', 'oxml-validator');
 const vendorDir = join(extensionRoot, 'dist', 'vendor', 'oxml-validator');
+const cli = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 
 if (!existsSync(join(validatorProject, 'oxmlvalidator.csproj'))) {
   console.error(`Validator project not found at ${validatorProject}.`);
@@ -73,12 +75,54 @@ if (!existsSync(dllPath)) {
 // inside a packaged extension nobody rebuilds. Uses the SDK's own runtime
 // (available on this build machine) — the *provisioned* runtime is what an
 // end user's machine gets, tested separately by dotnetProvisioner.test.ts.
-const smokeOutput = execFileSync('dotnet', [dllPath, join(repoRoot, 'handmade_samples', 'cycle-simple.docx'), '--json'], {
-  encoding: 'utf8',
-});
-const report = JSON.parse(smokeOutput.trim());
-if (report.errorCount !== 0) {
-  throw new Error(`Smoke test expected 0 errors on a known-good file, got ${report.errorCount}: ${smokeOutput}`);
+//
+// The "known-good file" is generated fresh here via this project's own CLI
+// rather than a committed fixture — two reasons, found 2026-09-08:
+//   1. The original fixture (handmade_samples/cycle-simple.docx) is
+//      deliberately gitignored (real Word-extracted SmartArt content,
+//      licensing — see AGENTS.md "Licensing"), so it doesn't exist on a
+//      fresh checkout at all; this script would fail on any CI runner or
+//      any contributor who hadn't kept that local research file around.
+//   2. Even a committed, self-generated fixture couldn't assert
+//      `errorCount === 0` today: Pandoc's own reference.docx-derived parts
+//      (styles.xml/numbering.xml/settings.xml) carry ~17 pre-existing
+//      schema quirks on *every* export, already characterized as Pandoc's
+//      own writer bug — tolerated by real Word, not this project's to fix
+//      (see scripts/test-oxml-validate.mjs, the same reasoning applied
+//      here). What this smoke test actually needs to guarantee is that the
+//      validator DLL itself runs and correctly flags issues in *this
+//      project's own* output — so it uses the same word/diagrams+wpc:wpc
+//      classification test:oxml-validate already established, not a raw
+//      errorCount.
+const smokeWorkDir = mkdtempSync(join(tmpdir(), 'md2nativedocx-oxmlvalidator-smoke-'));
+try {
+  const smokeMd = join(smokeWorkDir, 'smoke.md');
+  const smokeDocx = join(smokeWorkDir, 'smoke.docx');
+  writeFileSync(smokeMd, '# Smoke\n\n```mermaid\ngraph TD\n  A --> B\n  B --> C\n  C --> A\n```\n');
+  execFileSync('node', [cli, smokeMd, '-o', smokeDocx], { stdio: 'pipe' });
+
+  // The validator exits non-zero whenever errorCount > 0 (expected here,
+  // given the pre-existing Pandoc noise above) — it still prints the JSON
+  // report on stdout either way, only a genuinely missing stdout means the
+  // validator itself failed to run (same handling as test-oxml-validate.mjs).
+  let smokeOutput;
+  try {
+    smokeOutput = execFileSync('dotnet', [dllPath, smokeDocx, '--json'], { encoding: 'utf8' });
+  } catch (err) {
+    smokeOutput = err.stdout?.toString();
+    if (!smokeOutput) throw err;
+  }
+  const report = JSON.parse(smokeOutput.trim());
+  const ownOutputErrors = report.errors.filter(
+    (e) => e.Part?.startsWith('/word/diagrams/') || e.Path?.includes('wpc:wpc'),
+  );
+  if (ownOutputErrors.length > 0) {
+    throw new Error(
+      `Smoke test found ${ownOutputErrors.length} schema error(s) in this project's own diagram output: ${JSON.stringify(ownOutputErrors)}`,
+    );
+  }
+} finally {
+  rmSync(smokeWorkDir, { recursive: true, force: true });
 }
 
 console.log(`Vendored Word-compatibility validator ready: ${vendorDir}`);
