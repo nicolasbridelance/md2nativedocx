@@ -3,11 +3,34 @@
   "version": "0.1.0",
   "description": "CLI: convert Markdown with Mermaid diagrams into a .docx with native, editable OOXML vector shapes.",
   "license": "CC0-1.0",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicolasbridelance/md2nativedocx",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/nicolasbridelance/md2nativedocx#readme",
+  "bugs": {
+    "url": "https://github.com/nicolasbridelance/md2nativedocx/issues"
+  },
+  "keywords": [
+    "mermaid",
+    "docx",
+    "pandoc",
+    "ooxml",
+    "markdown"
+  ],
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "bin": {
     "md2nativedocx": "bin/md2nativedocx.mjs"
   },
+  "files": [
+    "bin",
+    "src",
+    "assets"
+  ],
   "scripts": {
     "build": "echo \"cli: no build step (plain JS)\"",
     "typecheck": "echo \"cli: no typecheck step\"",

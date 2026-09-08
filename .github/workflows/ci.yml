@@ -56,6 +56,12 @@ jobs:
       - name: Open XML schema validation
         run: npm run test:oxml-validate
 
+      - name: Verify npm packages (clean-room install of core/pandoc-filter/cli)
+        # OS-independent by nature (this is about npm's package-resolution
+        # layout, not platform code) — one job is enough, unlike
+        # build-test-windows/-macos above.
+        run: npm run verify:npm-packages
+
       - name: Write job summary
         if: always()
         run: node scripts/ci-summary.mjs >> "$GITHUB_STEP_SUMMARY"

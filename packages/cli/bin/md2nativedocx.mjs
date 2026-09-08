@@ -25,15 +25,24 @@ import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
 import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from '../src/referenceDocBuilder.mjs';
 
-// The pandoc-filter package may be hoisted to the repo root node_modules (npm
-// workspaces) or nested under packages/cli/node_modules. Resolve whichever
-// exists.
-const FILTER_CANDIDATES = [
-  fileURLToPath(new URL('../node_modules/@md2nativedocx/pandoc-filter/md2nativedocx.lua', import.meta.url)),
-  fileURLToPath(new URL('../../../node_modules/@md2nativedocx/pandoc-filter/md2nativedocx.lua', import.meta.url)),
-];
-const FILTER_PATH = FILTER_CANDIDATES.find((p) => existsSync(p))
-  ?? FILTER_CANDIDATES[0];
+// Where @md2nativedocx/pandoc-filter actually lands on disk relative to this
+// file varies by how the CLI itself was deployed — hoisted to the repo root
+// node_modules (npm workspace dev), nested under packages/cli/node_modules,
+// a sibling under a flat npm install's node_modules/@md2nativedocx/ (found
+// 2026-09-08, via a real clean-room `npm pack`+install test: two hardcoded
+// relative-path guesses covered the first two shapes but not this one, the
+// actual shape a real `npm install -g @md2nativedocx/cli` produces), or
+// wherever bundle-cli.mjs lays out the vendored VS Code extension's copy.
+// import.meta.resolve() is Node's own package-resolution algorithm (the same
+// one require()/import use), so it finds the right one in every case without
+// this file having to guess directory-climbing depths by hand.
+let FILTER_PATH;
+try {
+  FILTER_PATH = fileURLToPath(import.meta.resolve('@md2nativedocx/pandoc-filter/md2nativedocx.lua'));
+} catch (err) {
+  process.stderr.write(`md2nativedocx: could not locate @md2nativedocx/pandoc-filter: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.exit(1);
+}
 
 // Custom reference.docx (Word's current default look -- Aptos font scheme,
 // modern "Office" theme colors, non-bold flat heading hierarchy) instead of

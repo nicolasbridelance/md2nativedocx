@@ -17,7 +17,8 @@
     "test:fuzz": "npm run test:fuzz -w packages/core",
     "test:visual": "node scripts/test-visual.mjs",
     "test:visual:update-baseline": "node scripts/test-visual.mjs --update-baseline",
-    "test:oxml-validate": "node scripts/test-oxml-validate.mjs"
+    "test:oxml-validate": "node scripts/test-oxml-validate.mjs",
+    "verify:npm-packages": "node scripts/verify-npm-packages.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

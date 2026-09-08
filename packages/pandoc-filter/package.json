@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "description": "Lua filter for Pandoc: converts ```mermaid code blocks into native OOXML via the md2nativedocx core engine.",
   "license": "CC0-1.0",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicolasbridelance/md2nativedocx",
+    "directory": "packages/pandoc-filter"
+  },
   "type": "module",
   "files": [
-    "md2nativedocx.lua"
+    "md2nativedocx.lua",
+    "bin"
   ],
   "scripts": {
     "build": "echo \"pandoc-filter: no build step (Lua + JS bridge)\"",
@@ -14,5 +19,8 @@
     "test": "node --test test/*.test.mjs",
     "pretest:ci": "mkdir -p reports",
     "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs"
+  },
+  "dependencies": {
+    "@md2nativedocx/core": "0.1.0"
   }
 }
