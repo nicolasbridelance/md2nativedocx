@@ -534,6 +534,28 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `test:oxml-validate` (0 erreur). 19 tests unitaires ajoutés pour requirementDiagram (parser +
       traducteur), dont un test de régression dédié à ce piège précis (paire déclarée dans les deux
       sens documentés).
+- [x] **`architecture-beta` shippé (2026-09-09)** — neuvième type non-flowchart livré, cinquième de
+      la famille B. Type "New 🔥" de Mermaid, grammaire vérifiée contre
+      `mermaid.js.org/syntax/architecture.html` (2026-09-09) à la profondeur "structure + quelques
+      exemples" seulement (comme prévenu en tête de `FUTURE_full_mermaid_coverage_SPEC.md`). Portée
+      v1 assumée (détail dans les doc-comments de `parser.ts`/`translator.ts`) : déclarations
+      `group`/`service`/`junction` (id, icône optionnelle, titre optionnel, `in <parent>` optionnel)
+      et arêtes avec ports directionnels (`L`/`R`/`T`/`B`) et flèche optionnelle de chaque côté.
+      **Deux simplifications v1 documentées, pas silencieuses** : (1) le containment de groupe
+      (`in <id>`) est analysé mais pas rendu en boîte imbriquée — tous les nœuds (service/groupe/
+      jonction) sont posés à plat dans un même graphe Dagre, avertissement unique émis si au moins un
+      nœud a un parent (même précédent que la gestion `namespace` de classDiagram) ; (2) les ports
+      `L`/`R`/`T`/`B` sont analysés et conservés dans l'AST mais n'influencent pas encore le point
+      d'accroche exact du connecteur (même approche générique `edgePoint()` que les autres modules
+      famille B, pas d'amarrage forcé sur le côté nommé). Les icônes Mermaid (bibliothèque SVG
+      propriétaire) n'ont aucun équivalent OOXML : les noms reconnus (`cloud`, `database`, `disk`)
+      pointent vers les préréglages de forme les plus proches déjà utilisés ailleurs dans ce projet
+      (`cloud` de `mindmap`, `can` — cylindre — de `ooxml-translator.ts`), tout le reste dégrade en
+      rectangle arrondi neutre. Vérifié par export CLI réel + rendu LibreOffice headless
+      (`test-corpus/visual/fixtures/architecture-diagram.mmd`, 1 groupe + 4 services + 1 jonction,
+      mélange d'arêtes avec/sans flèche) et `test:oxml-validate` (0 erreur de schéma sous
+      `word/diagrams/`) — rendu correct dès la première tentative, aucun bug trouvé cette fois.
+      19 tests unitaires ajoutés (parser + traducteur).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

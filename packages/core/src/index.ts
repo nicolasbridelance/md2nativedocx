@@ -107,6 +107,18 @@ export type {
   RequirementRelationType,
 } from './diagrams/requirement-diagram/types.js';
 
+// Architecture diagram module (Family B).
+export { parseArchitectureDiagram } from './diagrams/architecture-diagram/parser.js';
+export type { ArchitectureDiagramParseResult } from './diagrams/architecture-diagram/parser.js';
+export { translateArchitectureDiagramToOoxml } from './diagrams/architecture-diagram/translator.js';
+export type {
+  ArchitectureDiagram,
+  ArchitectureNode,
+  ArchitectureNodeKind,
+  ArchitectureEdge,
+  ArchitectureSide,
+} from './diagrams/architecture-diagram/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

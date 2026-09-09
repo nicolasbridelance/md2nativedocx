@@ -71,6 +71,7 @@ const PLAIN_FIXTURE_NAMES = [
   'state-diagram',
   'er-diagram',
   'requirement-diagram',
+  'architecture-diagram',
 ];
 
 function findDotnet() {
