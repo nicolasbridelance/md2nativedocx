@@ -86,6 +86,8 @@ import {
   translateMindmapToOoxml,
   parseClassDiagram,
   translateClassDiagramToOoxml,
+  parseStateDiagram,
+  translateStateDiagramToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -185,6 +187,13 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateClassDiagramToOoxml(ast));
+  } else if (diagramType.type === 'state') {
+    // Sixth non-flowchart diagram type shipped, second of Family B.
+    const { ast, warnings } = parseStateDiagram(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateStateDiagramToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

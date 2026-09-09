@@ -33,24 +33,27 @@
  * `triangle` for association/dependency vs. a larger one for inheritance/
  * realization — so all 8 relationship types still render visually distinct
  * from one another, even if not pixel-identical to strict UML notation.
+ *
+ * `edgePoint`/`connector`/`rect`/`textBoxLines` live in
+ * `../../translator/graph-shapes.ts`, not here — extracted once
+ * `../state-diagram/translator.ts` needed the exact same primitives (see
+ * that module's own doc comment).
  */
 
 import dagre from 'dagre';
 import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
-import { escapeXml } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
   scaledExtent,
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
 } from '../../translator/canvas.js';
+import { connector, edgePoint, rect, scalePt, textBoxLines, type ArrowMarker } from '../../translator/graph-shapes.js';
 
 const LINE_COLOR = '2F5496';
 const TITLE_FILL = 'D9E2F3';
-const TEXT_COLOR = '000000';
 
 const TITLE_FONT_PX = 13;
 const MEMBER_FONT_PX = 10;
@@ -69,8 +72,6 @@ const RANKDIR: Readonly<Record<ClassDiagram['direction'], 'TB' | 'BT' | 'LR' | '
   LR: 'LR',
   RL: 'RL',
 };
-
-type ArrowMarker = 'none' | 'triangle' | 'oval' | 'diamond';
 
 const STYLE_BY_TYPE: Readonly<Record<ClassRelationType, { dash: 'solid' | 'dash'; marker: ArrowMarker; size: 'sm' | 'lg' }>> = {
   inheritance: { dash: 'solid', marker: 'triangle', size: 'lg' },
@@ -104,136 +105,6 @@ function boxSizeFor(box: ClassBox): BoxSize {
   const attrH = box.attributes.length > 0 ? box.attributes.length * ROW_H + COMPARTMENT_PAD_Y : 0;
   const methodH = box.methods.length > 0 ? box.methods.length * ROW_H + COMPARTMENT_PAD_Y : 0;
   return { width, height: TITLE_H + attrH + methodH, titleH: TITLE_H, attrH, methodH };
-}
-
-/** Point where the ray from a box's center toward `(tx, ty)` crosses the
- * box's own border — used to trim a relationship line to each box's edge
- * instead of drawing it center-to-center through both boxes. */
-function edgePoint(cx: number, cy: number, halfW: number, halfH: number, tx: number, ty: number): { x: number; y: number } {
-  const dx = tx - cx;
-  const dy = ty - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-  const scaleX = dx !== 0 ? halfW / Math.abs(dx) : Infinity;
-  const scaleY = dy !== 0 ? halfH / Math.abs(dy) : Infinity;
-  const k = Math.min(scaleX, scaleY);
-  return { x: cx + dx * k, y: cy + dy * k };
-}
-
-function scalePt(px: number, factor: number): number {
-  return Math.round(px * EMU_PER_PX * factor);
-}
-
-function rect(id: number, x: number, y: number, w: number, h: number, fill: string | undefined, line: string | undefined, name: string): string {
-  const fillXml = fill ? `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>` : '<a:noFill/>';
-  const lineXml = line
-    ? `<a:ln w="9525"><a:solidFill><a:srgbClr val="${line}"/></a:solidFill></a:ln>`
-    : '<a:ln><a:noFill/></a:ln>';
-  return [
-    '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="${escapeXml(name)}"/>`,
-    '  <wps:cNvSpPr/>',
-    '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-    '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
-    fillXml,
-    lineXml,
-    '  </wps:spPr>',
-    '  <wps:bodyPr/>',
-    '</wps:wsp>',
-  ].join('\n');
-}
-
-const WORD_JC: Readonly<Record<'l' | 'ctr', 'left' | 'center'>> = { l: 'left', ctr: 'center' };
-
-function textBoxLines(
-  id: number,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  lines: string[],
-  sizeHalfPt: number,
-  opts: { bold?: boolean; align?: 'l' | 'ctr' } = {},
-): string {
-  const align = opts.align ?? 'l';
-  const boldAttr = opts.bold ? '<w:b/>' : '';
-  const paragraphs = lines
-    .map(
-      (line) =>
-        `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${WORD_JC[align]}"/></w:pPr>` +
-        `<w:r><w:rPr>${boldAttr}<w:color w:val="${TEXT_COLOR}"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
-        `<w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`,
-    )
-    .join('\n');
-  return [
-    '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Text ${id}"/>`,
-    '  <wps:cNvSpPr txBox="1"/>',
-    '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-    '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
-    '    <a:noFill/>',
-    '    <a:ln><a:noFill/></a:ln>',
-    '  </wps:spPr>',
-    '  <wps:txbx>',
-    '    <w:txbxContent>',
-    paragraphs,
-    '    </w:txbxContent>',
-    '  </wps:txbx>',
-    `  <wps:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="${align === 'ctr' ? 'ctr' : 't'}"/>`,
-    '</wps:wsp>',
-  ].join('\n');
-}
-
-/**
- * A straight relationship line, `wps:wsp` + `wps:cNvCnPr` (matching
- * `../mindmap/translator.ts`'s `connector()` — the one confirmed-working
- * connector primitive in this project's `wpc:wpc` canvas under LibreOffice,
- * see that module's doc comment) plus `a:headEnd`/`a:tailEnd` markers, the
- * same mechanism `../../translator/ooxml-translator.ts` already uses for
- * flowchart arrowheads.
- */
-function connector(
-  id: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  colorHex: string,
-  widthEmu: number,
-  dash: 'solid' | 'dash',
-  headEnd: ArrowMarker,
-  headSize: 'sm' | 'lg',
-  tailEnd: ArrowMarker,
-  tailSize: 'sm' | 'lg',
-): string {
-  const minX = Math.min(x1, x2);
-  const minY = Math.min(y1, y2);
-  const w = Math.max(1, Math.abs(x2 - x1));
-  const h = Math.max(1, Math.abs(y2 - y1));
-  const flip = (x2 - x1) * (y2 - y1) < 0;
-  const flipAttr = flip ? ' flipV="1"' : '';
-  const headXml = headEnd !== 'none' ? `      <a:headEnd type="${headEnd}" w="${headSize}" len="${headSize}"/>` : '';
-  const tailXml = tailEnd !== 'none' ? `      <a:tailEnd type="${tailEnd}" w="${tailSize}" len="${tailSize}"/>` : '';
-  return [
-    '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Connector ${id}"/>`,
-    '  <wps:cNvCnPr/>',
-    '  <wps:spPr>',
-    `    <a:xfrm${flipAttr}><a:off x="${minX}" y="${minY}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm>`,
-    '    <a:prstGeom prst="line"><a:avLst/></a:prstGeom>',
-    `    <a:ln w="${widthEmu}">`,
-    `      <a:solidFill><a:srgbClr val="${colorHex}"/></a:solidFill>`,
-    `      <a:prstDash val="${dash}"/>`,
-    headXml,
-    tailXml,
-    '    </a:ln>',
-    '  </wps:spPr>',
-    '  <wps:bodyPr/>',
-    '</wps:wsp>',
-  ]
-    .filter((line) => line.length > 0)
-    .join('\n');
 }
 
 function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: number, y: number, s: number): string[] {

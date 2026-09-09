@@ -81,6 +81,14 @@ export type { ClassDiagramParseResult } from './diagrams/class-diagram/parser.js
 export { translateClassDiagramToOoxml } from './diagrams/class-diagram/translator.js';
 export type { ClassDiagram, ClassBox, ClassMember, ClassRelationship, ClassRelationType } from './diagrams/class-diagram/types.js';
 
+// State diagram module (Family B). Second consumer of
+// translator/graph-shapes.ts (extracted from class-diagram/translator.ts —
+// see that module's shared-helpers note).
+export { parseStateDiagram } from './diagrams/state-diagram/parser.js';
+export type { StateDiagramParseResult } from './diagrams/state-diagram/parser.js';
+export { translateStateDiagramToOoxml } from './diagrams/state-diagram/translator.js';
+export type { StateDiagram, StateNode, StateNodeKind, StateTransition } from './diagrams/state-diagram/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

@@ -441,6 +441,33 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       3 marqueurs triangle/losange/ovale + un spot-check dédié agrégation) et `test:oxml-validate`
       (0 erreur de schéma sous `word/diagrams/`) — rendu correct dès la première tentative, aucun bug
       trouvé cette fois. 24 tests unitaires ajoutés (parser + traducteur).
+- [x] **`stateDiagram`/`stateDiagram-v2` shippé (2026-09-09)** — sixième type non-flowchart livré,
+      deuxième de la famille B. Grammaire vérifiée contre `mermaid.js.org/syntax/stateDiagram.html`
+      (2026-09-09). Refactor au passage : `edgePoint`/`connector`/`rect`/`textBoxLines` extraits de
+      `diagrams/class-diagram/translator.ts` vers `translator/graph-shapes.ts` (nouveau module
+      partagé) dès que ce deuxième module en a eu besoin des mêmes primitives — même convention
+      d'extraction que `canvas.ts` en son temps (voir le doc-comment de `graph-shapes.ts`). Portée
+      v1 assumée (détail dans le doc-comment de `parser.ts`) : transitions plates avec label
+      optionnel, pseudo-états start/end (chaque occurrence de `[*]` synthétise son propre nœud,
+      distingué par position source/cible), `state "Label" as id`, forme alternative `id : Label`,
+      stéréotypes `<<choice>>`/`<<fork>>`/`<<join>>`. États composites (`state X { ... }`) reconnus
+      et avertis une seule fois, mais leurs états/transitions internes sont quand même analysés
+      (aplatis au niveau racine, même pile générique de blocs que la gestion `namespace` de
+      classDiagram) plutôt que rendus en boîte de containment imbriquée — limitation documentée, pas
+      une perte silencieuse. Notes et `classDef`/`class`/`style` reconnus et avertis, jamais perdus
+      silencieusement. Contrairement aux 8 types de relation de classDiagram, toute transition rend
+      de façon identique (ligne pleine, triangle à l'extrémité cible) — pas de table marqueur/tiret
+      par type nécessaire ici. Pseudo-états rendus en notation UML standard : cercle plein (start),
+      cercle plein cerclé (end), losange (choice), barre pleine fine (fork/join, orientée
+      perpendiculairement au sens du flux). Deux `warning`s de lint (`detect-unsafe-regex` sur une
+      regex combinant les deux extrémités d'une transition, `detect-possible-timing-attacks` sur une
+      variable nommée `token` — faux positif classique de cette règle sur ce nom) corrigés en
+      splittant sur le littéral `-->`/`:'` plutôt qu'une regex combinée (même précédent que
+      `POINT_TAIL` dans `diagrams/quadrant/parser.ts`) et en renommant la variable. Vérifié par
+      export CLI réel + rendu LibreOffice headless (`test-corpus/visual/fixtures/state-diagram.mmd`,
+      cycle avec les 4 formes de nœud — normal/start/end/choice — et transitions étiquetées) et
+      `test:oxml-validate` (0 erreur de schéma sous `word/diagrams/`) — rendu correct dès la première
+      tentative, aucun bug trouvé cette fois. 22 tests unitaires ajoutés (parser + traducteur).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

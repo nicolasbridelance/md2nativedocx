@@ -1,0 +1,14 @@
+# state-diagram
+
+```mermaid
+stateDiagram-v2
+  [*] --> Idle
+  Idle --> Loading : fetch
+  Loading --> choice1
+  state choice1 <<choice>>
+  choice1 --> Success : ok
+  choice1 --> Error : fail
+  Success --> Idle : reset
+  Error --> Idle : retry
+  Idle --> [*]
+```
