@@ -499,6 +499,41 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `class-diagram.png` était déjà byte-identique. `test:oxml-validate` : 0 erreur sur les 3.
       22 tests unitaires ajoutés pour erDiagram (parser + traducteur) ; tests existants inchangés,
       aucun n'asserte sur les attributs `flipH`/`flipV` littéraux.
+- [x] **`requirementDiagram` shippé (2026-09-09)** — huitième type non-flowchart livré, quatrième de
+      la famille B. Grammaire vérifiée contre `mermaid.js.org/syntax/requirementDiagram.html`
+      (2026-09-09). Portée v1 : blocs `requirement`/`functionalRequirement`/etc. (`id`/`text`/`risk`/
+      `verifymethod`), blocs `element` (`type`/`docref`), les 7 types de relation
+      (`contains`/`copies`/`derives`/`satisfies`/`verifies`/`refines`/`traces`) dans les deux sens
+      documentés (`A - type -> B` et `A <- type - B`). `type`/`risk`/`verifymethod` gardés en texte
+      libre plutôt que validés contre les listes d'énumération de la spec — aucune preuve que ces
+      listes soient exhaustives d'une version Mermaid à l'autre, mieux vaut garder un contenu réel
+      que le rejeter sur une liste peut-être incomplète. Rendu : Mermaid lui-même ne distingue pas
+      visuellement les 7 types de relation (vérifié sur la page source — tous les exemples rendent la
+      même flèche pointillée), donc ce module ne invente pas de distinction que Mermaid ne fait pas
+      non plus : toute relation = ligne pointillée + triangle à l'extrémité destination + étiquette
+      `«type»`.
+- [x] **Bug réel trouvé et corrigé en vérifiant `requirementDiagram` par rendu réel (2026-09-09)** —
+      deux relations entre la même paire de boîtes (`test_req`/`test_req2` dans le fixture) se
+      dessinaient exactement l'une sur l'autre, rendant les deux étiquettes `«type»` illisibles
+      (superposées). Nouvelle primitive partagée `translator/graph-shapes.ts` :
+      `parallelEdgeOffset()`/`perpendicularUnit()`/`shiftPoint()`, groupant les relations par paire de
+      nœuds non ordonnée et décalant chaque ligne perpendiculairement à elle-même. **Piège trouvé
+      deux fois de suite, même famille de bug que le correctif `flipH`/`flipV` de la veille** : dériver
+      la direction perpendiculaire (puis, séparément, la direction "le long de la ligne" pour l'étage
+      des étiquettes) depuis les points propres de CHAQUE relation plutôt que d'une paire canonique
+      (nœuds triés) fait que le sens s'inverse pour une relation déclarée dans l'autre sens
+      (`{from:B,to:A}` vs `{from:A,to:B}`), annulant exactement le décalage d'index et recollant les
+      deux éléments au même endroit — repéré une première fois sur les connecteurs (corrigé), puis
+      une seconde fois sur le décalage "le long de la ligne" des étiquettes (le premier correctif
+      avait l'air correct à la lecture mais ne changeait rien au rendu réel — confirmé en
+      instrumentant les coordonnées réelles, pas en devinant). **Leçon methodo à retenir** : toute
+      logique de décalage dérivée de la direction d'une relation doit être calculée une fois depuis un
+      ordre canonique des deux nœuds, jamais depuis `from`/`to` de la relation elle-même. Vérifié par
+      export CLI réel + rendu LibreOffice headless + zoom pixel sur la zone à deux relations, à
+      chacune des 3 itérations du correctif (pas seulement la version finale) et par
+      `test:oxml-validate` (0 erreur). 19 tests unitaires ajoutés pour requirementDiagram (parser +
+      traducteur), dont un test de régression dédié à ce piège précis (paire déclarée dans les deux
+      sens documentés).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

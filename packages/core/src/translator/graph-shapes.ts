@@ -40,6 +40,59 @@ export function edgePoint(cx: number, cy: number, halfW: number, halfH: number, 
   return { x: cx + dx * k, y: cy + dy * k };
 }
 
+/**
+ * How far the `index`-th of `count` relationships sharing the same node
+ * pair should be pushed off the direct line between them, perpendicular to
+ * it — without this, two or more relationships between the same two boxes
+ * (e.g. `requirementDiagram`'s `A - traces -> B` and `A <- derives - B`)
+ * draw exactly on top of each other, garbling both labels into one
+ * illegible overlap. Found via a real render of
+ * `test-corpus/visual/fixtures/requirement-diagram.mmd` (2026-09-09) — not
+ * a hypothetical: `test_req`/`test_req2` in that fixture have 2
+ * relationships between them, and unit tests alone (XML-structure-only,
+ * same as every past "found by real render" bug in this project) had
+ * nothing to catch a purely-visual overlap. Callers group relationships by
+ * an unordered pair key (`[a, b].sort().join('|')`, since `A - x -> B` and
+ * `B <- x - A` sit on the same line regardless of direction) and pass this
+ * relationship's position within that group.
+ */
+export function parallelEdgeOffset(index: number, count: number, gapPx = 14): number {
+  if (count <= 1) return 0;
+  return (index - (count - 1) / 2) * gapPx;
+}
+
+/**
+ * Unit vector perpendicular to the line from `p1` to `p2`. Degenerates to
+ * `(0,0)` for a zero-length line (nothing meaningful to be perpendicular
+ * to).
+ *
+ * **Must be computed once from a canonical (direction-independent) pair of
+ * points per node pair, not from each relationship's own `p1`/`p2`** — two
+ * relationships between the same nodes but opposite documented directions
+ * (`A - x -> B` and `A <- y - B`, i.e. `{from:A,to:B}` and `{from:B,to:A}`)
+ * have swapped `p1`/`p2`, which flips this vector's sign; combined with
+ * {@link parallelEdgeOffset} assigning them opposite-signed offsets, the
+ * two sign flips cancel out and both lines end up shifted onto the *same*
+ * side by the *same* amount — coincident again, not parallel. Callers
+ * must derive `p1`/`p2` here from a fixed canonical ordering (e.g. the two
+ * node names sorted) and apply the resulting vector via {@link shiftPoint}
+ * to each relationship's own actual endpoints.
+ */
+export function perpendicularUnit(p1: { x: number; y: number }, p2: { x: number; y: number }): { ux: number; uy: number } {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return { ux: 0, uy: 0 };
+  return { ux: -dy / len, uy: dx / len };
+}
+
+/** Shift a point by `amount` along the `(ux, uy)` unit vector — see
+ * {@link perpendicularUnit}'s doc comment for why that vector must come
+ * from a canonical pair, not from the point being shifted. */
+export function shiftPoint(p: { x: number; y: number }, ux: number, uy: number, amount: number): { x: number; y: number } {
+  return { x: p.x + ux * amount, y: p.y + uy * amount };
+}
+
 export function rect(id: number, x: number, y: number, w: number, h: number, fill: string | undefined, line: string | undefined, name: string, roundRect = false): string {
   const fillXml = fill ? `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>` : '<a:noFill/>';
   const lineXml = line

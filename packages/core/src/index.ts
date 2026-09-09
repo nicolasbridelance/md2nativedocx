@@ -95,6 +95,18 @@ export type { ErDiagramParseResult } from './diagrams/er-diagram/parser.js';
 export { translateErDiagramToOoxml } from './diagrams/er-diagram/translator.js';
 export type { ErDiagram, ErEntity, ErAttribute, ErRelationship, ErCardinality } from './diagrams/er-diagram/types.js';
 
+// Requirement diagram module (Family B).
+export { parseRequirementDiagram } from './diagrams/requirement-diagram/parser.js';
+export type { RequirementDiagramParseResult } from './diagrams/requirement-diagram/parser.js';
+export { translateRequirementDiagramToOoxml } from './diagrams/requirement-diagram/translator.js';
+export type {
+  RequirementDiagram,
+  Requirement,
+  RequirementElement,
+  RequirementRelationship,
+  RequirementRelationType,
+} from './diagrams/requirement-diagram/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
