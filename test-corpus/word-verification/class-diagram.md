@@ -1,0 +1,30 @@
+# class-diagram
+
+```mermaid
+classDiagram
+  direction LR
+  class Animal {
+    +String name
+    +int age
+    +makeSound() void
+  }
+  class Dog {
+    +String breed
+    +bark() void
+  }
+  class Cat {
+    +bark() void
+  }
+  class Owner {
+    +String name
+    +feed(Animal a) void
+  }
+  Animal <|-- Dog
+  Animal <|-- Cat
+  Owner "1" --> "many" Animal : owns
+  Owner *-- Address : has
+  class Address {
+    +String street
+    +String city
+  }
+```

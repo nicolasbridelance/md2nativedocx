@@ -70,6 +70,17 @@ export type { MindmapParseResult } from './diagrams/mindmap/parser.js';
 export { translateMindmapToOoxml } from './diagrams/mindmap/translator.js';
 export type { MindmapChart, MindmapNode, MindmapShape } from './diagrams/mindmap/types.js';
 
+// Class diagram module (Family B, docs/specs/FUTURE_full_mermaid_coverage_SPEC.md
+// §3 — reuses Dagre for layout, unlike quadrant/venn/mindmap above, but keeps
+// their same independent-module and plain-OOXML-shapes convention). Node
+// rendering extends to a 3-compartment box (name/attributes/methods); see
+// diagrams/class-diagram/translator.ts's module doc comment for the v1
+// relationship-marker fidelity trade-offs.
+export { parseClassDiagram } from './diagrams/class-diagram/parser.js';
+export type { ClassDiagramParseResult } from './diagrams/class-diagram/parser.js';
+export { translateClassDiagramToOoxml } from './diagrams/class-diagram/translator.js';
+export type { ClassDiagram, ClassBox, ClassMember, ClassRelationship, ClassRelationType } from './diagrams/class-diagram/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

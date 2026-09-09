@@ -84,6 +84,8 @@ import {
   translateVennToOoxml,
   parseMindmap,
   translateMindmapToOoxml,
+  parseClassDiagram,
+  translateClassDiagramToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -173,6 +175,16 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateMindmapToOoxml(ast));
+  } else if (diagramType.type === 'class') {
+    // Fifth non-flowchart diagram type shipped (swimlane-beta, the fourth,
+    // is a flowchart alias with no dedicated branch here — see
+    // detectDiagramType), first of Family B (reuses Dagre, same module
+    // convention otherwise).
+    const { ast, warnings } = parseClassDiagram(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateClassDiagramToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

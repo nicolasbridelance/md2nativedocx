@@ -60,7 +60,7 @@ const SMARTART_FIXTURES = [
  * schema validation, so `test:visual` alone never had a chance to catch
  * this, and this test never previously ran against these 3 diagram types'
  * own output. Exactly the gap this addition closes. */
-const PLAIN_FIXTURE_NAMES = ['minimal', 'decision', 'quadrant', 'venn', 'mindmap', 'swimlane'];
+const PLAIN_FIXTURE_NAMES = ['minimal', 'decision', 'quadrant', 'venn', 'mindmap', 'swimlane', 'class-diagram'];
 
 function findDotnet() {
   try {

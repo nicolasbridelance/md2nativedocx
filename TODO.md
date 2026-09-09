@@ -409,6 +409,38 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       tentative, aucun bug trouvé cette fois. Reprise du chantier "faire monter le 3/28" actée avec
       le mainteneur (2026-09-09) : ordre de priorité laissé à l'agent, sequenceDiagram (ci-dessous)
       n'est donc plus un blocage produit mais une question d'ordonnancement par coût.
+- [x] **`classDiagram` shippé (2026-09-09)** — cinquième type non-flowchart livré, premier de la
+      famille B ("graphe nœuds/arêtes, réutilise Dagre + traducteur étendu") de
+      `FUTURE_full_mermaid_coverage_SPEC.md` §3. Grammaire vérifiée contre
+      `mermaid.js.org/syntax/classDiagram.html` (2026-09-09). Contrairement à quadrant/venn/mindmap,
+      réutilise directement le package `dagre` (déjà une dépendance via `layout/layout.ts`, zéro
+      nouvelle dépendance) plutôt que `layout()` lui-même — celui-ci est typé contre l'AST flowchart
+      et suppose des boîtes à taille fixe/étiquette mono-ligne, ce qui ne tient pas pour une boîte à
+      compartiments multi-lignes. Nouveau module `packages/core/src/diagrams/class-diagram/`
+      (parser/translator/types), câblé dans `md2nativedocx-core.mjs` et le barrel public comme les
+      précédents. Portée v1 assumée (détail dans le doc-comment de `parser.ts`) : les 8 familles de
+      flèches de relation (héritage/réalisation/composition/agrégation/association/dépendance/lien
+      plein/pointillé) avec label optionnel après `:` ; membres conservés en texte brut (marqueur de
+      visibilité isolé, reste verbatim) plutôt que dissection sémantique complète ; générique
+      (`List~int~`) et id entre backticks supportés ; `namespace` reconnu et averti mais ses classes
+      internes sont quand même parsées (pile de blocs générique) ; annotations/`classDef`/`style`/
+      `note`/cardinalités reconnus et avertis, jamais perdus silencieusement. Boîte à 3 compartiments
+      (nom/attributs/méthodes, compartiment omis si vide) rendue en formes `wps:wsp` planes, pas en
+      SmartArt `dgm:layoutDef`. Relations en lignes droites centre-à-centre coupées à la bordure de
+      chaque boîte (pas de routage Dagre multi-points comme le flowchart) — simplification v1
+      assumée et documentée, ce chantier étant typiquement de taille bien plus modeste (quelques
+      classes) que les flowcharts à centaines de nœuds où le routage complexe se justifie. Fidélité
+      des marqueurs également assumée : `a:headEnd`/`a:tailEnd` n'a pas de variante "contour creux",
+      donc triangle creux (héritage/réalisation UML strict) et losange creux (agrégation) ne sont pas
+      reproductibles avec l'unique primitive de connecteur confirmée fonctionner dans ce projet —
+      substitués par les préréglages intégrés les plus proches et visuellement distincts (`oval` pour
+      l'agrégation, triangle plus petit pour association/dépendance vs plus grand pour
+      héritage/réalisation) : les 8 types restent visuellement distincts entre eux, pas une
+      reproduction pixel-perfect de la notation UML. Vérifié par export CLI réel + rendu LibreOffice
+      headless (`test-corpus/visual/fixtures/class-diagram.mmd`, 5 classes/4 relations incluant les
+      3 marqueurs triangle/losange/ovale + un spot-check dédié agrégation) et `test:oxml-validate`
+      (0 erreur de schéma sous `word/diagrams/`) — rendu correct dès la première tentative, aucun bug
+      trouvé cette fois. 24 tests unitaires ajoutés (parser + traducteur).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
