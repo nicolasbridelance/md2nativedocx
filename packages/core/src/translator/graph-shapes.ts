@@ -163,8 +163,26 @@ export function connector(
   const minY = Math.min(y1, y2);
   const w = Math.max(1, Math.abs(x2 - x1));
   const h = Math.max(1, Math.abs(y2 - y1));
-  const flip = (x2 - x1) * (y2 - y1) < 0;
-  const flipAttr = flip ? ' flipV="1"' : '';
+  // The `line` preset's own unflipped path runs local (0,0) -> (w,h), i.e.
+  // absolute (minX,minY) -> (maxX,maxY) — so `headEnd` (which decorates the
+  // path start) only lands on `(x1,y1)` for free when `x1<=x2 && y1<=y2`.
+  // In every other of the 4 quadrant cases, a single combined `flipV`
+  // (the previous implementation: `flipV` iff `(x2-x1)*(y2-y1) < 0`) gets 2
+  // of the 4 right by coincidence and silently swaps `headEnd`/`tailEnd`
+  // onto the wrong endpoint in the other 2 — found via a real render
+  // (`test-corpus/visual/fixtures/er-diagram.mmd`: a cardinality marker
+  // landed on the wrong entity whenever `x1 > x2`, regardless of `y`).
+  // Fixed by flipping each axis independently: flip horizontally whenever
+  // `x1` is the larger x, flip vertically whenever `y1` is the larger y —
+  // this provably keeps local (0,0)/`headEnd` pinned to `(x1,y1)` and local
+  // (w,h)/`tailEnd` to `(x2,y2)` in all 4 cases (worked through by hand: the
+  // displayed position of local (0,0) under {flipH,flipV} is
+  // {no flip: (minX,minY), flipV only: (minX,maxY), flipH only:
+  // (maxX,minY), both: (maxX,maxY)} — exactly the 4 possible `(x1,y1)`
+  // corners depending on its relation to `x2`/`y2`).
+  const flipH = x1 > x2;
+  const flipV = y1 > y2;
+  const flipAttr = `${flipH ? ' flipH="1"' : ''}${flipV ? ' flipV="1"' : ''}`;
   const headXml = headEnd !== 'none' ? `      <a:headEnd type="${headEnd}" w="${headSize}" len="${headSize}"/>` : '';
   const tailXml = tailEnd !== 'none' ? `      <a:tailEnd type="${tailEnd}" w="${tailSize}" len="${tailSize}"/>` : '';
   return [

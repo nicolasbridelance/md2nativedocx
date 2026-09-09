@@ -468,6 +468,37 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       cycle avec les 4 formes de nœud — normal/start/end/choice — et transitions étiquetées) et
       `test:oxml-validate` (0 erreur de schéma sous `word/diagrams/`) — rendu correct dès la première
       tentative, aucun bug trouvé cette fois. 22 tests unitaires ajoutés (parser + traducteur).
+- [x] **`erDiagram` shippé (2026-09-09)** — septième type non-flowchart livré, troisième de la
+      famille B. Grammaire vérifiée contre `mermaid.js.org/syntax/entityRelationshipDiagram.html`
+      (2026-09-09). Portée v1 assumée (détail dans le doc-comment de `parser.ts`) : entités avec bloc
+      d'attributs (`type name [PK|FK|UK[,...]] ["commentaire"]`), relations avec cardinalité
+      crow's-foot complète sur les deux extrémités et style de trait identifiant (`--`) vs
+      non-identifiant (`..`). Alias d'entité **non implémenté** — aucun exemple de syntaxe littérale
+      confirmé trouvé sur la page source ; conformément à la règle du projet de ne jamais deviner une
+      grammaire non confirmée, plutôt que d'inventer. Fidélité des marqueurs de cardinalité assumée,
+      même philosophie que classDiagram : aucun équivalent OOXML pour les glyphes crow's-foot réels
+      (cercle "zéro", barre "un", éventail "plusieurs" combinés par paire) — mappés sur les 4
+      préréglages `a:headEnd`/`a:tailEnd` disponibles pour rester mutuellement distincts (aucun,
+      `oval`, `triangle`, `diamond`) plutôt que fidèles à la notation réelle. Le style de trait
+      identifiant/non-identifiant, lui, correspond nativement et fidèlement à plein/pointillé.
+- [x] **Bug réel trouvé et corrigé en vérifiant `erDiagram` par rendu réel (2026-09-09)** —
+      `translator/graph-shapes.ts`'s `connector()` (utilisé par classDiagram/stateDiagram/erDiagram)
+      plaçait `headEnd`/`tailEnd` sur la mauvaise extrémité géométrique dès que le point "from" était
+      à droite du point "to" (`x1 > x2`), quel que soit `y` — la logique `flipV` combinée
+      (`(x2-x1)*(y2-y1) < 0`) ne couvrait correctement que 2 des 4 cas de quadrant par coïncidence.
+      Trouvé visuellement sur `CUSTOMER ||--o{ ORDER` : le losange de cardinalité (censé être sur
+      ORDER) apparaissait sur CUSTOMER. Corrigé en remplaçant le `flipV` combiné par deux flips
+      indépendants par axe (`flipH = x1 > x2`, `flipV = y1 > y2`), prouvé correct à la main pour les 4
+      cas de quadrant (voir le doc-comment de `connector()`). classDiagram/stateDiagram n'affichaient
+      pas ce bug dans leurs fixtures existantes par pure coïncidence géométrique (leurs relations
+      concernées tombaient dans les 2 cas déjà corrects) — **aucune régression après coup, mais
+      confirme que ce bug était déjà silencieusement présent** dans les deux modules précédents pour
+      toute disposition Dagre qui l'aurait déclenché. Les 3 baselines visuelles (class-diagram/
+      state-diagram/er-diagram) régénérées et revérifiées par rendu réel après le correctif ; seule
+      `state-diagram.png` a effectivement changé au niveau pixel (confirmé visuellement correct),
+      `class-diagram.png` était déjà byte-identique. `test:oxml-validate` : 0 erreur sur les 3.
+      22 tests unitaires ajoutés pour erDiagram (parser + traducteur) ; tests existants inchangés,
+      aucun n'asserte sur les attributs `flipH`/`flipV` littéraux.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

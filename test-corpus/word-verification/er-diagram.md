@@ -1,0 +1,23 @@
+# er-diagram
+
+```mermaid
+erDiagram
+  CUSTOMER {
+    int id PK
+    string email UK
+    string name
+  }
+  ORDER {
+    int id PK
+    int customer_id FK
+    string status
+  }
+  LINE-ITEM {
+    int id PK
+    int order_id FK
+    string product
+  }
+  CUSTOMER ||--o{ ORDER : places
+  ORDER ||--|{ LINE-ITEM : contains
+  CUSTOMER }|..|{ LINE-ITEM : "reviews"
+```

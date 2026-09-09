@@ -89,6 +89,12 @@ export type { StateDiagramParseResult } from './diagrams/state-diagram/parser.js
 export { translateStateDiagramToOoxml } from './diagrams/state-diagram/translator.js';
 export type { StateDiagram, StateNode, StateNodeKind, StateTransition } from './diagrams/state-diagram/types.js';
 
+// ER diagram module (Family B).
+export { parseErDiagram } from './diagrams/er-diagram/parser.js';
+export type { ErDiagramParseResult } from './diagrams/er-diagram/parser.js';
+export { translateErDiagramToOoxml } from './diagrams/er-diagram/translator.js';
+export type { ErDiagram, ErEntity, ErAttribute, ErRelationship, ErCardinality } from './diagrams/er-diagram/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
