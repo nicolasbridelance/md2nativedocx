@@ -391,6 +391,24 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       leur largeur utile réelle est inférieure à leur boîte englobante ; facteur de marge
       supplémentaire par forme ajouté à `boxSizeFor()`. Les trois corrections vérifiées par un
       second (puis un troisième) rendu réel, pas juste relues dans le code.
+- [x] **`swimlane-beta` shippé (2026-09-09)** — quatrième type non-flowchart livré, premier de la
+      famille A ("extension directe du flowchart, quasi gratuite") de
+      `FUTURE_full_mermaid_coverage_SPEC.md` §3. Confirmé contre `mermaid.js.org/syntax/
+      swimlanes.html` (2026-09-09) : swimlane-beta "carries the full Flowchart feature set" —
+      grammaire nœuds/arêtes identique au flowchart, seuls les `subgraph` de premier niveau
+      changent de sémantique (lane plutôt que boîte imbriquée arbitraire). Implémenté exactement
+      comme le pressentait la spec — un alias d'en-tête, pas un nouveau module : `parser.ts`
+      reconnaît `swimlane-beta [TD|TB|LR|BT|RL]` au même titre que `graph`/`flowchart` (même
+      normalisation TB→TD), et `detectDiagramType()` classe ce header comme `'flowchart'` plutôt
+      que comme un type à part — aucune divergence de pipeline, `layout.ts`/`ooxml-translator.ts`
+      inchangés, les lanes rendent avec la même boîte de sous-graphe pleine que `subgraph`
+      classique. Zéro nouvelle dépendance, zéro changement d'API publique. Vérifié par export CLI
+      réel + rendu LibreOffice headless (`test-corpus/visual/fixtures/swimlane.mmd`, 3 lanes/5
+      nœuds/flèches inter-lanes avec labels Oui/Non) et par `test:oxml-validate` (0 erreur de
+      schéma sous `word/diagrams/`, ajouté à `PLAIN_FIXTURE_NAMES`) — rendu correct dès la première
+      tentative, aucun bug trouvé cette fois. Reprise du chantier "faire monter le 3/28" actée avec
+      le mainteneur (2026-09-09) : ordre de priorité laissé à l'agent, sequenceDiagram (ci-dessous)
+      n'est donc plus un blocage produit mais une question d'ordonnancement par coût.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

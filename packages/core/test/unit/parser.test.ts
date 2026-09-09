@@ -35,6 +35,28 @@ test('BT and RL are recognized as their own distinct directions, not folded into
   assert.equal(rl.warnings.length, 0);
 });
 
+test('swimlane-beta is accepted as a third header keyword alongside graph/flowchart (Family A, near-zero-cost extension)', () => {
+  // mermaid.js.org/syntax/swimlanes.html: swimlane-beta "carries the full
+  // Flowchart feature set" — identical node/edge grammar, top-level
+  // subgraphs rendered as lanes rather than nested boxes. detectDiagramType
+  // already classifies this header as 'flowchart' (diagram-type.test.ts);
+  // this confirms parseMermaid() itself accepts the header and treats lanes
+  // as ordinary subgraphs.
+  const { ast, warnings } = parseMermaid(
+    'swimlane-beta LR\n  subgraph Customer[Customer]\n    A[Order] --> B[Pay]\n  end\n  subgraph Store[Store]\n    C[Ship]\n  end\n  B --> C',
+  );
+  assert.equal(ast.direction, 'LR');
+  assert.equal(ast.subgraphs.length, 2);
+  assert.deepEqual(
+    ast.subgraphs.map((s) => s.title),
+    ['Customer', 'Store'],
+  );
+  assert.equal(warnings.length, 0);
+
+  const bare = parseMermaid('swimlane-beta\n  subgraph S[Lane]\n    A --> B\n  end');
+  assert.equal(bare.ast.direction, 'TD', 'no direction defaults to TD, same as bare graph/flowchart');
+});
+
 test('parses node shapes (spec §6.1)', () => {
   const { ast } = parseMermaid(
     'graph TD\n  A[rect]\n  B(round)\n  C([stadium])\n  D{diamond}\n  E[(cylinder)]\n  F((ellipse))',

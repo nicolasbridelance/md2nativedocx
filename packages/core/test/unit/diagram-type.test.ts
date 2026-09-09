@@ -9,6 +9,11 @@ test('recognizes graph/flowchart headers as flowchart', () => {
   assert.equal(detectDiagramType('graph\n  A --> B').type, 'flowchart');
 });
 
+test('recognizes swimlane-beta as a flowchart alias, not a diversion type', () => {
+  assert.equal(detectDiagramType('swimlane-beta LR\n  subgraph a[A]\n  end').type, 'flowchart');
+  assert.equal(detectDiagramType('swimlane-beta\n  subgraph a[A]\n  end').type, 'flowchart');
+});
+
 test('skips blank lines and %% comments/init directives before classifying', () => {
   const info = detectDiagramType('\n\n%%{init: {"theme": "dark"}}%%\n%% a comment\ngitGraph\n  commit');
   assert.equal(info.type, 'gitGraph');

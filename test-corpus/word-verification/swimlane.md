@@ -1,0 +1,22 @@
+# swimlane
+
+```mermaid
+swimlane-beta LR
+  subgraph Customer[Customer]
+    Order[Place order]
+    Pay(Pay invoice)
+  end
+  subgraph Store[Store]
+    Pack[Pack items]
+    Decision{In stock?}
+  end
+  subgraph Carrier[Carrier]
+    Ship([Ship package])
+  end
+
+  Order --> Decision
+  Decision -->|Yes| Pack
+  Decision -->|No| Order
+  Pack --> Ship
+  Ship --> Pay
+```

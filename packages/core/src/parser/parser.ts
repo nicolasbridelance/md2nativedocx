@@ -626,18 +626,25 @@ export function parseMermaid(text: string): ParseResult {
     const line = rawLine.trim();
     if (line.length === 0) continue;
 
-    // Header line: graph TD / flowchart LR/BT/RL. `TB` is Mermaid's own
-    // documented alias for `TD` (top-to-bottom either way) and maps straight
-    // through to it; the other three are distinct directions, all laid out by
-    // Dagre (`layout.ts`) and by SmartArt's `linDir` param (`chain.ts`/`tree.ts`).
-    const header = line.match(/^(?:graph|flowchart)\s+(TD|TB|LR|BT|RL)\b/i);
+    // Header line: graph TD / flowchart LR/BT/RL / swimlane-beta LR. `TB` is
+    // Mermaid's own documented alias for `TD` (top-to-bottom either way) and
+    // maps straight through to it; the other three are distinct directions,
+    // all laid out by Dagre (`layout.ts`) and by SmartArt's `linDir` param
+    // (`chain.ts`/`tree.ts`). `swimlane-beta` is accepted as a third header
+    // keyword alongside `graph`/`flowchart` (not a separate diagram type):
+    // per Mermaid's own docs (mermaid.js.org/syntax/swimlanes.html),
+    // swimlane-beta "carries the full Flowchart feature set" — identical
+    // node/edge grammar, top-level `subgraph`s rendered as lanes instead of
+    // nested boxes. `detectDiagramType()` already classifies this header as
+    // `'flowchart'` for the same reason (see its doc comment).
+    const header = line.match(/^(?:graph|flowchart|swimlane-beta)\s+(TD|TB|LR|BT|RL)\b/i);
     if (header) {
       const requested = header[1]!.toUpperCase();
       direction = requested === 'TB' ? 'TD' : (requested as 'TD' | 'LR' | 'BT' | 'RL');
       continue;
     }
-    // Allow a bare "graph"/"flowchart" with no direction.
-    if (/^(?:graph|flowchart)\s*$/i.test(line)) continue;
+    // Allow a bare "graph"/"flowchart"/"swimlane-beta" with no direction.
+    if (/^(?:graph|flowchart|swimlane-beta)\s*$/i.test(line)) continue;
 
     // Comments
     if (line.startsWith('%%')) continue;

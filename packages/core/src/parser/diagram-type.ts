@@ -22,7 +22,6 @@
 export type DiagramType =
   | 'flowchart'
   | 'unknown'
-  | 'swimlane'
   | 'sequence'
   | 'class'
   | 'state'
@@ -65,7 +64,6 @@ const UNKNOWN: DiagramTypeInfo = { type: 'unknown', label: 'Unknown' };
 // line. Verified against mermaid.js.org (2026-09-04) — see the spec's §2
 // table. `graph`/`flowchart` are handled separately below, not in this list.
 const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: RegExp }> = [
-  { type: 'swimlane', label: 'Swimlanes', pattern: /^swimlane-beta\b/i },
   { type: 'sequence', label: 'Sequence diagram', pattern: /^sequenceDiagram\b/i },
   { type: 'class', label: 'Class diagram', pattern: /^classDiagram\b/i },
   { type: 'state', label: 'State diagram', pattern: /^stateDiagram(?:-v2)?\b/i },
@@ -115,7 +113,9 @@ export function detectDiagramType(text: string): DiagramTypeInfo {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
 
-    if (/^(?:graph|flowchart)\b/i.test(line)) return FLOWCHART;
+    // `swimlane-beta` is an alias header, not a distinct diagram type — see
+    // its handling in parser.ts's header regex for why.
+    if (/^(?:graph|flowchart|swimlane-beta)\b/i.test(line)) return FLOWCHART;
 
     for (const candidate of NON_FLOWCHART_HEADERS) {
       if (candidate.pattern.test(line)) return { type: candidate.type, label: candidate.label };
