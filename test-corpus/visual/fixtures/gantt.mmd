@@ -1,0 +1,11 @@
+gantt
+    title Adoption d'un logiciel
+    dateFormat YYYY-MM-DD
+    excludes weekends
+    section Cadrage
+    Recueil besoins      :done,    des1, 2026-01-05, 5d
+    Choix outil          :active,  des2, after des1, 3d
+    section Deploiement
+    Formation            :crit,    des3, after des2, 4d
+    Go-live              :milestone, des4, after des3, 0d
+    Suivi post go-live   :         des5, after des4, 10d

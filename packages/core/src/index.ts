@@ -119,6 +119,13 @@ export type {
   ArchitectureSide,
 } from './diagrams/architecture-diagram/types.js';
 
+// Gantt module (Family D, option (b): calendar shapes, no `c:chart` — see
+// docs/adr/spikes/spike-gantt-parser/spike.md).
+export { parseGanttChart } from './diagrams/gantt/parser.js';
+export type { GanttParseResult } from './diagrams/gantt/parser.js';
+export { translateGanttToOoxml } from './diagrams/gantt/translator.js';
+export type { GanttChart, GanttTask, GanttTag } from './diagrams/gantt/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

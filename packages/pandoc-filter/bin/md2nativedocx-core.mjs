@@ -94,6 +94,8 @@ import {
   translateRequirementDiagramToOoxml,
   parseArchitectureDiagram,
   translateArchitectureDiagramToOoxml,
+  parseGanttChart,
+  translateGanttToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -221,6 +223,14 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateArchitectureDiagramToOoxml(ast));
+  } else if (diagramType.type === 'gantt') {
+    // Tenth non-flowchart diagram type shipped, first of Family D (calendar
+    // shapes, no `c:chart` — docs/adr/spikes/spike-gantt-parser/spike.md).
+    const { ast, warnings } = parseGanttChart(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateGanttToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,
