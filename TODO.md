@@ -236,6 +236,22 @@ ADR 0001/0002 — condensé dans `docs/history/TODO_ARCHIVE.md`.
       automatisé) — non faits. En particulier : le rendu réel du CodeLens/pastille/walkthrough à
       l'œil, et `vscode.env.openExternal`/`revealFileInOS` depuis un Codespace (censé transiter par
       la machine locale de l'utilisateur via le forwarding VS Code — jamais vérifié en pratique).
+- [ ] **Support `.qmd` (Quarto)** — idée loguée le 2026-09-10 (mainteneur). Aujourd'hui
+      `activationEvents`/menus contextuels (`package.json`) ne reconnaissent que
+      `onLanguage:markdown`/`.md`/`.mmd`. Un `.qmd` est du Pandoc-markdown + frontmatter YAML
+      étendu (proche `.Rmd`) — probablement lisible tel quel par le reader `markdown` de Pandoc
+      pour la partie texte/diagrammes, mais à vérifier : chunks de code exécutables Quarto
+      (` ```{python}`/` ```{r}`, etc.) et frontmatter spécifique (`execute:`, `format: docx: ...`)
+      non couverts par notre pipeline actuel — pas juste un ajout d'extension de fichier, un spike
+      de compatibilité d'abord.
+- [ ] **Clic droit "Exporter en Word" sur l'onglet de l'éditeur** — idée loguée le 2026-09-10
+      (mainteneur). Existe aujourd'hui en `explorer/context` (clic droit sur le fichier dans
+      l'explorateur) et `editor/context` (clic droit dans le corps du texte) — voir
+      `packages/vscode-extension/package.json` `contributes.menus`. Il manque le point de menu
+      `editor/title/context` (clic droit sur l'onglet lui-même, en haut du panneau d'édition) :
+      même commande (`md2nativedocx.exportDocument`), même condition
+      (`resourceExtname == .md || resourceExtname == .mmd`), juste un point de contribution
+      supplémentaire — coût attendu faible.
 
 ## Phase 3 — Couleurs + sous-graphes
 
@@ -1007,6 +1023,26 @@ core + 15 pandoc-filter + 64 vscode-extension + 4 word-addin), typecheck clean.
       `layoutDef`, pas encore investigué.
 
 ---
+
+## Piste — Contribuer le moteur en amont à Pandoc (idée loguée 2026-09-10)
+
+Idée du mainteneur, pas scopée : cloner le dépôt Pandoc et proposer une branche/PR portant notre
+traduction diagramme → OOXML. À noter avant de s'engager, pour cadrer une vraie discussion plutôt
+que de partir tête baissée :
+
+- Pandoc est écrit en Haskell ; `packages/core` est en TypeScript. Une "PR vers Pandoc" ne peut donc
+  pas être un simple portage de notre code — soit une réécriture du traducteur en Haskell (gros
+  chantier, double maintenance de deux implémentations dans deux langages), soit une proposition
+  plus modeste côté Pandoc (ex. un point d'extension officiel pour qu'un filtre externe injecte du
+  `RawBlock('openxml')` groupé sans les limitations actuelles, si de telles limitations existent —
+  pas vérifié).
+- Notre architecture actuelle (cahier des charges §0/§4) traite déjà Pandoc comme un hôte externe
+  mature qu'on ne modifie pas, précisément pour ne pas avoir à maintenir un fork — proposer un
+  changement upstream inverse cette logique et engage une relation avec un projet tiers (revue de
+  mainteneurs Pandoc, délais hors de notre contrôle, exigences de style Haskell/tests du projet).
+- Avant de cloner quoi que ce soit : clarifier l'objectif réel — remonter un besoin/une limitation
+  précise à l'issue tracker de Pandoc (léger, rapide) vs. proposer du code (lourd, incertain). À
+  trancher avec le mainteneur avant tout spike.
 
 ## Règles non négociables (rappel — voir AGENTS.md)
 
