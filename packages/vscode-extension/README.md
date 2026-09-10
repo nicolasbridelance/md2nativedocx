@@ -1,5 +1,8 @@
 # md2nativedocx — Markdown → Word, done right
 
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/md2nativedocx.md2nativedocx?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
+[![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
+
 Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
 LaTeX math — with one standout difference: if the document contains Mermaid diagrams, those don't
 get flattened into an image like everywhere else. They become real vector Word shapes
