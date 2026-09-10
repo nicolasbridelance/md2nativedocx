@@ -78,14 +78,14 @@ export's own `.log` file.
 
 ## Usage
 
-Works on any `.md` file — with or without a Mermaid diagram, text/tables/formatting export either
-way — and on a raw `.mmd` Mermaid file too.
+Works on any `.md` or `.qmd` (Quarto Markdown) file — with or without a Mermaid diagram, text/
+tables/formatting export either way — and on a raw `.mmd` Mermaid file too.
 
-1. Open a `.md` or `.mmd` file, **or** just right-click one in the Explorer — no need to open it
-   first.
+1. Open a `.md`, `.qmd` or `.mmd` file, **or** just right-click one in the Explorer — no need to
+   open it first.
 2. Click **⚙️ Export to Word** (or **Export this block only** for a single diagram, above that
-   block) — from the CodeLens, the status bar item, the right-click menu (Explorer or editor), or
-   the Command Palette.
+   block) — from the CodeLens, the status bar item, the right-click menu (Explorer, editor, or the
+   editor tab itself), or the Command Palette.
 3. A notification offers to open the generated `.docx` or reveal it in the file explorer.
 
 No configuration required before first use. Optional settings: `md2nativedocx.outputDirectory`

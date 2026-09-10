@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(outputChannel);
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd}' }, new MermaidCodeLensProvider()),
+    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd,qmd}' }, new MermaidCodeLensProvider()),
     vscode.commands.registerCommand('md2nativedocx.exportDocument', (uri?: vscode.Uri) =>
       handleExportDocument(uri),
     ),
@@ -177,7 +177,7 @@ async function resolveExportableUri(uri: vscode.Uri | undefined): Promise<vscode
   if (uri) return uri;
   const active = vscode.window.activeTextEditor;
   if (active && isExportablePath(active.document.uri.fsPath)) return active.document.uri;
-  void vscode.window.showErrorMessage(vscode.l10n.t('Open a Markdown (.md) or Mermaid (.mmd) file first.'));
+  void vscode.window.showErrorMessage(vscode.l10n.t('Open a Markdown (.md), Mermaid (.mmd) or Quarto (.qmd) file first.'));
   return null;
 }
 

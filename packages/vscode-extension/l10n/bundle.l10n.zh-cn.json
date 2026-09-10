@@ -1,5 +1,5 @@
 {
-  "Open a Markdown (.md) file first.": "请先打开一个 Markdown（.md）文件。",
+  "Open a Markdown (.md), Mermaid (.mmd) or Quarto (.qmd) file first.": "请先打开一个 Markdown（.md）、Mermaid（.mmd）或 Quarto（.qmd）文件。",
   "No mermaid diagram found in this document.": "此文档中未找到任何 mermaid 图表。",
   "Diagram {0}": "图表 {0}",
   "line {0}": "第 {0} 行",

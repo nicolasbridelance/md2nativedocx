@@ -3,6 +3,19 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- `.qmd` (Quarto Markdown) files are now exportable everywhere `.md` already was — CodeLens,
+  status bar, Command Palette, and the Explorer/editor right-click menus — since a ` ```mermaid `
+  fence inside one parses exactly like it does in plain Markdown.
+- Right-click **Export to Word** in the editor tab bar itself (not just inside the editor or the
+  Explorer) via a new `editor/title/context` menu entry.
+
+### Fixed
+- The generated `.docx` for a `.qmd` source was misnamed (e.g. `report.qmd.docx` instead of
+  `report.docx`) — the output basename only ever stripped an exact `.md` suffix.
+
 ## [0.5.4] — 2026-09-08
 
 ### Changed

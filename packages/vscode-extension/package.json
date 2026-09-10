@@ -43,7 +43,8 @@
   ],
   "activationEvents": [
     "onLanguage:markdown",
-    "onLanguage:mermaid"
+    "onLanguage:mermaid",
+    "onLanguage:quarto"
   ],
   "contributes": {
     "commands": [
@@ -80,14 +81,21 @@
       "explorer/context": [
         {
           "command": "md2nativedocx.exportDocument",
-          "when": "resourceExtname == .md || resourceExtname == .mmd",
+          "when": "resourceExtname == .md || resourceExtname == .mmd || resourceExtname == .qmd",
           "group": "7_modification"
         }
       ],
       "editor/context": [
         {
           "command": "md2nativedocx.exportDocument",
-          "when": "resourceExtname == .md || resourceExtname == .mmd",
+          "when": "resourceExtname == .md || resourceExtname == .mmd || resourceExtname == .qmd",
+          "group": "1_modification"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "md2nativedocx.exportDocument",
+          "when": "resourceExtname == .md || resourceExtname == .mmd || resourceExtname == .qmd",
           "group": "1_modification"
         }
       ]

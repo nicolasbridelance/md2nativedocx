@@ -2,7 +2,14 @@ import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { blockAtLine, parseMermaidBlocks, wrapBlockAsDocument, wrapMermaidSource, type MermaidBlock } from './mermaidBlocks';
+import {
+  blockAtLine,
+  parseMermaidBlocks,
+  wrapBlockAsDocument,
+  wrapMermaidSource,
+  EXPORTABLE_EXTENSIONS,
+  type MermaidBlock,
+} from './mermaidBlocks';
 
 export interface ExportResult {
   outputPath: string;
@@ -295,12 +302,24 @@ export function resolveOutputPath(sourcePath: string, outputBaseName: string, ou
   return join(dir, `${outputBaseName}.docx`);
 }
 
+/** `sourcePath`'s filename with its extension stripped, for whichever of
+ * `EXPORTABLE_EXTENSIONS` it actually ends with — unlike
+ * `path.basename(sourcePath, '.md')`, which only strips an exact `.md`
+ * suffix and would otherwise leave a `.qmd`/`.mmd` source's own extension
+ * sitting in the middle of the generated `.docx` filename. */
+function sourceBaseName(sourcePath: string): string {
+  const base = basename(sourcePath);
+  const lower = base.toLowerCase();
+  const ext = EXPORTABLE_EXTENSIONS.find((candidate) => lower.endsWith(candidate));
+  return ext ? base.slice(0, base.length - ext.length) : base;
+}
+
 export async function exportDocument(
   sourcePath: string,
   outputDirectory: string,
   options: RunCliOptions = {},
 ): Promise<ExportResult> {
-  const outputPath = resolveOutputPath(sourcePath, basename(sourcePath, '.md'), outputDirectory);
+  const outputPath = resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory);
   await runCli(sourcePath, outputPath, dirname(sourcePath), options);
   const logPath = logPathFor(outputPath);
   return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -329,7 +348,7 @@ export async function exportBlock(
   try {
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapBlockAsDocument(block));
-    const outputBaseName = `${basename(sourcePath, '.md')}-diagram-${blockIndex + 1}`;
+    const outputBaseName = `${sourceBaseName(sourcePath)}-diagram-${blockIndex + 1}`;
     const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);

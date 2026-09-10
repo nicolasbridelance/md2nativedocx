@@ -286,6 +286,17 @@ async function main() {
     '--lua-filter',
     FILTER_PATH,
   ];
+  if (extname(input).toLowerCase() === '.qmd') {
+    // Pandoc guesses its reader from the input extension and doesn't know
+    // `.qmd` (Quarto Markdown) — left alone, it falls back to markdown but
+    // prints a "Could not deduce format" warning on every export. Quarto
+    // markdown is Pandoc markdown plus optional YAML front matter and
+    // executable code chunks (both already valid Pandoc markdown syntax —
+    // pandoc's markdown reader just treats a chunk as an ordinary fenced
+    // code block), so declaring the reader explicitly is correct, not a
+    // guess, and drops the warning.
+    pandocArgs.push('--from', 'markdown');
+  }
   if (existsSync(EFFECTIVE_REFERENCE_DOC_PATH)) {
     pandocArgs.push('--reference-doc', EFFECTIVE_REFERENCE_DOC_PATH);
   }

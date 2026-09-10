@@ -1,5 +1,5 @@
 {
-  "Open a Markdown (.md) file first.": "Сначала откройте файл Markdown (.md).",
+  "Open a Markdown (.md), Mermaid (.mmd) or Quarto (.qmd) file first.": "Сначала откройте файл Markdown (.md), Mermaid (.mmd) или Quarto (.qmd).",
   "No mermaid diagram found in this document.": "В этом документе не найдено ни одной диаграммы mermaid.",
   "Diagram {0}": "Диаграмма {0}",
   "line {0}": "строка {0}",

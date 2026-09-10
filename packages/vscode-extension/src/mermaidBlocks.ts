@@ -107,8 +107,14 @@ export function wrapBlockAsDocument(block: MermaidBlock): string {
  * dot — kept in one place so the command handlers, the status bar, and the
  * CodeLens provider agree on what counts as "exportable" without depending
  * on a document's `languageId` (a `.mmd` file has no guaranteed language
- * association unless some other extension defines one). */
-export const EXPORTABLE_EXTENSIONS = ['.md', '.mmd'] as const;
+ * association unless some other extension defines one). `.qmd` (Quarto
+ * Markdown) is Pandoc markdown plus optional YAML front matter and
+ * executable code chunks — ` ```mermaid ` fences inside it parse the same
+ * way as in a `.md` file, so it's handled as one everywhere except the raw
+ * Pandoc invocation (`bin/md2nativedocx.mjs` passes `--from markdown`
+ * explicitly for it, since Pandoc can't guess a reader from that
+ * extension). */
+export const EXPORTABLE_EXTENSIONS = ['.md', '.mmd', '.qmd'] as const;
 
 /** Whether `filePath`'s extension is one this extension can export
  * (case-insensitive). */

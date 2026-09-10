@@ -9,6 +9,7 @@ const FIXTURES_DIR = path.join(__dirname, '..', '..', '..', 'test', 'fixtures');
 const FIXTURE = path.join(FIXTURES_DIR, 'sample.md');
 const PLAIN_FIXTURE = path.join(FIXTURES_DIR, 'plain.md');
 const MMD_FIXTURE = path.join(FIXTURES_DIR, 'diagram.mmd');
+const QMD_FIXTURE = path.join(FIXTURES_DIR, 'sample.qmd');
 
 async function codeLensesFor(uri: vscode.Uri): Promise<vscode.CodeLens[]> {
   const doc = await vscode.workspace.openTextDocument(uri);
@@ -67,6 +68,51 @@ suite('md2nativedocx extension host', () => {
     const lenses = await codeLensesFor(vscode.Uri.file(MMD_FIXTURE));
     assert.equal(lenses.length, 1, `expected 1 CodeLens, got ${lenses.length}`);
     assert.equal(lenses[0]?.command?.command, 'md2nativedocx.exportDocument');
+  });
+
+  test('provides two CodeLenses above a mermaid block in a Quarto (.qmd) document, YAML front matter included', async () => {
+    const lenses = await codeLensesFor(vscode.Uri.file(QMD_FIXTURE));
+    assert.equal(lenses.length, 2, `expected 2 CodeLenses, got ${lenses.length}`);
+    const titles = lenses.map((l) => l.command?.command).sort();
+    assert.deepEqual(titles, ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument']);
+  });
+
+  test('declares the editor/title/context (tab bar right-click) menu entry for .md/.mmd/.qmd', async () => {
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext);
+    const contributes = ext.packageJSON.contributes as {
+      menus?: Record<string, Array<{ command: string; when?: string }>>;
+    };
+    const entry = contributes.menus?.['editor/title/context']?.find(
+      (e) => e.command === 'md2nativedocx.exportDocument',
+    );
+    assert.ok(entry, 'expected an editor/title/context entry for md2nativedocx.exportDocument');
+    for (const extName of ['.md', '.mmd', '.qmd']) {
+      assert.ok(entry?.when?.includes(`resourceExtname == ${extName}`), `expected the "when" clause to cover ${extName}`);
+    }
+  });
+
+  test('exportDocument command exports a real .docx for a .qmd file, named after it (not "*.qmd.docx")', async () => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'md2nativedocx-qmd-suite-'));
+    const qmdCopy = path.join(outDir, 'report.qmd');
+    fs.copyFileSync(QMD_FIXTURE, qmdCopy);
+    try {
+      // Same invocation shape as a right-click "Export to Word" in the
+      // Explorer/editor/tab-bar context menu.
+      void vscode.commands.executeCommand('md2nativedocx.exportDocument', vscode.Uri.file(qmdCopy));
+      const expected = path.join(outDir, 'report.docx');
+      let found = false;
+      for (let i = 0; i < 40; i++) {
+        if (fs.existsSync(expected)) {
+          found = true;
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      assert.ok(found, `expected ${expected} to be created`);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
   });
 
   test('exportDocument command exports a real .docx for a raw .mmd file (Explorer/editor context menu path)', async () => {

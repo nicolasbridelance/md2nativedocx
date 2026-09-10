@@ -1,0 +1,10 @@
+---
+title: "Exemple Quarto"
+---
+
+# Exemple
+
+```mermaid
+graph TD
+  A --> B
+```

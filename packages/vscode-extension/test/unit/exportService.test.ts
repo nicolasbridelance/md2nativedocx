@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveOutputPath, resolveBlockForCursor, exportMermaidFile } from '../../src/exportService';
+import { resolveOutputPath, resolveBlockForCursor, exportMermaidFile, exportDocument } from '../../src/exportService';
 
 test('resolveOutputPath defaults to the source file\'s own directory (zero-config)', () => {
   const out = resolveOutputPath('/home/user/reports/rapport.md', 'rapport', '');
@@ -72,6 +72,19 @@ test('exportMermaidFile surfaces parser warnings via warningCount (spec §10)', 
     const result = await exportMermaidFile(mmdPath, '');
     assert.equal(result.warningCount, 1);
     assert.ok(existsSync(result.logPath));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('exportDocument strips a .qmd source extension correctly instead of leaving it in the .docx name', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-qmd-export-test-'));
+  try {
+    const qmdPath = join(dir, 'report.qmd');
+    writeFileSync(qmdPath, '# Titre\n\n```mermaid\ngraph TD\n  A --> B\n```\n');
+    const result = await exportDocument(qmdPath, '');
+    assert.equal(result.outputPath, join(dir, 'report.docx'));
+    assert.ok(existsSync(result.outputPath));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

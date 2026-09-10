@@ -106,16 +106,19 @@ test('wrapMermaidSource wraps raw Mermaid text (e.g. a whole .mmd file) in a min
   assert.equal(wrapped, '# diagram\n\n```mermaid\ngraph TD\n  A --> B\n```\n');
 });
 
-test('isExportablePath accepts .md and .mmd (case-insensitive), rejects everything else', () => {
+test('isExportablePath accepts .md, .mmd and .qmd (case-insensitive), rejects everything else', () => {
   assert.equal(isExportablePath('/a/b/notes.md'), true);
   assert.equal(isExportablePath('/a/b/diagram.mmd'), true);
   assert.equal(isExportablePath('/a/b/DIAGRAM.MMD'), true);
+  assert.equal(isExportablePath('/a/b/report.qmd'), true);
+  assert.equal(isExportablePath('/a/b/REPORT.QMD'), true);
   assert.equal(isExportablePath('/a/b/readme.txt'), false);
   assert.equal(isExportablePath('/a/b/notes.md.bak'), false);
 });
 
-test('isMermaidFilePath is true only for .mmd', () => {
+test('isMermaidFilePath is true only for .mmd (a .qmd file is markdown-like, not raw Mermaid)', () => {
   assert.equal(isMermaidFilePath('/a/b/diagram.mmd'), true);
   assert.equal(isMermaidFilePath('/a/b/DIAGRAM.MMD'), true);
   assert.equal(isMermaidFilePath('/a/b/notes.md'), false);
+  assert.equal(isMermaidFilePath('/a/b/report.qmd'), false);
 });
