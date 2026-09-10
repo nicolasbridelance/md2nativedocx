@@ -1,0 +1,11 @@
+{
+  "name": "spike-gantt-parser",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway repro harness for spike.md — not part of the published packages.",
+  "dependencies": {
+    "mermaid": "12.0.0",
+    "jsdom": "^29.0.0",
+    "dompurify": "^3.4.0"
+  }
+}
