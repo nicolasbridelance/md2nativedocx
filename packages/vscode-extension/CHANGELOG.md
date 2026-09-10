@@ -3,7 +3,7 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.5.5] — 2026-09-10
 
 ### Added
 - `.qmd` (Quarto Markdown) files are now exportable everywhere `.md` already was — CodeLens,
