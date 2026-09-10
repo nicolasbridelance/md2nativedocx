@@ -21,7 +21,17 @@ module.exports = {
   // `eslint .` outright (TypeError: Converting circular structure to JSON while validating the
   // nested config), not just producing noisy findings. Run `npm run lint -w packages/word-addin`
   // for that package instead.
-  ignorePatterns: ['dist/', 'node_modules/', '*.js', 'packages/word-addin/'],
+  ignorePatterns: [
+    'dist/',
+    'node_modules/',
+    '*.js',
+    'packages/word-addin/',
+    // Vendored MIT source kept only as a read-only reference for the Gantt
+    // parser spike (decision: reuse rejected at runtime — see
+    // docs/adr/spikes/spike-gantt-parser/spike.md) — not code this project
+    // maintains or ships, so it shouldn't be held to this repo's lint rules.
+    'docs/adr/spikes/spike-gantt-parser/reference/',
+  ],
   rules: {
     '@typescript-eslint/no-explicit-any': 'warn',
     'security/detect-non-literal-fs-filename': 'off',
