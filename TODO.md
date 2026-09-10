@@ -572,6 +572,27 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       mélange d'arêtes avec/sans flèche) et `test:oxml-validate` (0 erreur de schéma sous
       `word/diagrams/`) — rendu correct dès la première tentative, aucun bug trouvé cette fois.
       19 tests unitaires ajoutés (parser + traducteur).
+- [x] **`gantt` shippé (2026-09-10)** — dixième type non-flowchart livré, premier de la famille D
+      (`FUTURE_full_mermaid_coverage_SPEC.md`) — option (b) retenue (formes `wps:wsp` sur une grille
+      calendrier, pas de backend `c:chart`), après spike dédié
+      (`docs/adr/spikes/spike-gantt-parser/spike.md`) ayant écarté une dépendance runtime au paquet
+      npm `mermaid` (chemin de chunk interne non stable + DOM/DOMPurify requis même pour le parsing
+      pur) au profit d'une référence de code source vendorée (MIT, lue, jamais importée) pour écrire
+      un parseur maison fidèle. Portée v1 : `title`, `dateFormat`, `excludes`
+      (`weekends`/jours nommés/dates explicites), `section`, tâches avec id/tags
+      (`active`/`done`/`crit`/`milestone`), début en date explicite/`after <ids>`/omis (chaîné sur la
+      fin de la tâche précédente **globalement**, pas par section — comportement réel de Mermaid
+      confirmé contre la référence vendorée), fin en date explicite/`until <ids>`/durée
+      (`d`/`w`/`M`/`y`/`h`, étirée après les jours exclus exactement comme `fixTaskDates` sauf pour
+      une date de fin explicite, jamais étirée). Jalons rendus en losange, pas de flèche de
+      dépendance dessinée (vrai Mermaid n'en dessine pas non plus). Arithmétique de dates maison
+      (`date-utils.ts`, ancrée UTC, déterministe) plutôt que `dayjs` — `packages/core` garde `dagre`
+      comme unique dépendance. Vérifié par export CLI réel + rendu LibreOffice headless (calcul
+      d'exclusion des week-ends validé à la main contre les largeurs de barres rendues) +
+      `test:oxml-validate` (0 erreur de schéma) + baseline `test:visual` + 21 tests unitaires
+      (dont un bug réel trouvé et corrigé en écrivant les tests : une durée malformée comme
+      `"1.2.3d"` passait la regex volontairement permissive puis produisait une `Invalid Date` faute
+      de garde `Number.isFinite`).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
