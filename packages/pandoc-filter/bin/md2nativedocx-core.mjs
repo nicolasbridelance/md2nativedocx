@@ -100,6 +100,8 @@ import {
   translateC4DiagramToOoxml,
   parseGitGraphDiagram,
   translateGitGraphToOoxml,
+  parseCynefinDiagram,
+  translateCynefinToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -252,6 +254,16 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateGitGraphToOoxml(ast));
+  } else if (diagramType.type === 'cynefin') {
+    // Thirteenth non-flowchart diagram type shipped, second of Family D
+    // (calculated shapes, no c:chart — same shape as quadrant/venn, NOT a
+    // reuse of quadrantChart's own translator, see diagrams/cynefin/
+    // types.ts's doc comment for why the "2x2" resemblance is superficial).
+    const { ast, warnings } = parseCynefinDiagram(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateCynefinToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

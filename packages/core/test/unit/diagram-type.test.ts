@@ -45,6 +45,7 @@ test('recognizes a representative sample of the other ~28 diagram types', () => 
     ['architecture-beta\n  service a(cloud)[A]', 'architecture'],
     ['radar-beta\n  title Skills', 'radar'],
     ['treemap-beta\n  "root"', 'treemap'],
+    ['cynefin-beta\n  complex', 'cynefin'],
   ];
   for (const [text, expected] of cases) {
     assert.equal(detectDiagramType(text).type, expected, `expected ${expected} for: ${text.split('\n')[0]}`);

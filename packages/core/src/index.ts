@@ -142,6 +142,14 @@ export type { GitGraphParseResult } from './diagrams/git-graph/parser.js';
 export { translateGitGraphToOoxml } from './diagrams/git-graph/translator.js';
 export type { GitGraphDiagram, GitBranch, GitCommit, GitCommitType, GitOrientation } from './diagrams/git-graph/types.js';
 
+// cynefin-beta module (Family D — fixed 5-domain layout + calculated
+// shapes, NOT a quadrantChart reuse despite both being "2x2"-shaped, see
+// diagrams/cynefin/types.js's doc comment).
+export { parseCynefinDiagram } from './diagrams/cynefin/parser.js';
+export type { CynefinParseResult } from './diagrams/cynefin/parser.js';
+export { translateCynefinToOoxml } from './diagrams/cynefin/translator.js';
+export type { CynefinDiagram, CynefinDomain, CynefinTransition } from './diagrams/cynefin/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

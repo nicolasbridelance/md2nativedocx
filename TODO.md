@@ -662,6 +662,34 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       REVERSE/HIGHLIGHT/tag) et de l'orientation `TB:` + `test:oxml-validate` (0 erreur de schéma
       sous `word/diagrams/`) + baseline `test:visual` (zéro régression sur les 43 fixtures
       préexistantes, confirmé par `git status`) + 35 tests unitaires (parser + traducteur).
+- [x] **`cynefin-beta` shippé (2026-09-11)** — treizième type non-flowchart livré, second de la
+      famille D (formes calculées sur canevas `wpc:wpc`, pas de `c:chart`, même stratégie que
+      `quadrantChart`/`venn-beta`). Grammaire vérifiée contre la source markdown réelle de
+      `mermaid-js/mermaid` (`docs/syntax/cynefin.md` via raw.githubusercontent.com). L'hypothèse de
+      `FUTURE_full_mermaid_coverage_SPEC.md` ("probablement réutilisable avec `quadrantChart`",
+      posée avant lecture de la vraie grammaire) s'est révélée fausse une fois vérifiée : pas de
+      points `[x, y]` arbitraires, mais 5 domaines **fixes et nommés** (Complex/Complicated/Clear/
+      Chaotic + une région centrale Confusion) contenant des listes d'items texte, plus un graphe de
+      transitions optionnel — module dédié, pas une variante de `quadrantChart`. Portée v1 : pas de
+      support frontmatter/`config:`/variables de thème (`width`/`height`/`padding`/
+      `boundaryAmplitude`/`seed`/`*Bg`, même absence de précédent que partout ailleurs dans ce
+      projet) ; `accTitle`/`accDescr` reconnus et avertis une fois, sans effet (pas d'équivalent
+      OOXML) ; la frontière organique ondulée caractéristique du framework (signature visuelle du
+      vrai rendu Mermaid) devient une simple ligne droite — même compromis "géométrie calculée, pas
+      fidélité visuelle exacte" déjà accepté pour `venn-beta`. Les 5 domaines aux positions fixes
+      documentées (Complex haut-gauche, Complicated haut-droite, Chaotic bas-gauche, Clear
+      bas-droite, Confusion au centre) rendent toujours, même vides (cas "Empty framework" des docs).
+      Sous-titres de domaine (modèle de décision + type de pratique) repris verbatim des docs
+      Mermaid. Plafond de 3 items + badge "+N more" pour la région Confusion, comportement
+      documenté reproduit fidèlement (les 4 domaines principaux ne sont eux jamais coupés, même
+      choix que Mermaid lui-même). Self-loop de transition (`complex --> complex`) silencieusement
+      ignoré, sans avertissement — comportement explicitement documenté par Mermaid, pas une lacune
+      de ce projet. Vérifié par export CLI réel + rendu LibreOffice headless
+      (`test-corpus/visual/fixtures/cynefin.mmd`, l'exemple "Strategy Categorization" des docs
+      Mermaid elles-mêmes, plus une vérification séparée du plafond/badge de la région Confusion) +
+      `test:oxml-validate` (0 erreur de schéma sous `word/diagrams/`) + baseline `test:visual` (zéro
+      régression sur les 44 fixtures préexistantes, confirmé par `git status`) + 27 tests unitaires
+      (parser + traducteur).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
