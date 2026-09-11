@@ -134,6 +134,14 @@ export type { C4ParseResult } from './diagrams/c4/parser.js';
 export { translateC4DiagramToOoxml } from './diagrams/c4/translator.js';
 export type { C4Diagram, C4Element, C4Relationship, C4Category, C4Variant } from './diagrams/c4/types.js';
 
+// gitGraph module (re-classified Family F — fixed branch lanes + a fixed
+// commit-sequence axis, no Dagre — see diagrams/git-graph/types.ts's doc
+// comment).
+export { parseGitGraphDiagram } from './diagrams/git-graph/parser.js';
+export type { GitGraphParseResult } from './diagrams/git-graph/parser.js';
+export { translateGitGraphToOoxml } from './diagrams/git-graph/translator.js';
+export type { GitGraphDiagram, GitBranch, GitCommit, GitCommitType, GitOrientation } from './diagrams/git-graph/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

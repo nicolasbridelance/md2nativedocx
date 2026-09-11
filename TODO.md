@@ -624,6 +624,44 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       visuellement la boîte intermédiaire — même limitation "lignes droites, pas de routage Dagre"
       déjà documentée pour toute la famille B, juste plus visible ici. 33 tests unitaires ajoutés
       (parser + traducteur).
+- [x] **`gitGraph` shippé (2026-09-11)** — douzième type non-flowchart livré, premier de la famille
+      F (re-classé, voir la note "angle mort n°2" de `FUTURE_full_mermaid_coverage_SPEC.md` : pas un
+      graphe Dagre, mais des couloirs de branche fixes + un axe de séquence de commits fixe, même
+      forme non-Dagre que le layout calendrier de `gantt`). Grammaire vérifiée contre la source
+      markdown réelle de `mermaid-js/mermaid` (`docs/syntax/gitgraph.md` via
+      raw.githubusercontent.com, même raison que C4 — la page rendue mermaid.js.org charge ses
+      exemples dans un éditeur interactif). Portée v1 : aucun support frontmatter/`config:` (ce
+      projet n'en a jamais eu pour aucun type — `showBranches`/`showCommitLabel`/`mainBranchName`/
+      `mainBranchOrder`/`parallelCommits`/les variables de thème `git0`-`git7` ne sont donc pas une
+      lacune spécifique à gitGraph) ; position des commits sur l'axe principal = ordre de
+      déclaration (compteur de séquence global), pas l'algorithme temporel réel de Mermaid
+      ("distance au parent") ; labels de commit jamais tournés à 45° (comportement fixe équivalent à
+      `rotateCommitLabel: false`). `commit`/`branch`/`checkout`/`switch`/`merge`/`cherry-pick`
+      complets avec attributs `id`/`type`/`tag`/`order`/`parent` ; `branch "nom-clé-réservé"` entre
+      guillemets géré ; tri d'affichage des branches (main toujours première, puis sans `order` par
+      ordre d'apparition, puis avec `order` par valeur croissante) vérifié contre l'exemple documenté
+      de Mermaid lui-même. Rendu : cercle plein (`NORMAL`), cercle barré d'un X blanc (`REVERSE`),
+      carré arrondi (`HIGHLIGHT`), "œil de bœuf" à deux cercles concentriques pour l'approximation du
+      "double cercle plein" d'un merge ; chaque arête parent est colorée par la branche du *parent*
+      (donc un point de branchement se lit visuellement comme partant de l'autre couloir) ; un
+      cherry-pick trace une ligne pointillée grise de traçabilité vers son commit source (pas
+      d'icône cerise dédiée — même précédent "pas d'icône exacte" que les icônes d'`architecture-beta`).
+      Palette cyclique à 8 couleurs propre à ce projet (pas un calque exact des `git0`-`git7` de
+      Mermaid, qui dépendent du thème actif). Un vrai bug trouvé et corrigé pendant la vérification
+      visuelle (pas par les tests unitaires, qui ne voient que la structure XML) : la largeur de
+      couloir (`commitGap`) était dérivée du label *annoté* d'un cherry-pick
+      (`"<id> (cherry-pick of <source>)"`, potentiellement très long) plutôt que de l'id nu — un
+      seul cherry-pick verbeux gonflait l'espacement de tous les commits du diagramme, écrasant le
+      canevas entier à ~50px de haut une fois mis à l'échelle pour tenir dans la largeur de page.
+      Corrigé pour dériver l'espacement du seul id nu (le label annoté peut déborder légèrement dans
+      l'espace voisin dans ce cas précis — compromis v1 documenté, même famille que la limitation
+      "lignes droites, pas de routage" déjà acceptée ailleurs dans le projet). Vérifié par export CLI
+      réel + rendu LibreOffice headless (`test-corpus/visual/fixtures/git-graph.mmd`, l'exemple
+      cherry-pick des docs Mermaid elles-mêmes — ZERO/A/ONE/B/MERGE/TWO/THREE/C sur
+      main/develop/release) + une vérification visuelle séparée de chaque forme de commit (NORMAL/
+      REVERSE/HIGHLIGHT/tag) et de l'orientation `TB:` + `test:oxml-validate` (0 erreur de schéma
+      sous `word/diagrams/`) + baseline `test:visual` (zéro régression sur les 43 fixtures
+      préexistantes, confirmé par `git status`) + 35 tests unitaires (parser + traducteur).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

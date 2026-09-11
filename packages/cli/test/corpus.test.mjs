@@ -228,20 +228,24 @@ test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', (
   }
 });
 
-test('diagram-type guard-rail: a gitGraph block gets a clean note, not a silently-wrong flowchart parse', () => {
+test('diagram-type dispatch: a gitGraph block renders as a real diagram, not the flowchart pipeline or the "unsupported" note', () => {
   // Regression test for the exact bug logged in the roadmap: gitGraph's bare
   // "commit"/"branch" words happen to look enough like flowchart node syntax
   // that, without the guard-rail, this would silently produce a nonsense
-  // wpg:wgp diagram instead of a clean rejection.
+  // wpg:wgp diagram. gitGraph itself shipped later (see diagrams/git-graph/)
+  // — same precedent as mindmap's now-removed version of this test: once a
+  // type is actually implemented, the regression worth keeping is "the
+  // guard-rail correctly routes to the real translator", not "still
+  // unsupported".
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
   try {
-    const markdown = '# Test\n\n```mermaid\ngitGraph\n  commit\n  commit\n```\n';
+    const markdown = '# Test\n\n```mermaid\ngitGraph\n  commit\n  commit\n  branch develop\n  commit\n```\n';
     const docx = convertTo(markdown, dir, 'gitgraph');
     execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
     const xml = readDocumentXml(docx);
-    assert.ok(!xml.includes('<wpg:wgp'), 'must not produce shapes for an unsupported diagram type');
-    assert.ok(!xml.includes('<dgm:relIds'), 'must not produce SmartArt for an unsupported diagram type');
-    assert.ok(xml.includes('GitGraph diagrams are not yet supported'), 'clean note missing');
+    assert.ok(!xml.includes('<wpg:wgp'), 'must not fall through to the flowchart pipeline');
+    assert.ok(!xml.includes('GitGraph diagrams are not yet supported'), 'must no longer hit the unsupported-type note');
+    assert.ok(xml.includes('<wpc:wpc'), 'must render as a real wpc:wpc canvas, same envelope as the other diagram families');
     assert.ok(xml.includes('Test'), 'surrounding markdown heading must still convert normally');
   } finally {
     rmSync(dir, { recursive: true, force: true });

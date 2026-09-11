@@ -74,6 +74,7 @@ const PLAIN_FIXTURE_NAMES = [
   'architecture-diagram',
   'gantt',
   'c4',
+  'git-graph',
 ];
 
 function findDotnet() {

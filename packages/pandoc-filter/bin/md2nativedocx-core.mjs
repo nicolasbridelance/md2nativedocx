@@ -98,6 +98,8 @@ import {
   translateGanttToOoxml,
   parseC4Diagram,
   translateC4DiagramToOoxml,
+  parseGitGraphDiagram,
+  translateGitGraphToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -240,6 +242,16 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateC4DiagramToOoxml(ast));
+  } else if (diagramType.type === 'gitGraph') {
+    // Twelfth non-flowchart diagram type shipped, first of Family F (fixed
+    // branch lanes + fixed commit-sequence axis, no Dagre — re-classified
+    // from the spec's original Family B default, see diagrams/git-graph/
+    // types.ts's doc comment).
+    const { ast, warnings } = parseGitGraphDiagram(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateGitGraphToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,
