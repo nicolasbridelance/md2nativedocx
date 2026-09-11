@@ -593,6 +593,37 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       (dont un bug réel trouvé et corrigé en écrivant les tests : une durée malformée comme
       `"1.2.3d"` passait la regex volontairement permissive puis produisait une `Invalid Date` faute
       de garde `Number.isFinite`).
+- [x] **C4 (`C4Context`/`C4Container`/`C4Component`/`C4Dynamic`/`C4Deployment`) shippé (2026-09-11)**
+      — onzième type non-flowchart livré, sixième de la famille B. Grammaire vérifiée contre la
+      source markdown réelle de `mermaid-js/mermaid` (`docs/syntax/c4.md` via
+      raw.githubusercontent.com — la page rendue mermaid.js.org charge ses exemples dans un éditeur
+      interactif qu'un fetch texte seul ne peut pas lire). Syntaxe entièrement différente des types
+      précédents (appels de fonction façon PlantUML, `Type(alias, "label", ...)`), donc parseur
+      générique (`parseCall` + split d'arguments respectant les guillemets) plutôt que des regex par
+      construction comme les autres modules. Portée v1 : les ~20 types d'éléments
+      (`Person(_Ext)`/`System(Db/Queue)(_Ext)`/`Container(Db/Queue)(_Ext)`/
+      `Component(Db/Queue)(_Ext)`/`Deployment_Node`/`Node(_L/_R)`) réduits à une seule forme AST
+      (catégorie + externe + variante db/queue) ; `Rel`/`BiRel`/`Rel_Back`/les variantes
+      directionnelles (`Rel_U`/`Rel_D`/etc., sans effet sur ce layout Dagre)/`RelIndex` réduits à une
+      seule relation ; `Boundary`/`Enterprise_Boundary`/`System_Boundary`/`Container_Boundary`/
+      `Deployment_Node`-comme-conteneur aplatis avec avertissement (même schéma que le `in <parent>`
+      d'`architecture-beta` et le `namespace` de `classDiagram`) ; `UpdateElementStyle`/
+      `UpdateRelStyle`/`UpdateLayoutConfig`/`AddElementTag`/`AddRelTag` reconnus et avertis une fois,
+      sans effet sur le rendu (directives de style/densité, pas de structure). Boîte à 2
+      compartiments (nom / ligne stéréotype `[Catégorie, Qualificatif: techno]` + description
+      optionnelle) par catégorie, couleur de remplissage distincte par catégorie — externe/db/queue
+      signalés uniquement dans le texte du stéréotype, pas par une géométrie dédiée (même choix que
+      `requirementDiagram`). Vérifié par export CLI réel + rendu LibreOffice headless
+      (`test-corpus/visual/fixtures/c4.mmd`, l'exemple `C4Container` "Internet Banking System" des
+      docs Mermaid elles-mêmes — Person/System_Ext/Container/Container_Ext/ContainerDb/
+      ContainerDb_Ext dans un `Container_Boundary`) et `test:oxml-validate` (0 erreur de schéma sous
+      `word/diagrams/`) — rendu correct dès la première tentative pour la structure/couleurs/
+      flèches. Un artefact visuel réel trouvé au rendu et documenté (pas corrigé, cohérent avec le
+      reste de la famille) : une relation qui saute un rang (`Rel(customer, spa, ...)`, alors que
+      `Rel(web_app, spa, "Delivers")` place séparément `spa` un rang sous `web_app`) traverse
+      visuellement la boîte intermédiaire — même limitation "lignes droites, pas de routage Dagre"
+      déjà documentée pour toute la famille B, juste plus visible ici. 33 tests unitaires ajoutés
+      (parser + traducteur).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

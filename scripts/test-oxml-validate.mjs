@@ -73,6 +73,7 @@ const PLAIN_FIXTURE_NAMES = [
   'requirement-diagram',
   'architecture-diagram',
   'gantt',
+  'c4',
 ];
 
 function findDotnet() {

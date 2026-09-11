@@ -126,6 +126,14 @@ export type { GanttParseResult } from './diagrams/gantt/parser.js';
 export { translateGanttToOoxml } from './diagrams/gantt/translator.js';
 export type { GanttChart, GanttTask, GanttTag } from './diagrams/gantt/types.js';
 
+// C4 diagram module (Family B — C4Context/C4Container/C4Component/
+// C4Dynamic/C4Deployment all collapse onto one AST, see
+// diagrams/c4/types.ts's doc comment).
+export { parseC4Diagram } from './diagrams/c4/parser.js';
+export type { C4ParseResult } from './diagrams/c4/parser.js';
+export { translateC4DiagramToOoxml } from './diagrams/c4/translator.js';
+export type { C4Diagram, C4Element, C4Relationship, C4Category, C4Variant } from './diagrams/c4/types.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
