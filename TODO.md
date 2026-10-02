@@ -724,6 +724,21 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       (0.000 % de différence confirmé). Vérifié par export CLI réel + rendu LibreOffice (exemple complet
       des docs Mermaid) + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `kanban.png`
       nouvelle) + 8 tests unitaires. Prochain : `packet`/`treemap-beta`/`radar-beta`…
+- [x] **`packet` shippé (2026-10-02)** — dix-septième type non-flowchart livré, sixième de la famille D.
+      Grammaire vérifiée contre `docs/syntax/packet.md` de `mermaid-js/mermaid`. Champs `n`, `a-b` et
+      `+count` (démarre après le champ précédent), titre via `title` ou `title:` du frontmatter ; 32 bits
+      par ligne, bit 0 à gauche, premier/dernier bit imprimés au-dessus de chaque segment ; un champ qui
+      traverse une ligne est scindé en un segment étiqueté par ligne. Libellés non coupables dans une
+      boîte étroite (drapeaux TCP 1 bit) réduits à la taille qui tient plutôt que coupés en pleine
+      lettre (constaté au rendu réel). Plafond de 65536 bits (entrée hostile). Hors portée v1 :
+      `showBits`/`bitOrder: descending`/`bitsPerRow` (frontmatter `config`, averti une fois).
+      **Vrai bug transversal trouvé en vérifiant celui-ci** : `detectDiagramType()` ne sautait pas un
+      bloc frontmatter `---…---` initial, donc tout diagramme précédé de frontmatter (exemple TCP
+      officiel inclus) tombait silencieusement dans le pipeline flowchart — le traitement frontmatter
+      de pie/timeline/kanban était lui aussi inatteignable dans ce cas. Corrigé (+ tests, dont
+      `---` non terminé/tardif non pris pour du frontmatter). Vérifié par export CLI réel + rendu
+      LibreOffice + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `packet.png`
+      nouvelle) + 12 tests unitaires.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

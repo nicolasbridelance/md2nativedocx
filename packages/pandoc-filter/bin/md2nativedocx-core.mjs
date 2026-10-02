@@ -108,6 +108,8 @@ import {
   translateTimelineToOoxml,
   parseKanban,
   translateKanbanToOoxml,
+  parsePacketDiagram,
+  translatePacketToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -292,6 +294,13 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateKanbanToOoxml(ast));
+  } else if (diagramType.type === 'packet') {
+    // Seventeenth non-flowchart diagram type shipped, sixth of Family D.
+    const { ast, warnings } = parsePacketDiagram(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translatePacketToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

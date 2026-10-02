@@ -79,6 +79,7 @@ const PLAIN_FIXTURE_NAMES = [
   'pie',
   'timeline',
   'kanban',
+  'packet',
 ];
 
 function findDotnet() {

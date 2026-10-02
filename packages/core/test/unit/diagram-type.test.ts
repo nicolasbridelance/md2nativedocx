@@ -46,6 +46,8 @@ test('recognizes a representative sample of the other ~28 diagram types', () => 
     ['radar-beta\n  title Skills', 'radar'],
     ['treemap-beta\n  "root"', 'treemap'],
     ['cynefin-beta\n  complex', 'cynefin'],
+    ['---\ntitle: "T"\nconfig:\n  pie: {}\n---\npie\n  "a" : 1', 'pie'],
+    ['---\ntitle: x\n---\n%% c\nflowchart TD\n A-->B', 'flowchart'],
   ];
   for (const [text, expected] of cases) {
     assert.equal(detectDiagramType(text).type, expected, `expected ${expected} for: ${text.split('\n')[0]}`);
@@ -63,4 +65,9 @@ test('buildUnsupportedDiagramTypeNoteXml produces a well-formed, escaped note', 
   assert.match(xml, /^<w:p /);
   assert.ok(xml.includes('GitGraph diagrams are not yet supported'));
   assert.ok(!xml.includes('<w:t xml:space="preserve"><'), 'label must not inject raw XML');
+});
+
+test('an unterminated or late `---` is not treated as frontmatter', () => {
+  assert.equal(detectDiagramType('---\npie').type, 'unknown');
+  assert.equal(detectDiagramType('graph TD\n---\npie').type, 'flowchart');
 });

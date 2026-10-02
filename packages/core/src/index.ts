@@ -248,3 +248,9 @@ export { parseKanban } from './diagrams/kanban/parser.js';
 export type { KanbanParseResult } from './diagrams/kanban/parser.js';
 export { translateKanbanToOoxml } from './diagrams/kanban/translator.js';
 export type { KanbanBoard, KanbanColumn, KanbanCard, KanbanPriority } from './diagrams/kanban/types.js';
+
+// packet module (Family D — bit-field rows of calculated boxes on a wpc:wpc canvas).
+export { parsePacketDiagram } from './diagrams/packet/parser.js';
+export type { PacketParseResult } from './diagrams/packet/parser.js';
+export { translatePacketToOoxml } from './diagrams/packet/translator.js';
+export type { PacketDiagram, PacketField } from './diagrams/packet/types.js';

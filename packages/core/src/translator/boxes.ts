@@ -48,7 +48,9 @@ export interface BoxStyle {
   italic?: boolean;
   /** Outline color; no outline when omitted. */
   line?: string;
-  align?: 'left' | 'center';
+  align?: 'left' | 'center' | 'right';
+  /** Disable word wrap (text may overflow the box instead of breaking mid-word). */
+  noWrap?: boolean;
 }
 
 /** A filled rectangle with one centered/left paragraph per entry of `lines`
@@ -79,7 +81,7 @@ export function boxShape(
   const ln = style.line
     ? `<a:ln w="${scaledLineWidthEmu(9525, scale)}"><a:solidFill><a:srgbClr val="${style.line}"/></a:solidFill></a:ln>`
     : '<a:ln><a:noFill/></a:ln>';
-  const inset = jc === 'left' ? scalePt(8, scale) : 0;
+  const inset = jc === 'center' ? 0 : scalePt(style.noWrap ? 2 : 8, scale);
   return [
     '<wps:wsp>',
     `  <wps:cNvPr id="${id}" name="Box ${id}"/>`,
@@ -93,7 +95,7 @@ export function boxShape(
     '  <wps:txbx>',
     `    <w:txbxContent>${paragraphs}</w:txbxContent>`,
     '  </wps:txbx>',
-    `  <wps:bodyPr wrap="square" lIns="${inset}" tIns="0" rIns="${inset}" bIns="0" anchor="ctr"/>`,
+    `  <wps:bodyPr wrap="${style.noWrap ? 'none' : 'square'}" lIns="${inset}" tIns="0" rIns="${inset}" bIns="0" anchor="ctr"/>`,
     '</wps:wsp>',
   ].join('\n');
 }
