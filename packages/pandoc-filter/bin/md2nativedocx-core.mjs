@@ -132,6 +132,7 @@ import {
   translateEventModelingToOoxml,
   parseSequence,
   translateSequenceToOoxml,
+  parseZenuml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -396,6 +397,13 @@ try {
   } else if (diagramType.type === 'sequence') {
     // Twenty-eighth non-flowchart diagram type shipped, first of Family E.
     const { ast, warnings } = parseSequence(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateSequenceToOoxml(ast));
+  } else if (diagramType.type === 'zenuml') {
+    // Same AST and translator as sequenceDiagram; only the parser differs.
+    const { ast, warnings } = parseZenuml(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }

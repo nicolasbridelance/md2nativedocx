@@ -43,7 +43,7 @@ const ARROWS: ReadonlyArray<{ token: string; dashed: boolean; head: SequenceHead
 ];
 
 /** Decode `#59;` style entity codes and `<br/>` breaks, and cap the length. */
-function cleanText(raw: string): string {
+export function cleanText(raw: string): string {
   return raw
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/#(\d{1,6});/g, (whole, code: string) => {

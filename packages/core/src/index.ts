@@ -320,3 +320,7 @@ export { parseSequence } from './diagrams/sequence/parser.js';
 export type { SequenceParseResult } from './diagrams/sequence/parser.js';
 export { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 export type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from './diagrams/sequence/types.js';
+
+// zenuml module (parser only — it produces the sequence AST, rendered by translateSequenceToOoxml).
+export { parseZenuml } from './diagrams/zenuml/parser.js';
+export type { ZenumlParseResult } from './diagrams/zenuml/parser.js';

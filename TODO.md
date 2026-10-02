@@ -883,7 +883,21 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       LibreOffice + `test:oxml-validate` (0 erreur) + baseline `sequence.png` (venn.png restauré : dérive non traitée)
       + 6 tests unitaires + 1 test CLI. Fixture `test-corpus/word-verification/sequence.docx` pas encore ouverte dans
       Word réel. Limite visible : un cadre de bloc ne s'élargit pas pour contenir le texte d'un auto-message.
-      Reste : `zenuml` (plugin externe `@mermaid-js/mermaid-zenuml`, syntaxe différente, décision produit à prendre).
+      Reste : `zenuml` (voir ci-dessous).
+- [x] **`zenuml` shippé (2026-10-02)** — vingt-neuvième et dernier type de la liste. Plugin externe
+      (`@mermaid-js/mermaid-zenuml`), syntaxe « code » sans rapport avec `sequenceDiagram` ; grammaire transcrite
+      depuis `docs/syntax/zenuml.md` (non vérifiée contre l'ANTLR du plugin). Choix d'architecture : un parseur
+      (`diagrams/zenuml/parser.ts`) qui produit **le même AST** que `sequenceDiagram`, rendu par
+      `translateSequenceToOoxml` — pas de second traducteur. Couvre : `title`, participants (`Nom`, `A as Alias`,
+      annotateurs `@Actor` seul visible, les autres avertis), messages async `A->B: texte`, appels sync
+      `A.m(args)` / `Client->A.m() {…}` imbriqués (barre d'activation), `new A(args)`, réponses (`a = A.m()`,
+      `return x`, `@return`), fragments `while|for|foreach|forEach|loop`, `if/else if/else`, `opt`, `par`,
+      `try/catch/finally` (rendu comme `break`). Un appel de premier niveau part d'un participant implicite
+      « Starter » placé à gauche. Aussi : le traducteur séquence élargit désormais la zone de texte d'une flèche
+      courte pour ne plus tronquer son libellé. Vérifié par export CLI réel + rendu LibreOffice +
+      `test:oxml-validate` (0 erreur) + baseline `zenuml.png` + 4 tests unitaires + 1 test CLI. Fixture
+      `test-corpus/word-verification/zenuml.docx` pas encore ouverte dans Word réel. Le test CLI « garde-fou » qui
+      utilisait un type non géré a été remplacé : plus aucun type reconnu n'est non géré.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

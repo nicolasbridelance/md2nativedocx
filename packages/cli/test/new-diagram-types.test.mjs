@@ -147,13 +147,15 @@ test('cli exports a sequenceDiagram end to end, no warnings on clean input', () 
   }
 });
 
-test('a recognized-but-unimplemented type (e.g. zenuml) still gets the guard-rail note, not a quadrant/venn/mindmap misparse', () => {
-  const { code, out, docx, dir } = exportFixture('zenuml', 'zenuml\n  Alice->Bob: Hi\n');
+test('cli exports a zenuml diagram end to end through the sequence translator', () => {
+  const { code, out, docx, dir } = exportFixture('zenuml', 'zenuml\n  Alice->Bob: Hi\n  Bob.work() {\n    return done\n  }\n');
   try {
     assert.equal(code, 0, out);
+    assert.ok(!/Warnings:/.test(out), out);
     const xml = readDocumentXml(docx);
-    assert.ok(xml.includes('not yet supported'));
-    assert.ok(!xml.includes('<wpc:wpc'));
+    assert.ok(xml.includes('<wpc:wpc'));
+    assert.ok(xml.includes('>Hi<') && xml.includes('>done<'));
+    assert.ok(!xml.includes('not yet supported'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

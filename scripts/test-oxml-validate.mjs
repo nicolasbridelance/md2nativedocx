@@ -91,6 +91,7 @@ const PLAIN_FIXTURE_NAMES = [
   'wardley',
   'eventmodeling',
   'sequence',
+  'zenuml',
 ];
 
 function findDotnet() {

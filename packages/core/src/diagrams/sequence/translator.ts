@@ -259,7 +259,11 @@ export function translateSequenceToOoxml(ast: SequenceDiagram): string {
         } else {
           line(msgs, xFrom, arrowY, xTo, arrowY, { dash, tail: headKind, tailSize: headSize, head: item.both ? 'triangle' : 'none', headSize });
           if (item.head === 'cross') cross(msgs, xTo - dir * 5, arrowY, 4);
-          if (lines.length > 0) text(msgs, Math.min(xFrom, xTo) + 4, y, Math.abs(xTo - xFrom) - 8, lines);
+          if (lines.length > 0) {
+            // A short arrow (e.g. to a late-created box) must not clip its label: widen the text box around the midpoint.
+            const w = Math.max(Math.abs(xTo - xFrom) - 8, widest(lines, FONT) + 8);
+            text(msgs, (xFrom + xTo) / 2 - w / 2, y, w, lines);
+          }
         }
         if (item.number !== undefined) {
           const bx = self ? xFrom + 8 : xFrom + dir * 10;
