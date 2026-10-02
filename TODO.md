@@ -357,9 +357,14 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       que le fallback SmartArt) : `FUTURE_full_mermaid_coverage_SPEC.md` §4, "Phase 0" — bloquant
       avant tout nouveau type de diagramme, mais a de la valeur dès maintenant indépendamment du
       reste de la roadmap.
-- [ ] Diagrammes de séquence (priorité, demande la plus fréquente après flowchart — mais famille
-      de layout "lifeline", pas la moins chère techniquement ; arbitrage documenté comme
-      "angle mort n°1" dans la spec ci-dessus, pas tranché).
+- [x] **Couverture 29/29 atteinte (2026-10-02)** — les 28 types restants sont tous livrés :
+      `sequenceDiagram` (535aaa8) puis `zenuml` (6c1b724, parseur dédié → même AST et même
+      traducteur que sequence). Dernier lot : wardley, eventmodeling, sequence, zenuml.
+      **Reste ouvert** : les `.docx` de `test-corpus/word-verification/` pour eventmodeling, sequence
+      et zenuml n'ont jamais été ouverts dans un vrai Word ; un cadre de bloc ne s'élargit pas pour
+      contenir le texte d'un auto-message ; grammaires sequence/zenuml issues de la doc, non
+      vérifiées contre le parseur Mermaid réel. La branche CLI « type non supporté » est désormais
+      inatteignable pour les types reconnus.
 - [x] **`quadrantChart` shippé (2026-09-04)** — premier type non-flowchart livré, et premier
       module sous `packages/core/src/diagrams/<type>/` (convention §4 item 2 de la spec, appliquée
       pour la première fois plutôt que juste proposée). Voir `docs/smartart-full-catalog-cross-mermaid.md`

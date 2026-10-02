@@ -1,7 +1,7 @@
 # Tableau de compliance — Markdown + Mermaid flowchart → Word natif
 
 > **Scope explicite** : ce document ne couvre que le type de diagramme **flowchart**
-> (`graph`/`flowchart`) — pas les 28 autres types que Mermaid supporte (sequenceDiagram,
+> (`graph`/`flowchart`) — pas les 28 autres types que Mermaid supporte (tous livrés depuis 2026-10-02, 29/29 avec flowchart ; ce tableau de fidélité ne les couvre pas) (sequenceDiagram,
 > classDiagram, pie, gantt, mindmap, etc.). Ce n'est pas un oubli : le titre du document l'a
 > toujours dit, et `cahier_des_charges.md` §11 classe explicitement le reste en roadmap V2+.
 > Pour la feuille de route de ces 28 types (taxonomie par famille de rendu, prérequis
