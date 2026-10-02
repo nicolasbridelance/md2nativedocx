@@ -4,7 +4,7 @@
 // looking at a CI run sees real numbers for that exact commit, not a hand-typed snapshot.
 import { readFileSync, existsSync } from 'node:fs';
 
-const packages = ['core', 'cli', 'pandoc-filter', 'vscode-extension'];
+const packages = ['core', 'cli', 'pandoc-filter', 'pptx', 'vscode-extension'];
 
 function parseJunitSummary(path) {
   const xml = readFileSync(path, 'utf8');

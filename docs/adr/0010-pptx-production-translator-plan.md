@@ -1,8 +1,11 @@
 # ADR 0010 — Traducteur `.pptx` de production : plan et points à trancher
 
-- **Statut :** Proposé — **en attente de décision du mainteneur** sur les 4 points de « Décisions
-  requises » (AGENTS.md → « Escalate to a human » : nouveau package, éventuelle dépendance, surface
-  CLI).
+- **Statut :** Accepté et implémenté Phase 1 (2026-10-02) — décisions du mainteneur : (1) package
+  `packages/pptx`, (2) `fast-xml-parser` accepté (MIT, justification : réécrire l'arbre de formes sans
+  regex fragiles ; DTD rejetées avant parsing, entités non traitées), (3) surface CLI laissée à la
+  discrétion de l'agent : `-o x.pptx` déclenche l'export deck, titre = dernier titre Markdown, texte
+  hors diagramme ignoré, (4) vérification via LibreOffice Impress uniquement ; la vérification dans
+  PowerPoint/Google Slides réels reste à la charge du mainteneur.
 - **Date :** 2026-10-02
 - **Suite de :** ADR 0003 (spike Phase 0 pptx), `docs/specs/cahier_des_charges_google_slides.md` §5–§9.
 

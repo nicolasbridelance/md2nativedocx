@@ -23,7 +23,20 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
+import { CliError, resolveSafePath } from '../src/cliSupport.mjs';
 import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from '../src/referenceDocBuilder.mjs';
+
+// `-o something.pptx` takes the Pandoc-free deck path (packages/pptx). Dispatched here, before any of
+// the module-level .docx setup below (reference document build, Pandoc lookup), none of which a
+// deck export needs — and some of which (`unzip`/`zip` shell-outs) can fail on a bare machine.
+{
+  const argv = process.argv.slice(2);
+  const outIndex = argv.findIndex((a) => a === '-o' || a === '--output');
+  if (outIndex !== -1 && /\.pptx$/i.test(argv[outIndex + 1] ?? '')) {
+    const { runPptxCli } = await import('../src/pptxExport.mjs');
+    process.exit(await runPptxCli(argv, process.cwd()));
+  }
+}
 
 // Where @md2nativedocx/pandoc-filter actually lands on disk relative to this
 // file varies by how the CLI itself was deployed — hoisted to the repo root
@@ -195,34 +208,15 @@ const landscapeTablesGeometry = layoutOptions.landscapeTables
     }
   : null;
 
-const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx> [options]
+const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx|output.pptx> [options]
+
+A .pptx output is a slide deck: one slide per \`\`\`mermaid block, titled with the nearest
+preceding heading (text outside diagrams is not exported).
 
 Options:
-  -o, --output <file>   Output .docx path (required)
+  -o, --output <file>   Output .docx or .pptx path (required)
   -h, --help            Show this help
 `;
-
-/** Typed error for CLI-level failures. */
-class CliError extends Error {
-  constructor(message, exitCode = 1) {
-    super(message);
-    this.name = 'CliError';
-    this.exitCode = exitCode;
-  }
-}
-
-/** Resolve and validate a path (anti path traversal via `..`). */
-function resolveSafePath(rawPath, cwd) {
-  const abs = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
-  // Reject relative paths that escape the working directory via `..`.
-  if (!isAbsolute(rawPath)) {
-    const root = resolve(cwd);
-    if (!abs.startsWith(root + '/') && abs !== root) {
-      throw new CliError(`Path escapes the working directory: ${rawPath}`, 2);
-    }
-  }
-  return abs;
-}
 
 function parseArgs(argv) {
   const args = { input: null, output: null };

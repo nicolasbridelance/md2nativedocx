@@ -187,6 +187,27 @@ function main() {
         console.log(`✔ oxml-plain-${name}: 0 schema errors under word/diagrams/`);
       }
     }
+
+    // packages/pptx: one deck holding every visual fixture. Unlike the .docx (where Pandoc's own
+    // writer contributes known noise), every part of the .pptx is this project's output, so ANY
+    // schema error fails the run.
+    const deckMd = [...availablePlainFixtures]
+      .sort()
+      .map((name) => `# ${name}\n\n\`\`\`mermaid\n${readFixtureSource(visualFixturesDir, name)}\n\`\`\`\n`)
+      .join('\n');
+    const deckMdPath = join(workDir, 'oxml-pptx-all.md');
+    const deckPath = join(workDir, 'oxml-pptx-all.pptx');
+    writeFileSync(deckMdPath, deckMd);
+    execFileSync('node', [cli, deckMdPath, '-o', deckPath], { stdio: 'pipe' });
+    const deck = validate(deckPath);
+    const deckErrors = [...deck.diagramErrors, ...deck.otherErrors];
+    if (deckErrors.length > 0) {
+      failures++;
+      console.error(`✖ oxml-pptx-all: ${deckErrors.length} schema error(s)`);
+      for (const e of deckErrors.slice(0, 20)) console.error(`    ${e.Part} ${e.Path}: ${e.Description}`);
+    } else {
+      console.log(`✔ oxml-pptx-all: 0 schema errors (${availablePlainFixtures.size} slides)`);
+    }
   } finally {
     if (failures === 0) rmSync(workDir, { recursive: true, force: true });
     else console.error(`(generated .docx files kept at ${workDir} for inspection)`);

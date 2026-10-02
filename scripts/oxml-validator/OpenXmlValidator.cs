@@ -1,5 +1,5 @@
 // Wraps DocumentFormat.OpenXml.Validation.OpenXmlValidator (Microsoft's Open XML SDK) --
-// validates a .docx against the exact same schema real Word enforces strictly, unlike
+// validates a .docx (or, by extension, a .pptx) against the exact same schema real Word enforces strictly, unlike
 // well-formed-XML checks or LibreOffice (which performs no schema validation at all).
 //
 // Why this exists: TODO.md's "Incident SmartArt 'cycle' cassé en Word réel" cost 7 rounds
@@ -57,7 +57,10 @@ FileFormatVersions version = versionArg switch
 List<ErrorRecord> errors;
 try
 {
-    using var doc = WordprocessingDocument.Open(path, false);
+    // .pptx decks (packages/pptx) and .docx share this tool; pick the package type by extension.
+    using OpenXmlPackage doc = path.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase)
+        ? PresentationDocument.Open(path, false)
+        : WordprocessingDocument.Open(path, false);
     var validator = new OpenXmlValidator(version);
     // Materialize into a plain record *while the package is still open* --
     // ValidationErrorInfo.Part/.Path are lazy-ish wrappers over the

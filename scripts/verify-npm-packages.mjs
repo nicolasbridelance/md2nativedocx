@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
-const packages = ['core', 'pandoc-filter', 'cli'].map((name) => join(root, 'packages', name));
+const packages = ['core', 'pandoc-filter', 'pptx', 'cli'].map((name) => join(root, 'packages', name));
 
 console.log('verify-npm-packages: building packages/core...');
 execFileSync('npm', ['run', 'build', '--workspace=@md2nativedocx/core'], { cwd: root, stdio: 'inherit' });
@@ -34,7 +34,7 @@ mkdirSync(tarballDir, { recursive: true });
 mkdirSync(cleanroomDir, { recursive: true });
 
 try {
-  console.log('verify-npm-packages: npm pack (core, pandoc-filter, cli)...');
+  console.log('verify-npm-packages: npm pack (core, pandoc-filter, pptx, cli)...');
   const tarballs = packages.map((pkgDir) => {
     const out = execFileSync('npm', ['pack', '--pack-destination', tarballDir, '--json'], { cwd: pkgDir, encoding: 'utf8' });
     const [{ filename }] = JSON.parse(out);
@@ -61,6 +61,17 @@ try {
   const documentXml = new AdmZip(docxPath).readFile('word/document.xml').toString('utf8');
   if (!documentXml.includes('<w:drawing>')) {
     throw new Error('The installed CLI produced a .docx with no <w:drawing> — the diagram was not rendered.');
+  }
+
+  // The .pptx path (packages/pptx) resolves the pandoc-filter core bridge and core the same way.
+  const pptxPath = join(cleanroomDir, 'smoke.pptx');
+  execFileSync(join(cleanroomDir, 'node_modules', '.bin', 'md2nativedocx'), [mdPath, '-o', pptxPath], {
+    cwd: cleanroomDir,
+    stdio: 'inherit',
+  });
+  const slideXml = new AdmZip(pptxPath).readFile('ppt/slides/slide1.xml').toString('utf8');
+  if (!slideXml.includes('<p:sp>')) {
+    throw new Error('The installed CLI produced a .pptx with no <p:sp> shape — the diagram was not rendered.');
   }
 
   console.log('verify-npm-packages: OK — the installed CLI renders a real diagram end to end.');

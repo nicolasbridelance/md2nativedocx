@@ -950,11 +950,19 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 - ✅ Note de fallback dans le document généré, expédition des warnings (stderr + fichier `.log` +
   toast VS Code "View warnings"), réglage `md2nativedocx.referenceDocument` — 3 items priorisés
   par le mainteneur, tous livrés (2026-09-03).
-- [ ] Traducteur `.pptx` de production (spec Google Slides §5-§7) — pas commencé, en attente de la
-      vérification manuelle Google Slides/PowerPoint listée ci-dessus.
-      **Plan écrit 2026-10-02** : `docs/adr/0010-pptx-production-translator-plan.md` (réécriture
-      `wps:wsp` → `p:sp` sur la sortie existante, un seul module pour les 29 types) ; 4 décisions
-      du mainteneur en attente (package, analyseur XML, surface CLI, vérification Slides).
+- [x] **Traducteur `.pptx` de production livré (2026-10-02)** — `packages/pptx`
+      (`docs/adr/0010-pptx-production-translator-plan.md`) : `md2nativedocx deck.md -o deck.pptx`,
+      une diapositive 16:9 par bloc Mermaid (titre = dernier titre Markdown, texte hors diagramme
+      ignoré), les 29 types via une seule réécriture `wps:wsp` → `p:sp`/`p:cxnSp` de la sortie du core
+      (agrandie pour remplir la diapositive, ×2,5 max). Vérifié : 22 tests pptx + 3 tests CLI,
+      `test:oxml-validate` (un deck des 62 fixtures, 0 erreur de schéma), rendu LibreOffice Impress des
+      62 diapositives relu à l'œil + 6 baselines `test-corpus/visual/baseline-pptx/`, clean-room
+      `verify:npm-packages`. **Reste ouvert (mainteneur)** : ouvrir un deck dans PowerPoint et importer
+      dans Google Slides (formes sélectionnables, pas d'invite de réparation, connecteurs magnétiques —
+      ADR 0003 points 1-4) ; l'extension VS Code (`bundle-cli.mjs`) ne vendorise pas encore
+      `@md2nativedocx/pptx` (le `.pptx` n'y est pas exposé) ; `ci.yml` : les jobs Windows/macOS listent
+      leurs workspaces à la main et ne lancent pas les tests pptx (changement `ci.yml` à relire par un
+      humain, non fait).
 - ✅ Catalogue complet des layouts SmartArt (2026-09-03) — `docs/smartart-layout-catalog.md`, ~150
   layouts classés par pertinence pour un flowchart Mermaid. Deux pistes identifiées : `Labeled
   Hierarchy` (subgraph = hiérarchie libellée) et les layouts "convergents" (fusion après
