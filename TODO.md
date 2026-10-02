@@ -761,6 +761,16 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       frontmatter/thème (averti une fois). Vérifié par export CLI réel + rendu LibreOffice +
       `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `journey.png` nouvelle) + 8 tests
       unitaires. Fixture `test-corpus/word-verification/journey.docx` pas encore ouverte dans Word réel.
+- [x] **`treeView-beta` shippé (2026-10-02)** — vingtième type non-flowchart livré, neuvième de la
+      famille D. Grammaire vérifiée contre `docs/syntax/treeView.md` de `mermaid-js/mermaid`. Hiérarchie
+      par indentation (tabulation = 4 colonnes) ou par caractères de tracé (`├ └ │ ─`), libellés nus ou
+      entre guillemets, `/` final = dossier (gras), `## description` (italique), `:::highlight` (fond
+      jaune ; autres classes ignorées, averties une fois), `icon(...)` ignoré (averti une fois). Une ligne
+      par nœud, barres de connexion fines (rectangles). Profondeur plafonnée à 32, 2000 nœuds max (entrée
+      hostile). Hors portée v1 : frontmatter/thème/icônes. Vérifié par export CLI réel + rendu
+      LibreOffice + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `tree-view.png`
+      nouvelle) + 9 tests unitaires. Fixture `test-corpus/word-verification/tree-view.docx` pas encore
+      ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

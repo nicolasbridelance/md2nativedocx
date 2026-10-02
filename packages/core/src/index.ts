@@ -266,3 +266,9 @@ export { parseJourney } from './diagrams/journey/parser.js';
 export type { JourneyParseResult } from './diagrams/journey/parser.js';
 export { translateJourneyToOoxml } from './diagrams/journey/translator.js';
 export type { JourneyChart, JourneyTask } from './diagrams/journey/types.js';
+
+// tree-view module (Family D — indented rows with connector bars on a wpc:wpc canvas).
+export { parseTreeView } from './diagrams/tree-view/parser.js';
+export type { TreeViewParseResult } from './diagrams/tree-view/parser.js';
+export { translateTreeViewToOoxml } from './diagrams/tree-view/translator.js';
+export type { TreeViewDiagram, TreeViewNode } from './diagrams/tree-view/types.js';

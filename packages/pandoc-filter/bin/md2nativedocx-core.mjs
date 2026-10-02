@@ -114,6 +114,8 @@ import {
   translateTreemapToOoxml,
   parseJourney,
   translateJourneyToOoxml,
+  parseTreeView,
+  translateTreeViewToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -319,6 +321,13 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateJourneyToOoxml(ast));
+  } else if (diagramType.type === 'treeView') {
+    // Twentieth non-flowchart diagram type shipped, ninth of Family D.
+    const { ast, warnings } = parseTreeView(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateTreeViewToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

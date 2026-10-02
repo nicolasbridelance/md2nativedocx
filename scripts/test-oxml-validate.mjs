@@ -82,6 +82,7 @@ const PLAIN_FIXTURE_NAMES = [
   'packet',
   'treemap',
   'journey',
+  'tree-view',
 ];
 
 function findDotnet() {
