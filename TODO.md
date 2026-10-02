@@ -690,6 +690,20 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `test:oxml-validate` (0 erreur de schéma sous `word/diagrams/`) + baseline `test:visual` (zéro
       régression sur les 44 fixtures préexistantes, confirmé par `git status`) + 27 tests unitaires
       (parser + traducteur).
+- [x] **`pie` shippé (2026-10-02)** — quatorzième type non-flowchart livré, troisième de la famille D
+      (formes calculées sur canevas `wpc:wpc`, pas de `c:chart`). Grammaire vérifiée contre
+      `docs/syntax/pie.md` de `mermaid-js/mermaid` (raw.githubusercontent.com). Chaque part est un
+      `prstGeom="pie"` (`adj1`/`adj2` en 60000e de degré, décalés de -90° car Mermaid démarre à midi,
+      sens horaire) ; une part unique à 100 % devient une `ellipse` (un `pie` à angles égaux ne dessine
+      rien). Pourcentage au `textPosition` par défaut de Mermaid (0.75), omis sous 1 % comme Mermaid ;
+      légende à droite (défaut `legendPosition`), valeur brute ajoutée avec `showData`. Valeurs ≤ 0
+      rejetées avec avertissement (règle de la grammaire). Hors portée v1 : frontmatter `config:`
+      (`donutHole`, `legendPosition`, `highlightSlice`, `textPosition`) et variables de thème — avertis
+      une fois, ignorés. Vérifié par export CLI réel + rendu LibreOffice headless
+      (`test-corpus/visual/fixtures/pie.mmd`, exemple "Key elements in Product X" des docs) +
+      `test:oxml-validate` (0 erreur sous `word/diagrams/`) + baseline `test:visual` (seule `pie.png`
+      est nouvelle, confirmé par `git status`) + 11 tests unitaires. Prochain : `timeline`/`kanban`/
+      `packet`/`treemap`… (ordre laissé à l'agent) ; `sequenceDiagram` toujours volontairement plus tard.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

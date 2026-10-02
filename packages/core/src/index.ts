@@ -227,3 +227,10 @@ export type {
   Layout,
   LayoutBox,
 } from './types.js';
+
+// pie module (Family D — calculated `pie`-preset slices on a wpc:wpc canvas;
+// see diagrams/pie/translator.ts's module doc comment).
+export { parsePieChart } from './diagrams/pie/parser.js';
+export type { PieParseResult } from './diagrams/pie/parser.js';
+export { translatePieToOoxml } from './diagrams/pie/translator.js';
+export type { PieChart, PieSlice } from './diagrams/pie/types.js';
