@@ -813,6 +813,16 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       ignorés (averti une fois). Vérifié par export CLI réel + rendu LibreOffice + `test:oxml-validate` + baselines
       `test:visual` (`xychart.png`, `xychart-horizontal.png` nouvelles) + 8 tests unitaires. Fixture
       `test-corpus/word-verification/xychart.docx` pas encore ouverte dans Word réel.
+- [x] **`block-beta` shippé (2026-10-02)** — vingt-quatrième type non-flowchart livré, treizième de la
+      famille D. Grammaire d'après `docs/syntax/block.md` de `mermaid-js/mermaid` : `columns N`, blocs avec
+      `:span`, `space`/`space:N`, groupes imbriqués `block:id:span … end` (grille interne propre), formes
+      rect/round/stadium/circle/diamond (les autres formes retombent sur un rectangle avec leur libellé),
+      liens `-->`, `---`, `-.->`, `==>`, `<-->` avec libellé, `style`/`classDef`/`class`/`:::` (couleurs hex
+      validées uniquement). Plafonds : 500 blocs, 200 liens, profondeur 8, 24 colonnes. Différences avec
+      Mermaid : liens droits (peuvent traverser un bloc intermédiaire), `config`/thème ignorés. Vérifié par
+      export CLI réel + rendu LibreOffice + `test:oxml-validate` (0 erreur dans les parties diagramme) +
+      baseline `test:visual` (`block.png` nouvelle) + 8 tests unitaires. Fixture
+      `test-corpus/word-verification/block.docx` pas encore ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

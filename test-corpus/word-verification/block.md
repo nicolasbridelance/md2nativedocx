@@ -1,0 +1,16 @@
+# block
+
+```mermaid
+block-beta
+    columns 3
+    doc["Document"] space:1 db[("Database")]
+    block:pipeline:3
+        columns 3
+        parse["Parse"] layout("Layout") emit(["Emit"])
+    end
+    a["Input"] space b(("Out"))
+    doc --> parse
+    emit --> db
+    a -- "text" --> b
+    style a fill:#fde68a,stroke:#b45309
+```

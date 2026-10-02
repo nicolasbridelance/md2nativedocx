@@ -290,3 +290,9 @@ export { parseXyChart } from './diagrams/xychart/parser.js';
 export type { XyChartParseResult } from './diagrams/xychart/parser.js';
 export { translateXyChartToOoxml } from './diagrams/xychart/translator.js';
 export type { XyAxisX, XyAxisY, XyChart, XySeries } from './diagrams/xychart/types.js';
+
+// block module (Family D — column grid of blocks, nested groups and straight links on a wpc:wpc canvas).
+export { parseBlock } from './diagrams/block/parser.js';
+export type { BlockParseResult } from './diagrams/block/parser.js';
+export { translateBlockToOoxml } from './diagrams/block/translator.js';
+export type { BlockCell, BlockDiagram, BlockLink, BlockShape, BlockStyle } from './diagrams/block/types.js';
