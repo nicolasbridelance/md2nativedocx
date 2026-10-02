@@ -713,6 +713,17 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       (avertis une fois). Vérifié par export CLI réel + rendu LibreOffice (exemple "England's History
       Timeline" des docs) + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule
       `timeline.png` nouvelle) + 10 tests unitaires.
+- [x] **`kanban` shippé (2026-10-02)** — seizième type non-flowchart livré, cinquième de la famille D.
+      Grammaire vérifiée contre `docs/syntax/kanban.md` de `mermaid-js/mermaid`. Colonnes = lignes les
+      moins indentées, cartes = lignes plus indentées ; les 3 formes `id[Titre]`/`[Titre]`/`Titre` ;
+      métadonnées `@{ ticket, assigned, priority }` (priorité = liseré gauche rouge/orange/bleu/bleu clair).
+      **Décision de sécurité** : `ticketBaseUrl` (frontmatter) volontairement ignoré — il transformerait
+      les tickets en hyperliens, or ce projet n'émet jamais de référence distante (AGENTS.md règle 3) ;
+      les tickets restent du texte brut. Refactor au passage : primitives de boîtes extraites dans
+      `translator/boxes.ts` dès le 2e consommateur (timeline + kanban), timeline reste pixel-identique
+      (0.000 % de différence confirmé). Vérifié par export CLI réel + rendu LibreOffice (exemple complet
+      des docs Mermaid) + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `kanban.png`
+      nouvelle) + 8 tests unitaires. Prochain : `packet`/`treemap-beta`/`radar-beta`…
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

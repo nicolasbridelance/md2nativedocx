@@ -241,3 +241,10 @@ export { parseTimeline } from './diagrams/timeline/parser.js';
 export type { TimelineParseResult } from './diagrams/timeline/parser.js';
 export { translateTimelineToOoxml } from './diagrams/timeline/translator.js';
 export type { TimelineChart, TimelinePeriod } from './diagrams/timeline/types.js';
+
+// kanban module (Family D — columns of calculated card boxes on a wpc:wpc
+// canvas, sharing translator/boxes.ts with timeline).
+export { parseKanban } from './diagrams/kanban/parser.js';
+export type { KanbanParseResult } from './diagrams/kanban/parser.js';
+export { translateKanbanToOoxml } from './diagrams/kanban/translator.js';
+export type { KanbanBoard, KanbanColumn, KanbanCard, KanbanPriority } from './diagrams/kanban/types.js';

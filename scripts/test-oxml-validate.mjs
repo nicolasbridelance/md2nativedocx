@@ -78,6 +78,7 @@ const PLAIN_FIXTURE_NAMES = [
   'cynefin',
   'pie',
   'timeline',
+  'kanban',
 ];
 
 function findDotnet() {

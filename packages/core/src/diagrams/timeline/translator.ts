@@ -9,13 +9,10 @@
  */
 
 import type { TimelineChart } from './types.js';
-import { estimateTextWidth } from '../../layout/layout.js';
-import { escapeXml } from '../../translator/xml-escape.js';
+import { boxShape, noteParagraph, scalePt, tint, wrapText, type BoxStyle } from '../../translator/boxes.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
   scaledExtent,
-  scaledFontSizeHalfPt,
   wrapDrawingCanvas,
 } from '../../translator/canvas.js';
 
@@ -32,91 +29,15 @@ const BOX_GAP = 8;
 const WRAP_W = COL_W - 16;
 const PALETTE = ['4472C4', 'ED7D31', '70AD47', 'FFC000', '7030A0', '5B9BD5', 'C00000', '2E8B8B'];
 
-function scalePt(px: number, factor: number): number {
-  return Math.round(px * EMU_PER_PX * factor);
-}
-
-/** Blend a hex color toward white (`amount` 0..1 = share of white). */
-function tint(hex: string, amount: number): string {
-  const channel = (i: number): string => {
-    const v = parseInt(hex.slice(i, i + 2), 16);
-    return Math.round(v + (255 - v) * amount).toString(16).padStart(2, '0');
-  };
-  return (channel(0) + channel(2) + channel(4)).toUpperCase();
-}
-
-/** Greedy word wrap honoring forced `\n` breaks. */
-function wrapLines(text: string): string[] {
-  const out: string[] = [];
-  for (const paragraph of text.split('\n')) {
-    let current = '';
-    for (const word of paragraph.split(/\s+/).filter((w) => w.length > 0)) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (current && estimateTextWidth(candidate, FONT_PX) > WRAP_W) {
-        out.push(current);
-        current = word;
-      } else {
-        current = candidate;
-      }
-    }
-    out.push(current);
-  }
-  return out;
-}
+const wrapLines = (text: string): string[] => wrapText(text, FONT_PX, WRAP_W);
 
 function boxHeight(lines: string[]): number {
   return lines.length * LINE_H + BOX_PAD_Y * 2;
 }
 
-interface BoxStyle {
-  fill: string;
-  color: string;
-  bold: boolean;
-}
-
-function box(id: number, x: number, y: number, w: number, h: number, lines: string[], style: BoxStyle, scale: number): string {
-  const size = scaledFontSizeHalfPt(FONT_PX * 2 - 4, scale);
-  const paragraphs = lines
-    .map(
-      (line) =>
-        '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>' +
-        `<w:r><w:rPr>${style.bold ? '<w:b/>' : ''}<w:color w:val="${style.color}"/><w:sz w:val="${size}"/></w:rPr>` +
-        `<w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`,
-    )
-    .join('');
-  return [
-    '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Box ${id}"/>`,
-    '  <wps:cNvSpPr/>',
-    '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-    '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
-    `    <a:solidFill><a:srgbClr val="${style.fill}"/></a:solidFill>`,
-    '    <a:ln><a:noFill/></a:ln>',
-    '  </wps:spPr>',
-    '  <wps:txbx>',
-    `    <w:txbxContent>${paragraphs}</w:txbxContent>`,
-    '  </wps:txbx>',
-    '  <wps:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/>',
-    '</wps:wsp>',
-  ].join('\n');
-}
-
-function note(text: string): string {
-  return [
-    '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
-    '  <w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr>',
-    '  <w:r>',
-    '    <w:rPr><w:i/><w:color w:val="808080"/><w:sz w:val="18"/></w:rPr>',
-    `    <w:t xml:space="preserve">${escapeXml(text)}</w:t>`,
-    '  </w:r>',
-    '</w:p>',
-  ].join('\n');
-}
-
 /** Translate a parsed timeline into a self-contained WordprocessingML paragraph. */
 export function translateTimelineToOoxml(chart: TimelineChart): string {
-  if (chart.periods.length === 0) return note('This timeline has no periods to render.');
+  if (chart.periods.length === 0) return noteParagraph('This timeline has no periods to render.');
 
   const nextId = createIdAllocator();
   const n = chart.periods.length;
@@ -144,10 +65,7 @@ export function translateTimelineToOoxml(chart: TimelineChart): string {
 
   const parts: string[] = [];
   if (chart.title) {
-    parts.push(
-      box(nextId(), 0, scalePt(PAD / 2, s), scalePt(canvasW, s), scalePt(TITLE_HEIGHT, s), [chart.title], { fill: 'FFFFFF', color: '000000', bold: true }, s)
-        .replace(/<a:solidFill><a:srgbClr val="FFFFFF"\/><\/a:solidFill>/, '<a:noFill/>'),
-    );
+    parts.push(box(nextId(), 0, scalePt(PAD / 2, s), scalePt(canvasW, s), scalePt(TITLE_HEIGHT, s), [chart.title], { color: '000000', bold: true }, s));
   }
 
   let y = PAD + topMargin;
@@ -189,4 +107,8 @@ export function translateTimelineToOoxml(chart: TimelineChart): string {
   });
 
   return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Timeline');
+}
+
+function box(id: number, x: number, y: number, w: number, h: number, lines: string[], style: BoxStyle, scale: number): string {
+  return boxShape(id, x, y, w, h, lines, style, FONT_PX, scale);
 }
