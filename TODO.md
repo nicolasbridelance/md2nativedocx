@@ -952,6 +952,9 @@ et l'add-in Word (canal de distribution entièrement nouveau).
   par le mainteneur, tous livrés (2026-09-03).
 - [ ] Traducteur `.pptx` de production (spec Google Slides §5-§7) — pas commencé, en attente de la
       vérification manuelle Google Slides/PowerPoint listée ci-dessus.
+      **Plan écrit 2026-10-02** : `docs/adr/0010-pptx-production-translator-plan.md` (réécriture
+      `wps:wsp` → `p:sp` sur la sortie existante, un seul module pour les 29 types) ; 4 décisions
+      du mainteneur en attente (package, analyseur XML, surface CLI, vérification Slides).
 - ✅ Catalogue complet des layouts SmartArt (2026-09-03) — `docs/smartart-layout-catalog.md`, ~150
   layouts classés par pertinence pour un flowchart Mermaid. Deux pistes identifiées : `Labeled
   Hierarchy` (subgraph = hiérarchie libellée) et les layouts "convergents" (fusion après
