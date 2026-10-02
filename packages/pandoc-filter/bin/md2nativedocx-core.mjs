@@ -120,6 +120,8 @@ import {
   translateRadarToOoxml,
   parseIshikawa,
   translateIshikawaToOoxml,
+  parseXyChart,
+  translateXyChartToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -346,6 +348,13 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateIshikawaToOoxml(ast));
+  } else if (diagramType.type === 'xychart') {
+    // Twenty-third non-flowchart diagram type shipped, twelfth of Family D.
+    const { ast, warnings } = parseXyChart(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateXyChartToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

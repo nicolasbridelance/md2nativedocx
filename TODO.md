@@ -793,6 +793,17 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       rendu LibreOffice + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `ishikawa.png`
       nouvelle) + 7 tests unitaires. Fixture `test-corpus/word-verification/ishikawa.docx` pas encore
       ouverte dans Word réel.
+- [x] **`xychart-beta` shippé (2026-10-02)** — vingt-troisième type non-flowchart livré, douzième de la
+      famille D. Grammaire vérifiée contre `docs/syntax/xyChart.md` de `mermaid-js/mermaid` : en-tête
+      `xychart-beta`/`xychart` + `horizontal`, `title`, `x-axis` (liste de catégories ou `"titre" min --> max`),
+      `y-axis ["titre"] [min --> max]`, séries `bar`/`line` nommées ou non, labels de points `540 "label"`.
+      Grille et graduations « propres » (pas 1/2/5×10^k), une boîte par barre, une polyligne + marqueurs par
+      courbe, titres d'axes, légende si une série est nommée, orientation horizontale par une seule géométrie
+      catégorie/valeur. Plafonds : 12 séries, 200 points. Différences avec Mermaid : barres multiples côte à
+      côte dans une bande, axe x numérique rendu en libellés régulièrement espacés, `config.xyChart`/thème
+      ignorés (averti une fois). Vérifié par export CLI réel + rendu LibreOffice + `test:oxml-validate` + baselines
+      `test:visual` (`xychart.png`, `xychart-horizontal.png` nouvelles) + 8 tests unitaires. Fixture
+      `test-corpus/word-verification/xychart.docx` pas encore ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

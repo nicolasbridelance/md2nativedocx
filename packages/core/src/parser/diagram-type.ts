@@ -79,7 +79,7 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
   { type: 'timeline', label: 'Timeline', pattern: /^timeline\b/i },
   { type: 'zenuml', label: 'ZenUML', pattern: /^zenuml\b/i },
   { type: 'sankey', label: 'Sankey diagram', pattern: /^sankey-beta\b/i },
-  { type: 'xychart', label: 'XY chart', pattern: /^xychart-beta\b/i },
+  { type: 'xychart', label: 'XY chart', pattern: /^xychart(?:-beta)?\b/i },
   { type: 'block', label: 'Block diagram', pattern: /^block-beta\b/i },
   { type: 'packet', label: 'Packet diagram', pattern: /^packet(?:-beta)?\b/i },
   { type: 'kanban', label: 'Kanban board', pattern: /^kanban\b/i },

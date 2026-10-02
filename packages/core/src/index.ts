@@ -284,3 +284,9 @@ export { parseIshikawa } from './diagrams/ishikawa/parser.js';
 export type { IshikawaParseResult } from './diagrams/ishikawa/parser.js';
 export { translateIshikawaToOoxml } from './diagrams/ishikawa/translator.js';
 export type { IshikawaCategory, IshikawaCause, IshikawaDiagram } from './diagrams/ishikawa/types.js';
+
+// xychart module (Family D — gridlines, bars and polylines on a wpc:wpc canvas).
+export { parseXyChart } from './diagrams/xychart/parser.js';
+export type { XyChartParseResult } from './diagrams/xychart/parser.js';
+export { translateXyChartToOoxml } from './diagrams/xychart/translator.js';
+export type { XyAxisX, XyAxisY, XyChart, XySeries } from './diagrams/xychart/types.js';
