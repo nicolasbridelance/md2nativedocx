@@ -2,7 +2,7 @@
  * Parser for Mermaid `treeView-beta`. Hierarchy comes from the column where a
  * label starts (tab = 4 columns); leading box-drawing characters (`├ └ │ ─`)
  * count as indentation, so both styles work. A label is quoted (`"my file"`)
- * or a bare word; a trailing `/` marks a directory. Annotations after the
+ * or bare text running to the first annotation; a trailing `/` marks a directory. Annotations after the
  * label, in any order: `:::class` (only `highlight` is honoured), `## text`
  * (description), `icon(name)` (ignored, warned once). Unrecognized text ->
  * warning, never a throw. Depth is capped at 32 and nodes at 2000 (hostile
@@ -69,12 +69,14 @@ export function parseTreeView(text: string): TreeViewParseResult {
       label = end < 0 ? rest.slice(1) : rest.slice(1, end);
       rest = end < 0 ? '' : rest.slice(end + 1);
     } else {
-      const m = rest.match(/^[^\s]+/);
-      let word = m?.[0] ?? '';
-      const cut = Math.min(...['###', ':::', '##'].map((t) => (word.indexOf(t) < 0 ? word.length : word.indexOf(t))));
-      word = word.slice(0, cut);
-      label = word;
-      rest = rest.slice(word.length);
+      // A bare label runs to the first annotation (`###`, `:::`, `##`, ` icon(`) or the end of the
+      // line, so `🚀 rocket-app/` keeps its space like Mermaid's own render.
+      const stops = ['###', ':::', '##'].map((t) => rest.indexOf(t)).filter((n) => n >= 0);
+      const iconAt = rest.search(/\sicon\(/);
+      if (iconAt >= 0) stops.push(iconAt);
+      const cut = stops.length > 0 ? Math.min(...stops) : rest.length;
+      label = rest.slice(0, cut);
+      rest = rest.slice(cut);
     }
     label = label.trim();
     if (label.length === 0) {

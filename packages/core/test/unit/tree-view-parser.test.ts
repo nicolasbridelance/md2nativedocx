@@ -40,3 +40,11 @@ test('labels keep injection characters verbatim; unterminated quote does not thr
   assert.equal(ast.nodes[0]?.description, '<i>');
   assert.equal(ast.nodes[1]?.label, 'open');
 });
+
+test('an unquoted label with spaces and emoji keeps its whole text up to the annotations', () => {
+  const { ast, warnings } = parseTreeView('treeView-beta\n  🚀 rocket-app/\n    📦 my packages/ ## note\n      README.md :::highlight');
+  assert.deepEqual(ast.nodes.map((n) => n.label), ['🚀 rocket-app/', '📦 my packages/', 'README.md']);
+  assert.equal(ast.nodes[1]?.description, 'note');
+  assert.equal(ast.nodes[2]?.highlighted, true);
+  assert.deepEqual(warnings, []);
+});
