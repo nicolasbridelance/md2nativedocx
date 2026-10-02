@@ -771,6 +771,17 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       LibreOffice + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `tree-view.png`
       nouvelle) + 9 tests unitaires. Fixture `test-corpus/word-verification/tree-view.docx` pas encore
       ouverte dans Word réel.
+- [x] **`radar-beta` shippé (2026-10-02)** — vingt-et-unième type non-flowchart livré, dixième de la
+      famille D. Grammaire vérifiée contre `docs/syntax/radar.md` de `mermaid-js/mermaid`. `title`,
+      `axis id["Label"], ...`, `curve id["Label"]{1,2,3}` ou `curve id{ axe: valeur, ... }` (plusieurs par
+      ligne), options `showLegend`, `max`, `min`, `graticule circle|polygon`, `ticks`. Graticule (cercles
+      ou polygones), rayons par axe, un polygone freeform translucide par courbe (`a:custGeom` fermé,
+      alpha 30 %), légende à droite. Courbes keyées réordonnées selon l'ordre des axes, trous = `min`.
+      Moins de 3 axes : note. Plafond de 64 axes/courbes (entrée hostile). Hors portée v1 : lissage
+      `curveTension` (polygones à arêtes droites), frontmatter/thème (averti une fois), valeurs de
+      graduation non affichées. Vérifié par export CLI réel + rendu LibreOffice + `test:oxml-validate`
+      (0 erreur) + baseline `test:visual` (seule `radar.png` nouvelle) + 9 tests unitaires. Fixture
+      `test-corpus/word-verification/radar.docx` pas encore ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

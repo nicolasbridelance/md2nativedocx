@@ -83,6 +83,7 @@ const PLAIN_FIXTURE_NAMES = [
   'treemap',
   'journey',
   'tree-view',
+  'radar',
 ];
 
 function findDotnet() {

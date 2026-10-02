@@ -272,3 +272,9 @@ export { parseTreeView } from './diagrams/tree-view/parser.js';
 export type { TreeViewParseResult } from './diagrams/tree-view/parser.js';
 export { translateTreeViewToOoxml } from './diagrams/tree-view/translator.js';
 export type { TreeViewDiagram, TreeViewNode } from './diagrams/tree-view/types.js';
+
+// radar module (Family D — graticule, spokes and translucent curve polygons on a wpc:wpc canvas).
+export { parseRadar } from './diagrams/radar/parser.js';
+export type { RadarParseResult } from './diagrams/radar/parser.js';
+export { translateRadarToOoxml } from './diagrams/radar/translator.js';
+export type { RadarAxis, RadarChart, RadarCurve, RadarGraticule } from './diagrams/radar/types.js';
