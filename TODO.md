@@ -319,6 +319,15 @@ après la liste).
 
 **Comment lancer les spikes (à faire par le mainteneur, vrai Word desktop requis) :**
 
+> **⚠ Outillage retiré le 2026-10-02 (audit npm).** `office-addin-debugging`, `office-addin-dev-certs` et
+> `office-addin-manifest` (et les scripts `start`/`stop`/`validate`/`signin`/`signout`) ont été retirés de
+> `packages/word-addin` : `node-forge` ≤ 1.4.0 (via `mkcert`, tiré par `dev-certs`) a un advisory « high » sans
+> version corrigée, ce qui faisait échouer `npm audit` en CI. `office-addin-mock` est passé en 4.0.1 (tests
+> inchangés, 4/4). **Avant de lancer les spikes**, réinstaller ces trois paquets en devDependencies et remettre
+> les scripts (voir l'historique git de `packages/word-addin/package.json`), en vérifiant d'abord si un
+> `node-forge` corrigé existe. `webpack.config.js` charge `dev-certs` à la demande et donne un message clair s'il
+> manque ; `build`, `typecheck` et `test` fonctionnent sans.
+
 ```
 cd packages/word-addin
 npm run start   # office-addin-debugging : trust le certif dev-certs au premier lancement,

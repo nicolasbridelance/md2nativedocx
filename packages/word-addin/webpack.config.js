@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
 
-const devCerts = require("office-addin-dev-certs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
@@ -8,6 +7,15 @@ const urlDev = "https://localhost:3000/";
 const urlProd = "https://www.contoso.com/"; // CHANGE THIS TO YOUR PRODUCTION DEPLOYMENT LOCATION
 
 async function getHttpsOptions() {
+  // Loaded lazily: office-addin-dev-certs (-> mkcert -> node-forge, no patched release as of
+  // 2026-10-02) is not installed by default, so `build` never needs it. Reinstall it as a devDependency
+  // before running the dev server (see TODO.md, "Word ribbon add-in").
+  let devCerts;
+  try {
+    devCerts = require("office-addin-dev-certs");
+  } catch (error) {
+    throw new Error("The dev server needs the office-addin-dev-certs devDependency, removed for audit reasons (see TODO.md).", { cause: error });
+  }
   const httpsOptions = await devCerts.getHttpsServerOptions();
   return { ca: httpsOptions.ca, key: httpsOptions.key, cert: httpsOptions.cert };
 }
