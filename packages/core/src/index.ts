@@ -308,3 +308,9 @@ export { parseWardley } from './diagrams/wardley/parser.js';
 export type { WardleyParseResult } from './diagrams/wardley/parser.js';
 export { translateWardleyToOoxml } from './diagrams/wardley/translator.js';
 export type { WardleyAnnotation, WardleyFlow, WardleyLink, WardleyMap, WardleyNode, WardleyNodeKind, WardleyPipeline, WardleyPositioned, WardleyStage, WardleyStrategy } from './diagrams/wardley/types.js';
+
+// event-modeling module (Family D — time-frame columns across UI / command-read model / event swimlanes on a wpc:wpc canvas).
+export { parseEventModeling } from './diagrams/event-modeling/parser.js';
+export type { EventModelingParseResult } from './diagrams/event-modeling/parser.js';
+export { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
+export type { EventModelingDiagram, EventModelingFrame, EventModelingKind, EventModelingNote, EventModelingScenario, EventModelingStatement } from './diagrams/event-modeling/types.js';

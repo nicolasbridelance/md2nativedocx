@@ -852,6 +852,21 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       au lieu d'erreur) : `A:::classe` en `block`, formes sans guillemets (`A((c))`, `A[[x]]`, `A{{x}}`),
       groupe `block:g` non fermé ; en `sankey`, `sankey-beta` vide et enregistrements à 2/4 champs sont des erreurs
       Mermaid mais des avertissements chez nous. Tests de non-régression ajoutés (+2).
+- [x] **`eventmodeling` shippé (2026-10-02)** — vingt-septième type non-flowchart livré, seizième de la famille D.
+      Grammaire **vérifiée** en sondant le vrai `@mermaid-js/parser` 1.2.1 (grammaire Langium reconstituée +
+      `parse()` sur ~35 cas). Couvre : `tf`/`timeframe`/`rf`/`resetframe` + numéro 1-3 chiffres, types
+      `ui|cmd|command|evt|event|rmo|readmodel|pcr|processor`, noms qualifiés `Namespace.Nom`, `->> id` multiples,
+      `[[data]]`, données inline (`{…}`, `"…"`, `'…'`, type en backticks), blocs `data X {…}` et `note id {…}`,
+      `entity`, `gwt … given … (when …)? then …`. Rendu : une colonne par frame, couloirs UI/Automation,
+      Commande/Read model, Événements (multipliés par namespace), cartes colorées, flèches explicites ou
+      implicites (frame précédente, sauf `rf`), données tronquées sous le nom, notes sous la carte, scénarios en pied.
+      Mermaid rejette `title`/`accTitle` et les `note` inline ici : avertissement chez nous. Les types de sources
+      invalides (ex. `evt ->> ui`) ne sont pas signalés (le validateur Langium ne tourne pas via `parse()`).
+      Différences : couloirs triés par groupe puis par première apparition, `config`/thème ignorés. Plafonds :
+      100 frames, 300 liens, 100 blocs data/notes, 50 scénarios. Vérifié par export CLI réel + rendu LibreOffice +
+      `test:oxml-validate` (0 erreur dans les parties diagramme) + baseline `test:visual` (`eventmodeling.png`
+      nouvelle) + 7 tests unitaires. Fixture `test-corpus/word-verification/eventmodeling.docx` pas encore ouverte
+      dans Word réel. Reste : `sequenceDiagram`/`zenuml`.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
