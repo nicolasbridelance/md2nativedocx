@@ -104,3 +104,8 @@ test('an empty mindmap (header only) has a null root', () => {
   const { ast } = parseMindmap('mindmap\n');
   assert.equal(ast.root, null);
 });
+
+test('a multi-class `:::a b` line is stripped whole and never becomes a node', () => {
+  const { ast } = parseMindmap('mindmap\n  Root\n    A[A]\n    :::urgent large\n    B(B)\n    C');
+  assert.deepEqual(ast.root?.children.map((c) => c.label), ['A', 'B', 'C']);
+});
