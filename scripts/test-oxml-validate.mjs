@@ -84,6 +84,7 @@ const PLAIN_FIXTURE_NAMES = [
   'journey',
   'tree-view',
   'radar',
+  'ishikawa',
 ];
 
 function findDotnet() {

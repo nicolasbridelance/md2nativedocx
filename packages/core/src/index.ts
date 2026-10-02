@@ -278,3 +278,9 @@ export { parseRadar } from './diagrams/radar/parser.js';
 export type { RadarParseResult } from './diagrams/radar/parser.js';
 export { translateRadarToOoxml } from './diagrams/radar/translator.js';
 export type { RadarAxis, RadarChart, RadarCurve, RadarGraticule } from './diagrams/radar/types.js';
+
+// ishikawa module (Family D — spine, diagonal category bones and cause rows on a wpc:wpc canvas).
+export { parseIshikawa } from './diagrams/ishikawa/parser.js';
+export type { IshikawaParseResult } from './diagrams/ishikawa/parser.js';
+export { translateIshikawaToOoxml } from './diagrams/ishikawa/translator.js';
+export type { IshikawaCategory, IshikawaCause, IshikawaDiagram } from './diagrams/ishikawa/types.js';

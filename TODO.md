@@ -782,6 +782,17 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       graduation non affichées. Vérifié par export CLI réel + rendu LibreOffice + `test:oxml-validate`
       (0 erreur) + baseline `test:visual` (seule `radar.png` nouvelle) + 9 tests unitaires. Fixture
       `test-corpus/word-verification/radar.docx` pas encore ouverte dans Word réel.
+- [x] **`ishikawa-beta` shippé (2026-10-02)** — vingt-deuxième type non-flowchart livré, onzième de la
+      famille D. Grammaire vérifiée contre `docs/syntax/ishikawa.md` de `mermaid-js/mermaid` : première
+      ligne = effet, puis catégories et causes par indentation (l'exemple officiel indente effet et
+      catégories au même niveau — géré). Arête principale horizontale + tête (effet) à droite, catégories
+      en diagonale alternées dessus/dessous, causes de tout niveau aplaties en lignes le long de l'arête
+      (sous-causes en gris italique, décalées). Plafonds : 8 niveaux, 500 lignes. Hors portée v1 :
+      frontmatter/thème (averti une fois), arêtes de sous-causes ramifiées (aplaties). `pathShape` extrait
+      de radar vers `translator/path-shape.ts` (deuxième consommateur). Vérifié par export CLI réel +
+      rendu LibreOffice + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `ishikawa.png`
+      nouvelle) + 7 tests unitaires. Fixture `test-corpus/word-verification/ishikawa.docx` pas encore
+      ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
