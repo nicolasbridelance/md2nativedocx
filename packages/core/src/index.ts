@@ -296,3 +296,9 @@ export { parseBlock } from './diagrams/block/parser.js';
 export type { BlockParseResult } from './diagrams/block/parser.js';
 export { translateBlockToOoxml } from './diagrams/block/translator.js';
 export type { BlockCell, BlockDiagram, BlockLink, BlockShape, BlockStyle } from './diagrams/block/types.js';
+
+// sankey module (Family D — layered nodes joined by proportional ribbons on a wpc:wpc canvas).
+export { parseSankey } from './diagrams/sankey/parser.js';
+export type { SankeyParseResult } from './diagrams/sankey/parser.js';
+export { translateSankeyToOoxml } from './diagrams/sankey/translator.js';
+export type { SankeyDiagram, SankeyLink } from './diagrams/sankey/types.js';

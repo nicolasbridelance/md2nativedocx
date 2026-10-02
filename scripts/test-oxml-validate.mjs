@@ -87,6 +87,7 @@ const PLAIN_FIXTURE_NAMES = [
   'ishikawa',
   'xychart',
   'block',
+  'sankey',
 ];
 
 function findDotnet() {

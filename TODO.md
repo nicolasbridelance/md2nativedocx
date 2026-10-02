@@ -823,6 +823,16 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       export CLI réel + rendu LibreOffice + `test:oxml-validate` (0 erreur dans les parties diagramme) +
       baseline `test:visual` (`block.png` nouvelle) + 8 tests unitaires. Fixture
       `test-corpus/word-verification/block.docx` pas encore ouverte dans Word réel.
+- [x] **`sankey-beta` shippé (2026-10-02)** — vingt-cinquième type non-flowchart livré, quatorzième de la
+      famille D. Corps CSV `source,target,value` (guillemets RFC-4180, `""` = guillemet littéral), grammaire
+      d'après `docs/syntax/sankey.md` de `mermaid-js/mermaid` (non re-vérifiée contre la source). Nœuds
+      répartis en colonnes par plus long chemin (puits poussés dans la dernière colonne), barres de hauteur
+      proportionnelle au flux, rubans en S (Bézier cubique échantillonnée en polygone) d'épaisseur = valeur,
+      couleur de la source, libellé nom + valeur. Auto-liens et liens fermant un cycle ignorés avec
+      avertissement. Plafonds : 500 liens, 200 nœuds. Différences avec Mermaid : rubans polygonaux,
+      `config`/thème (`linkColor`, `nodeAlignment`, couleurs) ignorés. Vérifié par export CLI réel + rendu
+      LibreOffice + `test:oxml-validate` + baseline `test:visual` (`sankey.png` nouvelle) + 7 tests unitaires.
+      Fixture `test-corpus/word-verification/sankey.docx` pas encore ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
