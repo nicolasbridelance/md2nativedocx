@@ -59,3 +59,16 @@ test('hostile input: caps, unclosed groups and garbage never throw', () => {
   const deep = `block-beta\n${'block\n'.repeat(30)}a\n${'end\n'.repeat(30)}`;
   assert.ok(parseBlock(deep).warnings.some((w) => w.includes('nesting')));
 });
+
+test('forms accepted by the real Mermaid parser (probed with mermaid 11.x) parse without warnings', () => {
+  for (const src of [
+    'block-beta\ncolumns 3\nA B:2\nspace C\nblock:g:2\n D E\nend\nA-->B\nB-- "t" -->C',
+    'block-beta\nA("r") B(["s"]) C(("c")) D{"d"} E>"f"]',
+    'block-beta\nA[("db")] B[["sub"]] C{{"hex"}}',
+    'block-beta\nA B\nclassDef k fill:#0f0,stroke:#333\nclass A,B k\nstyle A fill:#f00,stroke:#333,stroke-width:4px',
+    'block-beta\nA<-->B\nA---B\nA-.->B\nA==>B',
+    'block-beta\nblock:g\n A\nend',
+  ]) {
+    assert.deepEqual(parseBlock(src).warnings, [], src);
+  }
+});

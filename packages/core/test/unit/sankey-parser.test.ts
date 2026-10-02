@@ -23,3 +23,10 @@ test('caps links and nodes on hostile input', () => {
   assert.ok(r.warnings.some((w) => w.includes('nodes')));
   assert.ok(parseSankey('---\nconfig: x\n---\nsankey-beta\na,b,1').warnings.some((w) => w.includes('frontmatter')));
 });
+
+test('forms accepted by the real Mermaid parser (probed with mermaid 11.x) parse without warnings', () => {
+  for (const src of ['sankey-beta\n\n\nA,B,1', 'sankey\nA , B , 10', 'sankey-beta\r\nA,B,1\r\n', '---\nconfig:\n  sankey:\n    showValues: false\n---\nsankey-beta\nA,B,1']) {
+    const r = parseSankey(src);
+    assert.equal(r.ast.links.length, 1, src);
+  }
+});

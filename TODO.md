@@ -846,7 +846,12 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       (comme `component` simple, non distingué). Vérifié par export CLI réel + rendu LibreOffice +
       `test:oxml-validate` (0 erreur dans les parties diagramme) + baseline `test:visual` (`wardley.png` nouvelle)
       + 7 tests unitaires. Fixture `test-corpus/word-verification/wardley.docx` pas encore ouverte dans Word réel.
-      TODO : la grammaire de `sankey` et `block` reste non re-vérifiée ; le même sondage du vrai parseur est possible.
+- [x] **Grammaires `block` et `sankey` vérifiées (2026-10-02)** — sondées avec le vrai `mermaid.parse` (mermaid 11.x,
+      jison, jsdom pour DOMPurify ; ces deux types ne sont pas dans `@mermaid-js/parser`). Tout ce que nous
+      acceptions comme valide est accepté par Mermaid. Nos parseurs sont des sur-ensembles tolérants (avertissement
+      au lieu d'erreur) : `A:::classe` en `block`, formes sans guillemets (`A((c))`, `A[[x]]`, `A{{x}}`),
+      groupe `block:g` non fermé ; en `sankey`, `sankey-beta` vide et enregistrements à 2/4 champs sont des erreurs
+      Mermaid mais des avertissements chez nous. Tests de non-régression ajoutés (+2).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
