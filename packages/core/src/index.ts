@@ -314,3 +314,9 @@ export { parseEventModeling } from './diagrams/event-modeling/parser.js';
 export type { EventModelingParseResult } from './diagrams/event-modeling/parser.js';
 export { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
 export type { EventModelingDiagram, EventModelingFrame, EventModelingKind, EventModelingNote, EventModelingScenario, EventModelingStatement } from './diagrams/event-modeling/types.js';
+
+// sequence module (Family E — lifelines, messages, activations, notes and block frames on a wpc:wpc canvas).
+export { parseSequence } from './diagrams/sequence/parser.js';
+export type { SequenceParseResult } from './diagrams/sequence/parser.js';
+export { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
+export type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from './diagrams/sequence/types.js';

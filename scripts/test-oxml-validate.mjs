@@ -90,6 +90,7 @@ const PLAIN_FIXTURE_NAMES = [
   'sankey',
   'wardley',
   'eventmodeling',
+  'sequence',
 ];
 
 function findDotnet() {

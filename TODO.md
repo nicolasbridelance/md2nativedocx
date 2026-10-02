@@ -867,6 +867,23 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `test:oxml-validate` (0 erreur dans les parties diagramme) + baseline `test:visual` (`eventmodeling.png`
       nouvelle) + 7 tests unitaires. Fixture `test-corpus/word-verification/eventmodeling.docx` pas encore ouverte
       dans Word réel. Reste : `sequenceDiagram`/`zenuml`.
+- [x] **`sequenceDiagram` shippé (2026-10-02)** — vingt-huitième type non-flowchart livré, premier de la famille E
+      (lignes de vie). **La grammaire n'est PAS dans `@mermaid-js/parser`** (sondé : aucun chunk séquence) : le lexer
+      jison est dans le paquet `mermaid` lui-même, donc grammaire transcrite depuis `docs/syntax/sequenceDiagram.md`
+      (pas vérifiée contre un parseur réel). Couvre : `participant`/`actor` (+ `as`, `@{…}` retiré), `create`/`destroy`,
+      les 10 flèches standard (`->`, `-->`, `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)`) avec
+      raccourci `+`/`-`, `activate`/`deactivate`, `Note left of|right of|over`, blocs `loop|alt|opt|par|critical|break|rect`
+      avec `else|and|option`, `box` (parsé, non dessiné), `autonumber [début [pas]]`, `title`, `<br/>`, `#NN;`.
+      Avertis et ignorés : demi-flèches, connexions centrales `()`, `link`/`links`/`properties`, frontmatter.
+      Rendu : boîtes en haut et en bas, lignes de vie pointillées, barres d'activation imbriquées, auto-messages en
+      boucle, croix (`-x`, `destroy`) dessinées en deux traits, pastille de numéro, cadres de bloc avec étiquette,
+      condition et séparateurs pointillés, `rect` en fond teinté, participant `create` tardif. Différences :
+      espacement des colonnes par règle simple, pas de personnage filaire pour `actor`, flèche asynchrone = petit
+      triangle. Plafonds : 50 participants, 500 éléments, 20 blocs imbriqués. Vérifié par export CLI réel + rendu
+      LibreOffice + `test:oxml-validate` (0 erreur) + baseline `sequence.png` (venn.png restauré : dérive non traitée)
+      + 6 tests unitaires + 1 test CLI. Fixture `test-corpus/word-verification/sequence.docx` pas encore ouverte dans
+      Word réel. Limite visible : un cadre de bloc ne s'élargit pas pour contenir le texte d'un auto-message.
+      Reste : `zenuml` (plugin externe `@mermaid-js/mermaid-zenuml`, syntaxe différente, décision produit à prendre).
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

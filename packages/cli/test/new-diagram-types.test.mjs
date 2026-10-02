@@ -134,8 +134,21 @@ test('cli surfaces a quadrantChart parser warning through stdout/.log, same mech
   }
 });
 
-test('a recognized-but-unimplemented type (e.g. sequenceDiagram) still gets the guard-rail note, not a quadrant/venn/mindmap misparse', () => {
-  const { code, out, docx, dir } = exportFixture('sequence', 'sequenceDiagram\n  Alice->>Bob: Hi\n');
+test('cli exports a sequenceDiagram end to end, no warnings on clean input', () => {
+  const { code, out, docx, dir } = exportFixture('sequence', 'sequenceDiagram\n  Alice->>Bob: Hi\n  Bob-->>Alice: Hello\n');
+  try {
+    assert.equal(code, 0, out);
+    assert.ok(!/Warnings:/.test(out), out);
+    const xml = readDocumentXml(docx);
+    assert.ok(xml.includes('<wpc:wpc'));
+    assert.ok(xml.includes('>Hi<'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a recognized-but-unimplemented type (e.g. zenuml) still gets the guard-rail note, not a quadrant/venn/mindmap misparse', () => {
+  const { code, out, docx, dir } = exportFixture('zenuml', 'zenuml\n  Alice->Bob: Hi\n');
   try {
     assert.equal(code, 0, out);
     const xml = readDocumentXml(docx);
