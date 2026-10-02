@@ -77,6 +77,7 @@ const PLAIN_FIXTURE_NAMES = [
   'git-graph',
   'cynefin',
   'pie',
+  'timeline',
 ];
 
 function findDotnet() {

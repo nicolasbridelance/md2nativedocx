@@ -704,6 +704,15 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `test:oxml-validate` (0 erreur sous `word/diagrams/`) + baseline `test:visual` (seule `pie.png`
       est nouvelle, confirmé par `git status`) + 11 tests unitaires. Prochain : `timeline`/`kanban`/
       `packet`/`treemap`… (ordre laissé à l'agent) ; `sequenceDiagram` toujours volontairement plus tard.
+- [x] **`timeline` shippé (2026-10-02)** — quinzième type non-flowchart livré, quatrième de la famille D
+      (formes calculées sur canevas `wpc:wpc`). Grammaire vérifiée contre `docs/syntax/timeline.md` de
+      `mermaid-js/mermaid`. Une colonne par période (gauche→droite), bandeaux de `section` au-dessus,
+      barre d'axe, événements empilés en dessous ; couleur par section (ou par période sans section) ;
+      retour à la ligne automatique par mot + `<br>` forcé ; lignes `: événement` de continuation.
+      Hors portée v1 : direction `TD` (v11.14+, reconnue, avertie, rendue en LR) et frontmatter/thème
+      (avertis une fois). Vérifié par export CLI réel + rendu LibreOffice (exemple "England's History
+      Timeline" des docs) + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule
+      `timeline.png` nouvelle) + 10 tests unitaires.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

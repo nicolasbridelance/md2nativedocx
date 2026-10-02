@@ -234,3 +234,10 @@ export { parsePieChart } from './diagrams/pie/parser.js';
 export type { PieParseResult } from './diagrams/pie/parser.js';
 export { translatePieToOoxml } from './diagrams/pie/translator.js';
 export type { PieChart, PieSlice } from './diagrams/pie/types.js';
+
+// timeline module (Family D — columns of calculated boxes on a wpc:wpc canvas;
+// see diagrams/timeline/translator.ts's module doc comment).
+export { parseTimeline } from './diagrams/timeline/parser.js';
+export type { TimelineParseResult } from './diagrams/timeline/parser.js';
+export { translateTimelineToOoxml } from './diagrams/timeline/translator.js';
+export type { TimelineChart, TimelinePeriod } from './diagrams/timeline/types.js';
