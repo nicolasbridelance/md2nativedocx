@@ -739,6 +739,19 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `---` non terminé/tardif non pris pour du frontmatter). Vérifié par export CLI réel + rendu
       LibreOffice + `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `packet.png`
       nouvelle) + 12 tests unitaires.
+- [x] **`treemap-beta` shippé (2026-10-02)** — dix-huitième type non-flowchart livré, septième de la
+      famille D. Grammaire vérifiée contre `docs/syntax/treemap.md` de `mermaid-js/mermaid`. Hiérarchie
+      par indentation (tabulation = 4 colonnes), feuilles `"Nom": valeur`, sections = somme de leurs
+      enfants, `:::classe` + `classDef fill/color/stroke` (hex 3/6 chiffres ou quelques noms CSS de base,
+      comme l'exemple `fill:red` des docs ; toute autre valeur ignorée, jamais écrite dans le XML).
+      Layout squarified (Bruls et al.), enfants triés par valeur décroissante comme Mermaid/d3 ; section =
+      rectangle teinté + bandeau d'en-tête, feuille = libellé + valeur ; libellés tronqués aux lignes qui
+      tiennent, mot trop large réduit à la taille qui tient (constaté au rendu réel : « Training » se
+      coupait en pleine lettre) via nouveau `fitFont()` partagé dans `translator/boxes.ts`. Profondeur
+      plafonnée à 32 (entrée hostile). Alias `treemap` sans `-beta` accepté par la détection. Hors portée
+      v1 : frontmatter/thème (averti une fois). Vérifié par export CLI réel + rendu LibreOffice +
+      `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `treemap.png` nouvelle) + 10 tests
+      unitaires.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 

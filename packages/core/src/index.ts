@@ -254,3 +254,9 @@ export { parsePacketDiagram } from './diagrams/packet/parser.js';
 export type { PacketParseResult } from './diagrams/packet/parser.js';
 export { translatePacketToOoxml } from './diagrams/packet/translator.js';
 export type { PacketDiagram, PacketField } from './diagrams/packet/types.js';
+
+// treemap module (Family D — squarified nested rectangles on a wpc:wpc canvas).
+export { parseTreemap } from './diagrams/treemap/parser.js';
+export type { TreemapParseResult } from './diagrams/treemap/parser.js';
+export { translateTreemapToOoxml } from './diagrams/treemap/translator.js';
+export type { TreemapDiagram, TreemapNode, TreemapStyle } from './diagrams/treemap/types.js';

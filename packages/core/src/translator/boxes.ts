@@ -112,3 +112,13 @@ export function noteParagraph(text: string): string {
     '</w:p>',
   ].join('\n');
 }
+
+/** Font size (px) that fits the widest of `lines` within `widthPx` on one
+ * line each (never above `fontPx`, never below `minPx`), plus whether any
+ * shrinking happened — callers then pair it with `noWrap` so the renderer
+ * doesn't break a single long word mid-letter. */
+export function fitFont(lines: string[], fontPx: number, widthPx: number, minPx: number): { fontPx: number; shrunk: boolean } {
+  const widest = Math.max(1, ...lines.map((l) => estimateTextWidth(l, fontPx)));
+  if (widest <= widthPx) return { fontPx, shrunk: false };
+  return { fontPx: Math.max(minPx, Math.floor((fontPx * widthPx) / widest)), shrunk: true };
+}

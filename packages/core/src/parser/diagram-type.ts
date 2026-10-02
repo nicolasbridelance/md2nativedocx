@@ -86,7 +86,7 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
   { type: 'architecture', label: 'Architecture diagram', pattern: /^architecture-beta\b/i },
   { type: 'radar', label: 'Radar chart', pattern: /^radar-beta\b/i },
   { type: 'eventModeling', label: 'Event Modeling diagram', pattern: /^eventmodeling\b/i },
-  { type: 'treemap', label: 'Treemap', pattern: /^treemap-beta\b/i },
+  { type: 'treemap', label: 'Treemap', pattern: /^treemap(?:-beta)?\b/i },
   { type: 'venn', label: 'Venn diagram', pattern: /^venn-beta\b/i },
   { type: 'ishikawa', label: 'Ishikawa diagram', pattern: /^ishikawa-beta\b/i },
   { type: 'wardley', label: 'Wardley map', pattern: /^wardley-beta\b/i },

@@ -80,6 +80,7 @@ const PLAIN_FIXTURE_NAMES = [
   'timeline',
   'kanban',
   'packet',
+  'treemap',
 ];
 
 function findDotnet() {
