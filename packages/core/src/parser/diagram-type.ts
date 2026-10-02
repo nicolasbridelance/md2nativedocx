@@ -89,7 +89,7 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
   { type: 'treemap', label: 'Treemap', pattern: /^treemap(?:-beta)?\b/i },
   { type: 'venn', label: 'Venn diagram', pattern: /^venn-beta\b/i },
   { type: 'ishikawa', label: 'Ishikawa diagram', pattern: /^ishikawa-beta\b/i },
-  { type: 'wardley', label: 'Wardley map', pattern: /^wardley-beta\b/i },
+  { type: 'wardley', label: 'Wardley map', pattern: /^wardley(?:-beta)?\b/i },
   { type: 'cynefin', label: 'Cynefin framework', pattern: /^cynefin-beta\b/i },
   { type: 'treeView', label: 'TreeView', pattern: /^treeView-beta\b/i },
 ];

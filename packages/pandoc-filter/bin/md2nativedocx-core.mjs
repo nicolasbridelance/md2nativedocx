@@ -126,6 +126,8 @@ import {
   translateBlockToOoxml,
   parseSankey,
   translateSankeyToOoxml,
+  parseWardley,
+  translateWardleyToOoxml,
 } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
@@ -373,6 +375,13 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     process.stdout.write(translateSankeyToOoxml(ast));
+  } else if (diagramType.type === 'wardley') {
+    // Twenty-sixth non-flowchart diagram type shipped, fifteenth of Family D.
+    const { ast, warnings } = parseWardley(input);
+    for (const warning of warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    process.stdout.write(translateWardleyToOoxml(ast));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

@@ -302,3 +302,9 @@ export { parseSankey } from './diagrams/sankey/parser.js';
 export type { SankeyParseResult } from './diagrams/sankey/parser.js';
 export { translateSankeyToOoxml } from './diagrams/sankey/translator.js';
 export type { SankeyDiagram, SankeyLink } from './diagrams/sankey/types.js';
+
+// wardley module (Family D — components on visibility/evolution axes with links, pipelines and evolve arrows on a wpc:wpc canvas).
+export { parseWardley } from './diagrams/wardley/parser.js';
+export type { WardleyParseResult } from './diagrams/wardley/parser.js';
+export { translateWardleyToOoxml } from './diagrams/wardley/translator.js';
+export type { WardleyAnnotation, WardleyFlow, WardleyLink, WardleyMap, WardleyNode, WardleyNodeKind, WardleyPipeline, WardleyPositioned, WardleyStage, WardleyStrategy } from './diagrams/wardley/types.js';

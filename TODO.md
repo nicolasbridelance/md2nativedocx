@@ -833,6 +833,20 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       `config`/thème (`linkColor`, `nodeAlignment`, couleurs) ignorés. Vérifié par export CLI réel + rendu
       LibreOffice + `test:oxml-validate` + baseline `test:visual` (`sankey.png` nouvelle) + 7 tests unitaires.
       Fixture `test-corpus/word-verification/sankey.docx` pas encore ouverte dans Word réel.
+- [x] **`wardley-beta` shippé (2026-10-02)** — vingt-sixième type non-flowchart livré, quinzième de la
+      famille D. Grammaire cette fois **vérifiée** contre `docs/syntax/wardley.md` de `mermaid-js/mermaid` et
+      contre le vrai `@mermaid-js/parser` 11.17.2 (AST sondé sur un exemple couvrant toutes les formes).
+      Couvre : `title`, `size`, `anchor`, `component` (+ `label [dx, dy]`, `(inertia)`, `(build|buy|outsource|market)`),
+      `pipeline { component … }`, liens (`->`, `-->`, `-.->`, `+>`, `+<`, `+<>`, `+'texte'>`, `; annotation`),
+      `evolve`, `note`, `annotations`/`annotation`, `accelerator`/`deaccelerator`, `evolution` (étapes, `@frontière`,
+      `A / B`). Coordonnées `[visibilité, évolution]` en 0–1 ou 0–100 ; hors plage = entité ignorée avec
+      avertissement (Mermaid, lui, lève une erreur). Plafonds : 200 nœuds, 500 liens, 100 de chaque autre type ;
+      `size` borné à 300–2400. Différences avec Mermaid : libellés de liens non pivotés, ancres en point plein,
+      `config`/thème ignorés ; `build` dessiné en triangle, `buy` losange, `outsource` carré, `market` cercle
+      (comme `component` simple, non distingué). Vérifié par export CLI réel + rendu LibreOffice +
+      `test:oxml-validate` (0 erreur dans les parties diagramme) + baseline `test:visual` (`wardley.png` nouvelle)
+      + 7 tests unitaires. Fixture `test-corpus/word-verification/wardley.docx` pas encore ouverte dans Word réel.
+      TODO : la grammaire de `sankey` et `block` reste non re-vérifiée ; le même sondage du vrai parseur est possible.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
