@@ -8,7 +8,8 @@
  * throw.
  *
  * V1 scope, deliberately: `set <id> [<label>]`, `union <id>,<id>,...`,
- * `text [<label>]` attached to the immediately preceding `set`/`union`, and
+ * `text <id>[<label>]` nodes attached to the immediately preceding `set`/`union`
+ * (drawn inside it, never replacing its own label), and
  * `style <id> fill:#RRGGBB` for a single set. NOT implemented yet (each
  * degrades to "ignored, with a warning", never silently dropped): the `:N`
  * size suffix on `set`/`union` (this project's translator computes its own
@@ -78,7 +79,7 @@ export function parseVennChart(text: string): VennParseResult {
         warnings.push(`Unsupported line ignored (set with no id): ${line}`);
         continue;
       }
-      const set: VennSet = { id, label: label ?? id };
+      const set: VennSet = { id, label: label ?? id, items: [] };
       ast.sets.push(set);
       setById.set(id, set);
       lastTarget = set;
@@ -86,7 +87,9 @@ export function parseVennChart(text: string): VennParseResult {
     }
 
     if ((match = line.match(/^union\s+(.+)$/i))) {
-      const setIds = stripSize(match[1] ?? '')
+      // `union A,B["Shared"]:3` — the bracket labels the union, so peel it off before splitting ids.
+      const { before, label } = extractBracket(stripSize(match[1] ?? ''));
+      const setIds = before
         .split(',')
         .map((part) => stripQuotes(part))
         .filter((part) => part.length > 0);
@@ -99,20 +102,21 @@ export function parseVennChart(text: string): VennParseResult {
         warnings.push(`Unsupported line ignored (union references undeclared set(s) ${unknown.join(', ')}): ${line}`);
         continue;
       }
-      const union: VennUnion = { setIds };
+      const union: VennUnion = { setIds, ...(label !== undefined ? { label } : {}), items: [] };
       ast.unions.push(union);
       lastTarget = union;
       continue;
     }
 
     if ((match = line.match(/^text\s+(.+)$/i))) {
-      const { label } = extractBracket(match[1] ?? '');
-      const text = label ?? stripQuotes(match[1] ?? '');
+      // `text A1["React"]` — the bracket is the displayed label, a bare id is shown as-is.
+      const { before, label } = extractBracket(stripSize(match[1] ?? ''));
+      const itemText = label ?? stripQuotes(before);
       if (!lastTarget) {
         warnings.push(`Unsupported line ignored (text with no preceding set/union): ${line}`);
         continue;
       }
-      lastTarget.label = text;
+      if (itemText.length > 0) lastTarget.items.push(itemText);
       continue;
     }
 
