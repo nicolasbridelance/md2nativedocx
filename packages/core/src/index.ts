@@ -260,3 +260,9 @@ export { parseTreemap } from './diagrams/treemap/parser.js';
 export type { TreemapParseResult } from './diagrams/treemap/parser.js';
 export { translateTreemapToOoxml } from './diagrams/treemap/translator.js';
 export type { TreemapDiagram, TreemapNode, TreemapStyle } from './diagrams/treemap/types.js';
+
+// journey module (Family D — task columns, score row and actor lanes on a wpc:wpc canvas).
+export { parseJourney } from './diagrams/journey/parser.js';
+export type { JourneyParseResult } from './diagrams/journey/parser.js';
+export { translateJourneyToOoxml } from './diagrams/journey/translator.js';
+export type { JourneyChart, JourneyTask } from './diagrams/journey/types.js';

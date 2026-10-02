@@ -752,6 +752,15 @@ en tête de fichier + un paragraphe par spike). `npm run stop` arrête le sidelo
       v1 : frontmatter/thème (averti une fois). Vérifié par export CLI réel + rendu LibreOffice +
       `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `treemap.png` nouvelle) + 10 tests
       unitaires.
+- [x] **`journey` shippé (2026-10-02)** — dix-neuvième type non-flowchart livré, huitième de la
+      famille D. Grammaire vérifiée contre `docs/syntax/userJourney.md` de `mermaid-js/mermaid`.
+      `title`, `section`, lignes `Tâche: score: Acteur1, Acteur2`. Une colonne par tâche, bandeaux de
+      section, ligne de score teintée rouge → vert (texte `n/5`, pas de glyphe emoji), une ligne par
+      acteur avec cellule colorée là où il participe. Score hors 1..5 borné (avertissement), score non
+      numérique : ligne ignorée (avertissement) ; plafond de 500 tâches (entrée hostile). Hors portée v1 :
+      frontmatter/thème (averti une fois). Vérifié par export CLI réel + rendu LibreOffice +
+      `test:oxml-validate` (0 erreur) + baseline `test:visual` (seule `journey.png` nouvelle) + 8 tests
+      unitaires. Fixture `test-corpus/word-verification/journey.docx` pas encore ouverte dans Word réel.
 
 ## Phase 6 — Google Slides (`.pptx`) et Phase 7 — SmartArt (`mmd2smartart`)
 
