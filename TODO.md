@@ -962,8 +962,8 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       — parties manquantes (`presProps`/`viewProps`/`tableStyles`/`txStyles`, `161dcd1`) et arêtes
       polyligne émises en `p:cxnSp` + `custGeom` (`afa3943`, trouvé par dichotomie : PowerPoint exige
       une géométrie prédéfinie sur un connecteur). Option `--show-source` ajoutée (`25b67ed`).
-      **Reste ouvert (mainteneur)** : importer un deck dans Google Slides, et vérifier le comportement
-      des liens droits (connecteurs) vs polylignes (formes libres, sans accroche magnétique) ; l'extension VS Code (`bundle-cli.mjs`) ne vendorise pas encore
+      L'import dans Google Slides est confirmé OK par le mainteneur (2026-10-05). Note : liens droits =
+      connecteurs, polylignes = formes libres sans accroche magnétique ; l'extension VS Code (`bundle-cli.mjs`) ne vendorise pas encore
       `@md2nativedocx/pptx` (le `.pptx` n'y est pas exposé) ; `ci.yml` : les jobs Windows/macOS listent
       leurs workspaces à la main et ne lancent pas les tests pptx (changement `ci.yml` à relire par un
       humain, non fait).
@@ -1030,7 +1030,8 @@ et l'add-in Word (canal de distribution entièrement nouveau).
         contournée par SmartArt), validation `test:oxml-validate`, rendu LibreOffice, et la même
         leçon que SmartArt (valider par schéma avant de deviner). Perte assumée : le rendu Word d'un
         graphique n'est pas le rendu Mermaid 1:1.
-      - Escalade requise : décision d'architecture + changement de contrat du traducteur.
+      - **Confié à l'agent (mainteneur, 2026-10-05)** : à réaliser (ADR puis spike) ; le changement de
+        contrat du traducteur reste signalé au mainteneur avant fusion.
 
 ---
 
@@ -1038,22 +1039,42 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 
 - ✅ Tous les types livrés (29/29) ; `docs/manual/manuel-utilisateur.{md,docx}` : manuel de 38 pages
   (couverture, sommaire champ Word pré-rempli, introduction, réglages, Markdown standard, une page
-  A4 par type avec source | rendu côte à côte). Généré par un script resté hors du dépôt (voir
-  HANDOVER.md) — le `.md` est désormais la source à éditer.
-- ✅ `packages/core` : tous les traducteurs honorent `maxDrawingCx/Cy` (`CanvasOptions`, `23a441b`) —
-  avant, seuls les flowcharts respectaient format de page/marges/paysage ; le CLI laisse une valeur
-  `MD2NATIVEDOCX_MAX_DRAWING_CX/CY` explicite l'emporter.
-- ✅ Bug de schéma Word corrigé : `w:b`/`w:i` après `w:color`/`w:sz` dans les runs de libellés
-  (`6d1f8a7`).
-- [ ] **CI rouge : `npm audit`** (19 vulnérabilités, 16 hautes, dev-only : `braces` via
-      `micromatch`/`fast-glob` dans la chaîne typescript-eslint de `word-addin`, `mocha` via
-      `@vscode/test-cli`). Pas causé par ce travail (aucun `package.json` modifié). Décision
-      mainteneur : mise à jour majeure de ces outils ou exceptions documentées (règle 6).
+  A4 par type avec source | rendu côte à côte). **Vérifié dans un vrai Word par le mainteneur
+  (couverture, sommaire, matrice d'équation : OK).** Le générateur est resté hors du dépôt : le `.md`
+  est la source à éditer.
+- ✅ `all-types-deck.pptx` : s'ouvre dans PowerPoint **et s'importe dans Google Slides** (mainteneur : OK).
+- ✅ Incident Pandoc sans droits admin (Windows) : re-testé sur le poste d'origine, **résolu**. Le rapport
+  de terrain est archivé dans `docs/history/missing_pandoc_bugfix.md`.
+- ✅ `packages/core` : tous les traducteurs honorent `maxDrawingCx/Cy` (`CanvasOptions`, `23a441b`).
+- ✅ Bug de schéma Word corrigé : `w:b`/`w:i` avant `w:color`/`w:sz` (`6d1f8a7`).
+- ✅ **CI verte sur `npm audit`** (`e8c8e90`) : `braces` (GHSA-vfj7-8cjw-p6xm) n'a **aucune version
+  corrigée** (toutes les versions publiées, jusqu'à 3.0.3, sont touchées), donc aucune mise à jour ne
+  pouvait faire passer l'audit simple. Deux garde-fous : (1) `npm audit --omit=dev --audit-level=high`
+  strict, sans exception, sur l'arbre livré (0 vulnérabilité) ; (2) `scripts/audit-gate.mjs` sur tout
+  l'arbre, qui échoue sur tout avis high/critical **sans entrée datée et motivée** dans
+  `audit-exceptions.json` (une seule aujourd'hui : braces, expire le **2026-12-31** — à réexaminer ;
+  toute exception expirée cesse de couvrir son avis).
+- ⏸ **Add-in Word, 3 spikes (Phase 4) : EN ATTENTE** (décision mainteneur, 2026-10-05).
+
+### Chantiers confiés à l'agent (mainteneur : « c'est dans ta banette »)
+
+- [ ] **Graphiques Word natifs `c:chart` + classeur embarqué** (pie → xychart → radar). Plan par paliers
+      en Phase 6/7. Livrable d'abord : l'ADR (exception à la règle 7 déjà créée par SmartArt) puis le
+      spike palier 1 (pie, valeurs en cache, sans classeur) validé par `test:oxml-validate` + LibreOffice,
+      puis le classeur, puis vérification dans un vrai Word (le mainteneur ouvre/clique Edit Data).
+- [ ] **SmartArt « pixel perfect »** — à implémenter, sauf infaisabilité démontrée. État : `chain`/`tree`
+      validés dans Word, `cycle` rend des formes vides dans Word (`smartart-cycle-recheck.docx`), ADR 0006
+      « en attente de confirmation Word réelle finale ». Contrainte : le rendu final est celui du moteur de
+      mise en page de Word appliqué à notre `layoutDef` ; notre `dsp:drawing` de repli doit coïncider avec
+      lui. Boucle d'essais réels avec le mainteneur nécessaire (je ne peux pas ouvrir Word).
 - [ ] Ranger le générateur du manuel dans `scripts/` (aujourd'hui hors dépôt).
-- [ ] Vérifier le manuel dans un vrai Word (couverture, champ de sommaire « dirty », matrice
-      d'équation — erreurs de schéma Pandoc `m:mcPr`).
-- [ ] Réponse publique : mermaid-js/mermaid#8060 (graphiques « double-cliquables ») répondue par le
-      mainteneur (formes natives vs objet graphique) — piste `c:chart` consignée en Phase 6/7.
+- [ ] Réponse publique mermaid-js/mermaid#8060 postée par le mainteneur (formes natives vs objet graphique).
+
+### Autres suites possibles (sans le mainteneur)
+
+- Vendoriser `@md2nativedocx/pptx` dans l'extension VS Code ; tests pptx dans les jobs Windows/macOS de
+  `ci.yml` (changement à relire par un humain) ; `.qmd` ; clic droit « Exporter en Word » ; l10n du
+  panneau de configuration.
 
 ---
 

@@ -10,10 +10,8 @@ than this date. Previous handover (2026-09-06, Word add-in scaffold) is folded i
 - **Green locally:** typecheck, lint, 642 core tests, 25 pptx tests, 117 cli tests, `test:visual`
   68/68. `test:oxml-validate`: 0 schema errors in anything this project emits (the ~470 errors in a
   whole manual are Pandoc's own list/table/math quirks, present in a bare `pandoc` output too).
-- **CI is red on one job only: `npm audit`** (19 vulns, 16 high, dev tooling only — `braces` via the
-  typescript-eslint chain in `packages/word-addin`, `mocha` via `@vscode/test-cli`). No
-  `package.json` changed; these are new advisories. It needs a maintainer decision (major bumps vs
-  documented exceptions, AGENTS.md rule 6). Everything else passes on Linux/macOS/Windows.
+- **CI:** green on Linux/macOS/Windows; the `npm audit` job was red from a new advisory with no
+  patched version and is now handled by a dated-exception gate (see "Still open").
 
 ## What happened this session
 
@@ -47,36 +45,41 @@ than this date. Previous handover (2026-09-06, Word add-in scaffold) is folded i
 6. **Public-facing:** replaced the retired shields.io VS Marketplace badge (`26ae866`); a reply to
    mermaid-js/mermaid#8060 (native chart vs native shapes) was posted by the maintainer.
 
-## Still open — roadmap
+## Still open — roadmap (updated 2026-10-05, later in the day)
 
-*Needs the maintainer (real Word/PowerPoint/Windows):*
-1. Open `docs/manual/manuel-utilisateur.docx` in Word: cover, dirty TOC field, equation matrix
-   (Pandoc `m:mcPr` order is the first suspect if Word complains).
-2. Import `all-types-deck.pptx` into Google Slides; check straight links (connectors) vs polylines
-   (free shapes, no magnetic attachment).
-3. Re-verify the Windows no-admin Pandoc incident on the real machine (0.5.1–0.5.3 fixes were only
-   reproduced on Linux); `docs/missing_pandoc_bugfix.md` is the maintainer's untracked handoff note —
-   commit or delete it.
-4. **Word add-in (Phase 4):** `packages/word-addin/` is scaffolded, its 5 buttons are stubs, blocked
-   on 3 spikes needing a real Word desktop (`TODO.md` "Comment lancer les spikes";
-   `docs/adr/0008-…`). Build order after the spikes: Coller en MD → Copier en MD (needs a new
-   OOXML→Markdown converter) → Couper → Enregistrer/Charger `.md`.
+*Confirmed by the maintainer this session:* the manual opens fine in real Word (cover, TOC, equation
+matrix); `all-types-deck.pptx` opens in PowerPoint and imports into Google Slides; the Windows
+no-admin Pandoc incident is **resolved** (its field report is archived in
+`docs/history/missing_pandoc_bugfix.md`).
 
-*Decisions only the maintainer takes:*
-5. `npm audit` (above). 6. SmartArt "pixel perfect" is **not concluded** (off by default;
-   ADR 0006 still awaits a final real-Word confirmation). 7. **Native `c:chart` + embedded
-   workbook** for pie/xychart/radar (editable data in Word) — logged in `TODO.md` Phase 6/7 with a
-   stepwise plan (pie without workbook → add workbook → real-Word check → xychart/radar), needs an
-   ADR for the rule-7 exception (SmartArt already set the precedent). 8. CLA/DCO before the first
-   external PR; GitHub repo settings (branch protection, private Codespaces ports).
+*On hold:* Word add-in (Phase 4) — the 3 spikes need a real Word desktop; waiting on the maintainer.
 
-*Doable without the maintainer:*
-9. Vendor `@md2nativedocx/pptx` into the VS Code extension (`bundle-cli.mjs`; `.pptx` isn't exposed
-   there yet) and add the pptx tests to the Windows/macOS CI jobs (a `ci.yml` change — needs human
-   review). 10. `.qmd` (Quarto) support and a right-click "Export to Word" on the editor tab.
-11. Put the manual generator into `scripts/`. 12. Panel l10n (the config panel and Phase 8 settings
-   are French-only). 13. Known visual gaps: sequence block frame doesn't widen for a self-message;
-   two unattached connectors on the bipartite stress graph; SmartArt cycle renders empty in Word.
+*Owned by the agent (maintainer: "dans ta banette"):*
+1. **Native `c:chart` + embedded workbook** for pie → xychart → radar (editable data in Word). Plan
+   in `TODO.md` Phase 6/7: ADR first (rule-7 exception, SmartArt set the precedent), then spike step 1
+   (pie, cached values, no workbook; validate with `test:oxml-validate` + LibreOffice), then the
+   workbook, then a real-Word check by the maintainer (Edit Data), then xychart/radar behind a
+   `shapes`/`native` switch (`shapes` stays default until Word confirms).
+2. **SmartArt "pixel perfect"** — implement unless proven infeasible. State: `chain`/`tree` validated
+   in Word, `cycle` renders empty shapes in Word, ADR 0006 awaits a final real-Word confirmation. Word
+   re-lays out the diagram from our `layoutDef`, so our `dsp:drawing` fallback must match that layout;
+   this needs a loop of real-Word tests with the maintainer.
+3. Put the manual generator into `scripts/` (currently outside the repo).
+
+*Done on the CI front:* `npm audit` is green again, without weakening the production gate —
+`braces` (GHSA-vfj7-8cjw-p6xm) has no patched version at all, so updates can't fix it. `ci.yml` now
+runs `npm audit --omit=dev --audit-level=high` (strict, 0 findings) and `scripts/audit-gate.mjs`
+(whole tree; fails on any high/critical advisory without a dated, justified entry in
+`audit-exceptions.json`). The single exception **expires 2026-12-31 — re-review it then**.
+
+*Other doable work (no maintainer needed):* vendor `@md2nativedocx/pptx` into the VS Code extension and
+add pptx tests to the Windows/macOS CI jobs (`ci.yml` change → human review); `.qmd` support; editor-tab
+right-click "Export to Word"; l10n of the config panel; known visual gaps (sequence block frame vs
+self-message, two unattached connectors on the bipartite stress graph).
+
+*Governance, whenever the first external PR approaches:* choose DCO (`Signed-off-by` via
+`git commit -s`, lightweight) vs a CLA (heavier, preserves relicensing) vs nothing — see AGENTS.md
+"Licensing". Not urgent while the project is single-maintainer.
 
 ## Conventions worth remembering
 
