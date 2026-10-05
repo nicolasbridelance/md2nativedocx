@@ -200,8 +200,15 @@ jobs:
           path: reports/npm-audit.json
           retention-days: 90
           if-no-files-found: warn
-      - name: Audit (fails the build on high/critical)
-        run: npm audit --audit-level=high
+      # Shipped dependency tree: any high/critical advisory fails the build, no exceptions.
+      - name: Audit production dependencies (fails on high/critical)
+        run: npm audit --omit=dev --audit-level=high
+      # Whole tree incl. dev tooling: fails on any high/critical advisory not covered by a dated,
+      # justified entry in audit-exceptions.json (some advisories have no patched version at all).
+      - name: Audit gate with dated exceptions
+        run: |
+          node --test scripts/audit-gate.test.mjs
+          node scripts/audit-gate.mjs
 
   secret-scan:
     name: Secret scan (gitleaks)

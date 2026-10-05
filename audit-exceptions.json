@@ -1,0 +1,9 @@
+[
+  {
+    "id": "GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "reason": "Stack-exhaustion DoS on deeply nested glob patterns. No patched version exists (every published braces, up to 3.0.3, is affected). Reached only through dev tooling that globs this repo's own files: typescript-eslint (word-addin lint), webpack-dev-server (word-addin dev server) and @vscode/vsce (packaging). `npm audit --omit=dev` is clean, so nothing in the shipped packages depends on it.",
+    "added": "2026-10-05",
+    "expires": "2026-12-31"
+  }
+]
