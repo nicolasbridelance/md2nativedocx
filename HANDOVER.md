@@ -60,15 +60,17 @@ no-admin Pandoc incident is **resolved** (its field report is archived in
    with `native-chart-xychart-radar.docx` (CHECKLIST Round 5). Opt-in: `MD2NATIVEDOCX_NATIVE_CHARTS=1` /
    VS Code setting `md2nativedocx.nativeCharts.enabled`. Degradations are documented in the ADR (a
    horizontal xychart with a line series stays shapes, with a warning). Remaining: decide the default.
-2. **SmartArt "pixel perfect"** — two changes, both opt-in and both awaiting real Word:
-   - `cycle` restructured to chain's two-level shape (`smartart-v3.docx`, Round 6). The cause of the empty
-     frame is *suspected, not proven* (tree has a constraint-free `composite` and works in Word).
-   - **Pre-rendered `dsp:drawing`** (`MD2NATIVEDOCX_SMARTART_DRAWING=1` with `MD2NATIVEDOCX_ENABLE_SMARTART=1`,
-     `smartart-v4-drawing.docx`, Round 7): the fifth diagram part Word always writes. Word and LibreOffice show
-     it as the cached rendering, so both display the same geometry (chain no longer stretched tall in
-     LibreOffice); they re-run the layout only on edit. Geometry is in `packages/core/src/smartart/drawing.ts`
-     and mirrors the layoutDef constraints; after an edit Word may re-lay out slightly differently — Round 7
-     asks the maintainer to note that. If Word accepts it, make it the default with SmartArt.
+2. **SmartArt "pixel perfect" + look** — **confirmed in real Word by the maintainer (2026-10-05): v3, v4 and all
+   v5 files open with no warning, the diagrams are visible and "très joli".** What shipped:
+   - `cycle` restructured to chain's two-level shape (the empty-frame cause was suspected, not proven; it now
+     displays).
+   - **Pre-rendered `dsp:drawing`** (`MD2NATIVEDOCX_SMARTART_DRAWING=1`, VS Code
+     `smartArt.preRenderedDrawing`, default on): Word and LibreOffice show the same cached geometry.
+   - **Look profiles** `simple` | `colorful` | `intense` (`MD2NATIVEDOCX_SMARTART_STYLE`, VS Code
+     `smartArt.style`, default `colorful`): accents per shape, theme gradient + shadow; still real,
+     restylable SmartArt. Not yet answered by the maintainer: the Word-computed look of
+     `smartart-v5-intense-no-drawing.docx` (does Word honour our `styleDef` references?) and which profile
+     should be the core default (core still defaults to `simple`; the VS Code extension defaults to `colorful`).
 3. Put the manual generator into `scripts/` (currently outside the repo); document native charts and the
    SmartArt switches in the manual.
 
