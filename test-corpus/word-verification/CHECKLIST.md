@@ -220,6 +220,24 @@ which Word already renders. Schema validator: 0 errors in `word/diagrams/*`.
       light orange.
 - [ ] Click a shape and edit its text: the diagram re-lays out without disappearing.
 
+## Round 7 — 2026-10-05: SmartArt pre-rendered drawing (`dsp:drawing`) — "pixel perfect"
+
+`smartart-v4-drawing.docx` — same four diagrams as Round 6, exported with
+`MD2NATIVEDOCX_ENABLE_SMARTART=1 MD2NATIVEDOCX_SMARTART_DRAWING=1`. Each diagram now carries the fifth part a
+real Word always writes (`word/diagrams/drawingN.xml`): Word and LibreOffice show it as the cached
+rendering, so both display the same shapes; they only re-run the layout when the diagram is edited. Schema
+validator: 0 errors in `word/diagrams/*`. In LibreOffice the chain is no longer stretched tall: neat boxes
+with arrows, tree and cycles as designed, dark text on the light-orange node.
+
+- [ ] Opens without a repair prompt (compare with `smartart-v3.docx` from Round 6).
+- [ ] §1 chain: four boxes in a row with light arrows between them (no tall stretched boxes).
+- [ ] §2 tree: "Projet" across the top, three boxes below.
+- [ ] §3 cycle: **A at the top, then B bottom-right, C bottom-left** (clockwise) — shapes visible.
+- [ ] §4 cycle: Planifier (light orange, **dark** text), Faire, Vérifier, Agir clockwise from the top.
+- [ ] Click a shape and edit its text: Word re-lays the diagram out. Note whether it **keeps looking like
+      this** (our drawing matches Word's own layout) or jumps to a different arrangement, and whether
+      anything disappears.
+
 ## Recording the result
 
 Once done, either:

@@ -21,6 +21,8 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, treeShapes } from './drawing.js';
+import type { SmartArtGenerateOptions } from './generate-options.js';
 
 /** The four OOXML diagram parts a `tree` SmartArt diagram needs. */
 export interface SmartArtTreeOutput {
@@ -32,6 +34,8 @@ export interface SmartArtTreeOutput {
   colorsXml: string;
   /** `word/diagrams/quickStyle{N}.xml` — `dgm:styleDef`, constant across diagrams. */
   styleXml: string;
+  /** `word/diagrams/drawing{N}.xml` — pre-rendered `dsp:drawing`, only when `options.drawing` was set. */
+  drawingXml?: string;
 }
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
@@ -386,7 +390,13 @@ function spPrFor(fill: string | undefined): string {
  * (`node.fill` renders correctly as a content-point `spPr` override; a
  * matching shape override does not and is not attempted here).
  */
-function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNode[], layoutUrn: string): string {
+function buildTreeDataXml(
+  flowchart: Flowchart,
+  root: FlowNode,
+  children: FlowNode[],
+  layoutUrn: string,
+  withDrawing: boolean,
+): { xml: string; drawingXml?: string } {
   const docId = '0';
   const rootId = '1';
   const childIds = children.map((_, i) => String(i + 2));
@@ -466,7 +476,7 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
       )
       .join('');
 
-  return (
+  const xml = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
     `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet ` +
@@ -477,8 +487,26 @@ function buildTreeDataXml(flowchart: Flowchart, root: FlowNode, children: FlowNo
     childPts +
     presPts +
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns}${presOfCxns}${presParOfCxns}</dgm:cxnLst>` +
-    '<dgm:bg/><dgm:whole/></dgm:dataModel>'
+    `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`
   );
+  if (!withDrawing) return { xml };
+  const rootFill = validateHexColor(root.fill, '');
+  const drawingXml = buildDiagramDrawingXml(
+    treeShapes(
+      flowchart.direction,
+      { id: pLevel1MainId, text: root.label, ...(rootFill ? { fill: rootFill } : {}) },
+      children.map((node, i) => {
+        const label = incomingLabel.get(node.id);
+        const fill = validateHexColor(node.fill, '');
+        return {
+          id: pLevel2MainIds.get(childIds[i] as string) as string,
+          text: label ? `${label} : ${node.label}` : node.label,
+          ...(fill ? { fill } : {}),
+        };
+      }),
+    ),
+  );
+  return { xml, drawingXml };
 }
 
 /** Maps `flowchart.direction` to the matching layout XML/URN pair. */
@@ -505,13 +533,15 @@ const TREE_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: stri
  * vertical layout regardless of the Mermaid source's own direction (see
  * `docs/markdown-mermaid-compliance-table.md`).
  */
-export function generateTree(flowchart: Flowchart): SmartArtTreeOutput {
+export function generateTree(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtTreeOutput {
   const { root, children } = rootAndChildren(flowchart);
   const { layoutXml, layoutUrn } = TREE_LAYOUT_BY_DIRECTION[flowchart.direction];
+  const data = buildTreeDataXml(flowchart, root, children, layoutUrn, options.drawing === true);
   return {
-    dataXml: buildTreeDataXml(flowchart, root, children, layoutUrn),
+    dataXml: data.xml,
     layoutXml,
     colorsXml: TREE_COLORS_XML,
     styleXml: TREE_STYLE_XML,
+    ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

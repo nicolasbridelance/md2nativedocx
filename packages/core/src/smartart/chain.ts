@@ -23,6 +23,8 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, chainShapes } from './drawing.js';
+import type { SmartArtGenerateOptions } from './generate-options.js';
 
 /** The four OOXML diagram parts a `chain` SmartArt diagram needs. */
 export interface SmartArtChainOutput {
@@ -34,6 +36,8 @@ export interface SmartArtChainOutput {
   colorsXml: string;
   /** `word/diagrams/quickStyle{N}.xml` — `dgm:styleDef`, constant across diagrams. */
   styleXml: string;
+  /** `word/diagrams/drawing{N}.xml` — pre-rendered `dsp:drawing`, only when `options.drawing` was set. */
+  drawingXml?: string;
 }
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
@@ -430,7 +434,12 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
  * Word-authored data file uses to tell the layout which transition point
  * belongs to which edge.
  */
-function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: string): string {
+function buildChainDataXml(
+  flowchart: Flowchart,
+  nodes: FlowNode[],
+  layoutUrn: string,
+  withDrawing: boolean,
+): { xml: string; drawingXml?: string } {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
   const incomingLabel = incomingLabelByNodeId(flowchart);
@@ -525,7 +534,7 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     })
     .join('');
 
-  return (
+  const xml = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
     `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet ` +
@@ -535,8 +544,25 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     contentPts +
     presPts +
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns}${presOfCxns}${presParOfCxns}</dgm:cxnLst>` +
-    '<dgm:bg/><dgm:whole/></dgm:dataModel>'
+    `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`
   );
+  if (!withDrawing) return { xml };
+  const drawingXml = buildDiagramDrawingXml(
+    chainShapes(
+      flowchart.direction,
+      nodes.map((node, i) => {
+        const label = incomingLabel.get(node.id);
+        const fill = validateHexColor(node.fill, '');
+        return {
+          id: pMainIds.get(nodeIds[i] as string) as string,
+          text: label ? `${label} : ${node.label}` : node.label,
+          ...(fill ? { fill } : {}),
+        };
+      }),
+      pSibTransIds,
+    ),
+  );
+  return { xml, drawingXml };
 }
 
 /** Maps `flowchart.direction` to the matching layout XML/URN pair. */
@@ -563,13 +589,15 @@ const CHAIN_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: str
  * the Mermaid source's own direction (see
  * `docs/markdown-mermaid-compliance-table.md`).
  */
-export function generateChain(flowchart: Flowchart): SmartArtChainOutput {
+export function generateChain(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtChainOutput {
   const nodes = orderedChainNodes(flowchart);
   const { layoutXml, layoutUrn } = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
+  const data = buildChainDataXml(flowchart, nodes, layoutUrn, options.drawing === true);
   return {
-    dataXml: buildChainDataXml(flowchart, nodes, layoutUrn),
+    dataXml: data.xml,
     layoutXml,
     colorsXml: CHAIN_COLORS_XML,
     styleXml: CHAIN_STYLE_XML,
+    ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

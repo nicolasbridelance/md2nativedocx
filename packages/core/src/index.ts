@@ -205,6 +205,7 @@ export type { SmartArtCycleOutput } from './smartart/cycle.js';
 // (spec §7 step 5). Pure — no filesystem/ZIP knowledge, see dispatch.ts.
 export { generateSmartArt } from './smartart/dispatch.js';
 export type { SmartArtGenerated } from './smartart/dispatch.js';
+export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 
 // Build the <w:p> fragment that embeds a SmartArt diagram inline, given 4
 // relationship ids (real or placeholder — see embed.ts's doc comment for why

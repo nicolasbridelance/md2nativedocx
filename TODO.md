@@ -1062,7 +1062,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       en Phase 6/7. Livrable d'abord : l'ADR (exception à la règle 7 déjà créée par SmartArt) puis le
       spike palier 1 (pie, valeurs en cache, sans classeur) validé par `test:oxml-validate` + LibreOffice,
       puis le classeur, puis vérification dans un vrai Word (le mainteneur ouvre/clique Edit Data).
-- [ ] **SmartArt « pixel perfect »** — à implémenter, sauf infaisabilité démontrée. État : `chain`/`tree`
+- ⏳ **SmartArt « pixel perfect »** — **implémenté 2026-10-05, Word réel en attente** : `dsp:drawing` pré-calculé (cinquième partie que Word écrit toujours ; Word et LibreOffice l'affichent comme rendu en cache → même géométrie des deux côtés), opt-in `MD2NATIVEDOCX_SMARTART_DRAWING=1` (avec `MD2NATIVEDOCX_ENABLE_SMARTART=1`) ; `cycle` restructuré (CHECKLIST Rounds 6-7, fichiers `smartart-v3.docx` / `smartart-v4-drawing.docx`). Historique et contraintes : État : `chain`/`tree`
       validés dans Word, `cycle` rend des formes vides dans Word (`smartart-cycle-recheck.docx`), ADR 0006
       « en attente de confirmation Word réelle finale ». Contrainte : le rendu final est celui du moteur de
       mise en page de Word appliqué à notre `layoutDef` ; notre `dsp:drawing` de repli doit coïncider avec

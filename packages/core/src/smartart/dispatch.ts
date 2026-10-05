@@ -20,6 +20,7 @@ import { classifyTopology, type SmartArtLayout } from './classify.js';
 import { generateChain } from './chain.js';
 import { generateTree } from './tree.js';
 import { generateCycle } from './cycle.js';
+import type { SmartArtGenerateOptions } from './generate-options.js';
 
 /** The four OOXML diagram parts for whichever topology `flowchart` matched. */
 export interface SmartArtGenerated {
@@ -29,6 +30,8 @@ export interface SmartArtGenerated {
   layoutXml: string;
   colorsXml: string;
   styleXml: string;
+  /** Pre-rendered `dsp:drawing` part; present only when `options.drawing` was set. */
+  drawingXml?: string;
 }
 
 /**
@@ -41,16 +44,16 @@ export interface SmartArtGenerated {
  * frequent shape) and callers should silently fall back to the existing
  * `wpg:wgp` translator, not treat it as an error.
  */
-export function generateSmartArt(flowchart: Flowchart): SmartArtGenerated | null {
+export function generateSmartArt(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtGenerated | null {
   const classification = classifyTopology(flowchart);
   if (!classification.eligible) return null;
 
   switch (classification.layout) {
     case 'chain':
-      return { layout: 'chain', ...generateChain(flowchart) };
+      return { layout: 'chain', ...generateChain(flowchart, options) };
     case 'tree':
-      return { layout: 'tree', ...generateTree(flowchart) };
+      return { layout: 'tree', ...generateTree(flowchart, options) };
     case 'cycle':
-      return { layout: 'cycle', ...generateCycle(flowchart) };
+      return { layout: 'cycle', ...generateCycle(flowchart, options) };
   }
 }

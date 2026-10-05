@@ -22,6 +22,8 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, cycleShapes } from './drawing.js';
+import type { SmartArtGenerateOptions } from './generate-options.js';
 
 /** The four OOXML diagram parts a `cycle` SmartArt diagram needs. */
 export interface SmartArtCycleOutput {
@@ -33,6 +35,8 @@ export interface SmartArtCycleOutput {
   colorsXml: string;
   /** `word/diagrams/quickStyle{N}.xml` — `dgm:styleDef`, constant across diagrams. */
   styleXml: string;
+  /** `word/diagrams/drawing{N}.xml` — pre-rendered `dsp:drawing`, only when `options.drawing` was set. */
+  drawingXml?: string;
 }
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
@@ -48,10 +52,14 @@ export const CYCLE_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/cycle1';
  * children fit around the circle); `Main` derives its own height from its width, exactly as `chain`'s
  * `Main` does.
  *
- * This replaces an earlier three-level version (`root` → `composite` → `Main`) whose `composite`
- * wrapper had no `w`/`h`/`l`/`t` constraints for its child: LibreOffice computed a size anyway and drew
- * four boxes, but real Word drew nothing (2026-09-06 round 2: container and data pane present, no shape),
- * the usual signature of a zero-sized child. No `sibTrans` spacer nodes — `cycle` positions its children
+ * This replaces an earlier three-level version (`root` → `composite` → `Main`) that real Word drew as an
+ * empty frame (2026-09-06 round 2: container and data pane present, no shape) while LibreOffice drew four
+ * boxes. The cause is **suspected, not proven**: that version sized its children with a `diam` constraint
+ * and gave the `composite` wrapper no `w`/`h` of its own, whereas `chain.ts` sizes `Main` with plain
+ * `w`/`h` constraints from the root. (`tree.ts` also has a constraint-free `composite` and renders in Word,
+ * so the wrapper alone is not the explanation.) Real-Word confirmation: CHECKLIST Round 6. With the
+ * pre-rendered `dsp:drawing` (`drawing.ts`) Word shows the cached shapes either way until the diagram is
+ * edited. No `sibTrans` spacer nodes — `cycle` positions its children
  * itself, it doesn't need `lin`'s manual inter-item spacer.
  */
 export const CYCLE_LAYOUT_XML =
@@ -177,7 +185,11 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
  * (spec §5.2 convention; content-point `spPr` solidFill) — see that
  * module's doc comment for the full rationale and verification history.
  */
-function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
+function buildCycleDataXml(
+  flowchart: Flowchart,
+  nodes: FlowNode[],
+  withDrawing: boolean,
+): { xml: string; drawingXml?: string } {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
   const incomingLabel = incomingLabelByNodeId(flowchart);
@@ -244,7 +256,7 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
     )
     .join('');
 
-  return (
+  const xml = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
     `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet ` +
@@ -254,8 +266,23 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
     contentPts +
     presPts +
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns}${presOfCxns}${presParOfCxns}</dgm:cxnLst>` +
-    '<dgm:bg/><dgm:whole/></dgm:dataModel>'
+    `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`
   );
+  if (!withDrawing) return { xml };
+  const drawingXml = buildDiagramDrawingXml(
+    cycleShapes(
+      nodes.map((node, i) => {
+        const label = incomingLabel.get(node.id);
+        const fill = validateHexColor(node.fill, '');
+        return {
+          id: pMainIds.get(nodeIds[i] as string) as string,
+          text: label ? `${label} : ${node.label}` : node.label,
+          ...(fill ? { fill } : {}),
+        };
+      }),
+    ),
+  );
+  return { xml, drawingXml };
 }
 
 /**
@@ -271,12 +298,14 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
  * circle has no "top-to-bottom" or "left-to-right" orientation to mirror
  * Mermaid's `TD`/`LR`, so a single fixed layout covers both.
  */
-export function generateCycle(flowchart: Flowchart): SmartArtCycleOutput {
+export function generateCycle(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtCycleOutput {
   const nodes = orderedCycleNodes(flowchart);
+  const data = buildCycleDataXml(flowchart, nodes, options.drawing === true);
   return {
-    dataXml: buildCycleDataXml(flowchart, nodes),
+    dataXml: data.xml,
     layoutXml: CYCLE_LAYOUT_XML,
     colorsXml: CYCLE_COLORS_XML,
     styleXml: CYCLE_STYLE_XML,
+    ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

@@ -169,13 +169,15 @@ function translateOptionsFromEnv() {
 function trySmartArt(ast, smartArtDir) {
   if (!smartArtDir) return null;
   try {
-    const generated = generateSmartArt(ast);
+    // The pre-rendered dsp:drawing (fifth part) is opt-in until a real Word confirms it.
+    const generated = generateSmartArt(ast, { drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING === '1' });
     if (!generated) return null;
 
     const id = randomUUID();
     const dir = join(smartArtDir, id);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'data.xml'), generated.dataXml, 'utf8');
+    if (generated.drawingXml !== undefined) writeFileSync(join(dir, 'drawing.xml'), generated.drawingXml, 'utf8');
+    writeFileSync(join(dir, 'data.xml'), generated.dataXml.split('SMARTART_DRAWING_REL').join(`SMARTART_PLACEHOLDER:${id}:dr`), 'utf8');
     writeFileSync(join(dir, 'layout.xml'), generated.layoutXml, 'utf8');
     writeFileSync(join(dir, 'colors.xml'), generated.colorsXml, 'utf8');
     writeFileSync(join(dir, 'quickStyle.xml'), generated.styleXml, 'utf8');

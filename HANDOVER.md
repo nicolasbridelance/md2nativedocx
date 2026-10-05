@@ -54,17 +54,23 @@ no-admin Pandoc incident is **resolved** (its field report is archived in
 
 *On hold:* Word add-in (Phase 4) — the 3 spikes need a real Word desktop; waiting on the maintainer.
 
-*Owned by the agent (maintainer: "dans ta banette"):*
-1. **Native `c:chart` + embedded workbook** for pie → xychart → radar (editable data in Word). Plan
-   in `TODO.md` Phase 6/7: ADR first (rule-7 exception, SmartArt set the precedent), then spike step 1
-   (pie, cached values, no workbook; validate with `test:oxml-validate` + LibreOffice), then the
-   workbook, then a real-Word check by the maintainer (Edit Data), then xychart/radar behind a
-   `shapes`/`native` switch (`shapes` stays default until Word confirms).
-2. **SmartArt "pixel perfect"** — implement unless proven infeasible. State: `chain`/`tree` validated
-   in Word, `cycle` renders empty shapes in Word, ADR 0006 awaits a final real-Word confirmation. Word
-   re-lays out the diagram from our `layoutDef`, so our `dsp:drawing` fallback must match that layout;
-   this needs a loop of real-Word tests with the maintainer.
-3. Put the manual generator into `scripts/` (currently outside the repo).
+*Owned by the agent (maintainer: "dans ta banette") — both now implemented, **awaiting real Word**:*
+1. **Native `c:chart` + embedded workbook** (`pie`, `xychart`, `radar`; ADR 0011). `pie` is **confirmed in
+   real Word** (Edit Data works). `xychart`/`radar` are schema-valid and render in LibreOffice; check them
+   with `native-chart-xychart-radar.docx` (CHECKLIST Round 5). Opt-in: `MD2NATIVEDOCX_NATIVE_CHARTS=1` /
+   VS Code setting `md2nativedocx.nativeCharts.enabled`. Degradations are documented in the ADR (a
+   horizontal xychart with a line series stays shapes, with a warning). Remaining: decide the default.
+2. **SmartArt "pixel perfect"** — two changes, both opt-in and both awaiting real Word:
+   - `cycle` restructured to chain's two-level shape (`smartart-v3.docx`, Round 6). The cause of the empty
+     frame is *suspected, not proven* (tree has a constraint-free `composite` and works in Word).
+   - **Pre-rendered `dsp:drawing`** (`MD2NATIVEDOCX_SMARTART_DRAWING=1` with `MD2NATIVEDOCX_ENABLE_SMARTART=1`,
+     `smartart-v4-drawing.docx`, Round 7): the fifth diagram part Word always writes. Word and LibreOffice show
+     it as the cached rendering, so both display the same geometry (chain no longer stretched tall in
+     LibreOffice); they re-run the layout only on edit. Geometry is in `packages/core/src/smartart/drawing.ts`
+     and mirrors the layoutDef constraints; after an edit Word may re-lay out slightly differently — Round 7
+     asks the maintainer to note that. If Word accepts it, make it the default with SmartArt.
+3. Put the manual generator into `scripts/` (currently outside the repo); document native charts and the
+   SmartArt switches in the manual.
 
 *Done on the CI front:* `npm audit` is green again, without weakening the production gate —
 `braces` (GHSA-vfj7-8cjw-p6xm) has no patched version at all, so updates can't fix it. `ci.yml` now
