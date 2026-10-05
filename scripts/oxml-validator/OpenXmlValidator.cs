@@ -57,10 +57,13 @@ FileFormatVersions version = versionArg switch
 List<ErrorRecord> errors;
 try
 {
-    // .pptx decks (packages/pptx) and .docx share this tool; pick the package type by extension.
+    // .pptx decks (packages/pptx), .xlsx chart workbooks (cli/chartParts) and .docx share this tool;
+    // pick the package type by extension.
     using OpenXmlPackage doc = path.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase)
         ? PresentationDocument.Open(path, false)
-        : WordprocessingDocument.Open(path, false);
+        : path.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+            ? SpreadsheetDocument.Open(path, false)
+            : WordprocessingDocument.Open(path, false);
     var validator = new OpenXmlValidator(version);
     // Materialize into a plain record *while the package is still open* --
     // ValidationErrorInfo.Part/.Path are lazy-ish wrappers over the

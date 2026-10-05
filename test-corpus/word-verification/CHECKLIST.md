@@ -166,6 +166,28 @@ gap (`postprocess.mjs`'s own doc comment) — expected to stay unforced/whatever
 with them, not a new bug if they look different from the rest. For each row, just note color vs.
 monochrome vs. missing/tofu. No checklist to fill in — freeform feedback is enough.
 
+## Round 4 — 2026-10-05: native Word charts (ADR 0011, `MD2NATIVEDOCX_NATIVE_CHARTS=1`, opt-in)
+
+Three files, same Markdown (`native-chart-pie.md`, three `pie` diagrams). Open them in this order — the
+schema validator reports 0 errors in the chart parts, but only a real Word can confirm the rest.
+
+### `native-chart-pie-no-workbook.docx` (palier 1: cached values, no embedded workbook)
+- [ ] Opens without a repair prompt; three pie **charts** are displayed.
+- [ ] Clicking one selects a *chart* (Chart Design / Format tabs appear), not a group of shapes.
+- [ ] Colours/title/legend/data labels can be changed from Chart Design. (Edit Data is expected to be
+      unavailable here — that is what the next file adds.)
+
+### `native-chart-pie.docx` (palier 2: embedded workbook)
+- [ ] Opens without a repair prompt.
+- [ ] Chart Design → **Edit Data** opens Excel on a two-column sheet (Category, Value); changing a value
+      and closing updates the pie.
+- [ ] Chart 3 (special characters `& < " «»`, accents) shows its title and labels intact, in Word *and*
+      in the sheet.
+- [ ] No "linked file not available" / "this workbook is corrupt" message at any point.
+
+### `native-chart-pie-shapes.docx` (reference: the default, shape-built pie)
+- [ ] Unchanged look (for comparing the two approaches).
+
 ## Recording the result
 
 Once done, either:

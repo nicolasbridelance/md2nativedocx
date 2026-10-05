@@ -29,6 +29,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import AdmZip from 'adm-zip';
 import { writeFileSync, readFileSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
@@ -103,11 +104,13 @@ function findDotnet() {
   }
 }
 
-function buildDocx(workDir, name, mermaid, { smartArt }) {
+function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false }) {
   const mdPath = join(workDir, `${name}.md`);
   writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${mermaid}\`\`\`\n`);
   const docxPath = join(workDir, `${name}.docx`);
-  const env = smartArt ? { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '1' } : process.env;
+  const env = { ...process.env };
+  if (smartArt) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
+  if (nativeCharts) env.MD2NATIVEDOCX_NATIVE_CHARTS = '1';
   execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: 'pipe', env });
   return docxPath;
 }
@@ -138,7 +141,8 @@ function validate(docxPath) {
   // entirely inside a `wpc:wpc` element and would have been silently
   // bucketed as "known Pandoc noise" by a `/word/diagrams/`-only filter —
   // exactly the class of regression this widened check exists to catch.
-  const isOwnDiagramOutput = (e) => e.Part?.startsWith('/word/diagrams/') || e.Path?.includes('wpc:wpc');
+  const isOwnDiagramOutput = (e) =>
+    e.Part?.startsWith('/word/diagrams/') || e.Part?.startsWith('/word/charts/') || e.Path?.includes('wpc:wpc');
   const diagramErrors = report.errors.filter(isOwnDiagramOutput);
   const otherErrors = report.errors.filter((e) => !isOwnDiagramOutput(e));
   return { diagramErrors, otherErrors };
@@ -185,6 +189,37 @@ function main() {
         console.error(`✖ oxml-plain-${name}: ${diagramErrors.length} schema error(s) under word/diagrams/`);
       } else {
         console.log(`✔ oxml-plain-${name}: 0 schema errors under word/diagrams/`);
+      }
+    }
+
+    // Native pie chart (ADR 0011): the chart part is this project's output, and so is the embedded
+    // workbook — validated as its own package, where any schema error fails the run.
+    {
+      const docxPath = buildDocx(workDir, 'oxml-native-pie', 'pie showData\n  title Pets\n  "Dogs" : 386\n  "Cats" : 85.5\n', {
+        smartArt: false,
+        nativeCharts: true,
+      });
+      const zip = new AdmZip(docxPath);
+      const workbook = zip.getEntries().find((e) => /^word\/embeddings\/.*\.xlsx$/.test(e.entryName));
+      const chartPart = zip.getEntry('word/charts/chart1.xml');
+      const { diagramErrors, otherErrors } = validate(docxPath);
+      knownOtherErrorTotal += otherErrors.length;
+      let workbookErrors = [];
+      if (workbook) {
+        const xlsxPath = join(workDir, 'oxml-native-pie-workbook.xlsx');
+        writeFileSync(xlsxPath, workbook.getData());
+        const result = validate(xlsxPath);
+        workbookErrors = [...result.diagramErrors, ...result.otherErrors];
+      }
+      if (!chartPart || !workbook || diagramErrors.length > 0 || workbookErrors.length > 0) {
+        failures++;
+        console.error(
+          `✖ oxml-native-pie: chart part ${chartPart ? 'present' : 'MISSING'}, workbook ${workbook ? 'present' : 'MISSING'}, ` +
+            `${diagramErrors.length} chart/diagram error(s), ${workbookErrors.length} workbook error(s)`,
+        );
+        for (const e of [...diagramErrors, ...workbookErrors].slice(0, 20)) console.error(`    ${e.Path}: ${e.Description}`);
+      } else {
+        console.log('✔ oxml-native-pie: chart part + embedded workbook, 0 schema errors');
       }
     }
 

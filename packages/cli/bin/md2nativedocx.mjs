@@ -23,6 +23,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
+import { injectChartParts } from '../src/chartParts.mjs';
 import { CliError, resolveSafePath } from '../src/cliSupport.mjs';
 import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from '../src/referenceDocBuilder.mjs';
 
@@ -330,9 +331,11 @@ async function main() {
   // keeps this code path identical whether or not any block turns out
   // eligible.
   const smartArtDir = smartArtEnabled ? mktempSmartArtDir() : null;
-  const pandocEnv = smartArtDir
-    ? { ...process.env, MD2NATIVEDOCX_SMARTART_DIR: smartArtDir }
-    : { ...process.env };
+  // Native Word charts (ADR 0011) are opt-in and off by default until a real Word confirms them.
+  const chartDir = process.env.MD2NATIVEDOCX_NATIVE_CHARTS === '1' ? mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-')) : null;
+  const pandocEnv = { ...process.env };
+  if (smartArtDir) pandocEnv.MD2NATIVEDOCX_SMARTART_DIR = smartArtDir;
+  if (chartDir) pandocEnv.MD2NATIVEDOCX_CHART_DIR = chartDir;
   // md2nativedocx.lua's core_command() needs this on Windows (no shebang/
   // file-association handling there, so it can't invoke a bare .mjs file the
   // way Unix does) — process.execPath is *this* script's own interpreter,
@@ -377,6 +380,7 @@ async function main() {
         // dispatched to it (no-op if none did, and skipped entirely when
         // SmartArt is disabled — nothing could have been dispatched).
         if (smartArtDir) injectSmartArtParts(output, smartArtDir);
+        if (chartDir) injectChartParts(output, chartDir);
       } catch (postErr) {
         process.stderr.write(`md2nativedocx: post-processing failed: ${postErr instanceof Error ? postErr.message : String(postErr)}\n`);
         process.exit(1);
@@ -400,6 +404,7 @@ async function main() {
       process.stdout.write(`Wrote ${basename(output)}\n`);
     } finally {
       if (smartArtDir) rmSync(smartArtDir, { recursive: true, force: true });
+      if (chartDir) rmSync(chartDir, { recursive: true, force: true });
       if (generatedReferenceDoc) rmSync(generatedReferenceDoc.dir, { recursive: true, force: true });
     }
   });

@@ -104,6 +104,7 @@ import {
   translateCynefinToOoxml,
   parsePieChart,
   translatePieToOoxml,
+  translatePieToChart,
   parseTimeline,
   translateTimelineToOoxml,
   parseKanban,
@@ -186,6 +187,31 @@ function trySmartArt(ast, smartArtDir) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     process.stderr.write(`md2nativedocx: SmartArt path failed, falling back to shapes: ${message}\n`);
+    return null;
+  }
+}
+
+/**
+ * Opt-in native Word chart for `pie` (ADR 0011). Same hand-off as SmartArt: the chart part and the
+ * workbook data are written to `<MD2NATIVEDOCX_CHART_DIR>/<random id>/` and the returned `<w:p>`
+ * carries a `CHART_PLACEHOLDER:<id>` relationship id that the CLI's post-processing replaces. Never
+ * throws: any failure falls back to the shape-built pie.
+ */
+function tryNativePieChart(ast, chartDir, options) {
+  if (!chartDir || ast.slices.length === 0) return null;
+  try {
+    const id = randomUUID();
+    const embedWorkbook = process.env.MD2NATIVEDOCX_CHART_WORKBOOK !== '0';
+    const chart = translatePieToChart(ast, id, { ...options, embedWorkbook });
+    const dir = join(chartDir, id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'chart.xml'), chart.chartXml, 'utf8');
+    writeFileSync(join(dir, 'data.json'), JSON.stringify(chart.workbook), 'utf8');
+    writeFileSync(join(dir, 'meta.json'), JSON.stringify({ hasWorkbook: chart.hasWorkbook }), 'utf8');
+    return chart.paragraphXml;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`md2nativedocx: native chart failed, falling back to shapes: ${message}\n`);
     return null;
   }
 }
@@ -302,7 +328,8 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translatePieToOoxml(ast, translateOptionsFromEnv()));
+    const nativeChart = tryNativePieChart(ast, process.env.MD2NATIVEDOCX_CHART_DIR, translateOptionsFromEnv());
+    process.stdout.write(nativeChart ?? translatePieToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'timeline') {
     // Fifteenth non-flowchart diagram type shipped, fourth of Family D.
     const { ast, warnings } = parseTimeline(input);
