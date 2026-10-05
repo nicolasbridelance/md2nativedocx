@@ -957,9 +957,13 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       (agrandie pour remplir la diapositive, ×2,5 max). Vérifié : 22 tests pptx + 3 tests CLI,
       `test:oxml-validate` (un deck des 62 fixtures, 0 erreur de schéma), rendu LibreOffice Impress des
       62 diapositives relu à l'œil + 6 baselines `test-corpus/visual/baseline-pptx/`, clean-room
-      `verify:npm-packages`. **Reste ouvert (mainteneur)** : ouvrir un deck dans PowerPoint et importer
-      dans Google Slides (formes sélectionnables, pas d'invite de réparation, connecteurs magnétiques —
-      ADR 0003 points 1-4) ; l'extension VS Code (`bundle-cli.mjs`) ne vendorise pas encore
+      `verify:npm-packages`. **Mise à jour 2026-10-05** : `all-types-deck.pptx` (62 diapositives) s'ouvre
+      sans invite dans un vrai PowerPoint (mainteneur) après deux correctifs trouvés par essais réels
+      — parties manquantes (`presProps`/`viewProps`/`tableStyles`/`txStyles`, `161dcd1`) et arêtes
+      polyligne émises en `p:cxnSp` + `custGeom` (`afa3943`, trouvé par dichotomie : PowerPoint exige
+      une géométrie prédéfinie sur un connecteur). Option `--show-source` ajoutée (`25b67ed`).
+      **Reste ouvert (mainteneur)** : importer un deck dans Google Slides, et vérifier le comportement
+      des liens droits (connecteurs) vs polylignes (formes libres, sans accroche magnétique) ; l'extension VS Code (`bundle-cli.mjs`) ne vendorise pas encore
       `@md2nativedocx/pptx` (le `.pptx` n'y est pas exposé) ; `ci.yml` : les jobs Windows/macOS listent
       leurs workspaces à la main et ne lancent pas les tests pptx (changement `ci.yml` à relire par un
       humain, non fait).
@@ -1027,6 +1031,29 @@ et l'add-in Word (canal de distribution entièrement nouveau).
         leçon que SmartArt (valider par schéma avant de deviner). Perte assumée : le rendu Word d'un
         graphique n'est pas le rendu Mermaid 1:1.
       - Escalade requise : décision d'architecture + changement de contrat du traducteur.
+
+---
+
+## Session 2026-10-05 — vérifications réelles, manuel utilisateur, pptx durci
+
+- ✅ Tous les types livrés (29/29) ; `docs/manual/manuel-utilisateur.{md,docx}` : manuel de 38 pages
+  (couverture, sommaire champ Word pré-rempli, introduction, réglages, Markdown standard, une page
+  A4 par type avec source | rendu côte à côte). Généré par un script resté hors du dépôt (voir
+  HANDOVER.md) — le `.md` est désormais la source à éditer.
+- ✅ `packages/core` : tous les traducteurs honorent `maxDrawingCx/Cy` (`CanvasOptions`, `23a441b`) —
+  avant, seuls les flowcharts respectaient format de page/marges/paysage ; le CLI laisse une valeur
+  `MD2NATIVEDOCX_MAX_DRAWING_CX/CY` explicite l'emporter.
+- ✅ Bug de schéma Word corrigé : `w:b`/`w:i` après `w:color`/`w:sz` dans les runs de libellés
+  (`6d1f8a7`).
+- [ ] **CI rouge : `npm audit`** (19 vulnérabilités, 16 hautes, dev-only : `braces` via
+      `micromatch`/`fast-glob` dans la chaîne typescript-eslint de `word-addin`, `mocha` via
+      `@vscode/test-cli`). Pas causé par ce travail (aucun `package.json` modifié). Décision
+      mainteneur : mise à jour majeure de ces outils ou exceptions documentées (règle 6).
+- [ ] Ranger le générateur du manuel dans `scripts/` (aujourd'hui hors dépôt).
+- [ ] Vérifier le manuel dans un vrai Word (couverture, champ de sommaire « dirty », matrice
+      d'équation — erreurs de schéma Pandoc `m:mcPr`).
+- [ ] Réponse publique : mermaid-js/mermaid#8060 (graphiques « double-cliquables ») répondue par le
+      mainteneur (formes natives vs objet graphique) — piste `c:chart` consignée en Phase 6/7.
 
 ---
 
