@@ -58,7 +58,9 @@ export interface DrawingShape {
   cx: number;
   cy: number;
   /** Preset geometry: `roundRect` for nodes, an arrow for chain transitions. */
-  prst: 'roundRect' | 'rightArrow' | 'leftArrow' | 'downArrow' | 'upArrow';
+  prst: 'roundRect' | 'rightArrow' | 'leftArrow' | 'downArrow' | 'upArrow' | 'connector';
+  /** `connector` only: the elbow line's corner points, in EMU relative to the shape's own top-left. */
+  path?: Array<[number, number]>;
   /** Node text (absent for arrows). */
   text?: string;
   /** Font size in hundredths of a point. */
@@ -106,16 +108,19 @@ function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
 }
 
 function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
+  const isConn = shape.prst === 'connector';
   const isArrow = shape.prst !== 'roundRect';
   const fill = validateHexColor(shape.fill, '');
   const lineWidth = style === 'simple' ? 12700 : style === 'colorful' ? 19050 : 25400;
-  const line = isArrow
+  const line = isConn
+    ? `<a:ln w="19050" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="${shape.accent ?? 'accent1'}"><a:shade val="60000"/></a:schemeClr></a:solidFill><a:prstDash val="solid"/></a:ln>`
+    : isArrow
     ? '<a:ln><a:noFill/></a:ln>'
     : `<a:ln w="${lineWidth}" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
   const effects = !isArrow && isIntense(style) ? SHADOW : '<a:effectLst/>';
   const colour = textColor(fill || undefined);
-  const lnIdx = isArrow ? 0 : style === 'simple' ? 0 : 2;
-  const fillIdx = !isArrow && isIntense(style) ? 3 : 1;
+  const lnIdx = isConn ? 2 : isArrow ? 0 : style === 'simple' ? 0 : 2;
+  const fillIdx = isConn ? 0 : !isArrow && isIntense(style) ? 3 : 1;
   const effectIdx = !isArrow && isIntense(style) ? 2 : 0;
   const styleXml =
     `<dsp:style><a:lnRef idx="${lnIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="${fillIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>` +
@@ -130,10 +135,15 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
       '<a:spcAft><a:spcPct val="35000"/></a:spcAft><a:buNone/></a:pPr>' +
       `<a:r><a:rPr lang="fr-FR" sz="${sz}" kern="1200"/><a:t>${escapeXml(shape.text ?? '')}</a:t></a:r></a:p></dsp:txBody>`;
   const rect = `<a:off x="${shape.x}" y="${shape.y}"/><a:ext cx="${shape.cx}" cy="${shape.cy}"/>`;
+  const geometry = isConn
+    ? `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="0" b="0"/><a:pathLst><a:path>${(shape.path ?? [])
+        .map(([px, py], i) => `<a:${i === 0 ? 'moveTo' : 'lnTo'}><a:pt x="${Math.round(px)}" y="${Math.round(py)}"/></a:${i === 0 ? 'moveTo' : 'lnTo'}>`)
+        .join('')}</a:path></a:pathLst></a:custGeom>`
+    : `<a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>`;
   const rot = shape.rotation ? ` rot="${Math.round(shape.rotation * 60000)}"` : '';
   return (
     `<dsp:sp modelId="${escapeXml(shape.modelId)}"><dsp:nvSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvSpPr/></dsp:nvSpPr>` +
-    `<dsp:spPr><a:xfrm${rot}>${rect}</a:xfrm><a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>${fillXml(shape, style)}${line}${effects}</dsp:spPr>` +
+    `<dsp:spPr><a:xfrm${rot}>${rect}</a:xfrm>${geometry}${isConn ? '<a:noFill/>' : fillXml(shape, style)}${line}${effects}</dsp:spPr>` +
     `${styleXml}${textBody}<dsp:txXfrm>${rect}</dsp:txXfrm></dsp:sp>`
   );
 }
@@ -170,6 +180,8 @@ interface Labelled {
   id: string;
   text: string;
   fill?: string;
+  /** Presentation point id of the connector line leading into this node (tree children only). */
+  connId?: string;
 }
 
 /**
@@ -293,6 +305,35 @@ export function treeShapes(
       accent: accentOf(style, 'node2', i),
       ...(child.fill ? { fill: child.fill } : {}),
     });
+    if (child.connId !== undefined) {
+      // Elbow from the middle of the root's facing side to the middle of the child's facing side, bending at
+      // the midpoint of the gap between the two (the shape Word's own tree connectors have).
+      const rootEdge = { TD: rootRect.y + rootRect.cy, BT: rootRect.y, LR: rootRect.x + rootRect.cx, RL: rootRect.x }[direction];
+      const childEdge = { TD: areaStart, BT: areaStart + areaSize, LR: areaStart, RL: areaStart + areaSize }[direction];
+      const rootMid = (horizontalFlow ? rootRect.y + rootRect.cy / 2 : rootRect.x + rootRect.cx / 2);
+      const childMid = pos + cell / 2;
+      const mainA = Math.min(rootEdge, childEdge); // low end of the connector along the flow axis
+      const mainLen = Math.abs(childEdge - rootEdge);
+      const crossA = Math.min(rootMid, childMid);
+      const crossLen = Math.abs(childMid - rootMid);
+      // Points relative to the box, in (flow axis, cross axis) terms, then mapped to (x, y).
+      const fromRoot = rootEdge <= childEdge ? 0 : mainLen;
+      const toChild = mainLen - fromRoot;
+      const rc = rootMid - crossA;
+      const cc = childMid - crossA;
+      const mid = mainLen / 2;
+      const along2xy = (m: number, c: number): [number, number] => (horizontalFlow ? [m, c] : [c, m]);
+      shapes.push({
+        modelId: child.connId,
+        x: Math.round(horizontalFlow ? mainA : crossA),
+        y: Math.round(horizontalFlow ? crossA : mainA),
+        cx: Math.round(horizontalFlow ? mainLen : crossLen),
+        cy: Math.round(horizontalFlow ? crossLen : mainLen),
+        prst: 'connector',
+        path: [along2xy(fromRoot, rc), along2xy(mid, rc), along2xy(mid, cc), along2xy(toChild, cc)],
+        accent: accentOf(style, 'parChTrans1D2', 0),
+      });
+    }
   });
   return shapes;
 }

@@ -21,7 +21,7 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
-import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
+import { CONN_STYLE_DEF, buildColorsXml, buildStyleXml, connColorsDef, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, treeShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
@@ -149,7 +149,19 @@ export const TREE_LAYOUT_XML =
   '<dgm:constr type="h" for="ch" forName="level2composite" refType="h"/>' +
   '<dgm:constr op="equ" type="sp" refType="w" refFor="ch" refForName="level2composite" fact="0.1"/>' +
   '</dgm:constrLst>' +
-  '<dgm:forEach name="level2ForEach" axis="ch" ptType="node">' +
+  '<dgm:forEach name="level2ForEach" axis="ch">' +
+  // The elbow line from the parent box to each child box: a `conn` node on the child's `parTrans` point (the
+  // shape Word's own hierarchy layouts use). Which sides it leaves/enters depends on the direction
+  // (`withConnPts`); zero padding so it touches both boxes.
+  '<dgm:forEach name="level2ConnForEach" axis="self" ptType="parTrans" cnt="1">' +
+  '<dgm:layoutNode name="level2Conn" styleLbl="parChTrans1D2">' +
+  '<dgm:alg type="conn"><dgm:param type="dim" val="1D"/><dgm:param type="endSty" val="noArr"/><dgm:param type="connRout" val="bend"/><dgm:param type="begPts" val="bCtr"/><dgm:param type="endPts" val="tCtr"/></dgm:alg>' +
+  '<dgm:shape xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" type="conn" r:blip=""/>' +
+  '<dgm:presOf axis="self"/>' +
+  '<dgm:constrLst><dgm:constr type="w" val="1"/><dgm:constr type="h" val="1"/><dgm:constr type="begPad"/><dgm:constr type="endPad"/></dgm:constrLst>' +
+  '</dgm:layoutNode>' +
+  '</dgm:forEach>' +
+  '<dgm:forEach name="level2NodeForEach" axis="self" ptType="node">' +
   '<dgm:layoutNode name="level2composite">' +
   '<dgm:alg type="composite"/><dgm:shape/>' +
   '<dgm:layoutNode name="level2Main" styleLbl="node2">' +
@@ -165,11 +177,18 @@ export const TREE_LAYOUT_XML =
   '</dgm:layoutNode>' +
   '</dgm:layoutNode>' +
   '</dgm:forEach>' +
+  '</dgm:forEach>' +
   '</dgm:layoutNode>' +
   '</dgm:layoutNode>' +
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
   '</dgm:layoutDef>';
+
+/** Sides of the parent/child boxes the connector line leaves and enters, per direction. */
+const TREE_CONN_PTS = /<dgm:param type="begPts" val="\w+"\/><dgm:param type="endPts" val="\w+"\/>/;
+function withConnPts(layoutXml: string, beg: string, end: string): string {
+  return layoutXml.replace(TREE_CONN_PTS, `<dgm:param type="begPts" val="${beg}"/><dgm:param type="endPts" val="${end}"/>`);
+}
 
 /**
  * The horizontal (Mermaid `LR`: root-on-left, children stacked in a column)
@@ -183,7 +202,7 @@ export const TREE_LAYOUT_XML =
  * LibreOffice: root box on the left, three correctly-styled child boxes
  * stacked vertically on the right.
  */
-export const TREE_LAYOUT_XML_LR = TREE_LAYOUT_XML.replace(
+export const TREE_LAYOUT_XML_LR = withConnPts(TREE_LAYOUT_XML, 'rCtr', 'lCtr').replace(
   `uniqueId="${TREE_LAYOUT_URN}"`,
   `uniqueId="${TREE_LAYOUT_LR_URN}"`
 )
@@ -220,7 +239,7 @@ export const TREE_LAYOUT_XML_LR = TREE_LAYOUT_XML.replace(
  * left-to-right; only which strip is on top changed), same as
  * {@link TREE_LAYOUT_XML} itself.
  */
-export const TREE_LAYOUT_XML_BT = TREE_LAYOUT_XML.replace(
+export const TREE_LAYOUT_XML_BT = withConnPts(TREE_LAYOUT_XML, 'tCtr', 'bCtr').replace(
   `uniqueId="${TREE_LAYOUT_URN}"`,
   `uniqueId="${TREE_LAYOUT_BT_URN}"`
 ).replace(
@@ -250,7 +269,7 @@ export const TREE_LAYOUT_XML_BT = TREE_LAYOUT_XML.replace(
  * (not `TREE_LAYOUT_XML` directly) so it inherits the same `linDir="fromT"`
  * vertical child-stacking without repeating that substitution.
  */
-export const TREE_LAYOUT_XML_RL = TREE_LAYOUT_XML_LR.replace(
+export const TREE_LAYOUT_XML_RL = withConnPts(TREE_LAYOUT_XML_LR, 'lCtr', 'rCtr').replace(
   `uniqueId="${TREE_LAYOUT_LR_URN}"`,
   `uniqueId="${TREE_LAYOUT_RL_URN}"`
 ).replace(
@@ -298,6 +317,7 @@ export const TREE_COLORS_XML =
   '<dgm:txFillClrLst><a:schemeClr val="bg1"/></dgm:txFillClrLst>' +
   '<dgm:txEffectClrLst/>' +
   '</dgm:styleLbl>' +
+  connColorsDef('simple') +
   '</dgm:colorsDef>';
 
 /**
@@ -327,6 +347,7 @@ export const TREE_STYLE_XML =
   '<a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef>' +
   '</dgm:style>' +
   '</dgm:styleLbl>' +
+  CONN_STYLE_DEF +
   '</dgm:styleDef>';
 
 /**
@@ -419,6 +440,12 @@ function buildTreeDataXml(
   const pLevel1ChildrenId = newModelId();
   const pLevel2CompositeIds = new Map(childIds.map((id) => [id, newModelId()]));
   const pLevel2MainIds = new Map(childIds.map((id) => [id, newModelId()]));
+  // Every parOf link (doc -> root, root -> each child) owns a parTrans/sibTrans point pair, as in a real
+  // Word-authored file; each child's parTrans point is what its connector line presents (`level2Conn`).
+  const parOfIds = [newModelId(), ...childIds.map(() => newModelId())];
+  const parTransIds = parOfIds.map(() => newModelId());
+  const sibTransIds = parOfIds.map(() => newModelId());
+  const pConnIds = new Map(childIds.map((id) => [id, newModelId()]));
 
   const rootPt =
     `<dgm:pt modelId="${rootId}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(root.fill)}` +
@@ -437,6 +464,14 @@ function buildTreeDataXml(
     })
     .join('');
 
+  const transPts = parOfIds
+    .map(
+      (cxnId, i) =>
+        `<dgm:pt modelId="${parTransIds[i]}" type="parTrans" cxnId="${cxnId}"><dgm:prSet/><dgm:spPr/></dgm:pt>` +
+        `<dgm:pt modelId="${sibTransIds[i]}" type="sibTrans" cxnId="${cxnId}"><dgm:prSet/><dgm:spPr/></dgm:pt>`
+    )
+    .join('');
+
   const presPts =
     `<dgm:pt modelId="${pRootId}" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
     `<dgm:pt modelId="${pLevel1Id}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
@@ -445,15 +480,19 @@ function buildTreeDataXml(
     childIds
       .map(
         (id, i) =>
+          `<dgm:pt modelId="${pConnIds.get(id)}" type="pres"><dgm:prSet presAssocID="${parTransIds[i + 1]}" presName="level2Conn" presStyleLbl="parChTrans1D2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/><dgm:spPr/></dgm:pt>` +
           `<dgm:pt modelId="${pLevel2CompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
           `<dgm:pt modelId="${pLevel2MainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2Main" presStyleLbl="node2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('');
 
   const parOfCxns =
-    `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${rootId}" srcOrd="0" destOrd="0"/>` +
+    `<dgm:cxn modelId="${parOfIds[0]}" type="parOf" srcId="${docId}" destId="${rootId}" srcOrd="0" destOrd="0" parTransId="${parTransIds[0]}" sibTransId="${sibTransIds[0]}"/>` +
     childIds
-      .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${rootId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
+      .map(
+        (id, i) =>
+          `<dgm:cxn modelId="${parOfIds[i + 1]}" type="parOf" srcId="${rootId}" destId="${id}" srcOrd="${i}" destOrd="0" parTransId="${parTransIds[i + 1]}" sibTransId="${sibTransIds[i + 1]}"/>`
+      )
       .join('');
 
   const presOfCxns =
@@ -464,6 +503,12 @@ function buildTreeDataXml(
         (id) =>
           `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pLevel2MainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
       )
+      .join('') +
+    childIds
+      .map(
+        (id, i) =>
+          `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${parTransIds[i + 1]}" destId="${pConnIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
+      )
       .join('');
 
   const presParOfCxns =
@@ -473,7 +518,8 @@ function buildTreeDataXml(
     childIds
       .map(
         (id, i) =>
-          `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel1ChildrenId}" destId="${pLevel2CompositeIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${layoutUrn}"/>` +
+          `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel1ChildrenId}" destId="${pConnIds.get(id)}" srcOrd="${2 * i}" destOrd="0" presId="${layoutUrn}"/>` +
+          `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel1ChildrenId}" destId="${pLevel2CompositeIds.get(id)}" srcOrd="${2 * i + 1}" destOrd="0" presId="${layoutUrn}"/>` +
           `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pLevel2CompositeIds.get(id)}" destId="${pLevel2MainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
       )
       .join('');
@@ -487,6 +533,7 @@ function buildTreeDataXml(
     'csTypeId="urn:md2nativedocx/smartart-colors/tree1" csCatId="accent1"/></dgm:pt>' +
     rootPt +
     childPts +
+    transPts +
     presPts +
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns}${presOfCxns}${presParOfCxns}</dgm:cxnLst>` +
     `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`
@@ -502,6 +549,7 @@ function buildTreeDataXml(
         const fill = validateHexColor(node.fill, '');
         return {
           id: pLevel2MainIds.get(childIds[i] as string) as string,
+          connId: pConnIds.get(childIds[i] as string) as string,
           text: label ? `${label} : ${node.label}` : node.label,
           ...(fill ? { fill } : {}),
         };
@@ -548,11 +596,11 @@ export function generateTree(flowchart: Flowchart, options: SmartArtGenerateOpti
     colorsXml:
       style === 'simple'
         ? TREE_COLORS_XML
-        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/tree1', ['node1','node2']),
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/tree1', ['node1', 'node2', 'parChTrans1D2']),
     styleXml:
       style === 'simple'
         ? TREE_STYLE_XML
-        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/tree1', ['node1','node2']),
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/tree1', ['node1', 'node2', 'parChTrans1D2']),
     ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

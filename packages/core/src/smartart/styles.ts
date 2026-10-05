@@ -18,7 +18,7 @@
 export type SmartArtStyle = 'simple' | 'colorful' | 'intense';
 
 /** Style labels this project's layouts use. */
-export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans';
+export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans' | 'parChTrans1D2';
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
@@ -28,6 +28,8 @@ const CHILD_ACCENT_CYCLE = ['accent3', 'accent4', 'accent5', 'accent6', 'accent2
 
 /** Theme accent the `index`-th shape of `label` is painted with. */
 export function accentOf(style: SmartArtStyle, label: StyleLabel, index: number): string {
+  // A parent-to-child connector takes the root's accent (its line is that accent, darkened).
+  if (label === 'parChTrans1D2') return accentOf(style, 'node1', 0);
   if (style === 'simple') return label === 'node2' ? 'accent2' : 'accent1';
   const cycle = label === 'node2' ? CHILD_ACCENT_CYCLE : ACCENT_CYCLE;
   return cycle[index % cycle.length] as string;
@@ -44,6 +46,25 @@ const clr = (accent: string, tintPercent?: number) =>
     ? `<a:schemeClr val="${accent}"/>`
     : `<a:schemeClr val="${accent}"><a:tint val="${tintPercent * 1000}"/></a:schemeClr>`;
 
+/** `parChTrans1D2` colours: no fill, a line in the root's accent darkened to 60% (how a real Word tree draws it). */
+export function connColorsDef(style: SmartArtStyle): string {
+  const accent = accentOf(style, 'parChTrans1D2', 0);
+  return (
+    '<dgm:styleLbl name="parChTrans1D2">' +
+    `<dgm:fillClrLst meth="repeat">${clr(accent)}</dgm:fillClrLst>` +
+    `<dgm:linClrLst meth="repeat"><a:schemeClr val="${accent}"><a:shade val="60000"/></a:schemeClr></dgm:linClrLst>` +
+    '<dgm:effectClrLst/><dgm:txLinClrLst/>' +
+    '<dgm:txFillClrLst meth="repeat"><a:schemeClr val="tx1"/></dgm:txFillClrLst><dgm:txEffectClrLst/></dgm:styleLbl>'
+  );
+}
+
+/** `parChTrans1D2` quick style: a 2nd-level theme line, no fill, no effect. */
+export const CONN_STYLE_DEF =
+  '<dgm:styleLbl name="parChTrans1D2"><dgm:style>' +
+  '<a:lnRef idx="2"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>' +
+  '<a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"/>' +
+  '</dgm:style></dgm:styleLbl>';
+
 /**
  * `dgm:colorsDef` for the non-default profiles. `uniqueId` must equal the `csTypeId` the data model
  * references. (`simple` keeps each generator's own original constant.)
@@ -51,6 +72,7 @@ const clr = (accent: string, tintPercent?: number) =>
 export function buildColorsXml(style: SmartArtStyle, uniqueId: string, labels: StyleLabel[]): string {
   const defs = labels
     .map((label) => {
+      if (label === 'parChTrans1D2') return connColorsDef(style);
       const isTrans = label === 'sibTrans';
       const accents = accentList(style, label);
       const fill = accents.map((a) => clr(a, isTrans ? 60 : undefined)).join('');
@@ -84,6 +106,7 @@ export function buildStyleXml(style: SmartArtStyle, uniqueId: string, labels: St
   const intense = style === 'intense';
   const defs = labels
     .map((label) => {
+      if (label === 'parChTrans1D2') return CONN_STYLE_DEF;
       const isTrans = label === 'sibTrans';
       const ln = isTrans ? 0 : 2;
       const fill = isTrans ? 1 : intense ? 3 : 1;

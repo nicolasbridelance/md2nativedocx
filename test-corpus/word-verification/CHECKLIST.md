@@ -306,9 +306,32 @@ Word-authored cycle (`handmade_samples/cycle-simple.docx`, structure only) write
 
 `smartart-v8-cycles-colorful.docx` and `smartart-v8-cycles-intense.docx` (3, 4 and 6 steps).
 
-- [ ] Both open with no repair prompt.
-- [ ] 3-step cycle: **3 arrows including the last-to-first**; 4-step: **4**; 6-step: **6**, all clockwise.
-- [ ] Edit a text or add a step in Word: the loop stays closed.
+- [x] Both open with no repair prompt.
+- [x] 3-step cycle: **3 arrows including the last-to-first**; 4-step: **4**; 6-step: **6**, all clockwise.
+- [x] Edit a text or add a step in Word: the loop stays closed.
+
+**Result (maintainer, real Word, 2026-10-05): all confirmed. Cycles are validated.** Decision: keep the rounded
+rectangles for cycle nodes (Word's own cycle uses discs; not adopted).
+
+## Round 12 — 2026-10-05: connector lines in trees (v9)
+
+Until now a tree showed the root box and the child boxes with **no line between them**. Word writes each
+parent-to-child line as a `conn` layout node on the child's `parTrans` point, an elbow ("bend") from the
+parent's facing side to the child's; the cached drawing carries it as a free-form path. Structure read from
+`handmade_samples/labeled-hierarchy-basique.docx` (structure only, nothing copied). The `conn` end points follow
+the direction: `TD` bottom-centre to top-centre, `LR` right to left, `BT` top to bottom, `RL` left to right.
+
+`smartart-v9-trees-colorful.docx` and `smartart-v9-trees-intense.docx` (with cached drawing),
+`smartart-v9-trees-colorful-no-drawing.docx` (layout definition only). Five trees: `TD` with 3 and 4 children,
+`LR`, `BT`, `RL`.
+
+- [ ] All three open with no repair prompt.
+- [ ] Each child is joined to its root by an elbow line, in all five trees (root above, left, below, right).
+- [ ] Do the "with drawing" and "no drawing" files look the same? (For cycles they did; if the lines are missing
+      only in `no-drawing`, the `layoutDef` connector is the thing to fix.)
+- [ ] Edit a text or add a child in Word: the lines follow and stay attached.
+- Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice shows the lines from the cached
+  drawing (it ignores `conn` when it computes the layout itself, so `no-drawing` has no lines there — expected).
 
 ## Recording the result
 
