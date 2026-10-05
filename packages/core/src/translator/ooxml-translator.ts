@@ -849,9 +849,11 @@ function renderLabelRuns(tokens: LabelToken[], color: string, sizeHalfPt: number
       if ('break' in token) {
         return ['          <w:r>', '            <w:br/>', '          </w:r>'].join('\n');
       }
-      const rPr = [`<w:color w:val="${color}"/>`, `<w:sz w:val="${sizeHalfPt}"/>`];
+      // CT_RPr is an ordered sequence (ECMA-376 §17.3.2.28): b, i, color, sz.
+      const rPr: string[] = [];
       if (token.bold) rPr.push('<w:b/>');
       if (token.italic) rPr.push('<w:i/>');
+      rPr.push(`<w:color w:val="${color}"/>`, `<w:sz w:val="${sizeHalfPt}"/>`);
       return [
         '          <w:r>',
         `            <w:rPr>${rPr.join('')}</w:rPr>`,
