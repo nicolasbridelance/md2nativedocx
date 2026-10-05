@@ -46,6 +46,8 @@ export interface DrawingShape {
   fontSize?: number;
   /** `RRGGBB` override from `classDef`/`style`; otherwise the theme's accent colour. */
   fill?: string;
+  /** Clockwise rotation in degrees (cycle arrows follow the circle). */
+  rotation?: number;
   /** Theme accent (`accent1`…`accent6`) the shape is painted with; default `accent1`. */
   accent?: string;
   /** Tint of that accent for transitions (60 = lighter), in percent. */
@@ -109,9 +111,10 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
       '<a:spcAft><a:spcPct val="35000"/></a:spcAft><a:buNone/></a:pPr>' +
       `<a:r><a:rPr lang="fr-FR" sz="${sz}" kern="1200"/><a:t>${escapeXml(shape.text ?? '')}</a:t></a:r></a:p></dsp:txBody>`;
   const rect = `<a:off x="${shape.x}" y="${shape.y}"/><a:ext cx="${shape.cx}" cy="${shape.cy}"/>`;
+  const rot = shape.rotation ? ` rot="${Math.round(shape.rotation * 60000)}"` : '';
   return (
     `<dsp:sp modelId="${escapeXml(shape.modelId)}"><dsp:nvSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvSpPr/></dsp:nvSpPr>` +
-    `<dsp:spPr><a:xfrm>${rect}</a:xfrm><a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>${fillXml(shape, style)}${line}${effects}</dsp:spPr>` +
+    `<dsp:spPr><a:xfrm${rot}>${rect}</a:xfrm><a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>${fillXml(shape, style)}${line}${effects}</dsp:spPr>` +
     `${styleXml}${textBody}<dsp:txXfrm>${rect}</dsp:txXfrm></dsp:sp>`
   );
 }
@@ -275,28 +278,55 @@ export function treeShapes(
   return shapes;
 }
 
-/** Cycle geometry: boxes 30% of the frame wide (height 0.6 of that) evenly spaced clockwise from the top. */
-export function cycleShapes(nodes: Labelled[], style: SmartArtStyle = 'simple'): DrawingShape[] {
+/**
+ * Cycle geometry: boxes evenly spaced clockwise from the top, a transition arrow between each pair (the last
+ * one closing the loop). Box width is up to 30% of the frame (the `layoutDef`'s ratio) but shrinks as needed
+ * so neighbours never touch the arrow that sits between them; height is 0.6 of the width.
+ */
+export function cycleShapes(nodes: Labelled[], transIds: string[], style: SmartArtStyle = 'simple'): DrawingShape[] {
   const { cx: FW, cy: FH } = DRAWING_FRAME;
-  const w = 0.3 * FW;
+  const n = nodes.length;
+  let w = 0.3 * FW;
+  const radiusFor = (width: number) => Math.min(FW - width, FH - 0.6 * width) / 2;
+  // Neighbouring box centres are a chord apart; leave room for the arrow between them.
+  while (w > 0.08 * FW && 1.35 * w > 2 * radiusFor(w) * Math.sin(Math.PI / n)) w *= 0.96;
   const h = 0.6 * w;
-  const radius = Math.min(FW - w, FH - h) / 2;
+  const radius = radiusFor(w);
   const font = fitFontSize(nodes.map((nd) => nd.text), w, h);
-  return nodes.map((node, i) => {
-    const angle = (2 * Math.PI * i) / nodes.length;
-    const centerX = FW / 2 + radius * Math.sin(angle);
-    const centerY = FH / 2 - radius * Math.cos(angle);
-    return {
+  const point = (angle: number, r: number) => ({ x: FW / 2 + r * Math.sin(angle), y: FH / 2 - r * Math.cos(angle) });
+  const shapes: DrawingShape[] = [];
+  nodes.forEach((node, i) => {
+    const centre = point((2 * Math.PI * i) / n, radius);
+    shapes.push({
       modelId: node.id,
-      x: Math.round(centerX - w / 2),
-      y: Math.round(centerY - h / 2),
+      x: Math.round(centre.x - w / 2),
+      y: Math.round(centre.y - h / 2),
       cx: Math.round(w),
       cy: Math.round(h),
-      prst: 'roundRect' as const,
+      prst: 'roundRect',
       text: node.text,
       fontSize: font,
       accent: accentOf(style, 'node1', i),
       ...(node.fill ? { fill: node.fill } : {}),
-    };
+    });
+    const trans = transIds[i];
+    if (trans !== undefined) {
+      const mid = (2 * Math.PI * (i + 0.5)) / n;
+      const c = point(mid, radius);
+      const len = Math.min(0.22 * w, 0.5 * 2 * radius * Math.sin(Math.PI / n));
+      const thick = 0.7 * len;
+      shapes.push({
+        modelId: trans,
+        x: Math.round(c.x - len / 2),
+        y: Math.round(c.y - thick / 2),
+        cx: Math.round(len),
+        cy: Math.round(thick),
+        prst: 'rightArrow',
+        rotation: (mid * 180) / Math.PI,
+        accent: accentOf(style, 'sibTrans', i),
+        tintPercent: 60,
+      });
+    }
   });
+  return shapes;
 }

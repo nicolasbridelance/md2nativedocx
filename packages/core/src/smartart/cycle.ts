@@ -77,6 +77,8 @@ export const CYCLE_LAYOUT_XML =
   '<dgm:constr op="equ" type="primFontSz" for="des" ptType="node" val="20"/>' +
   '<dgm:constr type="w" for="ch" forName="Main" refType="w" fact="0.3"/>' +
   '<dgm:constr op="equ" type="h" for="ch" forName="Main"/>' +
+  '<dgm:constr op="equ" type="w" for="ch" forName="sibTrans" refType="w" refFor="ch" refForName="Main" fact="0.4"/>' +
+  '<dgm:constr op="equ" type="h" for="ch" forName="sibTrans"/>' +
   '</dgm:constrLst>' +
   '<dgm:forEach name="nodesForEach" axis="ch" ptType="node">' +
   '<dgm:layoutNode name="Main" styleLbl="node1">' +
@@ -92,6 +94,24 @@ export const CYCLE_LAYOUT_XML =
   '</dgm:constrLst>' +
   '<dgm:ruleLst><dgm:rule type="primFontSz" val="5"/></dgm:ruleLst>' +
   '</dgm:layoutNode>' +
+  // One transition arrow after every node, the last one closing the loop back to the first. Same
+  // `conn` node as chain.ts (nested in the node forEach, a sibling of `Main`).
+  '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">' +
+  '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans">' +
+  '<dgm:alg type="conn">' +
+  '<dgm:param type="begPts" val="auto"/>' +
+  '<dgm:param type="endPts" val="auto"/>' +
+  '</dgm:alg>' +
+  '<dgm:shape xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" type="conn" r:blip=""/>' +
+  '<dgm:presOf axis="self"/>' +
+  '<dgm:constrLst>' +
+  '<dgm:constr type="h" refType="w" fact="0.62"/>' +
+  '<dgm:constr type="connDist"/>' +
+  '<dgm:constr type="begPad" refType="connDist" fact="0.25"/>' +
+  '<dgm:constr type="endPad" refType="connDist" fact="0.22"/>' +
+  '</dgm:constrLst>' +
+  '</dgm:layoutNode>' +
+  '</dgm:forEach>' +
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
   '</dgm:layoutDef>';
@@ -114,6 +134,11 @@ export const CYCLE_COLORS_XML =
   '<dgm:txFillClrLst><a:schemeClr val="bg1"/></dgm:txFillClrLst>' +
   '<dgm:txEffectClrLst/>' +
   '</dgm:styleLbl>' +
+  '<dgm:styleLbl name="sibTrans">' +
+  '<dgm:fillClrLst><a:schemeClr val="accent1"><a:shade val="75000"/></a:schemeClr></dgm:fillClrLst>' +
+  '<dgm:linClrLst/>' +
+  '<dgm:effectClrLst/><dgm:txLinClrLst/><dgm:txFillClrLst/><dgm:txEffectClrLst/>' +
+  '</dgm:styleLbl>' +
   '</dgm:colorsDef>';
 
 /**
@@ -131,6 +156,14 @@ export const CYCLE_STYLE_XML =
   '<a:fillRef idx="1"><a:schemeClr val="accent1"/></a:fillRef>' +
   '<a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>' +
   '<a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef>' +
+  '</dgm:style>' +
+  '</dgm:styleLbl>' +
+  '<dgm:styleLbl name="sibTrans">' +
+  '<dgm:style>' +
+  '<a:lnRef idx="0"><a:schemeClr val="accent1"/></a:lnRef>' +
+  '<a:fillRef idx="1"><a:schemeClr val="accent1"/></a:fillRef>' +
+  '<a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>' +
+  '<a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>' +
   '</dgm:style>' +
   '</dgm:styleLbl>' +
   '</dgm:styleDef>';
@@ -212,6 +245,10 @@ function buildCycleDataXml(
   const newModelId = () => String(nextModelId++);
   const pRootId = newModelId();
   const pMainIds = new Map(nodeIds.map((id) => [id, newModelId()]));
+  // One transition per node — the last one closes the loop back to the first.
+  const sibTransIds = nodeIds.map(() => newModelId());
+  const parTransIds = nodeIds.map(() => newModelId());
+  const pSibTransIds = nodeIds.map(() => newModelId());
 
   const contentPts = nodes
     .map((node, i) => {
@@ -224,7 +261,9 @@ function buildCycleDataXml(
       return (
         `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}` +
         `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`
+        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>` +
+        `<dgm:pt modelId="${parTransIds[i]}" type="parTrans"><dgm:prSet/></dgm:pt>` +
+        `<dgm:pt modelId="${sibTransIds[i]}" type="sibTrans"><dgm:prSet/></dgm:pt>`
       );
     })
     .join('');
@@ -236,10 +275,19 @@ function buildCycleDataXml(
         (id, i) =>
           `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
       )
+      .join('') +
+    sibTransIds
+      .map(
+        (id, i) =>
+          `<dgm:pt modelId="${pSibTransIds[i]}" type="pres"><dgm:prSet presAssocID="${id}" presName="sibTrans" presStyleLbl="sibTrans" presStyleIdx="${i}" presStyleCnt="${sibTransIds.length}"/><dgm:spPr/></dgm:pt>`
+      )
       .join('');
 
   const parOfCxns = nodeIds
-    .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0"/>`)
+    .map(
+      (id, i) =>
+        `<dgm:cxn modelId="${newModelId()}" type="parOf" srcId="${docId}" destId="${id}" srcOrd="${i}" destOrd="0" parTransId="${parTransIds[i]}" sibTransId="${sibTransIds[i]}"/>`
+    )
     .join('');
 
   const presOfCxns =
@@ -249,12 +297,17 @@ function buildCycleDataXml(
         (id) =>
           `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
       )
+      .join('') +
+    sibTransIds
+      .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pSibTransIds[i]}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`)
       .join('');
 
+  // Interleaved Main, transition, Main, transition, … : root's presParOf srcOrd is one sequence.
   const presParOfCxns = nodeIds
     .map(
       (id, i) =>
-        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pMainIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pMainIds.get(id)}" srcOrd="${2 * i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pSibTransIds[i]}" srcOrd="${2 * i + 1}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
     )
     .join('');
 
@@ -282,6 +335,7 @@ function buildCycleDataXml(
           ...(fill ? { fill } : {}),
         };
       }),
+      pSibTransIds,
       style,
     ),
     style,
@@ -312,11 +366,11 @@ export function generateCycle(flowchart: Flowchart, options: SmartArtGenerateOpt
     colorsXml:
       style === 'simple'
         ? CYCLE_COLORS_XML
-        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/cycle1', ['node1']),
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/cycle1', ['node1', 'sibTrans']),
     styleXml:
       style === 'simple'
         ? CYCLE_STYLE_XML
-        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/cycle1', ['node1']),
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/cycle1', ['node1', 'sibTrans']),
     ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

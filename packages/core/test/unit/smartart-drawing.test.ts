@@ -114,3 +114,35 @@ test('the cached drawing follows the profile: accents per shape, gradient and sh
   assert.match(intense?.drawingXml ?? '', /<a:gradFill/);
   assert.match(intense?.drawingXml ?? '', /<a:outerShdw/);
 });
+
+// ---- cycle transitions ----
+
+test('a cycle has one transition per node (the last closes the loop) in the data model, the layout and the drawing', () => {
+  const out = generateSmartArt(flow('flowchart TD\n A --> B\n B --> C\n C --> D\n D --> A'), { drawing: true, style: 'colorful' });
+  assert.ok(out?.drawingXml);
+  assert.equal(out.dataXml.match(/type="sibTrans"><dgm:prSet\/>/g)?.length, 4);
+  assert.equal(out.dataXml.match(/presName="sibTrans"/g)?.length, 4);
+  assert.match(out.layoutXml, /<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">/);
+  assert.equal(out.drawingXml.match(/prst="rightArrow"/g)?.length, 4);
+  // Arrows follow the circle: each is rotated, and the rotations are distinct.
+  const rotations = [...out.drawingXml.matchAll(/<a:xfrm rot="(\d+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(rotations).size, 4);
+  // Presentation tree: Main, transition, Main, transition, … in one srcOrd sequence.
+  const orders = [...out.dataXml.matchAll(/type="presParOf" srcId="\d+" destId="\d+" srcOrd="(\d+)"/g)].map((m) => Number(m[1]));
+  assert.deepEqual(orders, [0, 1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('a larger cycle shrinks its boxes so neighbours and arrows do not overlap', () => {
+  const ring = (n: number) =>
+    'flowchart TD\n' + Array.from({ length: n }, (_, i) => ` N${i}[Étape ${i}] --> N${(i + 1) % n}`).join('\n');
+  for (const n of [3, 6, 8]) {
+    const out = generateSmartArt(flow(ring(n)), { drawing: true });
+    assert.ok(out?.drawingXml, `n=${n}`);
+    const boxes = [...out.drawingXml.matchAll(/prst="roundRect"/g)].length;
+    assert.equal(boxes, n);
+  }
+  const wide = generateSmartArt(flow(ring(3)), { drawing: true });
+  const tight = generateSmartArt(flow(ring(8)), { drawing: true });
+  const width = (xml?: string) => Number(/<a:ext cx="(\d+)" cy="\d+"\/><\/a:xfrm><a:prstGeom prst="roundRect"/.exec(xml ?? '')?.[1]);
+  assert.ok(width(tight?.drawingXml) < width(wide?.drawingXml));
+});

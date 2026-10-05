@@ -261,6 +261,23 @@ Same four diagrams as before. Schema validator: 0 errors in `word/diagrams/*` fo
 - [ ] In the Design tab, **Change Colors** and **SmartArt Styles** still work on these diagrams.
 - [ ] Which profile do you want as the default?
 
+## Round 9 — 2026-10-05: SmartArt cycle transition arrows
+
+A cycle without arrows between its shapes looked unfinished. `cycle` now carries one transition per node (the
+last closes the loop), exactly like `chain`'s `conn` connectors: new points in the data model, a `sibTrans`
+layout node, and arrows in the cached drawing that follow the circle clockwise. The boxes also shrink for larger
+cycles so they never touch the arrows. Schema validator: 0 errors in `word/diagrams/*`.
+
+`smartart-v6-cycles-colorful.docx` and `smartart-v6-cycles-intense.docx` (3, 4 and 6 steps, cached drawing on).
+
+- [ ] Both open with no repair prompt (this changes the data model, so it is the thing to watch).
+- [ ] Arrows are visible between every pair of shapes, **including the one from the last back to the first**,
+      pointing clockwise.
+- [ ] Click a shape and edit its text, or add a shape from the text pane: does Word re-lay the cycle out with
+      arrows, and does it keep the loop closed?
+- [ ] If Word draws **no** arrows after an edit (or drops the last one), note which — it tells me whether the
+      layout needs `cnt` or `dir` parameters on the connector.
+
 ## Recording the result
 
 Once done, either:
