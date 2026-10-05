@@ -1,12 +1,21 @@
-# md2nativedocx
+# md2nativedocx — Mermaid to Word (.docx) with native, editable shapes
 
 [![CI](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/md2nativedocx.md2nativedocx?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](LICENSE)
 
-Convert Markdown containing **Mermaid** diagrams into a complete `.docx` with
-**native, editable OOXML vector shapes** — not flattened PNGs.
+**Convert Mermaid diagrams to Word.** `md2nativedocx` turns a Markdown file containing
+```` ```mermaid ```` blocks into a complete `.docx` (or a `.pptx` deck) where every diagram is made of
+**native, editable OOXML vector shapes** — not a flattened PNG. Open the file in Word and every box,
+arrow and label is selectable, movable and restylable. It supports all 29 Mermaid diagram types
+(flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git graph, …), runs as a
+[VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx), a CLI, or a
+Pandoc filter, and is public domain (CC0).
+
+> **Not just another Markdown-to-Word converter.** Plain Markdown → Word is what Pandoc already does well
+> (and this project uses Pandoc for it). What `md2nativedocx` adds is the part everyone else skips: the
+> *diagram* stays a diagram.
 
 > **Positioning.** Every existing tool reduces diagrams (Mermaid, Graphviz, PlantUML) to an
 > embedded PNG image. The source text is sometimes kept as a fallback, never the vector structure.
@@ -49,17 +58,19 @@ diagram. See `docs/specs/cahier_des_charges.md` (French) for the full detail.
 
 ## Supported diagram types
 
-**Flowchart** (`graph`/`flowchart`) is the primary, most complete target — see
+**All 29 Mermaid types export as native shapes:** flowchart, sequenceDiagram, classDiagram,
+stateDiagram, erDiagram, gantt, pie, mindmap, timeline, journey, gitGraph, quadrantChart, requirementDiagram,
+C4, sankey, xychart, block, packet, kanban, architecture, radar, treemap, venn, ishikawa, wardley, cynefin,
+treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-document note, never a silently wrong guess.
+(Fidelity detail is deepest for flowcharts; see below.)
+
+**Flowchart** (`graph`/`flowchart`) is the most complete, most complete target — see
 `docs/markdown-mermaid-compliance-table.md` for its full syntax coverage. A chain/tree/cycle-shaped
 flowchart exports as a native, editable Word **SmartArt** graphic instead of plain shapes when
 possible (toggle: `md2nativedocx.smartArt.enabled`); everything else still gets individually
 selectable/editable OOXML shapes with dynamic connectors.
 
-Three more diagram types export as native OOXML shapes: **`quadrantChart`**, **`venn-beta`** (2-3
-sets, true overlapping-circle geometry), and **`mindmap`** (radial layout, all 6 node shapes). Any
-other Mermaid diagram type is recognized and gets a clear in-document note rather than a silently
-wrong flowchart-shaped guess — see `docs/smartart-full-catalog-cross-mermaid.md` and
-`docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` for the roadmap covering the rest.
+Details per type: `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md`.
 
 ## Word compatibility, verified — not assumed
 
@@ -93,6 +104,25 @@ npx md2nativedocx report.md -o report.docx
 Every ```` ```mermaid ```` block in the document is converted into a native Word drawing
 (individually selectable/editable vector shapes, dynamic connectors, native text — or a SmartArt
 graphic for an eligible flowchart) — see "Supported diagram types" above.
+
+Want slides instead? `npx md2nativedocx deck.md -o deck.pptx` writes one 16:9 slide per Mermaid block, again
+with editable shapes (see [`packages/pptx`](packages/pptx/README.md)).
+
+## FAQ
+
+**How do I convert a Mermaid diagram to an editable Word document?**
+Put it in a ```` ```mermaid ```` block in a Markdown file and run `md2nativedocx file.md -o file.docx`, or click
+*Export to Word* in the VS Code extension. Nothing is rasterised.
+
+**Why not paste the Mermaid PNG/SVG into Word?**
+A picture can't be edited: to change a label you must re-render and re-insert. Here the diagram is real Word
+drawing objects, so you edit it in Word like one you drew by hand.
+
+**Does it need Word, a browser or Mermaid CLI installed?**
+No. It has its own parser and layout engine (Dagre); it needs Pandoc, which the VS Code extension downloads for you.
+
+**Is the `.docx` valid for real Word?**
+Every export is checked against Word's own schema with Microsoft's Open XML SDK (see above).
 
 ## Development
 

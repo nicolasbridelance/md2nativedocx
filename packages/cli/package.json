@@ -1,7 +1,7 @@
 {
   "name": "@md2nativedocx/cli",
   "version": "0.1.0",
-  "description": "CLI: convert Markdown with Mermaid diagrams into a .docx with native, editable OOXML vector shapes.",
+  "description": "Convert Markdown with Mermaid diagrams to Word (.docx) or PowerPoint (.pptx) with native, editable shapes — not flattened PNGs. All 29 Mermaid diagram types.",
   "license": "CC0-1.0",
   "repository": {
     "type": "git",
@@ -14,9 +14,18 @@
   },
   "keywords": [
     "mermaid",
+    "mermaid-to-docx",
+    "markdown-to-docx",
+    "markdown-to-word",
     "docx",
+    "pptx",
+    "word",
+    "powerpoint",
+    "diagram",
+    "editable",
     "pandoc",
     "ooxml",
+    "drawingml",
     "markdown"
   ],
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "md2nativedocx",
-  "displayName": "md2nativedocx",
+  "displayName": "md2nativedocx — Mermaid to Word (.docx)",
   "description": "%extension.description%",
   "version": "0.5.5",
   "publisher": "md2nativedocx",
@@ -28,18 +28,35 @@
     "theme": "dark"
   },
   "categories": [
+    "Visualization",
     "Other"
   ],
   "keywords": [
     "markdown",
     "mermaid",
+    "mermaid to word",
+    "mermaid to docx",
+    "markdown to word",
+    "markdown to docx",
     "word",
     "docx",
+    "microsoft word",
+    "powerpoint",
+    "pptx",
     "diagram",
+    "diagrams",
+    "flowchart",
+    "sequence diagram",
     "export",
+    "convert",
     "ooxml",
+    "drawingml",
+    "smartart",
     "pandoc",
-    "editable"
+    "editable",
+    "native shapes",
+    "vector",
+    "quarto"
   ],
   "activationEvents": [
     "onLanguage:markdown",

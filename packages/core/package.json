@@ -1,7 +1,7 @@
 {
   "name": "@md2nativedocx/core",
   "version": "0.1.0",
-  "description": "Pure TypeScript engine: Mermaid flowchart text -> intermediate AST -> layout coordinates -> OOXML/DrawingML XML string. No Pandoc, VS Code, or Office.js knowledge.",
+  "description": "Pure TypeScript engine: Mermaid text (all 29 diagram types) -> AST -> layout -> native, editable OOXML/DrawingML shapes for Word. No Pandoc, VS Code, or Office.js knowledge.",
   "license": "CC0-1.0",
   "repository": {
     "type": "git",

@@ -1,9 +1,9 @@
-# md2nativedocx — Markdown → Word, done right
+# md2nativedocx — Mermaid to Word (.docx), with native editable shapes
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/md2nativedocx.md2nativedocx?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
 
-Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
+**Convert Mermaid diagrams to Word, without flattening them into pictures.** Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
 LaTeX math — with one standout difference: if the document contains Mermaid diagrams, those don't
 get flattened into an image like everywhere else. They become real vector Word shapes
 (OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
@@ -78,6 +78,17 @@ Microsoft's own Open XML SDK — not a guess, not a reimplementation. A `.docx` 
 XML and still be a file real Word refuses to open; this check catches that class of problem before
 you do, and the result (a clean "0 errors", or exactly what and where otherwise) lands in the
 export's own `.log` file.
+
+## Frequently asked
+
+**How do I convert a Mermaid diagram to an editable Word diagram?** Open the `.md` (or `.mmd`) file, click
+**Export to Word** above the diagram. The result is native Word shapes, not a PNG.
+
+**Which Mermaid diagrams are supported?** All 29 types: flowchart, sequence, class, state, ER, Gantt, pie, mindmap,
+timeline, journey, git graph, C4, and more.
+
+**Do I need Pandoc, Word or Mermaid CLI?** No Word and no Mermaid CLI. Pandoc is downloaded automatically on first
+export if missing (see *Prerequisites*).
 
 ## Usage
 
