@@ -185,11 +185,11 @@ et <balises> & entités
 
 Image locale avec légende :
 
-![Image de test locale (PNG)](assets/sample-image.png)
+![Image de test locale (PNG)](assets/sample-image.png){width=60%}
 
-Image redimensionnée à 50 % :
+Image redimensionnée à 30 % :
 
-![Même image, 50 %](assets/sample-image.png){width=50%}
+![Même image, 30 %](assets/sample-image.png){width=30%}
 
 ## 7. Notes et divers
 
