@@ -9,6 +9,10 @@ get flattened into an image like everywhere else. They become real vector Word s
 (OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
 once the file is open in Word.
 
+<img src="docs/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
+
+*Mermaid source → one click → native shapes (rendered here with LibreOffice; every shape is editable in Word).*
+
 > **Deploying this in a corporate environment?** License, third-party dependency audit, IT risk
 > analysis, and a no-jargon guide for non-technical users each live in
 > [`docs/compliance/`](https://github.com/nicolasbridelance/md2nativedocx/tree/main/docs/compliance)
@@ -78,6 +82,12 @@ Microsoft's own Open XML SDK — not a guess, not a reimplementation. A `.docx` 
 XML and still be a file real Word refuses to open; this check catches that class of problem before
 you do, and the result (a clean "0 errors", or exactly what and where otherwise) lands in the
 export's own `.log` file.
+
+## All 29 Mermaid diagram types
+
+<img src="docs/showcase.png" width="900" alt="Gallery of all 29 supported Mermaid diagram types, each exported to native Word shapes"/>
+
+*One real export per type, rendered with LibreOffice.*
 
 ## Frequently asked
 

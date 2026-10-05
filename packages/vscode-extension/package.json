@@ -2,7 +2,7 @@
   "name": "md2nativedocx",
   "displayName": "md2nativedocx — Mermaid to Word (.docx)",
   "description": "%extension.description%",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "publisher": "md2nativedocx",
   "private": true,
   "license": "CC0-1.0",

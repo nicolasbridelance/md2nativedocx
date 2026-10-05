@@ -3,6 +3,16 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.6] — 2026-10-05
+
+### Changed
+- Marketplace listing rewritten around what the extension actually does: the title is now
+  "md2nativedocx — Mermaid to Word (.docx)", with the `Visualization` category and search keywords
+  ("mermaid to word", "mermaid to docx", …), so search engines and AI summaries stop describing it as a
+  generic Markdown converter.
+- README: new animated demo (Mermaid source → native Word shapes), a gallery of all 29 supported
+  diagram types, and a short FAQ.
+
 ## [0.5.5] — 2026-09-10
 
 ### Added

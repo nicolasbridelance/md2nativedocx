@@ -13,6 +13,10 @@ arrow and label is selectable, movable and restylable. It supports all 29 Mermai
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx), a CLI, or a
 Pandoc filter, and is public domain (CC0).
 
+![A Mermaid sankey, mindmap, Venn, timeline and treemap being exported to native Word shapes](docs/showcase/wow.gif)
+
+*Mermaid source → one click → native shapes. Rendered here with LibreOffice; every shape is editable in Word.*
+
 > **Not just another Markdown-to-Word converter.** Plain Markdown → Word is what Pandoc already does well
 > (and this project uses Pandoc for it). What `md2nativedocx` adds is the part everyone else skips: the
 > *diagram* stays a diagram.
@@ -63,6 +67,10 @@ stateDiagram, erDiagram, gantt, pie, mindmap, timeline, journey, gitGraph, quadr
 C4, sankey, xychart, block, packet, kanban, architecture, radar, treemap, venn, ishikawa, wardley, cynefin,
 treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-document note, never a silently wrong guess.
 (Fidelity detail is deepest for flowcharts; see below.)
+
+![All 29 supported Mermaid diagram types, each exported to native Word shapes](docs/showcase/preview.png)
+
+*One real export per type, rendered with LibreOffice. Regenerate with `python3 scripts/build-showcase.py`.*
 
 **Flowchart** (`graph`/`flowchart`) is the most complete, most complete target — see
 `docs/markdown-mermaid-compliance-table.md` for its full syntax coverage. A chain/tree/cycle-shaped
