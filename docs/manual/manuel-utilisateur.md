@@ -214,41 +214,25 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 - SmartArt : option expérimentale, désactivée par défaut
 
 
-*Source de l’exemple :*
-
-```text
-flowchart LR
-    A([Début]) --> B{Valide ?}
-    B -- oui --> C[Traiter]
-    B -- non --> D[/Rejeter/]
-    subgraph Équipe
-        C --> E[(Archiver)]
-    end
-    classDef ok fill:#C8E6C9,stroke:#2E7D32
-    classDef ko fill:#FFCDD2,stroke:#C62828
-    class C,E ok
-    class D ko
-    style A fill:#BBDEFB,stroke:#1565C0
-    linkStyle 0 stroke:#E65100,stroke-width:3px
-```
-
-*Rendu obtenu :*
-
-```mermaid
-flowchart LR
-    A([Début]) --> B{Valide ?}
-    B -- oui --> C[Traiter]
-    B -- non --> D[/Rejeter/]
-    subgraph Équipe
-        C --> E[(Archiver)]
-    end
-    classDef ok fill:#C8E6C9,stroke:#2E7D32
-    classDef ko fill:#FFCDD2,stroke:#C62828
-    class C,E ok
-    class D ko
-    style A fill:#BBDEFB,stroke:#1565C0
-    linkStyle 0 stroke:#E65100,stroke-width:3px
-```
++-------------------------------------------------+-----------------------------------------------------------------------------------+
+| Source Mermaid                                  | Rendu dans Word                                                                   |
++=================================================+===================================================================================+
+| ```text                                         | ```mermaid                                                                        |
+| flowchart LR                                    | flowchart LR                                                                      |
+|     A([Début]) --> B{Valide ?}                  |     A([Début]) --> B{Valide ?}                                                    |
+|     B -- oui --> C[Traiter]                     |     B -- oui --> C[Traiter]                                                       |
+|     B -- non --> D[/Rejeter/]                   |     B -- non --> D[/Rejeter/]                                                     |
+|     subgraph Équipe                             |     subgraph Équipe                                                               |
+|         C --> E[(Archiver)]                     |         C --> E[(Archiver)]                                                       |
+|     end                                         |     end                                                                           |
+|     classDef ok fill:#C8E6C9,stroke:#2E7D32     |     classDef ok fill:#C8E6C9,stroke:#2E7D32                                       |
+|     classDef ko fill:#FFCDD2,stroke:#C62828     |     classDef ko fill:#FFCDD2,stroke:#C62828                                       |
+|     class C,E ok                                |     class C,E ok                                                                  |
+|     class D ko                                  |     class D ko                                                                    |
+|     style A fill:#BBDEFB,stroke:#1565C0         |     style A fill:#BBDEFB,stroke:#1565C0                                           |
+|     linkStyle 0 stroke:#E65100,stroke-width:3px |     linkStyle 0 stroke:#E65100,stroke-width:3px                                   |
+| ```                                             | ```                                                                               |
++-------------------------------------------------+-----------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -277,51 +261,30 @@ Variante du flowchart : les `subgraph` de premier niveau deviennent des couloirs
 > **À savoir :** c’est un flowchart : toutes ses limites s’appliquent.
 
 
-*Source de l’exemple :*
-
-```text
-swimlane-beta LR
-  subgraph Customer[Customer]
-    Order[Place order]
-    Pay(Pay invoice)
-  end
-  subgraph Store[Store]
-    Pack[Pack items]
-    Decision{In stock?}
-  end
-  subgraph Carrier[Carrier]
-    Ship([Ship package])
-  end
-
-  Order --> Decision
-  Decision -->|Yes| Pack
-  Decision -->|No| Order
-  Pack --> Ship
-  Ship --> Pay
-```
-
-*Rendu obtenu :*
-
-```mermaid
-swimlane-beta LR
-  subgraph Customer[Customer]
-    Order[Place order]
-    Pay(Pay invoice)
-  end
-  subgraph Store[Store]
-    Pack[Pack items]
-    Decision{In stock?}
-  end
-  subgraph Carrier[Carrier]
-    Ship([Ship package])
-  end
-
-  Order --> Decision
-  Decision -->|Yes| Pack
-  Decision -->|No| Order
-  Pack --> Ship
-  Ship --> Pay
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| swimlane-beta LR                   | swimlane-beta LR                                            |
+|   subgraph Customer[Customer]      |   subgraph Customer[Customer]                               |
+|     Order[Place order]             |     Order[Place order]                                      |
+|     Pay(Pay invoice)               |     Pay(Pay invoice)                                        |
+|   end                              |   end                                                       |
+|   subgraph Store[Store]            |   subgraph Store[Store]                                     |
+|     Pack[Pack items]               |     Pack[Pack items]                                        |
+|     Decision{In stock?}            |     Decision{In stock?}                                     |
+|   end                              |   end                                                       |
+|   subgraph Carrier[Carrier]        |   subgraph Carrier[Carrier]                                 |
+|     Ship([Ship package])           |     Ship([Ship package])                                    |
+|   end                              |   end                                                       |
+|                                    |                                                             |
+|   Order --> Decision               |   Order --> Decision                                        |
+|   Decision -->|Yes| Pack           |   Decision -->|Yes| Pack                                    |
+|   Decision -->|No| Order           |   Decision -->|No| Order                                    |
+|   Pack --> Ship                    |   Pack --> Ship                                             |
+|   Ship --> Pay                     |   Ship --> Pay                                              |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -357,73 +320,26 @@ swimlane-beta LR
 > **À savoir :** grammaire transcrite de la documentation, jamais comparée à un analyseur Mermaid réel.
 
 
-*Source de l’exemple :*
-
-```text
-sequenceDiagram
-    title Checkout
-    autonumber
-    actor U as User
-    participant W as Web App
-    participant API
-    participant DB as Database
-    U->>+W: Place order
-    W->>API: POST /orders
-    activate API
-    API->>DB: INSERT order
-    DB-->>API: ok
-    API-xW: Payment declined
-    Note over API,DB: Retried 3 times
-    loop Every minute
-        W-)API: poll status
-    end
-    alt paid
-        API-->>-W: 200 OK
-    else failed
-        API--)W: 402
-        API->>API: log failure
-    end
-    Note right of W: done
-    create participant M as Mailer
-    W->>M: send receipt
-    destroy M
-    M-->>W: sent
-    W-->>-U: Confirmation
-```
-
-*Rendu obtenu :*
-
-```mermaid
-sequenceDiagram
-    title Checkout
-    autonumber
-    actor U as User
-    participant W as Web App
-    participant API
-    participant DB as Database
-    U->>+W: Place order
-    W->>API: POST /orders
-    activate API
-    API->>DB: INSERT order
-    DB-->>API: ok
-    API-xW: Payment declined
-    Note over API,DB: Retried 3 times
-    loop Every minute
-        W-)API: poll status
-    end
-    alt paid
-        API-->>-W: 200 OK
-    else failed
-        API--)W: 402
-        API->>API: log failure
-    end
-    Note right of W: done
-    create participant M as Mailer
-    W->>M: send receipt
-    destroy M
-    M-->>W: sent
-    W-->>-U: Confirmation
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| sequenceDiagram                    | sequenceDiagram                                             |
+|     autonumber                     |     autonumber                                              |
+|     actor U as User                |     actor U as User                                         |
+|     participant W as Web           |     participant W as Web                                    |
+|     participant A as API           |     participant A as API                                    |
+|     U->>W: Place order             |     U->>W: Place order                                      |
+|     W->>+A: POST /orders           |     W->>+A: POST /orders                                    |
+|     alt in stock                   |     alt in stock                                            |
+|         A-->>-W: 200 OK            |         A-->>-W: 200 OK                                     |
+|     else sold out                  |     else sold out                                           |
+|         A--xW: 409                 |         A--xW: 409                                          |
+|     end                            |     end                                                     |
+|     Note right of A: Logged        |     Note right of A: Logged                                 |
+|     W-->>U: Confirmation           |     W-->>U: Confirmation                                    |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -456,71 +372,24 @@ Syntaxe de séquence « façon code » (plugin Mermaid externe), rendue avec le 
 > **À savoir :** grammaire transcrite de la documentation, jamais comparée au plugin ZenUML.
 
 
-*Source de l’exemple :*
-
-```text
-zenuml
-    title Booking
-    @Actor Client
-    @Database DB
-    Booking as Booking Service
-    Client->Booking.book(id) {
-      DB.find(id) {
-        return row
-      }
-      if(available) {
-        order = DB.save(id)
-        new Mailer(id)
-      } else {
-        return sold_out
-      }
-      while(retry) {
-        Booking->DB: poll
-      }
-      return ok
-    }
-    try {
-      Client->Booking: confirm
-    } catch {
-      Client->Booking: cancel
-    }
-    opt {
-      Booking.audit()
-    }
-```
-
-*Rendu obtenu :*
-
-```mermaid
-zenuml
-    title Booking
-    @Actor Client
-    @Database DB
-    Booking as Booking Service
-    Client->Booking.book(id) {
-      DB.find(id) {
-        return row
-      }
-      if(available) {
-        order = DB.save(id)
-        new Mailer(id)
-      } else {
-        return sold_out
-      }
-      while(retry) {
-        Booking->DB: poll
-      }
-      return ok
-    }
-    try {
-      Client->Booking: confirm
-    } catch {
-      Client->Booking: cancel
-    }
-    opt {
-      Booking.audit()
-    }
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| zenuml                             | zenuml                                                      |
+|     title Booking                  |     title Booking                                           |
+|     @Actor Client                  |     @Actor Client                                           |
+|     Client->Booking: book(id)      |     Client->Booking: book(id)                               |
+|     Booking.find(id) {             |     Booking.find(id) {                                      |
+|       return row                   |       return row                                            |
+|     }                              |     }                                                       |
+|     if(available) {                |     if(available) {                                         |
+|       Booking->DB: save            |       Booking->DB: save                                     |
+|     } else {                       |     } else {                                                |
+|       Booking->Client: sold_out    |       Booking->Client: sold_out                             |
+|     }                              |     }                                                       |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -554,67 +423,38 @@ Classes UML avec attributs, méthodes et relations.
 - Liens en lignes droites
 
 
-*Source de l’exemple :*
-
-```text
-classDiagram
-  direction LR
-  class Animal {
-    +String name
-    +int age
-    +makeSound() void
-  }
-  class Dog {
-    +String breed
-    +bark() void
-  }
-  class Cat {
-    +bark() void
-  }
-  class Owner {
-    +String name
-    +feed(Animal a) void
-  }
-  Animal <|-- Dog
-  Animal <|-- Cat
-  Owner "1" --> "many" Animal : owns
-  Owner *-- Address : has
-  class Address {
-    +String street
-    +String city
-  }
-```
-
-*Rendu obtenu :*
-
-```mermaid
-classDiagram
-  direction LR
-  class Animal {
-    +String name
-    +int age
-    +makeSound() void
-  }
-  class Dog {
-    +String breed
-    +bark() void
-  }
-  class Cat {
-    +bark() void
-  }
-  class Owner {
-    +String name
-    +feed(Animal a) void
-  }
-  Animal <|-- Dog
-  Animal <|-- Cat
-  Owner "1" --> "many" Animal : owns
-  Owner *-- Address : has
-  class Address {
-    +String street
-    +String city
-  }
-```
++--------------------------------------+-----------------------------------------------------------------+
+| Source Mermaid                       | Rendu dans Word                                                 |
++======================================+=================================================================+
+| ```text                              | ```mermaid                                                      |
+| classDiagram                         | classDiagram                                                    |
+|   direction LR                       |   direction LR                                                  |
+|   class Animal {                     |   class Animal {                                                |
+|     +String name                     |     +String name                                                |
+|     +int age                         |     +int age                                                    |
+|     +makeSound() void                |     +makeSound() void                                           |
+|   }                                  |   }                                                             |
+|   class Dog {                        |   class Dog {                                                   |
+|     +String breed                    |     +String breed                                               |
+|     +bark() void                     |     +bark() void                                                |
+|   }                                  |   }                                                             |
+|   class Cat {                        |   class Cat {                                                   |
+|     +bark() void                     |     +bark() void                                                |
+|   }                                  |   }                                                             |
+|   class Owner {                      |   class Owner {                                                 |
+|     +String name                     |     +String name                                                |
+|     +feed(Animal a) void             |     +feed(Animal a) void                                        |
+|   }                                  |   }                                                             |
+|   Animal <|-- Dog                    |   Animal <|-- Dog                                               |
+|   Animal <|-- Cat                    |   Animal <|-- Cat                                               |
+|   Owner "1" --> "many" Animal : owns |   Owner "1" --> "many" Animal : owns                            |
+|   Owner *-- Address : has            |   Owner *-- Address : has                                       |
+|   class Address {                    |   class Address {                                               |
+|     +String street                   |     +String street                                              |
+|     +String city                     |     +String city                                                |
+|   }                                  |   }                                                             |
+| ```                                  | ```                                                             |
++--------------------------------------+-----------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -645,35 +485,22 @@ classDiagram
 - Séparateur de concurrence `--`, notes, styles : ignorés avec avertissement
 
 
-*Source de l’exemple :*
-
-```text
-stateDiagram-v2
-  [*] --> Idle
-  Idle --> Loading : fetch
-  Loading --> choice1
-  state choice1 <<choice>>
-  choice1 --> Success : ok
-  choice1 --> Error : fail
-  Success --> Idle : reset
-  Error --> Idle : retry
-  Idle --> [*]
-```
-
-*Rendu obtenu :*
-
-```mermaid
-stateDiagram-v2
-  [*] --> Idle
-  Idle --> Loading : fetch
-  Loading --> choice1
-  state choice1 <<choice>>
-  choice1 --> Success : ok
-  choice1 --> Error : fail
-  Success --> Idle : reset
-  Error --> Idle : retry
-  Idle --> [*]
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| stateDiagram-v2                    | stateDiagram-v2                                             |
+|   [*] --> Idle                     |   [*] --> Idle                                              |
+|   Idle --> Loading : fetch         |   Idle --> Loading : fetch                                  |
+|   Loading --> choice1              |   Loading --> choice1                                       |
+|   state choice1 <<choice>>         |   state choice1 <<choice>>                                  |
+|   choice1 --> Success : ok         |   choice1 --> Success : ok                                  |
+|   choice1 --> Error : fail         |   choice1 --> Error : fail                                  |
+|   Success --> Idle : reset         |   Success --> Idle : reset                                  |
+|   Error --> Idle : retry           |   Error --> Idle : retry                                    |
+|   Idle --> [*]                     |   Idle --> [*]                                              |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -703,53 +530,31 @@ Entités avec attributs et cardinalités « patte de corbeau ».
 - Liens en lignes droites
 
 
-*Source de l’exemple :*
-
-```text
-erDiagram
-  CUSTOMER {
-    int id PK
-    string email UK
-    string name
-  }
-  ORDER {
-    int id PK
-    int customer_id FK
-    string status
-  }
-  LINE-ITEM {
-    int id PK
-    int order_id FK
-    string product
-  }
-  CUSTOMER ||--o{ ORDER : places
-  ORDER ||--|{ LINE-ITEM : contains
-  CUSTOMER }|..|{ LINE-ITEM : "reviews"
-```
-
-*Rendu obtenu :*
-
-```mermaid
-erDiagram
-  CUSTOMER {
-    int id PK
-    string email UK
-    string name
-  }
-  ORDER {
-    int id PK
-    int customer_id FK
-    string status
-  }
-  LINE-ITEM {
-    int id PK
-    int order_id FK
-    string product
-  }
-  CUSTOMER ||--o{ ORDER : places
-  ORDER ||--|{ LINE-ITEM : contains
-  CUSTOMER }|..|{ LINE-ITEM : "reviews"
-```
++-----------------------------------------+----------------------------------------------------------------------+
+| Source Mermaid                          | Rendu dans Word                                                      |
++=========================================+======================================================================+
+| ```text                                 | ```mermaid                                                           |
+| erDiagram                               | erDiagram                                                            |
+|   CUSTOMER {                            |   CUSTOMER {                                                         |
+|     int id PK                           |     int id PK                                                        |
+|     string email UK                     |     string email UK                                                  |
+|     string name                         |     string name                                                      |
+|   }                                     |   }                                                                  |
+|   ORDER {                               |   ORDER {                                                            |
+|     int id PK                           |     int id PK                                                        |
+|     int customer_id FK                  |     int customer_id FK                                               |
+|     string status                       |     string status                                                    |
+|   }                                     |   }                                                                  |
+|   LINE-ITEM {                           |   LINE-ITEM {                                                        |
+|     int id PK                           |     int id PK                                                        |
+|     int order_id FK                     |     int order_id FK                                                  |
+|     string product                      |     string product                                                   |
+|   }                                     |   }                                                                  |
+|   CUSTOMER ||--o{ ORDER : places        |   CUSTOMER ||--o{ ORDER : places                                     |
+|   ORDER ||--|{ LINE-ITEM : contains     |   ORDER ||--|{ LINE-ITEM : contains                                  |
+|   CUSTOMER }|..|{ LINE-ITEM : "reviews" |   CUSTOMER }|..|{ LINE-ITEM : "reviews"                              |
+| ```                                     | ```                                                                  |
++-----------------------------------------+----------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -778,53 +583,31 @@ Exigences, éléments et leurs relations (SysML).
 - Styles ignorés avec avertissement
 
 
-*Source de l’exemple :*
-
-```text
-requirementDiagram
-  requirement test_req {
-    id: 1
-    text: the test text.
-    risk: high
-    verifymethod: test
-  }
-  functionalRequirement test_req2 {
-    id: 1.1
-    text: the second test text.
-    risk: low
-    verifymethod: inspection
-  }
-  element test_entity {
-    type: simulation
-  }
-  test_entity - satisfies -> test_req
-  test_req - traces -> test_req2
-  test_req <- derives - test_req2
-```
-
-*Rendu obtenu :*
-
-```mermaid
-requirementDiagram
-  requirement test_req {
-    id: 1
-    text: the test text.
-    risk: high
-    verifymethod: test
-  }
-  functionalRequirement test_req2 {
-    id: 1.1
-    text: the second test text.
-    risk: low
-    verifymethod: inspection
-  }
-  element test_entity {
-    type: simulation
-  }
-  test_entity - satisfies -> test_req
-  test_req - traces -> test_req2
-  test_req <- derives - test_req2
-```
++---------------------------------------+------------------------------------------------------------------+
+| Source Mermaid                        | Rendu dans Word                                                  |
++=======================================+==================================================================+
+| ```text                               | ```mermaid                                                       |
+| requirementDiagram                    | requirementDiagram                                               |
+|   requirement test_req {              |   requirement test_req {                                         |
+|     id: 1                             |     id: 1                                                        |
+|     text: the test text.              |     text: the test text.                                         |
+|     risk: high                        |     risk: high                                                   |
+|     verifymethod: test                |     verifymethod: test                                           |
+|   }                                   |   }                                                              |
+|   functionalRequirement test_req2 {   |   functionalRequirement test_req2 {                              |
+|     id: 1.1                           |     id: 1.1                                                      |
+|     text: the second test text.       |     text: the second test text.                                  |
+|     risk: low                         |     risk: low                                                    |
+|     verifymethod: inspection          |     verifymethod: inspection                                     |
+|   }                                   |   }                                                              |
+|   element test_entity {               |   element test_entity {                                          |
+|     type: simulation                  |     type: simulation                                             |
+|   }                                   |   }                                                              |
+|   test_entity - satisfies -> test_req |   test_entity - satisfies -> test_req                            |
+|   test_req - traces -> test_req2      |   test_req - traces -> test_req2                                 |
+|   test_req <- derives - test_req2     |   test_req <- derives - test_req2                                |
+| ```                                   | ```                                                              |
++---------------------------------------+------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -854,71 +637,25 @@ Modèle C4 en notation d’appels de fonction.
 - Un appel sur une seule ligne
 
 
-*Source de l’exemple :*
-
-```text
-C4Container
-    title Container diagram for Internet Banking System
-
-    System_Ext(email_system, "E-Mail System", "The internal Microsoft Exchange system")
-    Person(customer, "Customer", "A customer of the bank, with personal bank accounts")
-
-    Container_Boundary(c1, "Internet Banking") {
-        Container(spa, "Single-Page App", "JavaScript, Angular", "Provides all the Internet banking functionality to customers via their web browser")
-        Container_Ext(mobile_app, "Mobile App", "C#, Xamarin", "Provides a limited subset of the Internet banking functionality to customers via their mobile device")
-        Container(web_app, "Web Application", "Java, Spring MVC", "Delivers the static content and the Internet banking SPA")
-        ContainerDb(database, "Database", "SQL Database", "Stores user registration information, hashed auth credentials, access logs, etc.")
-        ContainerDb_Ext(backend_api, "API Application", "Java, Docker Container", "Provides Internet banking functionality via API")
-    }
-
-    System_Ext(banking_system, "Mainframe Banking System", "Stores all of the core banking information about customers, accounts, transactions, etc.")
-
-    Rel(customer, web_app, "Uses", "HTTPS")
-    Rel(customer, spa, "Uses", "HTTPS")
-    Rel(customer, mobile_app, "Uses")
-
-    Rel(web_app, spa, "Delivers")
-    Rel(spa, backend_api, "Uses", "async, JSON/HTTPS")
-    Rel(mobile_app, backend_api, "Uses", "async, JSON/HTTPS")
-    Rel_Back(database, backend_api, "Reads from and writes to", "sync, JDBC")
-
-    Rel(email_system, customer, "Sends e-mails to")
-    Rel(backend_api, email_system, "Sends e-mails using", "sync, SMTP")
-    Rel(backend_api, banking_system, "Uses", "sync/async, XML/HTTPS")
-```
-
-*Rendu obtenu :*
-
-```mermaid
-C4Container
-    title Container diagram for Internet Banking System
-
-    System_Ext(email_system, "E-Mail System", "The internal Microsoft Exchange system")
-    Person(customer, "Customer", "A customer of the bank, with personal bank accounts")
-
-    Container_Boundary(c1, "Internet Banking") {
-        Container(spa, "Single-Page App", "JavaScript, Angular", "Provides all the Internet banking functionality to customers via their web browser")
-        Container_Ext(mobile_app, "Mobile App", "C#, Xamarin", "Provides a limited subset of the Internet banking functionality to customers via their mobile device")
-        Container(web_app, "Web Application", "Java, Spring MVC", "Delivers the static content and the Internet banking SPA")
-        ContainerDb(database, "Database", "SQL Database", "Stores user registration information, hashed auth credentials, access logs, etc.")
-        ContainerDb_Ext(backend_api, "API Application", "Java, Docker Container", "Provides Internet banking functionality via API")
-    }
-
-    System_Ext(banking_system, "Mainframe Banking System", "Stores all of the core banking information about customers, accounts, transactions, etc.")
-
-    Rel(customer, web_app, "Uses", "HTTPS")
-    Rel(customer, spa, "Uses", "HTTPS")
-    Rel(customer, mobile_app, "Uses")
-
-    Rel(web_app, spa, "Delivers")
-    Rel(spa, backend_api, "Uses", "async, JSON/HTTPS")
-    Rel(mobile_app, backend_api, "Uses", "async, JSON/HTTPS")
-    Rel_Back(database, backend_api, "Reads from and writes to", "sync, JDBC")
-
-    Rel(email_system, customer, "Sends e-mails to")
-    Rel(backend_api, email_system, "Sends e-mails using", "sync, SMTP")
-    Rel(backend_api, banking_system, "Uses", "sync/async, XML/HTTPS")
-```
++--------------------------------------------+---------------------------------------------------------------------------+
+| Source Mermaid                             | Rendu dans Word                                                           |
++============================================+===========================================================================+
+| ```text                                    | ```mermaid                                                                |
+| C4Container                                | C4Container                                                               |
+|     title Internet Banking                 |     title Internet Banking                                                |
+|     Person(customer, "Customer")           |     Person(customer, "Customer")                                          |
+|     Container_Boundary(c1, "Bank") {       |     Container_Boundary(c1, "Bank") {                                      |
+|         Container(spa, "SPA", "Angular")   |         Container(spa, "SPA", "Angular")                                  |
+|         Container(api, "API", "Java")      |         Container(api, "API", "Java")                                     |
+|         ContainerDb(db, "Database", "SQL") |         ContainerDb(db, "Database", "SQL")                                |
+|     }                                      |     }                                                                     |
+|     System_Ext(mail, "E-Mail System")      |     System_Ext(mail, "E-Mail System")                                     |
+|     Rel(customer, spa, "Uses", "HTTPS")    |     Rel(customer, spa, "Uses", "HTTPS")                                   |
+|     Rel(spa, api, "Calls", "JSON")         |     Rel(spa, api, "Calls", "JSON")                                        |
+|     Rel(api, db, "Reads/writes", "JDBC")   |     Rel(api, db, "Reads/writes", "JDBC")                                  |
+|     Rel(api, mail, "Sends e-mails")        |     Rel(api, mail, "Sends e-mails")                                       |
+| ```                                        | ```                                                                       |
++--------------------------------------------+---------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -948,41 +685,25 @@ Services, groupes et jonctions reliés par des ports.
 - Icônes : `cloud`, `database`, `disk` mappées sur des formes, les autres en rectangle arrondi
 
 
-*Source de l’exemple :*
-
-```text
-architecture-beta
-  group public_api(cloud)[Public API]
-
-  service database1(database)[My Database] in public_api
-  service server(server)[Server] in public_api
-  service disk1(disk)[Storage] in public_api
-  service gateway(internet)[Gateway]
-  junction j1
-
-  gateway:B --> T:server
-  server:R --> L:database1
-  server:B -- T:j1
-  j1:R -- L:disk1
-```
-
-*Rendu obtenu :*
-
-```mermaid
-architecture-beta
-  group public_api(cloud)[Public API]
-
-  service database1(database)[My Database] in public_api
-  service server(server)[Server] in public_api
-  service disk1(disk)[Storage] in public_api
-  service gateway(internet)[Gateway]
-  junction j1
-
-  gateway:B --> T:server
-  server:R --> L:database1
-  server:B -- T:j1
-  j1:R -- L:disk1
-```
++----------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+| Source Mermaid                                           | Rendu dans Word                                                                                   |
++==========================================================+===================================================================================================+
+| ```text                                                  | ```mermaid                                                                                        |
+| architecture-beta                                        | architecture-beta                                                                                 |
+|   group public_api(cloud)[Public API]                    |   group public_api(cloud)[Public API]                                                             |
+|                                                          |                                                                                                   |
+|   service database1(database)[My Database] in public_api |   service database1(database)[My Database] in public_api                                          |
+|   service server(server)[Server] in public_api           |   service server(server)[Server] in public_api                                                    |
+|   service disk1(disk)[Storage] in public_api             |   service disk1(disk)[Storage] in public_api                                                      |
+|   service gateway(internet)[Gateway]                     |   service gateway(internet)[Gateway]                                                              |
+|   junction j1                                            |   junction j1                                                                                     |
+|                                                          |                                                                                                   |
+|   gateway:B --> T:server                                 |   gateway:B --> T:server                                                                          |
+|   server:R --> L:database1                               |   server:R --> L:database1                                                                        |
+|   server:B -- T:j1                                       |   server:B -- T:j1                                                                                |
+|   j1:R -- L:disk1                                        |   j1:R -- L:disk1                                                                                 |
+| ```                                                      | ```                                                                                               |
++----------------------------------------------------------+---------------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1013,39 +734,24 @@ Grille de blocs sur N colonnes avec liens.
 - Plafonds : 500 blocs, 200 liens, 8 niveaux, 24 colonnes
 
 
-*Source de l’exemple :*
-
-```text
-block-beta
-    columns 3
-    doc["Document"] space:1 db[("Database")]
-    block:pipeline:3
-        columns 3
-        parse["Parse"] layout("Layout") emit(["Emit"])
-    end
-    a["Input"] space b(("Out"))
-    doc --> parse
-    emit --> db
-    a -- "text" --> b
-    style a fill:#fde68a,stroke:#b45309
-```
-
-*Rendu obtenu :*
-
-```mermaid
-block-beta
-    columns 3
-    doc["Document"] space:1 db[("Database")]
-    block:pipeline:3
-        columns 3
-        parse["Parse"] layout("Layout") emit(["Emit"])
-    end
-    a["Input"] space b(("Out"))
-    doc --> parse
-    emit --> db
-    a -- "text" --> b
-    style a fill:#fde68a,stroke:#b45309
-```
++--------------------------------------------------------+-----------------------------------------------------------------------------------------------+
+| Source Mermaid                                         | Rendu dans Word                                                                               |
++========================================================+===============================================================================================+
+| ```text                                                | ```mermaid                                                                                    |
+| block-beta                                             | block-beta                                                                                    |
+|     columns 3                                          |     columns 3                                                                                 |
+|     doc["Document"] space:1 db[("Database")]           |     doc["Document"] space:1 db[("Database")]                                                  |
+|     block:pipeline:3                                   |     block:pipeline:3                                                                          |
+|         columns 3                                      |         columns 3                                                                             |
+|         parse["Parse"] layout("Layout") emit(["Emit"]) |         parse["Parse"] layout("Layout") emit(["Emit"])                                        |
+|     end                                                |     end                                                                                       |
+|     a["Input"] space b(("Out"))                        |     a["Input"] space b(("Out"))                                                               |
+|     doc --> parse                                      |     doc --> parse                                                                             |
+|     emit --> db                                        |     emit --> db                                                                               |
+|     a -- "text" --> b                                  |     a -- "text" --> b                                                                         |
+|     style a fill:#fde68a,stroke:#b45309                |     style a fill:#fde68a,stroke:#b45309                                                       |
+| ```                                                    | ```                                                                                           |
++--------------------------------------------------------+-----------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1073,39 +779,24 @@ Flux entre nœuds, largeur proportionnelle à la valeur.
 - Plafonds : 500 liens, 200 nœuds
 
 
-*Source de l’exemple :*
-
-```text
-sankey-beta
-
-Agricultural 'waste',Bio-conversion,124.729
-Bio-conversion,Liquid,0.597
-Bio-conversion,Solid,26.862
-Bio-conversion,Gas,280.322
-Bio-conversion,Losses,10
-Coal imports,Coal,11.606
-Coal,Solid,75.571
-Gas,Heating,79.5
-Solid,Heating,40.2
-Liquid,Heating,2
-```
-
-*Rendu obtenu :*
-
-```mermaid
-sankey-beta
-
-Agricultural 'waste',Bio-conversion,124.729
-Bio-conversion,Liquid,0.597
-Bio-conversion,Solid,26.862
-Bio-conversion,Gas,280.322
-Bio-conversion,Losses,10
-Coal imports,Coal,11.606
-Coal,Solid,75.571
-Gas,Heating,79.5
-Solid,Heating,40.2
-Liquid,Heating,2
-```
++---------------------------------------------+-----------------------------------------------------------------------------+
+| Source Mermaid                              | Rendu dans Word                                                             |
++=============================================+=============================================================================+
+| ```text                                     | ```mermaid                                                                  |
+| sankey-beta                                 | sankey-beta                                                                 |
+|                                             |                                                                             |
+| Agricultural 'waste',Bio-conversion,124.729 | Agricultural 'waste',Bio-conversion,124.729                                 |
+| Bio-conversion,Liquid,0.597                 | Bio-conversion,Liquid,0.597                                                 |
+| Bio-conversion,Solid,26.862                 | Bio-conversion,Solid,26.862                                                 |
+| Bio-conversion,Gas,280.322                  | Bio-conversion,Gas,280.322                                                  |
+| Bio-conversion,Losses,10                    | Bio-conversion,Losses,10                                                    |
+| Coal imports,Coal,11.606                    | Coal imports,Coal,11.606                                                    |
+| Coal,Solid,75.571                           | Coal,Solid,75.571                                                           |
+| Gas,Heating,79.5                            | Gas,Heating,79.5                                                            |
+| Solid,Heating,40.2                          | Solid,Heating,40.2                                                          |
+| Liquid,Heating,2                            | Liquid,Heating,2                                                            |
+| ```                                         | ```                                                                         |
++---------------------------------------------+-----------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1135,37 +826,23 @@ Planning de tâches sur un calendrier.
 - Un `after` introuvable retombe sur la fin de la tâche précédente (jamais sur « aujourd’hui »)
 
 
-*Source de l’exemple :*
-
-```text
-gantt
-    title Adoption d'un logiciel
-    dateFormat YYYY-MM-DD
-    excludes weekends
-    section Cadrage
-    Recueil besoins      :done,    des1, 2026-01-05, 5d
-    Choix outil          :active,  des2, after des1, 3d
-    section Deploiement
-    Formation            :crit,    des3, after des2, 4d
-    Go-live              :milestone, des4, after des3, 0d
-    Suivi post go-live   :         des5, after des4, 10d
-```
-
-*Rendu obtenu :*
-
-```mermaid
-gantt
-    title Adoption d'un logiciel
-    dateFormat YYYY-MM-DD
-    excludes weekends
-    section Cadrage
-    Recueil besoins      :done,    des1, 2026-01-05, 5d
-    Choix outil          :active,  des2, after des1, 3d
-    section Deploiement
-    Formation            :crit,    des3, after des2, 4d
-    Go-live              :milestone, des4, after des3, 0d
-    Suivi post go-live   :         des5, after des4, 10d
-```
++-----------------------------------------------------------+----------------------------------------------------------------------------------------------------+
+| Source Mermaid                                            | Rendu dans Word                                                                                    |
++===========================================================+====================================================================================================+
+| ```text                                                   | ```mermaid                                                                                         |
+| gantt                                                     | gantt                                                                                              |
+|     title Adoption d'un logiciel                          |     title Adoption d'un logiciel                                                                   |
+|     dateFormat YYYY-MM-DD                                 |     dateFormat YYYY-MM-DD                                                                          |
+|     excludes weekends                                     |     excludes weekends                                                                              |
+|     section Cadrage                                       |     section Cadrage                                                                                |
+|     Recueil besoins      :done,    des1, 2026-01-05, 5d   |     Recueil besoins      :done,    des1, 2026-01-05, 5d                                            |
+|     Choix outil          :active,  des2, after des1, 3d   |     Choix outil          :active,  des2, after des1, 3d                                            |
+|     section Deploiement                                   |     section Deploiement                                                                            |
+|     Formation            :crit,    des3, after des2, 4d   |     Formation            :crit,    des3, after des2, 4d                                            |
+|     Go-live              :milestone, des4, after des3, 0d |     Go-live              :milestone, des4, after des3, 0d                                          |
+|     Suivi post go-live   :         des5, after des4, 10d  |     Suivi post go-live   :         des5, after des4, 10d                                           |
+| ```                                                       | ```                                                                                                |
++-----------------------------------------------------------+----------------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1194,35 +871,22 @@ Périodes et événements.
 - Configuration/thème ignorés
 
 
-*Source de l’exemple :*
-
-```text
-timeline
-        title England's History Timeline
-        section Stone Age
-          7600 BC : Britain's oldest known house was built in Orkney, Scotland
-          6000 BC : Sea levels rise and Britain becomes an island.<br> The people who live here are hunter-gatherers.
-        section Bronze Age
-          2300 BC : People arrive from Europe and settle in Britain. <br>They bring farming and metalworking.
-                  : New styles of pottery and ways of burying the dead appear.
-          2200 BC : The last major building works are completed at Stonehenge.<br> People now bury their dead in stone circles.
-                  : The first metal objects are made in Britain.Some other nice things happen. it is a good time to be alive.
-```
-
-*Rendu obtenu :*
-
-```mermaid
-timeline
-        title England's History Timeline
-        section Stone Age
-          7600 BC : Britain's oldest known house was built in Orkney, Scotland
-          6000 BC : Sea levels rise and Britain becomes an island.<br> The people who live here are hunter-gatherers.
-        section Bronze Age
-          2300 BC : People arrive from Europe and settle in Britain. <br>They bring farming and metalworking.
-                  : New styles of pottery and ways of burying the dead appear.
-          2200 BC : The last major building works are completed at Stonehenge.<br> People now bury their dead in stone circles.
-                  : The first metal objects are made in Britain.Some other nice things happen. it is a good time to be alive.
-```
++---------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Source Mermaid                                                                                                                  | Rendu dans Word                                                                                                                                                                                                           |
++=================================================================================================================================+===========================================================================================================================================================================================================================+
+| ```text                                                                                                                         | ```mermaid                                                                                                                                                                                                                |
+| timeline                                                                                                                        | timeline                                                                                                                                                                                                                  |
+|         title England's History Timeline                                                                                        |         title England's History Timeline                                                                                                                                                                                  |
+|         section Stone Age                                                                                                       |         section Stone Age                                                                                                                                                                                                 |
+|           7600 BC : Britain's oldest known house was built in Orkney, Scotland                                                  |           7600 BC : Britain's oldest known house was built in Orkney, Scotland                                                                                                                                            |
+|           6000 BC : Sea levels rise and Britain becomes an island.<br> The people who live here are hunter-gatherers.           |           6000 BC : Sea levels rise and Britain becomes an island.<br> The people who live here are hunter-gatherers.                                                                                                     |
+|         section Bronze Age                                                                                                      |         section Bronze Age                                                                                                                                                                                                |
+|           2300 BC : People arrive from Europe and settle in Britain. <br>They bring farming and metalworking.                   |           2300 BC : People arrive from Europe and settle in Britain. <br>They bring farming and metalworking.                                                                                                             |
+|                   : New styles of pottery and ways of burying the dead appear.                                                  |                   : New styles of pottery and ways of burying the dead appear.                                                                                                                                            |
+|           2200 BC : The last major building works are completed at Stonehenge.<br> People now bury their dead in stone circles. |           2200 BC : The last major building works are completed at Stonehenge.<br> People now bury their dead in stone circles.                                                                                           |
+|                   : The first metal objects are made in Britain.Some other nice things happen. it is a good time to be alive.   |                   : The first metal objects are made in Britain.Some other nice things happen. it is a good time to be alive.                                                                                             |
+| ```                                                                                                                             | ```                                                                                                                                                                                                                       |
++---------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1251,33 +915,21 @@ timeline
 - Configuration ignorée
 
 
-*Source de l’exemple :*
-
-```text
-journey
-    title My working day
-    section Go to work
-      Make tea: 5: Me
-      Go upstairs: 3: Me
-      Do work: 1: Me, Cat
-    section Go home
-      Go downstairs: 5: Me
-      Sit down: 5: Me
-```
-
-*Rendu obtenu :*
-
-```mermaid
-journey
-    title My working day
-    section Go to work
-      Make tea: 5: Me
-      Go upstairs: 3: Me
-      Do work: 1: Me, Cat
-    section Go home
-      Go downstairs: 5: Me
-      Sit down: 5: Me
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| journey                            | journey                                                     |
+|     title My working day           |     title My working day                                    |
+|     section Go to work             |     section Go to work                                      |
+|       Make tea: 5: Me              |       Make tea: 5: Me                                       |
+|       Go upstairs: 3: Me           |       Go upstairs: 3: Me                                    |
+|       Do work: 1: Me, Cat          |       Do work: 1: Me, Cat                                   |
+|     section Go home                |     section Go home                                         |
+|       Go downstairs: 5: Me         |       Go downstairs: 5: Me                                  |
+|       Sit down: 5: Me              |       Sit down: 5: Me                                       |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1305,27 +957,18 @@ Parts d’un tout.
 - `accTitle`/`accDescr` : avertissement
 
 
-*Source de l’exemple :*
-
-```text
-pie showData
-    title Key elements in Product X
-    "Calcium" : 42.96
-    "Potassium" : 50.05
-    "Magnesium" : 10.01
-    "Iron" :  5
-```
-
-*Rendu obtenu :*
-
-```mermaid
-pie showData
-    title Key elements in Product X
-    "Calcium" : 42.96
-    "Potassium" : 50.05
-    "Magnesium" : 10.01
-    "Iron" :  5
-```
++-------------------------------------+---------------------------------------------------------------+
+| Source Mermaid                      | Rendu dans Word                                               |
++=====================================+===============================================================+
+| ```text                             | ```mermaid                                                    |
+| pie showData                        | pie showData                                                  |
+|     title Key elements in Product X |     title Key elements in Product X                           |
+|     "Calcium" : 42.96               |     "Calcium" : 42.96                                         |
+|     "Potassium" : 50.05             |     "Potassium" : 50.05                                       |
+|     "Magnesium" : 10.01             |     "Magnesium" : 10.01                                       |
+|     "Iron" :  5                     |     "Iron" :  5                                               |
+| ```                                 | ```                                                           |
++-------------------------------------+---------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1354,27 +997,18 @@ Barres et lignes sur deux axes.
 - Plafonds : 12 séries, 200 points, 200 catégories
 
 
-*Source de l’exemple :*
-
-```text
-xychart-beta
-    title "Sales Revenue"
-    x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
-    y-axis "Revenue (in $)" 4000 --> 11000
-    bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
-    line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
-```
-
-*Rendu obtenu :*
-
-```mermaid
-xychart-beta
-    title "Sales Revenue"
-    x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
-    y-axis "Revenue (in $)" 4000 --> 11000
-    bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
-    line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
-```
++--------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+| Source Mermaid                                                                       | Rendu dans Word                                                                                                                                  |
++======================================================================================+==================================================================================================================================================+
+| ```text                                                                              | ```mermaid                                                                                                                                       |
+| xychart-beta                                                                         | xychart-beta                                                                                                                                     |
+|     title "Sales Revenue"                                                            |     title "Sales Revenue"                                                                                                                        |
+|     x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]              |     x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]                                                                          |
+|     y-axis "Revenue (in $)" 4000 --> 11000                                           |     y-axis "Revenue (in $)" 4000 --> 11000                                                                                                       |
+|     bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]  |     bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]                                                              |
+|     line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000] |     line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]                                                             |
+| ```                                                                                  | ```                                                                                                                                              |
++--------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1403,33 +1037,21 @@ Courbes sur plusieurs axes.
 - Configuration ignorée
 
 
-*Source de l’exemple :*
-
-```text
-radar-beta
-  title Grades
-  axis m["Math"], s["Science"], e["English"]
-  axis h["History"], g["Geography"], a["Art"]
-  curve a["Alice"]{85, 90, 80, 70, 75, 90}
-  curve b["Bob"]{70, 75, 85, 80, 90, 85}
-  max 100
-  graticule polygon
-  ticks 4
-```
-
-*Rendu obtenu :*
-
-```mermaid
-radar-beta
-  title Grades
-  axis m["Math"], s["Science"], e["English"]
-  axis h["History"], g["Geography"], a["Art"]
-  curve a["Alice"]{85, 90, 80, 70, 75, 90}
-  curve b["Bob"]{70, 75, 85, 80, 90, 85}
-  max 100
-  graticule polygon
-  ticks 4
-```
++-----------------------------------------------+--------------------------------------------------------------------------------+
+| Source Mermaid                                | Rendu dans Word                                                                |
++===============================================+================================================================================+
+| ```text                                       | ```mermaid                                                                     |
+| radar-beta                                    | radar-beta                                                                     |
+|   title Grades                                |   title Grades                                                                 |
+|   axis m["Math"], s["Science"], e["English"]  |   axis m["Math"], s["Science"], e["English"]                                   |
+|   axis h["History"], g["Geography"], a["Art"] |   axis h["History"], g["Geography"], a["Art"]                                  |
+|   curve a["Alice"]{85, 90, 80, 70, 75, 90}    |   curve a["Alice"]{85, 90, 80, 70, 75, 90}                                     |
+|   curve b["Bob"]{70, 75, 85, 80, 90, 85}      |   curve b["Bob"]{70, 75, 85, 80, 90, 85}                                       |
+|   max 100                                     |   max 100                                                                      |
+|   graticule polygon                           |   graticule polygon                                                            |
+|   ticks 4                                     |   ticks 4                                                                      |
+| ```                                           | ```                                                                            |
++-----------------------------------------------+--------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1457,39 +1079,24 @@ Points placés sur une matrice 2×2.
 - `radius`, `stroke-color`, `stroke-width`, `classDef`/`:::` : ignorés avec avertissement (position intacte)
 
 
-*Source de l’exemple :*
-
-```text
-quadrantChart
-    title Reach and engagement of campaigns
-    x-axis Low Reach --> High Reach
-    y-axis Low Engagement --> High Engagement
-    quadrant-1 We should expand
-    quadrant-2 Need to promote
-    quadrant-3 Re-evaluate
-    quadrant-4 May be improved
-    Campaign A: [0.3, 0.6] color: #1565C0
-    Campaign B: [0.45, 0.23] color: #1565C0
-    Campaign C: [0.57, 0.69] color: #ff3300
-    Campaign D: [0.78, 0.34] color: #1565C0
-```
-
-*Rendu obtenu :*
-
-```mermaid
-quadrantChart
-    title Reach and engagement of campaigns
-    x-axis Low Reach --> High Reach
-    y-axis Low Engagement --> High Engagement
-    quadrant-1 We should expand
-    quadrant-2 Need to promote
-    quadrant-3 Re-evaluate
-    quadrant-4 May be improved
-    Campaign A: [0.3, 0.6] color: #1565C0
-    Campaign B: [0.45, 0.23] color: #1565C0
-    Campaign C: [0.57, 0.69] color: #ff3300
-    Campaign D: [0.78, 0.34] color: #1565C0
-```
++-----------------------------------------------+--------------------------------------------------------------------------------+
+| Source Mermaid                                | Rendu dans Word                                                                |
++===============================================+================================================================================+
+| ```text                                       | ```mermaid                                                                     |
+| quadrantChart                                 | quadrantChart                                                                  |
+|     title Reach and engagement of campaigns   |     title Reach and engagement of campaigns                                    |
+|     x-axis Low Reach --> High Reach           |     x-axis Low Reach --> High Reach                                            |
+|     y-axis Low Engagement --> High Engagement |     y-axis Low Engagement --> High Engagement                                  |
+|     quadrant-1 We should expand               |     quadrant-1 We should expand                                                |
+|     quadrant-2 Need to promote                |     quadrant-2 Need to promote                                                 |
+|     quadrant-3 Re-evaluate                    |     quadrant-3 Re-evaluate                                                     |
+|     quadrant-4 May be improved                |     quadrant-4 May be improved                                                 |
+|     Campaign A: [0.3, 0.6] color: #1565C0     |     Campaign A: [0.3, 0.6] color: #1565C0                                      |
+|     Campaign B: [0.45, 0.23] color: #1565C0   |     Campaign B: [0.45, 0.23] color: #1565C0                                    |
+|     Campaign C: [0.57, 0.69] color: #ff3300   |     Campaign C: [0.57, 0.69] color: #ff3300                                    |
+|     Campaign D: [0.78, 0.34] color: #1565C0   |     Campaign D: [0.78, 0.34] color: #1565C0                                    |
+| ```                                           | ```                                                                            |
++-----------------------------------------------+--------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1520,47 +1127,28 @@ Ensembles et intersections.
 > **À savoir :** à partir de 4 ensembles, le diagramme n’est plus un vrai Venn (cercles séparés).
 
 
-*Source de l’exemple :*
-
-```text
-venn-beta
-  title Skills coverage
-  set A ["Design"]
-  set B ["Code"]
-  set C ["Writing"]
-  union A,B
-    text ["Design+Code"]
-  union B,C
-    text ["Code+Writing"]
-  union A,C
-    text ["Design+Writing"]
-  union A,B,C
-    text ["All three"]
-  style A fill:#BBDEFB
-  style B fill:#C8E6C9
-  style C fill:#FFE0B2
-```
-
-*Rendu obtenu :*
-
-```mermaid
-venn-beta
-  title Skills coverage
-  set A ["Design"]
-  set B ["Code"]
-  set C ["Writing"]
-  union A,B
-    text ["Design+Code"]
-  union B,C
-    text ["Code+Writing"]
-  union A,C
-    text ["Design+Writing"]
-  union A,B,C
-    text ["All three"]
-  style A fill:#BBDEFB
-  style B fill:#C8E6C9
-  style C fill:#FFE0B2
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| venn-beta                          | venn-beta                                                   |
+|   title Skills coverage            |   title Skills coverage                                     |
+|   set A ["Design"]                 |   set A ["Design"]                                          |
+|   set B ["Code"]                   |   set B ["Code"]                                            |
+|   set C ["Writing"]                |   set C ["Writing"]                                         |
+|   union A,B                        |   union A,B                                                 |
+|     text ["Design+Code"]           |     text ["Design+Code"]                                    |
+|   union B,C                        |   union B,C                                                 |
+|     text ["Code+Writing"]          |     text ["Code+Writing"]                                   |
+|   union A,C                        |   union A,C                                                 |
+|     text ["Design+Writing"]        |     text ["Design+Writing"]                                 |
+|   union A,B,C                      |   union A,B,C                                               |
+|     text ["All three"]             |     text ["All three"]                                      |
+|   style A fill:#BBDEFB             |   style A fill:#BBDEFB                                      |
+|   style B fill:#C8E6C9             |   style B fill:#C8E6C9                                      |
+|   style C fill:#FFE0B2             |   style C fill:#FFE0B2                                      |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1589,53 +1177,31 @@ Arbre radial à partir d’une racine.
 - Racines multiples : la première est gardée
 
 
-*Source de l’exemple :*
-
-```text
-mindmap
-  root((Project Plan))
-    Research
-      Market analysis
-      Competitor review
-      User interviews
-    Design
-      [Wireframes]
-      )Moodboard(
-        Colors
-        Typography
-    {{Engineering}}
-      (Backend)
-        API
-        Database
-      Frontend
-    Launch
-      ))Marketing((
-      Support
-```
-
-*Rendu obtenu :*
-
-```mermaid
-mindmap
-  root((Project Plan))
-    Research
-      Market analysis
-      Competitor review
-      User interviews
-    Design
-      [Wireframes]
-      )Moodboard(
-        Colors
-        Typography
-    {{Engineering}}
-      (Backend)
-        API
-        Database
-      Frontend
-    Launch
-      ))Marketing((
-      Support
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| mindmap                            | mindmap                                                     |
+|   root((Project Plan))             |   root((Project Plan))                                      |
+|     Research                       |     Research                                                |
+|       Market analysis              |       Market analysis                                       |
+|       Competitor review            |       Competitor review                                     |
+|       User interviews              |       User interviews                                       |
+|     Design                         |     Design                                                  |
+|       [Wireframes]                 |       [Wireframes]                                          |
+|       )Moodboard(                  |       )Moodboard(                                           |
+|         Colors                     |         Colors                                              |
+|         Typography                 |         Typography                                          |
+|     {{Engineering}}                |     {{Engineering}}                                         |
+|       (Backend)                    |       (Backend)                                             |
+|         API                        |         API                                                 |
+|         Database                   |         Database                                            |
+|       Frontend                     |       Frontend                                              |
+|     Launch                         |     Launch                                                  |
+|       ))Marketing((                |       ))Marketing((                                         |
+|       Support                      |       Support                                               |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1665,39 +1231,24 @@ Arborescence façon explorateur de fichiers.
 - Plafonds : profondeur 32, 2000 nœuds
 
 
-*Source de l’exemple :*
-
-```text
-treeView-beta
-    "packages/"
-        "core/" ## the moat
-            "src/"
-                parser/
-                translator/
-                index.ts:::highlight
-            package.json
-        cli/
-        "README file.md" ## quick start
-    docs/
-        specs/
-```
-
-*Rendu obtenu :*
-
-```mermaid
-treeView-beta
-    "packages/"
-        "core/" ## the moat
-            "src/"
-                parser/
-                translator/
-                index.ts:::highlight
-            package.json
-        cli/
-        "README file.md" ## quick start
-    docs/
-        specs/
-```
++-----------------------------------------+----------------------------------------------------------------------+
+| Source Mermaid                          | Rendu dans Word                                                      |
++=========================================+======================================================================+
+| ```text                                 | ```mermaid                                                           |
+| treeView-beta                           | treeView-beta                                                        |
+|     "packages/"                         |     "packages/"                                                      |
+|         "core/" ## the moat             |         "core/" ## the moat                                          |
+|             "src/"                      |             "src/"                                                   |
+|                 parser/                 |                 parser/                                              |
+|                 translator/             |                 translator/                                          |
+|                 index.ts:::highlight    |                 index.ts:::highlight                                 |
+|             package.json                |             package.json                                             |
+|         cli/                            |         cli/                                                         |
+|         "README file.md" ## quick start |         "README file.md" ## quick start                              |
+|     docs/                               |     docs/                                                            |
+|         specs/                          |         specs/                                                       |
+| ```                                     | ```                                                                  |
++-----------------------------------------+----------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1726,49 +1277,29 @@ Rectangles imbriqués proportionnels aux valeurs.
 - Frontmatter ignoré avec avertissement
 
 
-*Source de l’exemple :*
-
-```text
-treemap-beta
-"Products"
-    "Electronics"
-        "Phones": 50
-        "Computers": 30
-        "Accessories": 20
-    "Clothing"
-        "Men's": 40
-        "Women's":::important
-            "Dresses": 25
-            "Tops": 15
-"Services"
-    "Support": 35
-    "Consulting": 12
-    "Training": 8
-
-classDef important fill:#f96,stroke:#333,color:#000;
-```
-
-*Rendu obtenu :*
-
-```mermaid
-treemap-beta
-"Products"
-    "Electronics"
-        "Phones": 50
-        "Computers": 30
-        "Accessories": 20
-    "Clothing"
-        "Men's": 40
-        "Women's":::important
-            "Dresses": 25
-            "Tops": 15
-"Services"
-    "Support": 35
-    "Consulting": 12
-    "Training": 8
-
-classDef important fill:#f96,stroke:#333,color:#000;
-```
++------------------------------------------------------+--------------------------------------------------------------------------------------------+
+| Source Mermaid                                       | Rendu dans Word                                                                            |
++======================================================+============================================================================================+
+| ```text                                              | ```mermaid                                                                                 |
+| treemap-beta                                         | treemap-beta                                                                               |
+| "Products"                                           | "Products"                                                                                 |
+|     "Electronics"                                    |     "Electronics"                                                                          |
+|         "Phones": 50                                 |         "Phones": 50                                                                       |
+|         "Computers": 30                              |         "Computers": 30                                                                    |
+|         "Accessories": 20                            |         "Accessories": 20                                                                  |
+|     "Clothing"                                       |     "Clothing"                                                                             |
+|         "Men's": 40                                  |         "Men's": 40                                                                        |
+|         "Women's":::important                        |         "Women's":::important                                                              |
+|             "Dresses": 25                            |             "Dresses": 25                                                                  |
+|             "Tops": 15                               |             "Tops": 15                                                                     |
+| "Services"                                           | "Services"                                                                                 |
+|     "Support": 35                                    |     "Support": 35                                                                          |
+|     "Consulting": 12                                 |     "Consulting": 12                                                                       |
+|     "Training": 8                                    |     "Training": 8                                                                          |
+|                                                      |                                                                                            |
+| classDef important fill:#f96,stroke:#333,color:#000; | classDef important fill:#f96,stroke:#333,color:#000;                                       |
+| ```                                                  | ```                                                                                        |
++------------------------------------------------------+--------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1796,51 +1327,20 @@ Colonnes et cartes.
 - `ticketBaseUrl` volontairement non géré : le projet n’émet jamais de référence distante
 
 
-*Source de l’exemple :*
-
-```text
-kanban
-  Todo
-    [Create Documentation]
-    docs[Create Blog about the new diagram]
-  [In progress]
-    id6[Create renderer so that it works in all cases. We also add some extra text here for testing purposes. And some more just for the extra flare.]
-  id9[Ready for deploy]
-    id8[Design grammar]@{ assigned: 'knsv' }
-  id10[Ready for test]
-    id4[Create parsing tests]@{ ticket: MC-2038, assigned: 'K.Sveidqvist', priority: 'High' }
-    id66[last item]@{ priority: 'Very Low', assigned: 'knsv' }
-  id11[Done]
-    id5[define getData]
-    id2[Title of diagram is more than 100 chars when user duplicates diagram with 100 char]@{ ticket: MC-2036, priority: 'Very High'}
-    id3[Update DB function]@{ ticket: MC-2037, assigned: knsv, priority: 'High' }
-
-  id12[Can't reproduce]
-    id3[Weird flickering in Firefox]
-```
-
-*Rendu obtenu :*
-
-```mermaid
-kanban
-  Todo
-    [Create Documentation]
-    docs[Create Blog about the new diagram]
-  [In progress]
-    id6[Create renderer so that it works in all cases. We also add some extra text here for testing purposes. And some more just for the extra flare.]
-  id9[Ready for deploy]
-    id8[Design grammar]@{ assigned: 'knsv' }
-  id10[Ready for test]
-    id4[Create parsing tests]@{ ticket: MC-2038, assigned: 'K.Sveidqvist', priority: 'High' }
-    id66[last item]@{ priority: 'Very Low', assigned: 'knsv' }
-  id11[Done]
-    id5[define getData]
-    id2[Title of diagram is more than 100 chars when user duplicates diagram with 100 char]@{ ticket: MC-2036, priority: 'Very High'}
-    id3[Update DB function]@{ ticket: MC-2037, assigned: knsv, priority: 'High' }
-
-  id12[Can't reproduce]
-    id3[Weird flickering in Firefox]
-```
++---------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| Source Mermaid                                          | Rendu dans Word                                                                                 |
++=========================================================+=================================================================================================+
+| ```text                                                 | ```mermaid                                                                                      |
+| kanban                                                  | kanban                                                                                          |
+|   Todo                                                  |   Todo                                                                                          |
+|     [Write docs]                                        |     [Write docs]                                                                                |
+|     docs[Write blog]@{ ticket: MC-1, priority: 'High' } |     docs[Write blog]@{ ticket: MC-1, priority: 'High' }                                         |
+|   [In progress]                                         |   [In progress]                                                                                 |
+|     id6[Build renderer]@{ assigned: 'knsv' }            |     id6[Build renderer]@{ assigned: 'knsv' }                                                    |
+|   Done                                                  |   Done                                                                                          |
+|     id11[Ship it]                                       |     id11[Ship it]                                                                               |
+| ```                                                     | ```                                                                                             |
++---------------------------------------------------------+-------------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1867,55 +1367,32 @@ Causes d’un effet, classées par catégorie.
 - Plafonds : 8 niveaux, 500 lignes
 
 
-*Source de l’exemple :*
-
-```text
-ishikawa-beta
-    Blurry Photo
-    Process
-        Out of focus
-        Shutter speed too slow
-        Protective film not removed
-        Beautification filter applied
-    User
-        Shaky hands
-    Equipment
-        LENS
-            Inappropriate lens
-            Damaged lens
-            Dirty lens
-        SENSOR
-            Damaged sensor
-            Dirty sensor
-    Environment
-        Subject moved too quickly
-        Too dark
-```
-
-*Rendu obtenu :*
-
-```mermaid
-ishikawa-beta
-    Blurry Photo
-    Process
-        Out of focus
-        Shutter speed too slow
-        Protective film not removed
-        Beautification filter applied
-    User
-        Shaky hands
-    Equipment
-        LENS
-            Inappropriate lens
-            Damaged lens
-            Dirty lens
-        SENSOR
-            Damaged sensor
-            Dirty sensor
-    Environment
-        Subject moved too quickly
-        Too dark
-```
++---------------------------------------+------------------------------------------------------------------+
+| Source Mermaid                        | Rendu dans Word                                                  |
++=======================================+==================================================================+
+| ```text                               | ```mermaid                                                       |
+| ishikawa-beta                         | ishikawa-beta                                                    |
+|     Blurry Photo                      |     Blurry Photo                                                 |
+|     Process                           |     Process                                                      |
+|         Out of focus                  |         Out of focus                                             |
+|         Shutter speed too slow        |         Shutter speed too slow                                   |
+|         Protective film not removed   |         Protective film not removed                              |
+|         Beautification filter applied |         Beautification filter applied                            |
+|     User                              |     User                                                         |
+|         Shaky hands                   |         Shaky hands                                              |
+|     Equipment                         |     Equipment                                                    |
+|         LENS                          |         LENS                                                     |
+|             Inappropriate lens        |             Inappropriate lens                                   |
+|             Damaged lens              |             Damaged lens                                         |
+|             Dirty lens                |             Dirty lens                                           |
+|         SENSOR                        |         SENSOR                                                   |
+|             Damaged sensor            |             Damaged sensor                                       |
+|             Dirty sensor              |             Dirty sensor                                         |
+|     Environment                       |     Environment                                                  |
+|         Subject moved too quickly     |         Subject moved too quickly                                |
+|         Too dark                      |         Too dark                                                 |
+| ```                                   | ```                                                              |
++---------------------------------------+------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1942,57 +1419,33 @@ Champs d’un paquet, en rangées de bits.
 - Options de frontmatter (`showBits`, `bitOrder`, `bitsPerRow`…) ignorées : 32 bits par rangée, bit de poids faible à gauche
 
 
-*Source de l’exemple :*
-
-```text
----
-title: "TCP Packet"
----
-packet
-0-15: "Source Port"
-16-31: "Destination Port"
-32-63: "Sequence Number"
-64-95: "Acknowledgment Number"
-96-99: "Data Offset"
-100-105: "Reserved"
-106: "URG"
-107: "ACK"
-108: "PSH"
-109: "RST"
-110: "SYN"
-111: "FIN"
-112-127: "Window"
-128-143: "Checksum"
-144-159: "Urgent Pointer"
-160-191: "(Options and Padding)"
-192-255: "Data (variable length)"
-```
-
-*Rendu obtenu :*
-
-```mermaid
----
-title: "TCP Packet"
----
-packet
-0-15: "Source Port"
-16-31: "Destination Port"
-32-63: "Sequence Number"
-64-95: "Acknowledgment Number"
-96-99: "Data Offset"
-100-105: "Reserved"
-106: "URG"
-107: "ACK"
-108: "PSH"
-109: "RST"
-110: "SYN"
-111: "FIN"
-112-127: "Window"
-128-143: "Checksum"
-144-159: "Urgent Pointer"
-160-191: "(Options and Padding)"
-192-255: "Data (variable length)"
-```
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| ---                                | ---                                                         |
+| title: "TCP Packet"                | title: "TCP Packet"                                         |
+| ---                                | ---                                                         |
+| packet                             | packet                                                      |
+| 0-15: "Source Port"                | 0-15: "Source Port"                                         |
+| 16-31: "Destination Port"          | 16-31: "Destination Port"                                   |
+| 32-63: "Sequence Number"           | 32-63: "Sequence Number"                                    |
+| 64-95: "Acknowledgment Number"     | 64-95: "Acknowledgment Number"                              |
+| 96-99: "Data Offset"               | 96-99: "Data Offset"                                        |
+| 100-105: "Reserved"                | 100-105: "Reserved"                                         |
+| 106: "URG"                         | 106: "URG"                                                  |
+| 107: "ACK"                         | 107: "ACK"                                                  |
+| 108: "PSH"                         | 108: "PSH"                                                  |
+| 109: "RST"                         | 109: "RST"                                                  |
+| 110: "SYN"                         | 110: "SYN"                                                  |
+| 111: "FIN"                         | 111: "FIN"                                                  |
+| 112-127: "Window"                  | 112-127: "Window"                                           |
+| 128-143: "Checksum"                | 128-143: "Checksum"                                         |
+| 144-159: "Urgent Pointer"          | 144-159: "Urgent Pointer"                                   |
+| 160-191: "(Options and Padding)"   | 160-191: "(Options and Padding)"                            |
+| 192-255: "Data (variable length)"  | 192-255: "Data (variable length)"                           |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -2020,53 +1473,31 @@ Cinq domaines de décision avec éléments et transitions.
 - Auto-transitions supprimées, comme dans Mermaid
 
 
-*Source de l’exemple :*
-
-```text
-cynefin-beta
-  title Strategy Categorization
-
-  complex
-    "Market research"
-
-  complicated
-    "Competitive analysis"
-
-  clear
-    "Standard pricing"
-
-  chaotic
-    "Crisis management"
-
-  complex --> complicated : "Pattern identified"
-  complicated --> clear : "Best practice codified"
-  clear --> chaotic : "Complacency"
-  chaotic --> complex : "Stabilized"
-```
-
-*Rendu obtenu :*
-
-```mermaid
-cynefin-beta
-  title Strategy Categorization
-
-  complex
-    "Market research"
-
-  complicated
-    "Competitive analysis"
-
-  clear
-    "Standard pricing"
-
-  chaotic
-    "Crisis management"
-
-  complex --> complicated : "Pattern identified"
-  complicated --> clear : "Best practice codified"
-  clear --> chaotic : "Complacency"
-  chaotic --> complex : "Stabilized"
-```
++----------------------------------------------------+----------------------------------------------------------------------------------------+
+| Source Mermaid                                     | Rendu dans Word                                                                        |
++====================================================+========================================================================================+
+| ```text                                            | ```mermaid                                                                             |
+| cynefin-beta                                       | cynefin-beta                                                                           |
+|   title Strategy Categorization                    |   title Strategy Categorization                                                        |
+|                                                    |                                                                                        |
+|   complex                                          |   complex                                                                              |
+|     "Market research"                              |     "Market research"                                                                  |
+|                                                    |                                                                                        |
+|   complicated                                      |   complicated                                                                          |
+|     "Competitive analysis"                         |     "Competitive analysis"                                                             |
+|                                                    |                                                                                        |
+|   clear                                            |   clear                                                                                |
+|     "Standard pricing"                             |     "Standard pricing"                                                                 |
+|                                                    |                                                                                        |
+|   chaotic                                          |   chaotic                                                                              |
+|     "Crisis management"                            |     "Crisis management"                                                                |
+|                                                    |                                                                                        |
+|   complex --> complicated : "Pattern identified"   |   complex --> complicated : "Pattern identified"                                       |
+|   complicated --> clear : "Best practice codified" |   complicated --> clear : "Best practice codified"                                     |
+|   clear --> chaotic : "Complacency"                |   clear --> chaotic : "Complacency"                                                    |
+|   chaotic --> complex : "Stabilized"               |   chaotic --> complex : "Stabilized"                                                   |
+| ```                                                | ```                                                                                    |
++----------------------------------------------------+----------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -2094,79 +1525,27 @@ Cartographie de valeur en fonction de l’évolution.
 - Plafonds : 200 nœuds, 500 liens
 
 
-*Source de l’exemple :*
-
-```text
-wardley-beta
-title Tea Shop
-size [1000, 640]
-anchor Business [0.95, 0.63]
-anchor Public [0.95, 0.78]
-component Cup of Tea [0.79, 0.61] label [-85, 10]
-component Cup [0.73, 0.78]
-component Tea [0.63, 0.81]
-component Hot Water [0.52, 0.80]
-component Water [0.38, 0.82] (buy)
-component Kettle [0.43, 0.35] (inertia)
-component Boiler [0.30, 0.20] (build)
-component Power [0.1, 0.7] (outsource)
-pipeline Kettle {
-  component "Electric Kettle" [0.64]
-  component "Gas Kettle" [0.46]
-}
-Business->Cup of Tea
-Public->Cup of Tea
-Cup of Tea->Cup
-Cup of Tea->Tea
-Cup of Tea->Hot Water
-Hot Water->Water
-Hot Water->Kettle; boils
-Kettle -.-> Power
-Boiler -> Power
-Tea +<> Water
-evolve Kettle 0.62
-note "Standardising power allows Kettles to evolve faster" [0.07, 0.45]
-annotations [0.12, 0.02]
-annotation 1,[0.20,0.30] "Standardising power"
-accelerator "Open Source" [0.62, 0.30]
-```
-
-*Rendu obtenu :*
-
-```mermaid
-wardley-beta
-title Tea Shop
-size [1000, 640]
-anchor Business [0.95, 0.63]
-anchor Public [0.95, 0.78]
-component Cup of Tea [0.79, 0.61] label [-85, 10]
-component Cup [0.73, 0.78]
-component Tea [0.63, 0.81]
-component Hot Water [0.52, 0.80]
-component Water [0.38, 0.82] (buy)
-component Kettle [0.43, 0.35] (inertia)
-component Boiler [0.30, 0.20] (build)
-component Power [0.1, 0.7] (outsource)
-pipeline Kettle {
-  component "Electric Kettle" [0.64]
-  component "Gas Kettle" [0.46]
-}
-Business->Cup of Tea
-Public->Cup of Tea
-Cup of Tea->Cup
-Cup of Tea->Tea
-Cup of Tea->Hot Water
-Hot Water->Water
-Hot Water->Kettle; boils
-Kettle -.-> Power
-Boiler -> Power
-Tea +<> Water
-evolve Kettle 0.62
-note "Standardising power allows Kettles to evolve faster" [0.07, 0.45]
-annotations [0.12, 0.02]
-annotation 1,[0.20,0.30] "Standardising power"
-accelerator "Open Source" [0.62, 0.30]
-```
++-----------------------------------------+----------------------------------------------------------------------+
+| Source Mermaid                          | Rendu dans Word                                                      |
++=========================================+======================================================================+
+| ```text                                 | ```mermaid                                                           |
+| wardley-beta                            | wardley-beta                                                         |
+| title Tea Shop                          | title Tea Shop                                                       |
+| anchor Business [0.95, 0.63]            | anchor Business [0.95, 0.63]                                         |
+| component Cup of Tea [0.79, 0.61]       | component Cup of Tea [0.79, 0.61]                                    |
+| component Tea [0.63, 0.81]              | component Tea [0.63, 0.81]                                           |
+| component Hot Water [0.52, 0.80]        | component Hot Water [0.52, 0.80]                                     |
+| component Kettle [0.43, 0.35] (inertia) | component Kettle [0.43, 0.35] (inertia)                              |
+| component Power [0.1, 0.7] (outsource)  | component Power [0.1, 0.7] (outsource)                               |
+| Business->Cup of Tea                    | Business->Cup of Tea                                                 |
+| Cup of Tea->Tea                         | Cup of Tea->Tea                                                      |
+| Cup of Tea->Hot Water                   | Cup of Tea->Hot Water                                                |
+| Hot Water->Kettle                       | Hot Water->Kettle                                                    |
+| Kettle -.-> Power                       | Kettle -.-> Power                                                    |
+| evolve Kettle 0.62                      | evolve Kettle 0.62                                                   |
+| note "Standardise power" [0.07, 0.45]   | note "Standardise power" [0.07, 0.45]                                |
+| ```                                     | ```                                                                  |
++-----------------------------------------+----------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -2196,55 +1575,32 @@ Cadres de temps, événements, données et scénarios.
 - Plafonds : 100 cadres, 300 liens, 50 scénarios
 
 
-*Source de l’exemple :*
-
-```text
-eventmodeling
-tf 01 ui CartScreen
-tf 02 cmd AddItem [[AddItem01]]
-tf 03 evt ItemAdded ->> 02 {"itemId": "42", "qty": 1}
-tf 04 rmo CartItems ->> 03
-tf 05 ui CartScreenUpdated ->> 04
-tf 06 pcr PriceCalculator ->> 04
-tf 07 cmd ApplyDiscount ->> 06
-tf 08 evt Billing.DiscountApplied ->> 07
-rf 09 ui Checkout ->> 04
-tf 10 cmd Pay ->> 09
-tf 11 evt Billing.Paid ->> 10
-data AddItem01 {
-  description: 'john'
-  price: 20.4
-}
-note 03 {
-  stock reserved elsewhere
-}
-gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded
-```
-
-*Rendu obtenu :*
-
-```mermaid
-eventmodeling
-tf 01 ui CartScreen
-tf 02 cmd AddItem [[AddItem01]]
-tf 03 evt ItemAdded ->> 02 {"itemId": "42", "qty": 1}
-tf 04 rmo CartItems ->> 03
-tf 05 ui CartScreenUpdated ->> 04
-tf 06 pcr PriceCalculator ->> 04
-tf 07 cmd ApplyDiscount ->> 06
-tf 08 evt Billing.DiscountApplied ->> 07
-rf 09 ui Checkout ->> 04
-tf 10 cmd Pay ->> 09
-tf 11 evt Billing.Paid ->> 10
-data AddItem01 {
-  description: 'john'
-  price: 20.4
-}
-note 03 {
-  stock reserved elsewhere
-}
-gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded
-```
++----------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+
+| Source Mermaid                                                 | Rendu dans Word                                                                                             |
++================================================================+=============================================================================================================+
+| ```text                                                        | ```mermaid                                                                                                  |
+| eventmodeling                                                  | eventmodeling                                                                                               |
+| tf 01 ui CartScreen                                            | tf 01 ui CartScreen                                                                                         |
+| tf 02 cmd AddItem [[AddItem01]]                                | tf 02 cmd AddItem [[AddItem01]]                                                                             |
+| tf 03 evt ItemAdded ->> 02 {"itemId": "42", "qty": 1}          | tf 03 evt ItemAdded ->> 02 {"itemId": "42", "qty": 1}                                                       |
+| tf 04 rmo CartItems ->> 03                                     | tf 04 rmo CartItems ->> 03                                                                                  |
+| tf 05 ui CartScreenUpdated ->> 04                              | tf 05 ui CartScreenUpdated ->> 04                                                                           |
+| tf 06 pcr PriceCalculator ->> 04                               | tf 06 pcr PriceCalculator ->> 04                                                                            |
+| tf 07 cmd ApplyDiscount ->> 06                                 | tf 07 cmd ApplyDiscount ->> 06                                                                              |
+| tf 08 evt Billing.DiscountApplied ->> 07                       | tf 08 evt Billing.DiscountApplied ->> 07                                                                    |
+| rf 09 ui Checkout ->> 04                                       | rf 09 ui Checkout ->> 04                                                                                    |
+| tf 10 cmd Pay ->> 09                                           | tf 10 cmd Pay ->> 09                                                                                        |
+| tf 11 evt Billing.Paid ->> 10                                  | tf 11 evt Billing.Paid ->> 10                                                                               |
+| data AddItem01 {                                               | data AddItem01 {                                                                                            |
+|   description: 'john'                                          |   description: 'john'                                                                                       |
+|   price: 20.4                                                  |   price: 20.4                                                                                               |
+| }                                                              | }                                                                                                           |
+| note 03 {                                                      | note 03 {                                                                                                   |
+|   stock reserved elsewhere                                     |   stock reserved elsewhere                                                                                  |
+| }                                                              | }                                                                                                           |
+| gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded | gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded                                              |
+| ```                                                            | ```                                                                                                         |
++----------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -2272,46 +1628,26 @@ Historique de branches et de commits.
 - L’ordre des instructions compte, comme dans un vrai dépôt
 
 
-*Source de l’exemple :*
-
-```text
-gitGraph
-    commit id: "ZERO"
-    branch develop
-    branch release
-    commit id:"A"
-    checkout main
-    commit id:"ONE"
-    checkout develop
-    commit id:"B"
-    checkout main
-    merge develop id:"MERGE"
-    commit id:"TWO"
-    checkout release
-    cherry-pick id:"MERGE" parent:"B"
-    commit id:"THREE"
-    checkout develop
-    commit id:"C"
-```
-
-*Rendu obtenu :*
-
-```mermaid
-gitGraph
-    commit id: "ZERO"
-    branch develop
-    branch release
-    commit id:"A"
-    checkout main
-    commit id:"ONE"
-    checkout develop
-    commit id:"B"
-    checkout main
-    merge develop id:"MERGE"
-    commit id:"TWO"
-    checkout release
-    cherry-pick id:"MERGE" parent:"B"
-    commit id:"THREE"
-    checkout develop
-    commit id:"C"
-```
++---------------------------------------+------------------------------------------------------------------+
+| Source Mermaid                        | Rendu dans Word                                                  |
++=======================================+==================================================================+
+| ```text                               | ```mermaid                                                       |
+| gitGraph                              | gitGraph                                                         |
+|     commit id: "ZERO"                 |     commit id: "ZERO"                                            |
+|     branch develop                    |     branch develop                                               |
+|     branch release                    |     branch release                                               |
+|     commit id:"A"                     |     commit id:"A"                                                |
+|     checkout main                     |     checkout main                                                |
+|     commit id:"ONE"                   |     commit id:"ONE"                                              |
+|     checkout develop                  |     checkout develop                                             |
+|     commit id:"B"                     |     commit id:"B"                                                |
+|     checkout main                     |     checkout main                                                |
+|     merge develop id:"MERGE"          |     merge develop id:"MERGE"                                     |
+|     commit id:"TWO"                   |     commit id:"TWO"                                              |
+|     checkout release                  |     checkout release                                             |
+|     cherry-pick id:"MERGE" parent:"B" |     cherry-pick id:"MERGE" parent:"B"                            |
+|     commit id:"THREE"                 |     commit id:"THREE"                                            |
+|     checkout develop                  |     checkout develop                                             |
+|     commit id:"C"                     |     commit id:"C"                                                |
+| ```                                   | ```                                                              |
++---------------------------------------+------------------------------------------------------------------+
