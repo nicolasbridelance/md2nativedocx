@@ -70,7 +70,9 @@ treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-docume
 
 ![All 29 supported Mermaid diagram types, each exported to native Word shapes](docs/showcase/preview.png)
 
-*One real export per type, rendered with LibreOffice. Regenerate with `python3 scripts/build-showcase.py`.*
+*Same Mermaid source, two outputs: **left = rendered by Mermaid.js** (a picture), **right = md2nativedocx** (native, editable
+Word shapes, rendered here with LibreOffice). Regenerate with `scripts/build-showcase.py` (see its header; Mermaid is not a
+repo dependency).*
 
 **Flowchart** (`graph`/`flowchart`) is the most complete, most complete target — see
 `docs/markdown-mermaid-compliance-table.md` for its full syntax coverage. A chain/tree/cycle-shaped

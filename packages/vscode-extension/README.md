@@ -85,9 +85,10 @@ export's own `.log` file.
 
 ## All 29 Mermaid diagram types
 
-<img src="docs/showcase.png" width="900" alt="Gallery of all 29 supported Mermaid diagram types, each exported to native Word shapes"/>
+<img src="docs/showcase.png" width="900" alt="Side-by-side gallery of all 29 supported Mermaid diagram types: Mermaid.js rendering on the left, md2nativedocx native Word shapes on the right"/>
 
-*One real export per type, rendered with LibreOffice.*
+*Same Mermaid source, two outputs: **left = rendered by Mermaid.js**, **right = md2nativedocx** (native, editable Word shapes,
+rendered here with LibreOffice).*
 
 ## Frequently asked
 
