@@ -135,6 +135,22 @@
           "default": false,
           "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%"
         },
+        "md2nativedocx.smartArt.style": {
+          "type": "string",
+          "enum": ["simple", "colorful", "intense"],
+          "default": "colorful",
+          "enumDescriptions": [
+            "%configuration.smartArt.style.simple%",
+            "%configuration.smartArt.style.colorful%",
+            "%configuration.smartArt.style.intense%"
+          ],
+          "markdownDescription": "%configuration.smartArt.style.markdownDescription%"
+        },
+        "md2nativedocx.smartArt.preRenderedDrawing": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%configuration.smartArt.preRenderedDrawing.markdownDescription%"
+        },
         "md2nativedocx.nativeCharts.enabled": {
           "type": "boolean",
           "default": false,

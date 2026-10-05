@@ -6,6 +6,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 ## [Unreleased]
 
 ### Added
+- New settings `md2nativedocx.smartArt.style` (`simple` | `colorful` — default | `intense`) and
+  `md2nativedocx.smartArt.preRenderedDrawing` (default on) for SmartArt diagrams: a different theme
+  accent per shape, optionally the theme's gradient + drop shadow, and the cached drawing Word itself
+  stores so Word and LibreOffice show the same shapes. They stay real, restylable SmartArt.
 - New setting `md2nativedocx.nativeCharts.enabled` (off by default): a Mermaid `pie`, `xychart` or
   `radar` becomes a native Word chart with an embedded workbook — Chart Design → Edit Data changes the
   values — instead of editable shapes. A horizontal `xychart` with a line series, or a radar with fewer

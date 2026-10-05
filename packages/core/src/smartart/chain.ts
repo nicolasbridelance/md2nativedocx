@@ -23,6 +23,7 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, chainShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
@@ -439,6 +440,7 @@ function buildChainDataXml(
   nodes: FlowNode[],
   layoutUrn: string,
   withDrawing: boolean,
+  style: SmartArtStyle,
 ): { xml: string; drawingXml?: string } {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
@@ -560,7 +562,9 @@ function buildChainDataXml(
         };
       }),
       pSibTransIds,
+      style,
     ),
+    style,
   );
   return { xml, drawingXml };
 }
@@ -590,14 +594,21 @@ const CHAIN_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: str
  * `docs/markdown-mermaid-compliance-table.md`).
  */
 export function generateChain(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtChainOutput {
+  const style: SmartArtStyle = options.style ?? 'simple';
   const nodes = orderedChainNodes(flowchart);
   const { layoutXml, layoutUrn } = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
-  const data = buildChainDataXml(flowchart, nodes, layoutUrn, options.drawing === true);
+  const data = buildChainDataXml(flowchart, nodes, layoutUrn, options.drawing === true, style);
   return {
     dataXml: data.xml,
     layoutXml,
-    colorsXml: CHAIN_COLORS_XML,
-    styleXml: CHAIN_STYLE_XML,
+    colorsXml:
+      style === 'simple'
+        ? CHAIN_COLORS_XML
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/chain1', ['node0','node1','sibTrans']),
+    styleXml:
+      style === 'simple'
+        ? CHAIN_STYLE_XML
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/chain1', ['node0','node1','sibTrans']),
     ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

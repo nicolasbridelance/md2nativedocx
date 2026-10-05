@@ -238,6 +238,29 @@ with arrows, tree and cycles as designed, dark text on the light-orange node.
       this** (our drawing matches Word's own layout) or jumps to a different arrangement, and whether
       anything disappears.
 
+## Round 8 — 2026-10-05: SmartArt look profiles (`MD2NATIVEDOCX_SMARTART_STYLE`)
+
+Round 7 confirmed the SmartArt open with no warning and are visible. The look was plain (one accent, flat),
+so there are now three profiles; all stay **real SmartArt** (restylable from the SmartArt Design tab):
+`simple` (the old look), `colorful` (a different theme accent per shape, like Word's "Colorful – Accent
+Colors") and `intense` (colorful + the theme's gradient fill, drop shadow, heavier white outline).
+Same four diagrams as before. Schema validator: 0 errors in `word/diagrams/*` for every profile.
+
+- `smartart-v5-colorful.docx` (colorful + cached drawing)
+- `smartart-v5-intense.docx` (intense + cached drawing)
+- `smartart-v5-intense-no-drawing.docx` (intense, **no** cached drawing: shows what Word itself computes
+  from our definitions)
+
+- [ ] All three open with no repair prompt.
+- [ ] colorful: each shape has its own accent colour (orange, grey, gold, blue, …); white text; the light-orange
+      override on "Planifier" is kept with dark text.
+- [ ] intense: gradient fill, soft shadow, white outline — the "wow" look; compare with how Word's own
+      "Intense Effect" quick style looks on the same diagram (Design tab → SmartArt Styles).
+- [ ] intense-no-drawing: does Word's own rendering match the cached one (gradient + shadow present)? If it
+      is flat, Word is ignoring our `styleDef` references — tell me, it changes the approach.
+- [ ] In the Design tab, **Change Colors** and **SmartArt Styles** still work on these diagrams.
+- [ ] Which profile do you want as the default?
+
 ## Recording the result
 
 Once done, either:

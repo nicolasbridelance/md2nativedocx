@@ -16,6 +16,7 @@
 
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
 import type { Flowchart } from '../types.js';
+import { accentOf, isIntense, type SmartArtStyle } from './styles.js';
 
 /** Frame size (EMU) the diagram is embedded in — keep in sync with `embed.ts`'s defaults. */
 export const DRAWING_FRAME = { cx: 5486400, cy: 3200400 };
@@ -45,7 +46,9 @@ export interface DrawingShape {
   fontSize?: number;
   /** `RRGGBB` override from `classDef`/`style`; otherwise the theme's accent colour. */
   fill?: string;
-  /** `accent1` tint for transitions (60 = lighter), in percent. */
+  /** Theme accent (`accent1`…`accent6`) the shape is painted with; default `accent1`. */
+  accent?: string;
+  /** Tint of that accent for transitions (60 = lighter), in percent. */
   tintPercent?: number;
 }
 
@@ -59,23 +62,43 @@ function textColor(fill: string | undefined): string {
   return luma > 160 ? 'dk1' : 'lt1';
 }
 
-function fillXml(shape: DrawingShape): string {
-  const fill = validateHexColor(shape.fill, '');
-  if (fill) return `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
-  const tint = shape.tintPercent === undefined ? '' : `<a:tint val="${shape.tintPercent * 1000}"/>`;
-  return `<a:solidFill><a:schemeClr val="accent1">${tint}</a:schemeClr></a:solidFill>`;
+/** Theme gradient fill 3 (what an "intense" quick style references), written out for one accent. */
+function intenseGradient(accent: string): string {
+  return (
+    '<a:gradFill rotWithShape="1"><a:gsLst>' +
+    `<a:gs pos="0"><a:schemeClr val="${accent}"><a:tint val="100000"/><a:shade val="100000"/><a:satMod val="130000"/></a:schemeClr></a:gs>` +
+    `<a:gs pos="100000"><a:schemeClr val="${accent}"><a:tint val="50000"/><a:shade val="100000"/><a:satMod val="350000"/></a:schemeClr></a:gs>` +
+    '</a:gsLst><a:lin ang="16200000" scaled="0"/></a:gradFill>'
+  );
 }
 
-function shapeXml(shape: DrawingShape): string {
+const SHADOW =
+  '<a:effectLst><a:outerShdw blurRad="40000" dist="23000" dir="5400000" rotWithShape="0"><a:srgbClr val="000000"><a:alpha val="35000"/></a:srgbClr></a:outerShdw></a:effectLst>';
+
+function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
+  const fill = validateHexColor(shape.fill, '');
+  if (fill) return `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
+  const accent = shape.accent ?? 'accent1';
+  if (shape.tintPercent === undefined && isIntense(style) && shape.prst === 'roundRect') return intenseGradient(accent);
+  const tint = shape.tintPercent === undefined ? '' : `<a:tint val="${shape.tintPercent * 1000}"/>`;
+  return `<a:solidFill><a:schemeClr val="${accent}">${tint}</a:schemeClr></a:solidFill>`;
+}
+
+function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
   const isArrow = shape.prst !== 'roundRect';
   const fill = validateHexColor(shape.fill, '');
+  const lineWidth = style === 'simple' ? 12700 : style === 'colorful' ? 19050 : 25400;
   const line = isArrow
     ? '<a:ln><a:noFill/></a:ln>'
-    : '<a:ln w="12700" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:prstDash val="solid"/></a:ln>';
+    : `<a:ln w="${lineWidth}" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
+  const effects = !isArrow && isIntense(style) ? SHADOW : '<a:effectLst/>';
   const colour = textColor(fill || undefined);
-  const style =
-    '<dsp:style><a:lnRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="1"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>' +
-    `<a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="${colour}"/></a:fontRef></dsp:style>`;
+  const lnIdx = isArrow ? 0 : style === 'simple' ? 0 : 2;
+  const fillIdx = !isArrow && isIntense(style) ? 3 : 1;
+  const effectIdx = !isArrow && isIntense(style) ? 2 : 0;
+  const styleXml =
+    `<dsp:style><a:lnRef idx="${lnIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="${fillIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>` +
+    `<a:effectRef idx="${effectIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="${colour}"/></a:fontRef></dsp:style>`;
   const sz = shape.fontSize ?? 1800;
   const inset = Math.max(0, Math.round((sz / 100) * EMU_PER_PT * 0.15));
   const textBody = isArrow
@@ -88,19 +111,19 @@ function shapeXml(shape: DrawingShape): string {
   const rect = `<a:off x="${shape.x}" y="${shape.y}"/><a:ext cx="${shape.cx}" cy="${shape.cy}"/>`;
   return (
     `<dsp:sp modelId="${escapeXml(shape.modelId)}"><dsp:nvSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvSpPr/></dsp:nvSpPr>` +
-    `<dsp:spPr><a:xfrm>${rect}</a:xfrm><a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>${fillXml(shape)}${line}<a:effectLst/></dsp:spPr>` +
-    `${style}${textBody}<dsp:txXfrm>${rect}</dsp:txXfrm></dsp:sp>`
+    `<dsp:spPr><a:xfrm>${rect}</a:xfrm><a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>${fillXml(shape, style)}${line}${effects}</dsp:spPr>` +
+    `${styleXml}${textBody}<dsp:txXfrm>${rect}</dsp:txXfrm></dsp:sp>`
   );
 }
 
 /** The complete `word/diagrams/drawingN.xml` part for `shapes`. */
-export function buildDiagramDrawingXml(shapes: DrawingShape[]): string {
+export function buildDiagramDrawingXml(shapes: DrawingShape[], style: SmartArtStyle = 'simple'): string {
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<dsp:drawing xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" ' +
     'xmlns:dsp="http://schemas.microsoft.com/office/drawing/2008/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
     '<dsp:spTree><dsp:nvGrpSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvGrpSpPr/></dsp:nvGrpSpPr><dsp:grpSpPr/>' +
-    shapes.map(shapeXml).join('') +
+    shapes.map((shape) => shapeXml(shape, style)).join('') +
     '</dsp:spTree></dsp:drawing>'
   );
 }
@@ -131,7 +154,12 @@ interface Labelled {
  * Chain geometry: `n` boxes in a row (or column) with a transition arrow between consecutive ones,
  * using the `layoutDef`'s ratios — box height 0.6 of its width, transition 0.4 of a box wide.
  */
-export function chainShapes(direction: Flowchart['direction'], nodes: Labelled[], transIds: string[]): DrawingShape[] {
+export function chainShapes(
+  direction: Flowchart['direction'],
+  nodes: Labelled[],
+  transIds: string[],
+  style: SmartArtStyle = 'simple',
+): DrawingShape[] {
   const n = nodes.length;
   const horizontal = direction === 'LR' || direction === 'RL';
   const { cx: FW, cy: FH } = DRAWING_FRAME;
@@ -166,6 +194,7 @@ export function chainShapes(direction: Flowchart['direction'], nodes: Labelled[]
       prst: 'roundRect',
       text: node.text,
       fontSize: font,
+      accent: accentOf(style, 'node1', i),
       ...(node.fill ? { fill: node.fill } : {}),
     });
     const trans = transIds[i];
@@ -181,6 +210,7 @@ export function chainShapes(direction: Flowchart['direction'], nodes: Labelled[]
         cx: Math.round(horizontal ? len : thick),
         cy: Math.round(horizontal ? thick : len),
         prst: arrowPrst,
+        accent: accentOf(style, 'sibTrans', i),
         tintPercent: 60,
       });
     }
@@ -193,7 +223,12 @@ export function chainShapes(direction: Flowchart['direction'], nodes: Labelled[]
  * whole frame and the children the remaining 55% area, each child `1 / (n + 0.1 (n - 1))` of it with a 10% gap.
  * `TD`: root on top; `BT`: root at the bottom; `LR`: root on the left; `RL`: root on the right.
  */
-export function treeShapes(direction: Flowchart['direction'], root: Labelled, children: Labelled[]): DrawingShape[] {
+export function treeShapes(
+  direction: Flowchart['direction'],
+  root: Labelled,
+  children: Labelled[],
+  style: SmartArtStyle = 'simple',
+): DrawingShape[] {
   const { cx: FW, cy: FH } = DRAWING_FRAME;
   const n = children.length;
   const horizontalFlow = direction === 'LR' || direction === 'RL';
@@ -216,6 +251,7 @@ export function treeShapes(direction: Flowchart['direction'], root: Labelled, ch
     prst: 'roundRect',
     text: root.text,
     fontSize: rootFont,
+    accent: accentOf(style, 'node1', 0),
     ...(root.fill ? { fill: root.fill } : {}),
   });
   const boxW = horizontalFlow ? areaSize : cell;
@@ -232,6 +268,7 @@ export function treeShapes(direction: Flowchart['direction'], root: Labelled, ch
       prst: 'roundRect',
       text: child.text,
       fontSize: font,
+      accent: accentOf(style, 'node2', i),
       ...(child.fill ? { fill: child.fill } : {}),
     });
   });
@@ -239,7 +276,7 @@ export function treeShapes(direction: Flowchart['direction'], root: Labelled, ch
 }
 
 /** Cycle geometry: boxes 30% of the frame wide (height 0.6 of that) evenly spaced clockwise from the top. */
-export function cycleShapes(nodes: Labelled[]): DrawingShape[] {
+export function cycleShapes(nodes: Labelled[], style: SmartArtStyle = 'simple'): DrawingShape[] {
   const { cx: FW, cy: FH } = DRAWING_FRAME;
   const w = 0.3 * FW;
   const h = 0.6 * w;
@@ -258,6 +295,7 @@ export function cycleShapes(nodes: Labelled[]): DrawingShape[] {
       prst: 'roundRect' as const,
       text: node.text,
       fontSize: font,
+      accent: accentOf(style, 'node1', i),
       ...(node.fill ? { fill: node.fill } : {}),
     };
   });

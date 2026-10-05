@@ -104,7 +104,7 @@ function findDotnet() {
   }
 }
 
-function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false, smartArtDrawing = false }) {
+function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false, smartArtDrawing = false, smartArtStyle }) {
   const mdPath = join(workDir, `${name}.md`);
   writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${mermaid}\`\`\`\n`);
   const docxPath = join(workDir, `${name}.docx`);
@@ -112,6 +112,7 @@ function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false, sma
   if (smartArt) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
   if (nativeCharts) env.MD2NATIVEDOCX_NATIVE_CHARTS = '1';
   if (smartArtDrawing) env.MD2NATIVEDOCX_SMARTART_DRAWING = '1';
+  if (smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = smartArtStyle;
   execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: 'pipe', env });
   return docxPath;
 }
@@ -178,18 +179,22 @@ function main() {
       }
     }
 
-    // SmartArt with the pre-rendered dsp:drawing (fifth part): the drawing is this project's output too.
-    for (const { name, mermaid } of SMARTART_FIXTURES) {
-      const docxPath = buildDocx(workDir, `${name}-drawing`, mermaid, { smartArt: true, smartArtDrawing: true });
-      const hasDrawing = new AdmZip(docxPath).getEntries().some((e) => /^word\/diagrams\/drawing\d+\.xml$/.test(e.entryName));
-      const { diagramErrors, otherErrors } = validate(docxPath);
-      knownOtherErrorTotal += otherErrors.length;
-      if (!hasDrawing || diagramErrors.length > 0) {
-        failures++;
-        console.error(`✖ ${name}+drawing: drawing part ${hasDrawing ? 'present' : 'MISSING'}, ${diagramErrors.length} schema error(s) under word/diagrams/`);
-        for (const e of diagramErrors) console.error(`    ${e.Path}: ${e.Description}`);
-      } else {
-        console.log(`✔ ${name}+drawing: dsp:drawing present, 0 schema errors under word/diagrams/`);
+    // SmartArt with the pre-rendered dsp:drawing (fifth part) in every look profile: the colour/style
+    // definitions and the drawing are this project's output too.
+    for (const style of ['simple', 'colorful', 'intense']) {
+      for (const { name, mermaid } of SMARTART_FIXTURES) {
+        const label = `${name}+drawing+${style}`;
+        const docxPath = buildDocx(workDir, `${name}-drawing-${style}`, mermaid, { smartArt: true, smartArtDrawing: true, smartArtStyle: style });
+        const hasDrawing = new AdmZip(docxPath).getEntries().some((e) => /^word\/diagrams\/drawing\d+\.xml$/.test(e.entryName));
+        const { diagramErrors, otherErrors } = validate(docxPath);
+        knownOtherErrorTotal += otherErrors.length;
+        if (!hasDrawing || diagramErrors.length > 0) {
+          failures++;
+          console.error(`✖ ${label}: drawing part ${hasDrawing ? 'present' : 'MISSING'}, ${diagramErrors.length} schema error(s) under word/diagrams/`);
+          for (const e of diagramErrors) console.error(`    ${e.Path}: ${e.Description}`);
+        } else {
+          console.log(`✔ ${label}: dsp:drawing present, 0 schema errors under word/diagrams/`);
+        }
       }
     }
 

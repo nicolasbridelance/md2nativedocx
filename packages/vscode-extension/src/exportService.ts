@@ -142,6 +142,10 @@ export interface RunCliOptions {
   /** Mirrors `md2nativedocx.nativeCharts.enabled`: `pie`/`xychart`/`radar` become native Word charts with
    * an embedded workbook (ADR 0011). Omitted/`false` keeps the shape-built diagrams. */
   nativeChartsEnabled?: boolean;
+  /** Mirrors `md2nativedocx.smartArt.style` (only used when SmartArt is enabled). */
+  smartArtStyle?: 'simple' | 'colorful' | 'intense';
+  /** Mirrors `md2nativedocx.smartArt.preRenderedDrawing`: embed the cached `dsp:drawing`. */
+  smartArtDrawing?: boolean;
   /** See {@link LayoutOptions}. */
   layout?: LayoutOptions;
   /** Mirrors `md2nativedocx.toc.enabled`. Unlike `layout`, this works even
@@ -208,6 +212,8 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
   if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
   if (options.nativeChartsEnabled === true) env.MD2NATIVEDOCX_NATIVE_CHARTS = '1';
+  if (options.smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = options.smartArtStyle;
+  if (options.smartArtDrawing === true) env.MD2NATIVEDOCX_SMARTART_DRAWING = '1';
   const layout = options.layout;
   if (layout) {
     if (layout.pageSize) env.MD2NATIVEDOCX_PAGE_SIZE = layout.pageSize;

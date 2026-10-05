@@ -64,3 +64,53 @@ test('a chain draws one transition arrow per gap, pointing the way the chain run
   const bt = generateSmartArt(flow('flowchart BT\n A --> B --> C'), { drawing: true });
   assert.equal(bt?.drawingXml?.match(/prst="upArrow"/g)?.length, 2);
 });
+
+// ---- look profiles (styles.ts) ----
+
+test('simple (the default) keeps the original flat single-accent definitions', () => {
+  const plain = generateSmartArt(flow('flowchart LR\n A --> B --> C'));
+  const simple = generateSmartArt(flow('flowchart LR\n A --> B --> C'), { style: 'simple' });
+  assert.equal(simple?.colorsXml, plain?.colorsXml);
+  assert.equal(simple?.styleXml, plain?.styleXml);
+  assert.doesNotMatch(plain?.colorsXml ?? '', /meth="repeat"/);
+});
+
+for (const kind of ['chain', 'tree', 'cycle'] as const) {
+  const src = {
+    chain: 'flowchart LR\n A --> B --> C',
+    tree: 'flowchart TD\n R --> A\n R --> B\n R --> C',
+    cycle: 'flowchart TD\n A --> B\n B --> C\n C --> A',
+  }[kind];
+  test(`${kind}: colorful cycles the theme accents; ids match the references in the data model`, () => {
+    const out = generateSmartArt(flow(src), { style: 'colorful' });
+    assert.ok(out);
+    assert.match(out.colorsXml, /<dgm:fillClrLst meth="repeat"><a:schemeClr val="accent[2-6]"\/>/);
+    assert.match(out.colorsXml, /<dgm:linClrLst meth="repeat"><a:schemeClr val="lt1"\/>/);
+    const csId = /csTypeId="([^"]+)"/.exec(out.dataXml)?.[1];
+    const qsId = /qsTypeId="([^"]+)"/.exec(out.dataXml)?.[1];
+    assert.ok(out.colorsXml.includes(`uniqueId="${csId}"`));
+    assert.ok(out.styleXml.includes(`uniqueId="${qsId}"`));
+  });
+}
+
+test('intense points the style labels at the theme gradient fill and shadow, colorful does not', () => {
+  const intense = generateSmartArt(flow('flowchart LR\n A --> B --> C'), { style: 'intense' });
+  assert.match(intense?.styleXml ?? '', /<a:fillRef idx="3">/);
+  assert.match(intense?.styleXml ?? '', /<a:effectRef idx="2">/);
+  const colorful = generateSmartArt(flow('flowchart LR\n A --> B --> C'), { style: 'colorful' });
+  assert.doesNotMatch(colorful?.styleXml ?? '', /<a:fillRef idx="3">/);
+});
+
+test('the cached drawing follows the profile: accents per shape, gradient and shadow only for intense', () => {
+  const src = 'flowchart LR\n A --> B --> C';
+  const simple = generateSmartArt(flow(src), { drawing: true });
+  assert.match(simple?.drawingXml ?? '', /<a:schemeClr val="accent1">/);
+  assert.doesNotMatch(simple?.drawingXml ?? '', /gradFill|outerShdw/);
+  const colorful = generateSmartArt(flow(src), { drawing: true, style: 'colorful' });
+  const accents = new Set([...(colorful?.drawingXml ?? '').matchAll(/<a:solidFill><a:schemeClr val="(accent\d)"/g)].map((m) => m[1]));
+  assert.ok(accents.size >= 3, `several accents expected, got ${[...accents].join(',')}`);
+  assert.doesNotMatch(colorful?.drawingXml ?? '', /gradFill|outerShdw/);
+  const intense = generateSmartArt(flow(src), { drawing: true, style: 'intense' });
+  assert.match(intense?.drawingXml ?? '', /<a:gradFill/);
+  assert.match(intense?.drawingXml ?? '', /<a:outerShdw/);
+});

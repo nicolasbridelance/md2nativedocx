@@ -21,6 +21,7 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, treeShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
@@ -396,6 +397,7 @@ function buildTreeDataXml(
   children: FlowNode[],
   layoutUrn: string,
   withDrawing: boolean,
+  style: SmartArtStyle,
 ): { xml: string; drawingXml?: string } {
   const docId = '0';
   const rootId = '1';
@@ -504,7 +506,9 @@ function buildTreeDataXml(
           ...(fill ? { fill } : {}),
         };
       }),
+      style,
     ),
+    style,
   );
   return { xml, drawingXml };
 }
@@ -534,14 +538,21 @@ const TREE_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: stri
  * `docs/markdown-mermaid-compliance-table.md`).
  */
 export function generateTree(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtTreeOutput {
+  const style: SmartArtStyle = options.style ?? 'simple';
   const { root, children } = rootAndChildren(flowchart);
   const { layoutXml, layoutUrn } = TREE_LAYOUT_BY_DIRECTION[flowchart.direction];
-  const data = buildTreeDataXml(flowchart, root, children, layoutUrn, options.drawing === true);
+  const data = buildTreeDataXml(flowchart, root, children, layoutUrn, options.drawing === true, style);
   return {
     dataXml: data.xml,
     layoutXml,
-    colorsXml: TREE_COLORS_XML,
-    styleXml: TREE_STYLE_XML,
+    colorsXml:
+      style === 'simple'
+        ? TREE_COLORS_XML
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/tree1', ['node1','node2']),
+    styleXml:
+      style === 'simple'
+        ? TREE_STYLE_XML
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/tree1', ['node1','node2']),
     ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

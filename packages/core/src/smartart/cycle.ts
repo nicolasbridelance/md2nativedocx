@@ -22,6 +22,7 @@
 
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, cycleShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
@@ -189,6 +190,7 @@ function buildCycleDataXml(
   flowchart: Flowchart,
   nodes: FlowNode[],
   withDrawing: boolean,
+  style: SmartArtStyle,
 ): { xml: string; drawingXml?: string } {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
@@ -280,7 +282,9 @@ function buildCycleDataXml(
           ...(fill ? { fill } : {}),
         };
       }),
+      style,
     ),
+    style,
   );
   return { xml, drawingXml };
 }
@@ -299,13 +303,20 @@ function buildCycleDataXml(
  * Mermaid's `TD`/`LR`, so a single fixed layout covers both.
  */
 export function generateCycle(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtCycleOutput {
+  const style: SmartArtStyle = options.style ?? 'simple';
   const nodes = orderedCycleNodes(flowchart);
-  const data = buildCycleDataXml(flowchart, nodes, options.drawing === true);
+  const data = buildCycleDataXml(flowchart, nodes, options.drawing === true, style);
   return {
     dataXml: data.xml,
     layoutXml: CYCLE_LAYOUT_XML,
-    colorsXml: CYCLE_COLORS_XML,
-    styleXml: CYCLE_STYLE_XML,
+    colorsXml:
+      style === 'simple'
+        ? CYCLE_COLORS_XML
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/cycle1', ['node1']),
+    styleXml:
+      style === 'simple'
+        ? CYCLE_STYLE_XML
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/cycle1', ['node1']),
     ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

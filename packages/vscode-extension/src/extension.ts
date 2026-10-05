@@ -69,6 +69,17 @@ function referenceDocumentSetting(): string | undefined {
   return resolved;
 }
 
+/** `md2nativedocx.smartArt.style` — look profile of the SmartArt diagrams (default `colorful`). */
+function smartArtStyleSetting(): 'simple' | 'colorful' | 'intense' {
+  const value = vscode.workspace.getConfiguration('md2nativedocx').get<string>('smartArt.style', 'colorful');
+  return value === 'simple' || value === 'intense' ? value : 'colorful';
+}
+
+/** `md2nativedocx.smartArt.preRenderedDrawing` — embed the cached `dsp:drawing` (default on). */
+function smartArtDrawingSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.preRenderedDrawing', true);
+}
+
 /** `md2nativedocx.nativeCharts.enabled` — `false` (default) keeps every `pie`/`xychart`/`radar` as editable
  * shapes. `true` opts into native Word charts with an embedded workbook (ADR 0011). */
 function nativeChartsEnabledSetting(): boolean {
@@ -196,13 +207,15 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
       const referenceDoc = referenceDocumentSetting();
       const smartArtEnabled = smartArtEnabledSetting();
       const nativeChartsEnabled = nativeChartsEnabledSetting();
+      const smartArtStyle = smartArtStyleSetting();
+      const smartArtDrawing = smartArtDrawingSetting();
       const layout = layoutOptionsSetting();
       warnIfLayoutOptionsIgnored(referenceDoc, layout);
       const toc = tocEnabledSetting();
       const tocDepth = tocDepthSetting();
       const emojiFont = emojiFontEnabledSetting();
       const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
-      const options = { pandocBin, referenceDoc, smartArtEnabled, nativeChartsEnabled, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
+      const options = { pandocBin, referenceDoc, smartArtEnabled, nativeChartsEnabled, smartArtStyle, smartArtDrawing, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
       return isMermaidFilePath(uri.fsPath)
         ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
         : exportDocument(uri.fsPath, outputDirectorySetting(), options);
@@ -255,6 +268,8 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
       const referenceDoc = referenceDocumentSetting();
       const smartArtEnabled = smartArtEnabledSetting();
       const nativeChartsEnabled = nativeChartsEnabledSetting();
+      const smartArtStyle = smartArtStyleSetting();
+      const smartArtDrawing = smartArtDrawingSetting();
       const layout = layoutOptionsSetting();
       warnIfLayoutOptionsIgnored(referenceDoc, layout);
       const toc = tocEnabledSetting();
@@ -266,6 +281,8 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
         referenceDoc,
         smartArtEnabled,
         nativeChartsEnabled,
+        smartArtStyle,
+        smartArtDrawing,
         layout,
         toc,
         tocDepth,

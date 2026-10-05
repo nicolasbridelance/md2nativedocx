@@ -1,3 +1,5 @@
+import type { SmartArtStyle } from './styles.js';
+
 /** Options shared by the SmartArt generators. */
 export interface SmartArtGenerateOptions {
   /**
@@ -6,4 +8,6 @@ export interface SmartArtGenerateOptions {
    * placeholder (`DRAWING_REL_TOKEN`) — the Pandoc bridge and the CLI do.
    */
   drawing?: boolean;
+  /** Look profile (default `simple`, the original flat single-accent look). See `styles.ts`. */
+  style?: SmartArtStyle;
 }
