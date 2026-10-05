@@ -52,7 +52,7 @@ Terme
 | texte plus long   |   **c** |   22,5 |
 | `code`            |   ✅   |    333 |
 
-Tableau large (8 colonnes), pour tester le passage en paysage si l'option est active :
+Tableau large (8 colonnes) :
 
 | C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8 |
 |---|---|---|---|---|---|---|---|
