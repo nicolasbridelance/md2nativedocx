@@ -215,6 +215,7 @@ preceding heading (text outside diagrams is not exported).
 
 Options:
   -o, --output <file>   Output .docx or .pptx path (required)
+  --show-source         .pptx only: show each diagram's Mermaid source beside it
   -h, --help            Show this help
 `;
 

@@ -33,6 +33,8 @@ export interface ExportPptxOptions {
   title?: string;
   /** Fixed timestamp for reproducible output. */
   now?: Date;
+  /** Show each diagram's Mermaid source in a panel beside it (off by default: decks are for audiences). */
+  showSource?: boolean;
 }
 
 /** Result of {@link exportPptx}. */
@@ -90,10 +92,14 @@ export async function exportPptx(markdown: string, options: ExportPptxOptions = 
   const warnings: string[] = [];
   const slides = [];
   for (const [index, block] of blocks.entries()) {
-    const area = diagramAreaFor(block.title !== undefined, false);
+    const area = diagramAreaFor(block.title !== undefined, false, options.showSource === true);
     const { fragmentXml, warnings: blockWarnings } = await provider(block.text, area);
     warnings.push(...blockWarnings.map((w) => `slide ${index + 1}: ${w}`));
-    slides.push(block.title === undefined ? { fragmentXml } : { fragmentXml, title: block.title });
+    slides.push({
+      fragmentXml,
+      ...(block.title !== undefined ? { title: block.title } : {}),
+      ...(options.showSource === true ? { source: block.text } : {}),
+    });
   }
   const built = buildPptx(slides, {
     ...(options.title !== undefined ? { title: options.title } : {}),

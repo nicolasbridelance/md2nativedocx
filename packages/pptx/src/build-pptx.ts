@@ -31,6 +31,7 @@ const TITLE_Y = 228600;
 const TITLE_HEIGHT = 685800;
 const TITLE_ID = 2;
 const NOTES_ID = 3;
+const SOURCE_ID = 4;
 const NOTES_HEIGHT = 342900;
 /** Diagrams are enlarged to fill the slide, but never beyond this factor (tiny diagrams would look absurd). */
 const MAX_UPSCALE = 2.5;
@@ -43,11 +44,17 @@ export interface DiagramArea {
   cy: number;
 }
 
-/** The diagram area of a slide, with or without a title band above it. */
-export function diagramAreaFor(hasTitle: boolean, hasNotes: boolean): DiagramArea {
+/** Share of the slide width given to the Mermaid source panel when it is shown. */
+const SOURCE_WIDTH_FRACTION = 0.36;
+const SOURCE_GAP = 182880; // 0.2 in between diagram and panel
+
+/** The diagram area of a slide, with or without a title band above it and a source panel beside it. */
+export function diagramAreaFor(hasTitle: boolean, hasNotes: boolean, hasSource = false): DiagramArea {
   const top = hasTitle ? TITLE_Y + TITLE_HEIGHT + 114300 : MARGIN;
   const bottom = SLIDE_HEIGHT - MARGIN - (hasNotes ? NOTES_HEIGHT : 0);
-  return { x: MARGIN, y: top, cx: SLIDE_WIDTH - 2 * MARGIN, cy: bottom - top };
+  const full = SLIDE_WIDTH - 2 * MARGIN;
+  const cx = hasSource ? full - Math.round(full * SOURCE_WIDTH_FRACTION) - SOURCE_GAP : full;
+  return { x: MARGIN, y: top, cx, cy: bottom - top };
 }
 
 /** One slide's worth of input: a core-generated fragment (`<w:p>` XML) plus an optional title. */
@@ -56,6 +63,8 @@ export interface SlideInput {
   fragmentXml: string;
   /** Slide title (plain text, escaped here). */
   title?: string;
+  /** Mermaid source to show in a panel beside the diagram (plain text, escaped here). */
+  source?: string;
 }
 
 /** Output of {@link buildPptx}. */
@@ -75,6 +84,44 @@ function textBox(id: number, name: string, box: DiagramArea, paragraphs: string,
   );
 }
 
+/**
+ * Largest font size (1/100 pt, 6-14 pt) at which the source lines, wrapped to the panel width,
+ * still fit its height. Monospace glyphs are about 0.6 em wide, lines 1.25 em tall.
+ */
+function sourceFontSize(lines: string[], box: DiagramArea): number {
+  const EMU_PER_PT = 12700;
+  const widthPt = (box.cx - 2 * 91440) / EMU_PER_PT;
+  const heightPt = (box.cy - 2 * 45720) / EMU_PER_PT;
+  for (let size = 14; size > 6; size -= 0.5) {
+    const charsPerLine = Math.max(1, Math.floor(widthPt / (size * 0.6)));
+    const rows = lines.reduce((sum, l) => sum + Math.max(1, Math.ceil(l.length / charsPerLine)), 0);
+    if (rows * size * 1.25 <= heightPt) return Math.round(size * 100);
+  }
+  return 600;
+}
+
+/** The Mermaid source as a gray panel of monospace text, one paragraph per source line. */
+function sourcePanel(source: string, box: DiagramArea): string {
+  const lines = source.replace(/\t/g, '    ').split(/\r?\n/);
+  const sz = sourceFontSize(lines, box);
+  const font = '<a:latin typeface="Consolas"/><a:cs typeface="Consolas"/>';
+  const color = '<a:solidFill><a:srgbClr val="1F2937"/></a:solidFill>';
+  const paragraphs = lines
+    .map((line) =>
+      line === ''
+        ? `<a:p><a:endParaRPr lang="en-US" sz="${sz}" dirty="0"/></a:p>`
+        : `<a:p><a:pPr algn="l"/><a:r><a:rPr lang="en-US" sz="${sz}" dirty="0">${color}${font}</a:rPr><a:t>${escapeXml(line)}</a:t></a:r></a:p>`,
+    )
+    .join('');
+  return (
+    `<p:sp><p:nvSpPr><p:cNvPr id="${SOURCE_ID}" name="Mermaid source"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>` +
+    `<p:spPr><a:xfrm><a:off x="${box.x}" y="${box.y}"/><a:ext cx="${box.cx}" cy="${box.cy}"/></a:xfrm>` +
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="F3F4F6"/></a:solidFill>' +
+    '<a:ln w="9525"><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></p:spPr>' +
+    `<p:txBody><a:bodyPr wrap="square" lIns="91440" tIns="45720" rIns="91440" bIns="45720" anchor="t"><a:noAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`
+  );
+}
+
 function titleShape(title: string): string {
   const run = `<a:r><a:rPr lang="en-US" sz="2800" b="1" dirty="0"><a:solidFill><a:srgbClr val="1F2937"/></a:solidFill></a:rPr><a:t>${escapeXml(title)}</a:t></a:r>`;
   return textBox(
@@ -91,7 +138,8 @@ function buildSlide(input: SlideInput, warnings: Set<string>): string {
   // First pass measures the drawing and any notes; the area then decides scale and offset.
   const probe: ConvertedFragment = convertFragment(input.fragmentXml, { x: 0, y: 0 });
   const hasNotes = probe.notesXml.length > 0;
-  const area = diagramAreaFor(hasTitle, hasNotes);
+  const hasSource = input.source !== undefined && input.source !== '';
+  const area = diagramAreaFor(hasTitle, hasNotes, hasSource);
   const fit =
     probe.extent.cx > 0 && probe.extent.cy > 0
       ? Math.min(area.cx / probe.extent.cx, area.cy / probe.extent.cy)
@@ -106,6 +154,11 @@ function buildSlide(input: SlideInput, warnings: Set<string>): string {
   const parts: string[] = [];
   if (hasTitle) parts.push(titleShape(input.title ?? ''));
   parts.push(...placed.shapesXml);
+  if (hasSource) {
+    const full = SLIDE_WIDTH - 2 * MARGIN;
+    const panelCx = Math.round(full * SOURCE_WIDTH_FRACTION);
+    parts.push(sourcePanel(input.source ?? '', { x: SLIDE_WIDTH - MARGIN - panelCx, y: area.y, cx: panelCx, cy: area.cy }));
+  }
   if (hasNotes) {
     parts.push(
       textBox(

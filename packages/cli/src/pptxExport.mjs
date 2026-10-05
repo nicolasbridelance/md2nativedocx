@@ -9,16 +9,20 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { CliError, resolveSafePath } from './cliSupport.mjs';
 
-const USAGE = `Usage: md2nativedocx <input.md> -o <output.pptx>
+const USAGE = `Usage: md2nativedocx <input.md> -o <output.pptx> [--show-source]
+
+  --show-source   Put each diagram's Mermaid source in a panel beside it
 `;
 
 function parsePptxArgs(argv) {
-  const args = { input: null, output: null };
+  const args = { input: null, output: null, showSource: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-o' || a === '--output') {
       args.output = argv[++i];
       if (!args.output) throw new CliError('Missing value for --output', 2);
+    } else if (a === '--show-source') {
+      args.showSource = true;
     } else if (a === '-h' || a === '--help') {
       args.help = true;
     } else if (a.startsWith('-')) {
@@ -48,7 +52,7 @@ export async function runPptxCli(argv, cwd) {
     const { exportPptx, PptxConversionError } = await import('@md2nativedocx/pptx');
     let result;
     try {
-      result = await exportPptx(readFileSync(input, 'utf8'), { title: basename(input) });
+      result = await exportPptx(readFileSync(input, 'utf8'), { title: basename(input), showSource: args.showSource });
     } catch (err) {
       if (err instanceof PptxConversionError) throw new CliError(`md2nativedocx: ${err.message}`, 1);
       throw err;

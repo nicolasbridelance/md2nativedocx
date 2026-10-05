@@ -27,3 +27,21 @@ test('bridge warnings are reported with their slide number', async () => {
   const result = await exportPptx('```mermaid\nzenuml\n  @Database D\n  D.x()\n```');
   assert.ok(result.warnings.some((w) => w.startsWith('slide 1: ')), result.warnings.join('|'));
 });
+
+test('showSource reserves a panel beside the diagram, shows the escaped source, and is off by default', async () => {
+  const md = '# T\n\n```mermaid\nflowchart LR\n A["a & <b>"] --> B\n```\n';
+  const areas: number[] = [];
+  const fragmentProvider = async (text: string, area: { cx: number }) => {
+    areas.push(area.cx);
+    return { fragmentXml: '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>', warnings: [] };
+  };
+  const plain = await exportPptx(md, { fragmentProvider });
+  const withSource = await exportPptx(md, { fragmentProvider, showSource: true });
+  assert.ok((areas[1] as number) < (areas[0] as number), 'diagram area must shrink to make room for the panel');
+  assert.doesNotMatch(new AdmZip(plain.buffer).readAsText('ppt/slides/slide1.xml'), /Mermaid source/);
+  const slide = new AdmZip(withSource.buffer).readAsText('ppt/slides/slide1.xml');
+  assert.match(slide, /name="Mermaid source"/);
+  assert.match(slide, /Consolas/);
+  assert.match(slide, /flowchart LR/);
+  assert.match(slide, /a &amp; &lt;b&gt;/);
+});
