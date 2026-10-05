@@ -1003,6 +1003,30 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 - ✅ Volet "corporate" (2026-09-03) — décision du mainteneur : un réglage
   (`md2nativedocx.referenceDocument`), pas une commande. Voir aussi `docs/specs/export_customization_SPEC.md`
   §2.1 pour son évolution vers un gabarit généré dynamiquement (Phase 8).
+- [ ] **SmartArt « pixel perfect » : pas de conclusion à ce jour (2026-10-05)** — `smartArt.enabled`
+      reste à `false` par défaut. ADR 0006 : corruption corrigée (ids `modelId`) mais « en attente de
+      confirmation Word réelle finale » ; `smartart-cycle-recheck.docx` rend encore des formes vides
+      (voir « Retours en attente »). À trancher avant de promouvoir SmartArt au-delà de l'option.
+- [ ] **Piste — graphiques Word natifs `c:chart` avec classeur embarqué (idée loguée 2026-10-05, pas
+      commencée, mainteneur : « dans les chantiers, à côté de SmartArt »).** Contexte : une question
+      publique (mermaid-js/mermaid#8060) demande des `pie`/`xychart` « double-cliquables » dans Word
+      avec données éditables (Chart Design → Edit Data). Aujourd'hui `pie`/`xychart`/`radar` sortent en
+      **formes natives** (mise en forme éditable, pas les données) — choix « famille D (b) ».
+      - Même schéma d'intégration que SmartArt : le filtre émet un dessin référençant `c:chart`,
+        `postprocess.mjs` injecte `word/charts/chartN.xml`, ses relations/content types et
+        `word/embeddings/*.xlsx` (relation interne, jamais `TargetMode="External"`, règle 3).
+      - Le classeur (`.xlsx` = petit zip de 5-6 parties XML) est ce qui rend « Edit Data » possible ;
+        `zipUtils.mjs` sert déjà sans dépendance — à confirmer qu'aucune nouvelle dépendance n'est
+        nécessaire (sinon : escalade, règle 6).
+      - Chemin par paliers proposé : (1) `pie` seul, `c:chart` avec valeurs en cache, sans classeur
+        (couleurs/styles éditables, pas les données) ; (2) ajout du classeur ; (3) vérification dans un
+        vrai Word (Edit Data) ; (4) `xychart` puis `radar` ; réglage `shapes`/`natif`, `shapes` par
+        défaut tant que Word n'a pas confirmé.
+      - Prérequis : ADR (assumer l'exception à la règle 7 « ne pas toucher aux internes du zip », déjà
+        contournée par SmartArt), validation `test:oxml-validate`, rendu LibreOffice, et la même
+        leçon que SmartArt (valider par schéma avant de deviner). Perte assumée : le rendu Word d'un
+        graphique n'est pas le rendu Mermaid 1:1.
+      - Escalade requise : décision d'architecture + changement de contrat du traducteur.
 
 ---
 
