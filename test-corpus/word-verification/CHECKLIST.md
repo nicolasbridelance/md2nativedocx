@@ -205,6 +205,21 @@ parts and in the five workbooks.
 - [ ] §6 radar: two translucent polygons (Alice, Bob), six axes, rings every 20.
 - [ ] Edit Data on §1 and §6 opens Excel with the matching columns; editing a value updates the chart.
 
+## Round 6 — 2026-10-05: SmartArt `cycle` restructured (the "blank shapes" bug)
+
+`smartart-v3.docx` — four SmartArt diagrams (chain, tree, two cycles), exported with
+`MD2NATIVEDOCX_ENABLE_SMARTART=1`. Hypothesis behind the fix: `cycle.ts`'s `layoutDef` had a `composite`
+wrapper with no size constraints for its child, so real Word sized it to zero (LibreOffice computes a size
+anyway, hence the earlier "works in LibreOffice"). `cycle` now has the same two-level shape as `chain`,
+which Word already renders. Schema validator: 0 errors in `word/diagrams/*`.
+
+- [ ] Opens without a repair prompt.
+- [ ] §1 chain and §2 tree look as in the previous round (regression check).
+- [ ] §3 cycle (A, B, C): **three shapes are drawn** (before: empty frame), clockwise from the top.
+- [ ] §4 cycle (Planifier, Faire, Vérifier, Agir): four shapes clockwise from the top, the first one in
+      light orange.
+- [ ] Click a shape and edit its text: the diagram re-lays out without disappearing.
+
 ## Recording the result
 
 Once done, either:

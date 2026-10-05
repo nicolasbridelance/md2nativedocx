@@ -42,12 +42,17 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 export const CYCLE_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/cycle1';
 
 /**
- * Original `dgm:layoutDef`: a `cycle` algorithm root, one `composite`/`Main`
- * pair per node via `forEach axis="ch"` (same leaf pattern as `chain.ts`'s
- * `CHAIN_LAYOUT_XML`), each child sized to 30% of the diagram's width via
- * the `diam` ("diameter") constraint type `cycle` expects for its children.
- * No `sibTrans` spacer nodes — `cycle` positions its children itself, it
- * doesn't need `lin`'s manual inter-item spacer.
+ * Original `dgm:layoutDef`: a `cycle` algorithm root and, per node, one leaf `Main` layoutNode via
+ * `forEach axis="ch"` — the same two-level shape as `chain.ts`'s `CHAIN_LAYOUT_XML`, which real Word
+ * renders correctly. The root sizes every `Main` child (`w` = 30% of the diagram's width, so the
+ * children fit around the circle); `Main` derives its own height from its width, exactly as `chain`'s
+ * `Main` does.
+ *
+ * This replaces an earlier three-level version (`root` → `composite` → `Main`) whose `composite`
+ * wrapper had no `w`/`h`/`l`/`t` constraints for its child: LibreOffice computed a size anyway and drew
+ * four boxes, but real Word drew nothing (2026-09-06 round 2: container and data pane present, no shape),
+ * the usual signature of a zero-sized child. No `sibTrans` spacer nodes — `cycle` positions its children
+ * itself, it doesn't need `lin`'s manual inter-item spacer.
  */
 export const CYCLE_LAYOUT_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -58,27 +63,25 @@ export const CYCLE_LAYOUT_XML =
   '<dgm:styleData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:styleData>' +
   '<dgm:clrData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:clrData>' +
   '<dgm:layoutNode name="root">' +
-  '<dgm:alg type="cycle"/><dgm:shape/>' +
+  '<dgm:alg type="cycle"><dgm:param type="stAng" val="0"/></dgm:alg><dgm:shape/>' +
   '<dgm:constrLst>' +
   '<dgm:constr op="equ" type="primFontSz" for="des" ptType="node" val="20"/>' +
-  '<dgm:constr type="diam" for="ch" forName="composite" refType="w" fact="0.3"/>' +
+  '<dgm:constr type="w" for="ch" forName="Main" refType="w" fact="0.3"/>' +
+  '<dgm:constr op="equ" type="h" for="ch" forName="Main"/>' +
   '</dgm:constrLst>' +
   '<dgm:forEach name="nodesForEach" axis="ch" ptType="node">' +
-  '<dgm:layoutNode name="composite">' +
-  '<dgm:alg type="composite"/>' +
-  '<dgm:shape/>' +
   '<dgm:layoutNode name="Main" styleLbl="node1">' +
   '<dgm:alg type="tx"/>' +
   '<dgm:shape type="roundRect"/>' +
   '<dgm:presOf axis="self" ptType="node" st="1" cnt="0"/>' +
   '<dgm:constrLst>' +
+  '<dgm:constr type="h" refType="w" fact="0.6"/>' +
   '<dgm:constr type="lMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="rMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="tMarg" refType="primFontSz" fact="0.15"/>' +
   '<dgm:constr type="bMarg" refType="primFontSz" fact="0.15"/>' +
   '</dgm:constrLst>' +
   '<dgm:ruleLst><dgm:rule type="primFontSz" val="5"/></dgm:ruleLst>' +
-  '</dgm:layoutNode>' +
   '</dgm:layoutNode>' +
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
@@ -165,7 +168,7 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
 /**
  * Build the `dgm:dataModel` for a cycle of `nodes`, including the hand-built
  * `presOf`/`presParOf` presentation mirror {@link CYCLE_LAYOUT_XML}'s own
- * `root`/`composite`/`Main` layoutNodes need to render under LibreOffice
+ * `root`/`Main` layoutNodes need to render under LibreOffice
  * (same requirement as `chain.ts`/`tree.ts`, ADR 0004 "Round 5") — including
  * the `doc`-point-to-`p-root` `presOf` that both those modules needed to fix
  * an otherwise fully blank render.
@@ -194,7 +197,6 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
   let nextModelId = nodes.length + 1;
   const newModelId = () => String(nextModelId++);
   const pRootId = newModelId();
-  const pCompositeIds = new Map(nodeIds.map((id) => [id, newModelId()]));
   const pMainIds = new Map(nodeIds.map((id) => [id, newModelId()]));
 
   const contentPts = nodes
@@ -218,7 +220,6 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
     nodeIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="${pCompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
           `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('');
@@ -239,8 +240,7 @@ function buildCycleDataXml(flowchart: Flowchart, nodes: FlowNode[]): string {
   const presParOfCxns = nodeIds
     .map(
       (id, i) =>
-        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pCompositeIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
-        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pCompositeIds.get(id)}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pMainIds.get(id)}" srcOrd="${i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
     )
     .join('');
 
