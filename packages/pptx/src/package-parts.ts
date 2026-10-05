@@ -33,6 +33,9 @@ export function contentTypesXml(slideCount: number): string {
     '<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>' +
     '<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>' +
     '<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>' +
+    '<Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>' +
+    '<Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/>' +
+    '<Override PartName="/ppt/tableStyles.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/>' +
     slides +
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
     '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
@@ -84,13 +87,24 @@ export function presentationRelsXml(slideCount: number): string {
     { length: slideCount },
     (_, i) => `<Relationship Id="rId${i + 2}" Type="${REL_BASE}/slide" Target="slides/slide${i + 1}.xml"/>`,
   ).join('');
+  const next = slideCount + 2;
   return (
     XML_DECL +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     `<Relationship Id="rId1" Type="${REL_BASE}/slideMaster" Target="slideMasters/slideMaster1.xml"/>${slides}` +
+    `<Relationship Id="rId${next}" Type="${REL_BASE}/presProps" Target="presProps.xml"/>` +
+    `<Relationship Id="rId${next + 1}" Type="${REL_BASE}/viewProps" Target="viewProps.xml"/>` +
+    `<Relationship Id="rId${next + 2}" Type="${REL_BASE}/theme" Target="theme/theme1.xml"/>` +
+    `<Relationship Id="rId${next + 3}" Type="${REL_BASE}/tableStyles" Target="tableStyles.xml"/>` +
     '</Relationships>'
   );
 }
+
+/** Empty presentation/view properties and table styles: PowerPoint always writes these parts. */
+export const PRES_PROPS_XML = XML_DECL + `<p:presentationPr ${NS_A} ${NS_R} ${NS_P}/>`;
+export const VIEW_PROPS_XML = XML_DECL + `<p:viewPr ${NS_A} ${NS_R} ${NS_P}/>`;
+export const TABLE_STYLES_XML =
+  XML_DECL + `<a:tblStyleLst ${NS_A} def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`;
 
 export const SLIDE_RELS_XML =
   XML_DECL +
@@ -102,7 +116,10 @@ export const SLIDE_MASTER_XML =
   XML_DECL +
   `<p:sldMaster ${NS_A} ${NS_R} ${NS_P}><p:cSld><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg><p:spTree>${EMPTY_TREE_HEAD}</p:spTree></p:cSld>` +
   '<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>' +
-  '<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>';
+  '<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>' +
+  '<p:txStyles><p:titleStyle><a:lvl1pPr algn="l"><a:defRPr sz="4400"/></a:lvl1pPr></p:titleStyle>' +
+  '<p:bodyStyle><a:lvl1pPr algn="l"><a:defRPr sz="1800"/></a:lvl1pPr></p:bodyStyle>' +
+  '<p:otherStyle><a:defPPr><a:defRPr lang="en-US"/></a:defPPr></p:otherStyle></p:txStyles></p:sldMaster>';
 
 export const SLIDE_MASTER_RELS_XML =
   XML_DECL +

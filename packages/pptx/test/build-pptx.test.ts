@@ -31,6 +31,29 @@ test('assembles a self-contained package: every part is well-formed, no external
   }
 });
 
+test('package integrity: PowerPoint\'s usual parts exist, every relationship target resolves and every part has a content type', () => {
+  const { buffer } = buildPptx([{ fragmentXml: fragment('flowchart LR\n A --> B') }], { now: NOW });
+  const zip = new AdmZip(buffer);
+  const names = new Set(zip.getEntries().map((e) => e.entryName));
+  for (const part of ['ppt/presProps.xml', 'ppt/viewProps.xml', 'ppt/tableStyles.xml']) {
+    assert.ok(names.has(part), `missing ${part}`);
+  }
+  assert.match(zip.readAsText('ppt/slideMasters/slideMaster1.xml'), /<p:txStyles>/);
+  for (const name of names) {
+    if (!name.endsWith('.rels')) continue;
+    const baseDir = name.replace(/_rels\/[^/]*$/, '');
+    for (const m of zip.readAsText(name).matchAll(/Target="([^"]+)"/g)) {
+      const target = new URL(m[1] as string, `file:///${baseDir}`).pathname.slice(1);
+      assert.ok(names.has(target), `${name} -> ${m[1]} does not exist`);
+    }
+  }
+  const types = zip.readAsText('[Content_Types].xml');
+  for (const name of names) {
+    if (name === '[Content_Types].xml' || name.endsWith('.rels')) continue;
+    assert.ok(types.includes(`PartName="/${name}"`), `no content type override for ${name}`);
+  }
+});
+
 test('puts the escaped title on the slide and keeps every shape inside the slide', () => {
   const { buffer, warnings } = buildPptx([{ fragmentXml: fragment('flowchart LR\n A --> B --> C'), title: 'T <&> "q"' }], {
     now: NOW,

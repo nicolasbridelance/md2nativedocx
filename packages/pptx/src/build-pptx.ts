@@ -6,6 +6,7 @@ import AdmZip from 'adm-zip';
 import { escapeXml } from '@md2nativedocx/core';
 import { type ConvertedFragment, convertFragment } from './fragment-converter.js';
 import {
+  PRES_PROPS_XML,
   ROOT_RELS_XML,
   SLIDE_HEIGHT,
   SLIDE_LAYOUT_RELS_XML,
@@ -14,7 +15,9 @@ import {
   SLIDE_MASTER_XML,
   SLIDE_RELS_XML,
   SLIDE_WIDTH,
+  TABLE_STYLES_XML,
   THEME_XML,
+  VIEW_PROPS_XML,
   appXml,
   contentTypesXml,
   coreXml,
@@ -141,6 +144,9 @@ export function buildPptx(slides: SlideInput[], options: { title?: string; now?:
   add('ppt/slideLayouts/slideLayout1.xml', SLIDE_LAYOUT_XML);
   add('ppt/slideLayouts/_rels/slideLayout1.xml.rels', SLIDE_LAYOUT_RELS_XML);
   add('ppt/theme/theme1.xml', THEME_XML);
+  add('ppt/presProps.xml', PRES_PROPS_XML);
+  add('ppt/viewProps.xml', VIEW_PROPS_XML);
+  add('ppt/tableStyles.xml', TABLE_STYLES_XML);
   slideParts.forEach((xml, i) => {
     add(`ppt/slides/slide${i + 1}.xml`, xml);
     add(`ppt/slides/_rels/slide${i + 1}.xml.rels`, SLIDE_RELS_XML);
