@@ -325,13 +325,15 @@ the direction: `TD` bottom-centre to top-centre, `LR` right to left, `BT` top to
 `smartart-v9-trees-colorful-no-drawing.docx` (layout definition only). Five trees: `TD` with 3 and 4 children,
 `LR`, `BT`, `RL`.
 
-- [ ] All three open with no repair prompt.
-- [ ] Each child is joined to its root by an elbow line, in all five trees (root above, left, below, right).
-- [ ] Do the "with drawing" and "no drawing" files look the same? (For cycles they did; if the lines are missing
+- [x] All three open with no repair prompt.
+- [x] Each child is joined to its root by an elbow line, in all five trees (root above, left, below, right).
+- [x] Do the "with drawing" and "no drawing" files look the same? (For cycles they did; if the lines are missing
       only in `no-drawing`, the `layoutDef` connector is the thing to fix.)
-- [ ] Edit a text or add a child in Word: the lines follow and stay attached.
+- [x] Edit a text or add a child in Word: the lines follow and stay attached.
 - Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice shows the lines from the cached
   drawing (it ignores `conn` when it computes the layout itself, so `no-drawing` has no lines there — expected).
+
+**Result (maintainer, real Word, 2026-10-05): all confirmed on the v9 files. Tree connectors are validated.**
 
 ## Recording the result
 
