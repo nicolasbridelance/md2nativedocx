@@ -206,7 +206,8 @@ export type { SmartArtCycleOutput } from './smartart/cycle.js';
 export { generateSmartArt } from './smartart/dispatch.js';
 export type { SmartArtGenerated } from './smartart/dispatch.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
-export type { SmartArtStyle } from './smartart/styles.js';
+export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
+export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';
 
 // Build the <w:p> fragment that embeds a SmartArt diagram inline, given 4
 // relationship ids (real or placeholder — see embed.ts's doc comment for why

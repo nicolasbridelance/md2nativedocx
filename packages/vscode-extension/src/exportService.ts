@@ -11,6 +11,10 @@ import {
   type MermaidBlock,
 } from './mermaidBlocks';
 
+/** SmartArt look profiles (kept in sync with `SMARTART_STYLES` in `packages/core`; the package.json enum lists the same). */
+export const SMARTART_STYLE_NAMES = ['simple', 'subtle', 'moderate', 'intense-accent', 'colorful', 'colorful-moderate', 'intense'] as const;
+export type SmartArtStyleName = (typeof SMARTART_STYLE_NAMES)[number];
+
 export interface ExportResult {
   outputPath: string;
   /** Non-fatal warnings surfaced by this export (spec §10) — parser
@@ -143,7 +147,7 @@ export interface RunCliOptions {
    * an embedded workbook (ADR 0011). Omitted/`false` keeps the shape-built diagrams. */
   nativeChartsEnabled?: boolean;
   /** Mirrors `md2nativedocx.smartArt.style` (only used when SmartArt is enabled). */
-  smartArtStyle?: 'simple' | 'colorful' | 'intense';
+  smartArtStyle?: SmartArtStyleName;
   /** Mirrors `md2nativedocx.smartArt.preRenderedDrawing`: embed the cached `dsp:drawing`. */
   smartArtDrawing?: boolean;
   /** See {@link LayoutOptions}. */

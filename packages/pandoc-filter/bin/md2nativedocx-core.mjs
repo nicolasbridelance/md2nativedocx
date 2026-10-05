@@ -75,6 +75,7 @@ import {
   layout,
   translateToOoxml,
   generateSmartArt,
+  SMARTART_STYLES,
   buildSmartArtDrawingXml,
   classifyTopology,
   buildSmartArtFallbackNoteXml,
@@ -171,7 +172,7 @@ function trySmartArt(ast, smartArtDir) {
   try {
     // The pre-rendered dsp:drawing (fifth part) is opt-in until a real Word confirms it.
     const requestedStyle = process.env.MD2NATIVEDOCX_SMARTART_STYLE;
-    const style = requestedStyle === 'colorful' || requestedStyle === 'intense' ? requestedStyle : 'simple';
+    const style = SMARTART_STYLES.includes(requestedStyle) ? requestedStyle : 'simple';
     const generated = generateSmartArt(ast, { drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING === '1', style });
     if (!generated) return null;
 

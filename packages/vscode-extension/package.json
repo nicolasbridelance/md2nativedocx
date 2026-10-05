@@ -137,11 +137,15 @@
         },
         "md2nativedocx.smartArt.style": {
           "type": "string",
-          "enum": ["simple", "colorful", "intense"],
+          "enum": ["simple", "subtle", "moderate", "intense-accent", "colorful", "colorful-moderate", "intense"],
           "default": "colorful",
           "enumDescriptions": [
             "%configuration.smartArt.style.simple%",
+            "%configuration.smartArt.style.subtle%",
+            "%configuration.smartArt.style.moderate%",
+            "%configuration.smartArt.style.intense-accent%",
             "%configuration.smartArt.style.colorful%",
+            "%configuration.smartArt.style.colorful-moderate%",
             "%configuration.smartArt.style.intense%"
           ],
           "markdownDescription": "%configuration.smartArt.style.markdownDescription%"

@@ -335,6 +335,30 @@ the direction: `TD` bottom-centre to top-centre, `LR` right to left, `BT` top to
 
 **Result (maintainer, real Word, 2026-10-05): all confirmed on the v9 files. Tree connectors are validated.**
 
+## Round 13 — 2026-10-05: four new look profiles (v10)
+
+SmartArt looks are now a table of profiles (`STYLE_PROFILES`, `styles.ts`) shared by chain, cycle and tree: a palette
+(one accent, or a different accent per shape) times the theme line / fill / effect style a Word quick style would
+reference. Existing `simple`, `colorful`, `intense` are unchanged; four new ones fill the grid:
+
+| Profile | Palette | Fill | Effect |
+|---|---|---|---|
+| `subtle` | one accent | flat, white outline | none |
+| `moderate` | one accent | soft gradient (theme fill 2) | light shadow |
+| `intense-accent` | one accent | gradient (theme fill 3) | drop shadow |
+| `colorful-moderate` | accent per shape | soft gradient | light shadow |
+
+`smartart-v10-subtle.docx`, `-moderate.docx`, `-intense-accent.docx`, `-colorful-moderate.docx`; each holds a chain,
+a 4-step cycle and a 3-child tree, with cached drawing.
+
+- [ ] All four open with no repair prompt.
+- [ ] The look matches the table (flat vs soft gradient vs strong gradient; shadow light vs strong; one colour vs several).
+- [ ] In Word's SmartArt Design tab, the diagram's own quick style / colours show as ours and can be changed to
+      another one without breaking the diagram.
+- [ ] Open the file, then restyle in Word to "Intense Effect": it should look like `intense-accent` (same indexes).
+- Not covered: Word's 3-D quick styles (Polished, Inset, Cartoon, scenes). They need `scene3d`/`sp3d` in the style
+  definition and have no sample here to read; to be decided with a real Word-authored reference.
+
 ## Recording the result
 
 Once done, either:

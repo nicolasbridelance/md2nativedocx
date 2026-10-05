@@ -16,7 +16,7 @@
 
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
 import type { Flowchart } from '../types.js';
-import { accentOf, isIntense, type SmartArtStyle } from './styles.js';
+import { accentOf, profileOf, type SmartArtStyle } from './styles.js';
 
 /** Frame size (EMU) the diagram is embedded in — keep in sync with `embed.ts`'s defaults. */
 export const DRAWING_FRAME = { cx: 5486400, cy: 3200400 };
@@ -85,6 +85,16 @@ function textColor(fill: string | undefined): string {
   return luma > 160 ? 'dk1' : 'lt1';
 }
 
+/** Theme gradient fill 2 (a soft two-stop gradient, what a "moderate" quick style references) for one accent. */
+function moderateGradient(accent: string): string {
+  return (
+    '<a:gradFill rotWithShape="1"><a:gsLst>' +
+    `<a:gs pos="0"><a:schemeClr val="${accent}"><a:tint val="90000"/><a:satMod val="105000"/></a:schemeClr></a:gs>` +
+    `<a:gs pos="100000"><a:schemeClr val="${accent}"><a:tint val="65000"/><a:satMod val="140000"/></a:schemeClr></a:gs>` +
+    '</a:gsLst><a:lin ang="16200000" scaled="0"/></a:gradFill>'
+  );
+}
+
 /** Theme gradient fill 3 (what an "intense" quick style references), written out for one accent. */
 function intenseGradient(accent: string): string {
   return (
@@ -95,6 +105,9 @@ function intenseGradient(accent: string): string {
   );
 }
 
+const LIGHT_SHADOW =
+  '<a:effectLst><a:outerShdw blurRad="40000" dist="20000" dir="5400000" rotWithShape="0"><a:srgbClr val="000000"><a:alpha val="38000"/></a:srgbClr></a:outerShdw></a:effectLst>';
+
 const SHADOW =
   '<a:effectLst><a:outerShdw blurRad="40000" dist="23000" dir="5400000" rotWithShape="0"><a:srgbClr val="000000"><a:alpha val="35000"/></a:srgbClr></a:outerShdw></a:effectLst>';
 
@@ -102,7 +115,11 @@ function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
   const fill = validateHexColor(shape.fill, '');
   if (fill) return `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
   const accent = shape.accent ?? 'accent1';
-  if (shape.tintPercent === undefined && isIntense(style) && shape.prst === 'roundRect') return intenseGradient(accent);
+  if (shape.tintPercent === undefined && shape.prst === 'roundRect') {
+    const { fillIdx } = profileOf(style);
+    if (fillIdx === 3) return intenseGradient(accent);
+    if (fillIdx === 2) return moderateGradient(accent);
+  }
   const tint = shape.tintPercent === undefined ? '' : `<a:tint val="${shape.tintPercent * 1000}"/>`;
   return `<a:solidFill><a:schemeClr val="${accent}">${tint}</a:schemeClr></a:solidFill>`;
 }
@@ -111,17 +128,18 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
   const isConn = shape.prst === 'connector';
   const isArrow = shape.prst !== 'roundRect';
   const fill = validateHexColor(shape.fill, '');
-  const lineWidth = style === 'simple' ? 12700 : style === 'colorful' ? 19050 : 25400;
+  const profile = profileOf(style);
+  const lineWidth = profile.lineW;
   const line = isConn
     ? `<a:ln w="19050" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="${shape.accent ?? 'accent1'}"><a:shade val="60000"/></a:schemeClr></a:solidFill><a:prstDash val="solid"/></a:ln>`
     : isArrow
     ? '<a:ln><a:noFill/></a:ln>'
     : `<a:ln w="${lineWidth}" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
-  const effects = !isArrow && isIntense(style) ? SHADOW : '<a:effectLst/>';
+  const effects = isArrow ? '<a:effectLst/>' : profile.effectIdx === 2 ? SHADOW : profile.effectIdx === 1 ? LIGHT_SHADOW : '<a:effectLst/>';
   const colour = textColor(fill || undefined);
-  const lnIdx = isConn ? 2 : isArrow ? 0 : style === 'simple' ? 0 : 2;
-  const fillIdx = isConn ? 0 : !isArrow && isIntense(style) ? 3 : 1;
-  const effectIdx = !isArrow && isIntense(style) ? 2 : 0;
+  const lnIdx = isConn ? 2 : isArrow ? 0 : profile.lnIdx;
+  const fillIdx = isConn ? 0 : isArrow ? 1 : profile.fillIdx;
+  const effectIdx = isArrow ? 0 : profile.effectIdx;
   const styleXml =
     `<dsp:style><a:lnRef idx="${lnIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="${fillIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>` +
     `<a:effectRef idx="${effectIdx}"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="${colour}"/></a:fontRef></dsp:style>`;

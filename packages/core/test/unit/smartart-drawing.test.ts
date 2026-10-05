@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMermaid } from '../../src/parser/index.js';
 import { generateSmartArt } from '../../src/smartart/dispatch.js';
+import { SMARTART_STYLES, STYLE_PROFILES } from '../../src/smartart/styles.js';
 import { CYCLE_FRAME, DRAWING_FRAME, DRAWING_REL_TOKEN, cycleBoxWidth } from '../../src/smartart/drawing.js';
 
 const flow = (text: string) => parseMermaid(text).ast;
@@ -166,4 +167,49 @@ test('cycle sizing is one rule shared by the layout and the drawing, and leaves 
     assert.ok(chord - w >= 0.7 * w - 1 || w <= 0.08 * CYCLE_FRAME.cx + 1, `n=${n}: gap ${chord - w} vs width ${w}`);
     assert.deepEqual(out.frame, CYCLE_FRAME);
   }
+});
+
+// ---- every look profile ----
+
+test('every profile yields schema-consistent parts and a drawing for every layout', () => {
+  const sources = [
+    'flowchart LR\n A --> B --> C',
+    'flowchart TD\n A --> B\n A --> C\n A --> D',
+    'flowchart TD\n A --> B\n B --> C\n C --> A',
+  ];
+  for (const style of SMARTART_STYLES) {
+    for (const src of sources) {
+      const out = generateSmartArt(flow(src), { drawing: true, style });
+      assert.ok(out, `${style}: eligible`);
+      const qsId = /qsTypeId="([^"]+)"/.exec(out.dataXml)?.[1];
+      const csId = /csTypeId="([^"]+)"/.exec(out.dataXml)?.[1];
+      assert.ok(out.styleXml.includes(`uniqueId="${qsId}"`), `${style}: quick style id`);
+      assert.ok(out.colorsXml.includes(`uniqueId="${csId}"`), `${style}: colors id`);
+      assert.ok(out.drawingXml?.includes('<dsp:sp '), `${style}: drawing has shapes`);
+    }
+  }
+});
+
+test('profiles map to the theme fill/effect indexes they name, in the quick style and in the drawing', () => {
+  const src = 'flowchart LR\n A --> B --> C';
+  for (const style of SMARTART_STYLES) {
+    if (style === 'simple') continue; // keeps its own original constants
+    const p = STYLE_PROFILES[style];
+    const out = generateSmartArt(flow(src), { drawing: true, style });
+    assert.match(out?.styleXml ?? '', new RegExp(`<a:fillRef idx="${p.fillIdx}">`), style);
+    assert.match(out?.styleXml ?? '', new RegExp(`<a:effectRef idx="${p.effectIdx}">`), style);
+    const drawing = out?.drawingXml ?? '';
+    assert.equal(drawing.includes('<a:gradFill'), p.fillIdx > 1, `${style}: gradient only for fill 2/3`);
+    assert.equal(drawing.includes('<a:outerShdw'), p.effectIdx > 0, `${style}: shadow only for effect 1/2`);
+  }
+});
+
+test('single-palette profiles use one accent for nodes, colorful ones several', () => {
+  const src = 'flowchart LR\n A --> B --> C --> D';
+  const accents = (style: (typeof SMARTART_STYLES)[number]) =>
+    new Set([...(generateSmartArt(flow(src), { drawing: true, style })?.drawingXml ?? '').matchAll(/<a:schemeClr val="(accent\d)"/g)].map((m) => m[1]));
+  assert.equal(accents('subtle').size, 1);
+  assert.equal(accents('moderate').size, 1);
+  assert.ok(accents('colorful-moderate').size > 1);
+  assert.ok(accents('intense').size > 1);
 });

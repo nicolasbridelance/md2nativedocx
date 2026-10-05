@@ -14,8 +14,45 @@
  * document's theme and accent colour setting.
  */
 
-/** Look profile of a SmartArt diagram. */
-export type SmartArtStyle = 'simple' | 'colorful' | 'intense';
+/**
+ * One look profile: which accents shapes use (`palette`) and which theme line / fill / effect style they
+ * reference, as Word's own quick styles do (`lnRef`/`fillRef`/`effectRef` indexes into the document theme's
+ * 3 line styles, 3 fills — 3 = gradient — and 3 effects — 2 = drop shadow).
+ */
+export interface StyleProfile {
+  /** `single`: accent 1 (accent 2 for children); `colorful`: a different accent per shape. */
+  palette: 'single' | 'colorful';
+  /** Theme line style of node shapes (0 = none, so the outline is invisible). */
+  lnIdx: 0 | 2;
+  /** Theme fill style: 1 flat, 2 soft gradient, 3 gradient (intense). */
+  fillIdx: 1 | 2 | 3;
+  /** Theme effect style: 0 none, 1 light shadow, 2 drop shadow. */
+  effectIdx: 0 | 1 | 2;
+  /** Outline width of node shapes in the cached drawing (EMU). */
+  lineW: number;
+}
+
+/** Every look profile, by name (the order is the order shown in settings). */
+export const STYLE_PROFILES = {
+  simple: { palette: 'single', lnIdx: 0, fillIdx: 1, effectIdx: 0, lineW: 12700 },
+  subtle: { palette: 'single', lnIdx: 2, fillIdx: 1, effectIdx: 0, lineW: 19050 },
+  moderate: { palette: 'single', lnIdx: 2, fillIdx: 2, effectIdx: 1, lineW: 19050 },
+  'intense-accent': { palette: 'single', lnIdx: 2, fillIdx: 3, effectIdx: 2, lineW: 25400 },
+  colorful: { palette: 'colorful', lnIdx: 2, fillIdx: 1, effectIdx: 0, lineW: 19050 },
+  'colorful-moderate': { palette: 'colorful', lnIdx: 2, fillIdx: 2, effectIdx: 1, lineW: 19050 },
+  intense: { palette: 'colorful', lnIdx: 2, fillIdx: 3, effectIdx: 2, lineW: 25400 },
+} as const satisfies Record<string, StyleProfile>;
+
+/** Look profile of a SmartArt diagram (a key of {@link STYLE_PROFILES}). */
+export type SmartArtStyle = keyof typeof STYLE_PROFILES;
+
+/** Every accepted profile name, for validating user input (settings, environment variables). */
+export const SMARTART_STYLES = Object.keys(STYLE_PROFILES) as SmartArtStyle[];
+
+/** The profile named `style`. */
+export function profileOf(style: SmartArtStyle): StyleProfile {
+  return STYLE_PROFILES[style];
+}
 
 /** Style labels this project's layouts use. */
 export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans' | 'parChTrans1D2';
@@ -30,14 +67,14 @@ const CHILD_ACCENT_CYCLE = ['accent3', 'accent4', 'accent5', 'accent6', 'accent2
 export function accentOf(style: SmartArtStyle, label: StyleLabel, index: number): string {
   // A parent-to-child connector takes the root's accent (its line is that accent, darkened).
   if (label === 'parChTrans1D2') return accentOf(style, 'node1', 0);
-  if (style === 'simple') return label === 'node2' ? 'accent2' : 'accent1';
+  if (profileOf(style).palette === 'single') return label === 'node2' ? 'accent2' : 'accent1';
   const cycle = label === 'node2' ? CHILD_ACCENT_CYCLE : ACCENT_CYCLE;
   return cycle[index % cycle.length] as string;
 }
 
 /** The accents `label` cycles through, in order (for `meth="repeat"` colour lists). */
 function accentList(style: SmartArtStyle, label: StyleLabel): string[] {
-  const n = style === 'simple' ? 1 : (label === 'node2' ? CHILD_ACCENT_CYCLE : ACCENT_CYCLE).length;
+  const n = profileOf(style).palette === 'single' ? 1 : (label === 'node2' ? CHILD_ACCENT_CYCLE : ACCENT_CYCLE).length;
   return Array.from({ length: n }, (_, i) => accentOf(style, label, i));
 }
 
@@ -90,7 +127,7 @@ export function buildColorsXml(style: SmartArtStyle, uniqueId: string, labels: S
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:colorsDef xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}" uniqueId="${uniqueId}" minVer="12.0">` +
     '<dgm:title val=""/><dgm:desc val=""/>' +
-    '<dgm:catLst><dgm:cat type="colorful" pri="10100"/></dgm:catLst>' +
+    `<dgm:catLst><dgm:cat type="${profileOf(style).palette === 'single' ? 'accent1' : 'colorful'}" pri="10100"/></dgm:catLst>` +
     defs +
     '</dgm:colorsDef>'
   );
@@ -103,14 +140,14 @@ export function buildColorsXml(style: SmartArtStyle, uniqueId: string, labels: S
  * the data model references.
  */
 export function buildStyleXml(style: SmartArtStyle, uniqueId: string, labels: StyleLabel[]): string {
-  const intense = style === 'intense';
+  const { lnIdx, fillIdx, effectIdx } = profileOf(style);
   const defs = labels
     .map((label) => {
       if (label === 'parChTrans1D2') return CONN_STYLE_DEF;
       const isTrans = label === 'sibTrans';
-      const ln = isTrans ? 0 : 2;
-      const fill = isTrans ? 1 : intense ? 3 : 1;
-      const effect = isTrans ? 0 : intense ? 2 : 0;
+      const ln = isTrans ? 0 : lnIdx;
+      const fill = isTrans ? 1 : fillIdx;
+      const effect = isTrans ? 0 : effectIdx;
       return (
         `<dgm:styleLbl name="${label}"><dgm:style>` +
         `<a:lnRef idx="${ln}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef>` +
@@ -129,9 +166,4 @@ export function buildStyleXml(style: SmartArtStyle, uniqueId: string, labels: St
     defs +
     '</dgm:styleDef>'
   );
-}
-
-/** Whether the profile paints shapes with the theme's gradient + shadow in the cached drawing. */
-export function isIntense(style: SmartArtStyle): boolean {
-  return style === 'intense';
 }

@@ -16,6 +16,8 @@ import {
   ExportFailedError,
   type ExportResult,
   type LayoutOptions,
+  SMARTART_STYLE_NAMES,
+  type SmartArtStyleName,
 } from './exportService';
 import { ensurePandoc } from './pandocProvisioner';
 import { ensureDotnet } from './dotnetProvisioner';
@@ -70,9 +72,9 @@ function referenceDocumentSetting(): string | undefined {
 }
 
 /** `md2nativedocx.smartArt.style` — look profile of the SmartArt diagrams (default `colorful`). */
-function smartArtStyleSetting(): 'simple' | 'colorful' | 'intense' {
+function smartArtStyleSetting(): SmartArtStyleName {
   const value = vscode.workspace.getConfiguration('md2nativedocx').get<string>('smartArt.style', 'colorful');
-  return value === 'simple' || value === 'intense' ? value : 'colorful';
+  return (SMARTART_STYLE_NAMES as readonly string[]).includes(value) ? (value as SmartArtStyleName) : 'colorful';
 }
 
 /** `md2nativedocx.smartArt.preRenderedDrawing` — embed the cached `dsp:drawing` (default on). */
