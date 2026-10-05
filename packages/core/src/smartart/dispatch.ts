@@ -32,6 +32,8 @@ export interface SmartArtGenerated {
   styleXml: string;
   /** Pre-rendered `dsp:drawing` part; present only when `options.drawing` was set. */
   drawingXml?: string;
+  /** Frame size (EMU) to embed the diagram in; absent = the default frame. */
+  frame?: { cx: number; cy: number };
 }
 
 /**

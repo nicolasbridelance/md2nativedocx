@@ -23,7 +23,7 @@
 import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
 import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
-import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, cycleShapes } from './drawing.js';
+import { CYCLE_FRAME, DRAWING_EXT_LST_XML, buildDiagramDrawingXml, cycleBoxWidth, cycleShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
 /** The four OOXML diagram parts a `cycle` SmartArt diagram needs. */
@@ -38,6 +38,8 @@ export interface SmartArtCycleOutput {
   styleXml: string;
   /** `word/diagrams/drawing{N}.xml` — pre-rendered `dsp:drawing`, only when `options.drawing` was set. */
   drawingXml?: string;
+  /** Frame size (EMU) the diagram must be embedded in (the geometry assumes it). */
+  frame?: { cx: number; cy: number };
 }
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
@@ -45,6 +47,11 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 
 /** `layoutDef` URN for the cycle algorithm (direction-independent — see module doc comment on `generateCycle`). */
 export const CYCLE_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/cycle1';
+
+/** `layoutDef` URN for a cycle of `n` nodes: the box size depends on `n`, so each count has its own definition. */
+export function cycleLayoutUrn(n: number): string {
+  return `${CYCLE_LAYOUT_URN}-n${n}`;
+}
 
 /**
  * Original `dgm:layoutDef`: a `cycle` algorithm root and, per node, one leaf `Main` layoutNode via
@@ -63,9 +70,11 @@ export const CYCLE_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/cycle1';
  * edited. No `sibTrans` spacer nodes — `cycle` positions its children
  * itself, it doesn't need `lin`'s manual inter-item spacer.
  */
-export const CYCLE_LAYOUT_XML =
+export function cycleLayoutXml(n: number): string {
+  const widthFact = (cycleBoxWidth(n) / CYCLE_FRAME.cx).toFixed(4);
+  return (
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-  `<dgm:layoutDef xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}" uniqueId="${CYCLE_LAYOUT_URN}">` +
+  `<dgm:layoutDef xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}" uniqueId="${cycleLayoutUrn(n)}">` +
   '<dgm:title val=""/><dgm:desc val=""/>' +
   '<dgm:catLst><dgm:cat type="cycle" pri="1"/></dgm:catLst>' +
   '<dgm:sampData useDef="1"><dgm:dataModel><dgm:ptLst/><dgm:bg/><dgm:whole/></dgm:dataModel></dgm:sampData>' +
@@ -75,7 +84,7 @@ export const CYCLE_LAYOUT_XML =
   '<dgm:alg type="cycle"><dgm:param type="stAng" val="0"/></dgm:alg><dgm:shape/>' +
   '<dgm:constrLst>' +
   '<dgm:constr op="equ" type="primFontSz" for="des" ptType="node" val="20"/>' +
-  '<dgm:constr type="w" for="ch" forName="Main" refType="w" fact="0.3"/>' +
+  `<dgm:constr type="w" for="ch" forName="Main" refType="w" fact="${widthFact}"/>` +
   '<dgm:constr op="equ" type="h" for="ch" forName="Main"/>' +
   '<dgm:constr op="equ" type="w" for="ch" forName="sibTrans" refType="w" refFor="ch" refForName="Main" fact="0.4"/>' +
   '<dgm:constr op="equ" type="h" for="ch" forName="sibTrans"/>' +
@@ -114,7 +123,12 @@ export const CYCLE_LAYOUT_XML =
   '</dgm:forEach>' +
   '</dgm:forEach>' +
   '</dgm:layoutNode>' +
-  '</dgm:layoutDef>';
+  '</dgm:layoutDef>'
+  );
+}
+
+/** The layout for the most common case (4 nodes); `generateCycle` writes the one matching the node count. */
+export const CYCLE_LAYOUT_XML = cycleLayoutXml(4);
 
 /**
  * Original `dgm:colorsDef` — single `styleLbl` (`node1`, the only style used
@@ -226,6 +240,7 @@ function buildCycleDataXml(
   style: SmartArtStyle,
 ): { xml: string; drawingXml?: string } {
   const docId = '0';
+  const layoutUrn = cycleLayoutUrn(nodes.length);
   const nodeIds = nodes.map((_, i) => String(i + 1));
   const incomingLabel = incomingLabelByNodeId(flowchart);
 
@@ -291,23 +306,23 @@ function buildCycleDataXml(
     .join('');
 
   const presOfCxns =
-    `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${docId}" destId="${pRootId}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
+    `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${docId}" destId="${pRootId}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>` +
     nodeIds
       .map(
         (id) =>
-          `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
+          `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pMainIds.get(id)}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`
       )
       .join('') +
     sibTransIds
-      .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pSibTransIds[i]}" srcOrd="0" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`)
+      .map((id, i) => `<dgm:cxn modelId="${newModelId()}" type="presOf" srcId="${id}" destId="${pSibTransIds[i]}" srcOrd="0" destOrd="0" presId="${layoutUrn}"/>`)
       .join('');
 
   // Interleaved Main, transition, Main, transition, … : root's presParOf srcOrd is one sequence.
   const presParOfCxns = nodeIds
     .map(
       (id, i) =>
-        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pMainIds.get(id)}" srcOrd="${2 * i}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>` +
-        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pSibTransIds[i]}" srcOrd="${2 * i + 1}" destOrd="0" presId="${CYCLE_LAYOUT_URN}"/>`
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pMainIds.get(id)}" srcOrd="${2 * i}" destOrd="0" presId="${layoutUrn}"/>` +
+        `<dgm:cxn modelId="${newModelId()}" type="presParOf" srcId="${pRootId}" destId="${pSibTransIds[i]}" srcOrd="${2 * i + 1}" destOrd="0" presId="${layoutUrn}"/>`
     )
     .join('');
 
@@ -315,7 +330,7 @@ function buildCycleDataXml(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
     `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet ` +
-    `loTypeId="${CYCLE_LAYOUT_URN}" loCatId="cycle" ` +
+    `loTypeId="${layoutUrn}" loCatId="cycle" ` +
     'qsTypeId="urn:md2nativedocx/smartart-quickstyle/cycle1" qsCatId="simple" ' +
     'csTypeId="urn:md2nativedocx/smartart-colors/cycle1" csCatId="accent1"/></dgm:pt>' +
     contentPts +
@@ -362,7 +377,8 @@ export function generateCycle(flowchart: Flowchart, options: SmartArtGenerateOpt
   const data = buildCycleDataXml(flowchart, nodes, options.drawing === true, style);
   return {
     dataXml: data.xml,
-    layoutXml: CYCLE_LAYOUT_XML,
+    layoutXml: cycleLayoutXml(nodes.length),
+    frame: CYCLE_FRAME,
     colorsXml:
       style === 'simple'
         ? CYCLE_COLORS_XML

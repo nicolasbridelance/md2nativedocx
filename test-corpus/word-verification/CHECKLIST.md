@@ -278,6 +278,23 @@ cycles so they never touch the arrows. Schema validator: 0 errors in `word/diagr
 - [ ] If Word draws **no** arrows after an edit (or drops the last one), note which — it tells me whether the
       layout needs `cnt` or `dir` parameters on the connector.
 
+## Round 10 — 2026-10-05: cycle arrows, second attempt (v7)
+
+Round 9 (v6): Word showed only some arrows (2 of 3, only the vertical ones of 6, 3 squashed of 4). Diagnosis:
+Word **recomputes a cycle's layout from our `layoutDef`** — it does not show the cached drawing — and the
+`layoutDef` sized every box at 30% of the frame width, so boxes overlapped and left no room for the diagonal
+arrows. Fix: one sizing rule (`cycleBoxWidth(n)`) now written into the `layoutDef` **per node count** and used
+by the cached drawing, a taller frame for cycles (4.6 in), and a guaranteed gap of at least 0.7 box widths
+between neighbours for the arrow.
+
+- `smartart-v7-cycles-colorful.docx` (with cached drawing) and `smartart-v7-cycles-colorful-no-drawing.docx`.
+- [ ] Both open with no repair prompt.
+- [ ] 3-step cycle: **3 arrows**. 4-step: **4 arrows**, not squashed. 6-step: **6 arrows**, all pointing clockwise.
+- [ ] Do the two files look **identical** in Word? If yes, Word ignores our cached drawing for these diagrams and
+      only the `layoutDef` matters (that settles the "pixel perfect" question: the lever is the layoutDef).
+      If they differ, note how.
+- [ ] If arrows are still missing or squashed: note which, and whether the boxes are where you expect.
+
 ## Recording the result
 
 Once done, either:

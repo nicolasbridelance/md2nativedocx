@@ -21,6 +21,25 @@ import { accentOf, isIntense, type SmartArtStyle } from './styles.js';
 /** Frame size (EMU) the diagram is embedded in — keep in sync with `embed.ts`'s defaults. */
 export const DRAWING_FRAME = { cx: 5486400, cy: 3200400 };
 
+/**
+ * Taller frame for a cycle (6 in x 4.6 in): the ring needs vertical room for its boxes **and** the arrows
+ * between them. Word recomputes a cycle's layout from the `layoutDef` rather than showing this file's cached
+ * shapes, so the sizes below are also written into the `layoutDef` (`cycle.ts`) — one source of truth.
+ */
+export const CYCLE_FRAME = { cx: 5486400, cy: 4206240 };
+
+/**
+ * Box width (EMU) for a cycle of `n` nodes: up to 30% of the frame, shrunk until neighbouring boxes leave a gap
+ * of at least 0.7 box widths for the arrow between them. The ring radius is taken conservatively from the box
+ * *width* on both axes, so the guarantee holds whichever dimension Word's cycle algorithm uses.
+ */
+export function cycleBoxWidth(n: number, frame: { cx: number; cy: number } = CYCLE_FRAME): number {
+  let w = 0.3 * frame.cx;
+  const radius = (width: number) => (frame.cy - width) / 2;
+  while (w > 0.08 * frame.cx && 1.7 * w > 2 * radius(w) * Math.sin(Math.PI / Math.max(3, n))) w *= 0.97;
+  return w;
+}
+
 /** Placeholder written into `dgm:dataModelExt/@relId`; the bridge swaps it for `SMARTART_PLACEHOLDER:<id>:dr`. */
 export const DRAWING_REL_TOKEN = 'SMARTART_DRAWING_REL';
 
@@ -280,20 +299,16 @@ export function treeShapes(
 
 /**
  * Cycle geometry: boxes evenly spaced clockwise from the top, a transition arrow between each pair (the last
- * one closing the loop). Box width is up to 30% of the frame (the `layoutDef`'s ratio) but shrinks as needed
- * so neighbours never touch the arrow that sits between them; height is 0.6 of the width.
+ * one closing the loop). Sizes come from {@link cycleBoxWidth}, the same rule the `layoutDef` states.
  */
 export function cycleShapes(nodes: Labelled[], transIds: string[], style: SmartArtStyle = 'simple'): DrawingShape[] {
-  const { cx: FW, cy: FH } = DRAWING_FRAME;
+  const frame = CYCLE_FRAME;
   const n = nodes.length;
-  let w = 0.3 * FW;
-  const radiusFor = (width: number) => Math.min(FW - width, FH - 0.6 * width) / 2;
-  // Neighbouring box centres are a chord apart; leave room for the arrow between them.
-  while (w > 0.08 * FW && 1.35 * w > 2 * radiusFor(w) * Math.sin(Math.PI / n)) w *= 0.96;
+  const w = cycleBoxWidth(n, frame);
   const h = 0.6 * w;
-  const radius = radiusFor(w);
+  const radius = (frame.cy - h) / 2;
   const font = fitFontSize(nodes.map((nd) => nd.text), w, h);
-  const point = (angle: number, r: number) => ({ x: FW / 2 + r * Math.sin(angle), y: FH / 2 - r * Math.cos(angle) });
+  const point = (angle: number, r: number) => ({ x: frame.cx / 2 + r * Math.sin(angle), y: frame.cy / 2 - r * Math.cos(angle) });
   const shapes: DrawingShape[] = [];
   nodes.forEach((node, i) => {
     const centre = point((2 * Math.PI * i) / n, radius);
@@ -313,8 +328,9 @@ export function cycleShapes(nodes: Labelled[], transIds: string[], style: SmartA
     if (trans !== undefined) {
       const mid = (2 * Math.PI * (i + 0.5)) / n;
       const c = point(mid, radius);
-      const len = Math.min(0.22 * w, 0.5 * 2 * radius * Math.sin(Math.PI / n));
-      const thick = 0.7 * len;
+      const gap = 2 * radius * Math.sin(Math.PI / n) - w;
+      const len = Math.max(0.1 * w, 0.5 * gap);
+      const thick = 0.8 * len;
       shapes.push({
         modelId: trans,
         x: Math.round(c.x - len / 2),

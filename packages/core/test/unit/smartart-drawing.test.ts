@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMermaid } from '../../src/parser/index.js';
 import { generateSmartArt } from '../../src/smartart/dispatch.js';
-import { DRAWING_FRAME, DRAWING_REL_TOKEN } from '../../src/smartart/drawing.js';
+import { CYCLE_FRAME, DRAWING_FRAME, DRAWING_REL_TOKEN, cycleBoxWidth } from '../../src/smartart/drawing.js';
 
 const flow = (text: string) => parseMermaid(text).ast;
 
@@ -31,9 +31,10 @@ for (const [name, src] of CASES) {
     assert.ok(shapeIds.length >= 3);
     for (const id of shapeIds) assert.ok(pres.has(id), `dsp:sp ${id} must be a presentation point`);
     assert.equal(new Set(shapeIds).size, shapeIds.length, 'one shape per presentation point');
+    const frame = out.frame ?? DRAWING_FRAME;
     for (const m of out.drawingXml.matchAll(/<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/g)) {
       const [x, y, cx, cy] = m.slice(1).map(Number) as [number, number, number, number];
-      assert.ok(x >= 0 && y >= 0 && x + cx <= DRAWING_FRAME.cx + 2 && y + cy <= DRAWING_FRAME.cy + 2, `shape outside frame: ${m[0]}`);
+      assert.ok(x >= 0 && y >= 0 && x + cx <= frame.cx + 2 && y + cy <= frame.cy + 2, `shape outside frame: ${m[0]}`);
     }
     assert.ok(out.dataXml.includes(DRAWING_REL_TOKEN), 'the data model points at its drawing through a placeholder');
   });
@@ -145,4 +146,21 @@ test('a larger cycle shrinks its boxes so neighbours and arrows do not overlap',
   const tight = generateSmartArt(flow(ring(8)), { drawing: true });
   const width = (xml?: string) => Number(/<a:ext cx="(\d+)" cy="\d+"\/><\/a:xfrm><a:prstGeom prst="roundRect"/.exec(xml ?? '')?.[1]);
   assert.ok(width(tight?.drawingXml) < width(wide?.drawingXml));
+});
+
+test('cycle sizing is one rule shared by the layout and the drawing, and leaves room for the arrows', () => {
+  for (const n of [3, 4, 5, 6, 8, 10]) {
+    const w = cycleBoxWidth(n);
+    const out = generateSmartArt(
+      parseMermaid('flowchart TD\n' + Array.from({ length: n }, (_, i) => ` N${i}[E${i}] --> N${(i + 1) % n}`).join('\n')).ast,
+      { drawing: true },
+    );
+    assert.ok(out?.drawingXml, `n=${n}`);
+    // the layoutDef states the same width fraction the drawing uses
+    assert.match(out.layoutXml, new RegExp(`forName="Main" refType="w" fact="${(w / CYCLE_FRAME.cx).toFixed(4)}"`));
+    // neighbours leave a gap of at least 0.7 box widths along the ring (conservative radius from the width)
+    const chord = 2 * ((CYCLE_FRAME.cy - w) / 2) * Math.sin(Math.PI / n);
+    assert.ok(chord - w >= 0.7 * w - 1 || w <= 0.08 * CYCLE_FRAME.cx + 1, `n=${n}: gap ${chord - w} vs width ${w}`);
+    assert.deepEqual(out.frame, CYCLE_FRAME);
+  }
 });

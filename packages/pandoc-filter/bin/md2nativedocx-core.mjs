@@ -189,7 +189,7 @@ function trySmartArt(ast, smartArtDir) {
       lo: `SMARTART_PLACEHOLDER:${id}:lo`,
       qs: `SMARTART_PLACEHOLDER:${id}:qs`,
       cs: `SMARTART_PLACEHOLDER:${id}:cs`,
-    });
+    }, generated.frame ? { widthEmu: generated.frame.cx, heightEmu: generated.frame.cy } : {});
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     process.stderr.write(`md2nativedocx: SmartArt path failed, falling back to shapes: ${message}\n`);
