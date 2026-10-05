@@ -1,63 +1,92 @@
-# Manuel d'utilisation de md2nativedocx
+```{=openxml}
+<w:p><w:pPr><w:spacing w:before="240" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="262626"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+```
+
++:----------------------------------+
+| ![](assets/icon.png){width=1.5in} |
++-----------------------------------+
+
+```{=openxml}
+<w:p><w:pPr><w:spacing w:before="240" w:after="40"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="2E7D32"/><w:sz w:val="64"/></w:rPr><w:t xml:space="preserve">md2nativedocx</w:t></w:r></w:p><w:p><w:pPr><w:spacing w:before="0" w:after="80"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="404040"/><w:sz w:val="36"/></w:rPr><w:t xml:space="preserve">Manuel d’utilisation</w:t></w:r></w:p><w:p><w:pPr><w:spacing w:before="0" w:after="240"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="666666"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Convertir Markdown et Mermaid en Word natif, sans aplatir les diagrammes en images</w:t></w:r></w:p>
+```
+
++:--------------------------------------+:--------------------------------------+
+| ![](assets/cover-mindmap.png){width=2.6in} | ![](assets/cover-venn.png){width=2.2in} |
++---------------------------------------+---------------------------------------+
+
+```{=openxml}
+<w:p><w:pPr><w:spacing w:before="200" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="262626"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+```
+
+| Informations techniques | |
+|:------------------------|:--------------------------------------------|
+| Version | 0.5.6 |
+| Date | 5 octobre 2026 |
+| Licence | CC0 1.0 (domaine public) |
+| Dépôt | github.com/nicolasbridelance/md2nativedocx |
+| Sorties | `.docx` (via Pandoc) et `.pptx` |
+| Diagrammes | 29 types Mermaid, formes natives modifiables |
+| Exécution | 100 % locale, sans référence distante |
+
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1080" w:bottom="1440" w:left="1080" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:pPr></w:p>
+```
+
+```{=openxml}
+<w:p><w:pPr><w:spacing w:before="0" w:after="240"/><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="2E7D32"/><w:sz w:val="44"/></w:rPr><w:t xml:space="preserve">Sommaire</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="120" w:after="0"/></w:pPr><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-2" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Présentation</w:t></w:r><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t>3</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Utilisation en ligne de commande</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>3</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Principes</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>3</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Comment lire ce manuel</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>3</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="120" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Réglages de mise en forme</w:t></w:r><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t>4</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="120" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Markdown standard</w:t></w:r><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t>5</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">1. Texte et emphase</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>5</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">2. Listes</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>5</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">3. Tableaux</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>5</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">4. Équations</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>6</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">5. Code</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>6</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">6. Images</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>6</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">7. Notes et divers</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>7</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="120" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Types de diagrammes</w:t></w:r><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t>8</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Flowchart (organigramme)</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>9</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Swimlane (couloirs)</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>10</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Diagramme de séquence</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>11</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">ZenUML</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>12</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Diagramme de classes</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>13</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Diagramme d’états</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>14</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Entité-relation</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>15</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Diagramme d’exigences</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>16</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">C4</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>17</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Architecture</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>18</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Block</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>19</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Sankey</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>20</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Diagramme de Gantt</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>21</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Chronologie</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>22</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Parcours utilisateur</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>23</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Diagramme circulaire</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>24</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Graphique XY</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>25</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Radar</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>26</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Quadrant</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>27</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Venn</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>28</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Carte mentale</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>29</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Arbre de fichiers</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>30</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Treemap</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>31</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Kanban</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>32</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Ishikawa (arêtes de poisson)</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>33</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Paquet réseau</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>34</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Cynefin</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>35</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Wardley</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>36</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Event modeling</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>37</w:t></w:r></w:p><w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9746"/></w:tabs><w:spacing w:before="0" w:after="0"/><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Git graph</w:t></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:tab/></w:r><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>38</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+```
+
+```{=openxml}
+<w:p><w:r><w:br w:type="page"/></w:r></w:p>
+```
+
+# Présentation
 
 md2nativedocx transforme un document Markdown contenant des diagrammes Mermaid en document Word (`.docx`) ou en présentation (`.pptx`). Les diagrammes ne sont pas des images : ce sont des formes Word natives, que l'on peut sélectionner, recolorer et déplacer. Le reste du Markdown est converti par Pandoc.
-
-Ce manuel décrit chaque type de diagramme (une page par type) : à quoi il sert, sa syntaxe essentielle, ce que l'implémentation prend en charge et ses limites actuelles.
 
 ## Utilisation en ligne de commande
 
 - Word : `md2nativedocx document.md -o document.docx`
-- Présentation : `md2nativedocx deck.md -o deck.pptx` (une diapositive par bloc Mermaid, titrée avec le titre précédent)
+- Présentation : `md2nativedocx deck.md -o deck.pptx` (une diapositive par bloc Mermaid, titrée avec le titre précédent). L'option `--show-source` affiche le code Mermaid à côté de chaque diagramme.
 - Les diagrammes s'écrivent dans un bloc de code `mermaid`.
 
 ## Principes
 
 - **Rien d'externe** : le fichier produit est autonome, sans aucune référence distante.
 - **Pas d'échec silencieux** : une construction non gérée produit un avertissement (affiché et noté dans le journal d'export), jamais un diagramme faux sans prévenir.
-- **Types reconnus** : tous les types du tableau ci-dessous.
-- **Plafonds** : les entrées très grandes sont plafonnées (voir « Limites » de chaque type).
+- **Éditable, à sens unique** : les formes se modifient dans Word, mais ce qui est modifié dans Word n'est pas reporté dans le Markdown, qui reste la source de vérité.
+- **Plafonds** : les entrées très grandes sont plafonnées (voir les limites de chaque type).
 
-## Réglages de mise en forme
+## Comment lire ce manuel
 
-Les réglages se passent par variables d'environnement (ou par l'extension VS Code) : `MD2NATIVEDOCX_PAGE_SIZE`, `MD2NATIVEDOCX_ORIENTATION`, `MD2NATIVEDOCX_MARGINS`, `MD2NATIVEDOCX_HEADING_FONT`, `MD2NATIVEDOCX_BODY_FONT`, `MD2NATIVEDOCX_FONT_SIZE`, `MD2NATIVEDOCX_LINE_SPACING`, `MD2NATIVEDOCX_JUSTIFY`, `MD2NATIVEDOCX_ACCENT_COLOR`, `MD2NATIVEDOCX_TABLE_HEADER_COLOR`, `MD2NATIVEDOCX_TOC` (1 = sommaire), `MD2NATIVEDOCX_TOC_DEPTH`, `MD2NATIVEDOCX_FOOTER_PAGE_NUMBER` (1 = numéro de page), `MD2NATIVEDOCX_LANDSCAPE_TABLES` (1 = tableaux larges en paysage).
+Les pages « Markdown standard » décrivent ce qui entoure les diagrammes. Chaque type de diagramme a ensuite sa page : une description, un petit tableau récapitulatif, la syntaxe essentielle, ce qui est pris en charge, les limites connues, puis la source Mermaid à gauche et le rendu obtenu dans Word à droite.
+
+```{=openxml}
+<w:p><w:r><w:br w:type="page"/></w:r></w:p>
+```
+
+# Réglages de mise en forme
+
+Les réglages se passent par variables d'environnement (ou par le panneau de configuration de l'extension VS Code).
+
+| Variable | Effet | Exemple |
+|:---------|:------|:--------|
+| `MD2NATIVEDOCX_PAGE_SIZE` | Format de page | `A4` |
+| `MD2NATIVEDOCX_ORIENTATION` | Orientation | `landscape` |
+| `MD2NATIVEDOCX_MARGINS` | Marges prédéfinies | `moderate` |
+| `MD2NATIVEDOCX_HEADING_FONT` | Police des titres | `Georgia` |
+| `MD2NATIVEDOCX_BODY_FONT` | Police du corps | `Calibri` |
+| `MD2NATIVEDOCX_FONT_SIZE` | Taille du corps (pt) | `11` |
+| `MD2NATIVEDOCX_LINE_SPACING` | Interligne | `1.15` |
+| `MD2NATIVEDOCX_JUSTIFY` | Justification | `justify` |
+| `MD2NATIVEDOCX_ACCENT_COLOR` | Couleur d'accent des titres | `#2E7D32` |
+| `MD2NATIVEDOCX_TABLE_HEADER_COLOR` | Fond d'en-tête des tableaux | `#C8E6C9` |
+| `MD2NATIVEDOCX_TOC` | Sommaire (1 = oui) | `1` |
+| `MD2NATIVEDOCX_TOC_DEPTH` | Profondeur du sommaire | `2` |
+| `MD2NATIVEDOCX_FOOTER_PAGE_NUMBER` | Numéro de page en pied (1 = oui) | `1` |
+| `MD2NATIVEDOCX_LANDSCAPE_TABLES` | Tableaux larges en paysage (1 = oui) | `1` |
 
 Le sommaire est un champ Word : à l'ouverture, cliquer « Activer la modification » puis accepter la mise à jour des champs.
-
-
-## Tableau récapitulatif des types
-
-| Type | Mot-clé | Couleurs personnalisables |
-|:-----|:--------|:--------------------------|
-| Flowchart (organigramme) | `flowchart` / `graph` | Oui : classDef, class, style, linkStyle |
-| Swimlane (couloirs) | `swimlane-beta` | Oui : comme le flowchart |
-| Diagramme de séquence | `sequenceDiagram` | Couleurs fixes |
-| ZenUML | `zenuml` | Couleurs fixes |
-| Diagramme de classes | `classDiagram` | Non (style ignoré) |
-| Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Non (style ignoré) |
-| Entité-relation | `erDiagram` | Non (style ignoré) |
-| Diagramme d’exigences | `requirementDiagram` | Non (style ignoré) |
-| C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Couleurs fixes |
-| Architecture | `architecture-beta` | Couleurs fixes |
-| Block | `block-beta` | Oui : style, classDef, class |
-| Sankey | `sankey-beta` | Couleurs fixes |
-| Diagramme de Gantt | `gantt` | Couleurs fixes |
-| Chronologie | `timeline` | Couleurs fixes |
-| Parcours utilisateur | `journey` | Couleurs fixes |
-| Diagramme circulaire | `pie` | Couleurs fixes |
-| Graphique XY | `xychart-beta` | Couleurs fixes |
-| Radar | `radar-beta` | Couleurs fixes |
-| Quadrant | `quadrantChart` | Points : color |
-| Venn | `venn-beta` | Oui : style par ensemble |
-| Carte mentale | `mindmap` | Non (classe ignorée) |
-| Arbre de fichiers | `treeView-beta` | Surlignage (highlight) |
-| Treemap | `treemap-beta` | Oui : classDef (fill, color, stroke) |
-| Kanban | `kanban` | Couleurs fixes |
-| Ishikawa (arêtes de poisson) | `ishikawa-beta` | Couleurs fixes |
-| Paquet réseau | `packet` | Couleurs fixes |
-| Cynefin | `cynefin-beta` | Couleurs fixes |
-| Wardley | `wardley-beta` | Couleurs fixes |
-| Event modeling | `eventmodeling` | Couleurs fixes |
-| Git graph | `gitGraph` | Couleurs fixes |
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -180,7 +209,40 @@ Texte avec emojis : ✅ ❌ ⚠️ 🚀 ⭐.
 
 # Types de diagrammes
 
-Une page par type. Chaque page montre la source Mermaid puis le diagramme obtenu.
+Le tableau ci-dessous récapitule tous les types reconnus, leur mot-clé Mermaid et la possibilité de personnaliser leurs couleurs. Chaque type est détaillé sur sa propre page.
+
+| Type | Mot-clé | Couleurs personnalisables |
+|:----------------------------|:----------------------------------|:------------------------------------|
+| Flowchart (organigramme) | `flowchart` / `graph` | Oui : classDef, class, style, linkStyle |
+| Swimlane (couloirs) | `swimlane-beta` | Oui : comme le flowchart |
+| Diagramme de séquence | `sequenceDiagram` | Couleurs fixes |
+| ZenUML | `zenuml` | Couleurs fixes |
+| Diagramme de classes | `classDiagram` | Non (style ignoré) |
+| Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Non (style ignoré) |
+| Entité-relation | `erDiagram` | Non (style ignoré) |
+| Diagramme d’exigences | `requirementDiagram` | Non (style ignoré) |
+| C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Couleurs fixes |
+| Architecture | `architecture-beta` | Couleurs fixes |
+| Block | `block-beta` | Oui : style, classDef, class |
+| Sankey | `sankey-beta` | Couleurs fixes |
+| Diagramme de Gantt | `gantt` | Couleurs fixes |
+| Chronologie | `timeline` | Couleurs fixes |
+| Parcours utilisateur | `journey` | Couleurs fixes |
+| Diagramme circulaire | `pie` | Couleurs fixes |
+| Graphique XY | `xychart-beta` | Couleurs fixes |
+| Radar | `radar-beta` | Couleurs fixes |
+| Quadrant | `quadrantChart` | Points : color |
+| Venn | `venn-beta` | Oui : style par ensemble |
+| Carte mentale | `mindmap` | Non (classe ignorée) |
+| Arbre de fichiers | `treeView-beta` | Surlignage (highlight) |
+| Treemap | `treemap-beta` | Oui : classDef (fill, color, stroke) |
+| Kanban | `kanban` | Couleurs fixes |
+| Ishikawa (arêtes de poisson) | `ishikawa-beta` | Couleurs fixes |
+| Paquet réseau | `packet` | Couleurs fixes |
+| Cynefin | `cynefin-beta` | Couleurs fixes |
+| Wardley | `wardley-beta` | Couleurs fixes |
+| Event modeling | `eventmodeling` | Couleurs fixes |
+| Git graph | `gitGraph` | Couleurs fixes |
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -208,31 +270,27 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 **Limites**
 
 - `direction` à l’intérieur d’un `subgraph` : lue mais ignorée (Dagre n’a qu’une direction globale), avertissement émis
-- Pas de `click`, d’animation d’arête, de formes icône/image, de sous-graphe repliable
-- Les liens sont des segments droits ou des routes Dagre, pas des courbes Mermaid
-- `classDef default` n’est pas appliqué
-- SmartArt : option expérimentale, désactivée par défaut
+- Pas de `click`, d’animation d’arête, de formes icône/image ni de sous-graphe repliable
+- `classDef default` n’est pas appliqué ; SmartArt : option expérimentale, désactivée par défaut
 
 
-+-------------------------------------------------+-----------------------------------------------------------------------------------+
-| Source Mermaid                                  | Rendu dans Word                                                                   |
-+=================================================+===================================================================================+
-| ```text                                         | ```mermaid                                                                        |
-| flowchart LR                                    | flowchart LR                                                                      |
-|     A([Début]) --> B{Valide ?}                  |     A([Début]) --> B{Valide ?}                                                    |
-|     B -- oui --> C[Traiter]                     |     B -- oui --> C[Traiter]                                                       |
-|     B -- non --> D[/Rejeter/]                   |     B -- non --> D[/Rejeter/]                                                     |
-|     subgraph Équipe                             |     subgraph Équipe                                                               |
-|         C --> E[(Archiver)]                     |         C --> E[(Archiver)]                                                       |
-|     end                                         |     end                                                                           |
-|     classDef ok fill:#C8E6C9,stroke:#2E7D32     |     classDef ok fill:#C8E6C9,stroke:#2E7D32                                       |
-|     classDef ko fill:#FFCDD2,stroke:#C62828     |     classDef ko fill:#FFCDD2,stroke:#C62828                                       |
-|     class C,E ok                                |     class C,E ok                                                                  |
-|     class D ko                                  |     class D ko                                                                    |
-|     style A fill:#BBDEFB,stroke:#1565C0         |     style A fill:#BBDEFB,stroke:#1565C0                                           |
-|     linkStyle 0 stroke:#E65100,stroke-width:3px |     linkStyle 0 stroke:#E65100,stroke-width:3px                                   |
-| ```                                             | ```                                                                               |
-+-------------------------------------------------+-----------------------------------------------------------------------------------+
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| flowchart LR                       | flowchart LR                                                |
+|     A([Début]) --> B{Valide ?}     |     A([Début]) --> B{Valide ?}                              |
+|     B -- oui --> C[Traiter]        |     B -- oui --> C[Traiter]                                 |
+|     B -- non --> D[/Rejeter/]      |     B -- non --> D[/Rejeter/]                               |
+|     subgraph Équipe                |     subgraph Équipe                                         |
+|         C --> E[(Archiver)]        |         C --> E[(Archiver)]                                 |
+|     end                            |     end                                                     |
+|     classDef ok fill:#C8E6C9       |     classDef ok fill:#C8E6C9                                |
+|     class C,E ok                   |     class C,E ok                                            |
+|     style D fill:#FFCDD2           |     style D fill:#FFCDD2                                    |
+|     style A fill:#BBDEFB           |     style A fill:#BBDEFB                                    |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -423,38 +481,26 @@ Classes UML avec attributs, méthodes et relations.
 - Liens en lignes droites
 
 
-+--------------------------------------+-----------------------------------------------------------------+
-| Source Mermaid                       | Rendu dans Word                                                 |
-+======================================+=================================================================+
-| ```text                              | ```mermaid                                                      |
-| classDiagram                         | classDiagram                                                    |
-|   direction LR                       |   direction LR                                                  |
-|   class Animal {                     |   class Animal {                                                |
-|     +String name                     |     +String name                                                |
-|     +int age                         |     +int age                                                    |
-|     +makeSound() void                |     +makeSound() void                                           |
-|   }                                  |   }                                                             |
-|   class Dog {                        |   class Dog {                                                   |
-|     +String breed                    |     +String breed                                               |
-|     +bark() void                     |     +bark() void                                                |
-|   }                                  |   }                                                             |
-|   class Cat {                        |   class Cat {                                                   |
-|     +bark() void                     |     +bark() void                                                |
-|   }                                  |   }                                                             |
-|   class Owner {                      |   class Owner {                                                 |
-|     +String name                     |     +String name                                                |
-|     +feed(Animal a) void             |     +feed(Animal a) void                                        |
-|   }                                  |   }                                                             |
-|   Animal <|-- Dog                    |   Animal <|-- Dog                                               |
-|   Animal <|-- Cat                    |   Animal <|-- Cat                                               |
-|   Owner "1" --> "many" Animal : owns |   Owner "1" --> "many" Animal : owns                            |
-|   Owner *-- Address : has            |   Owner *-- Address : has                                       |
-|   class Address {                    |   class Address {                                               |
-|     +String street                   |     +String street                                              |
-|     +String city                     |     +String city                                                |
-|   }                                  |   }                                                             |
-| ```                                  | ```                                                             |
-+--------------------------------------+-----------------------------------------------------------------+
++------------------------------------+-------------------------------------------------------------+
+| Source Mermaid                     | Rendu dans Word                                             |
++====================================+=============================================================+
+| ```text                            | ```mermaid                                                  |
+| classDiagram                       | classDiagram                                                |
+|   direction LR                     |   direction LR                                              |
+|   class Animal {                   |   class Animal {                                            |
+|     +String name                   |     +String name                                            |
+|     +makeSound() void              |     +makeSound() void                                       |
+|   }                                |   }                                                         |
+|   class Dog {                      |   class Dog {                                               |
+|     +bark() void                   |     +bark() void                                            |
+|   }                                |   }                                                         |
+|   class Owner {                    |   class Owner {                                             |
+|     +feed(Animal a) void           |     +feed(Animal a) void                                    |
+|   }                                |   }                                                         |
+|   Animal <|-- Dog                  |   Animal <|-- Dog                                           |
+|   Owner --> Animal : owns          |   Owner --> Animal : owns                                   |
+| ```                                | ```                                                         |
++------------------------------------+-------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -871,22 +917,21 @@ Périodes et événements.
 - Configuration/thème ignorés
 
 
-+---------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Source Mermaid                                                                                                                  | Rendu dans Word                                                                                                                                                                                                           |
-+=================================================================================================================================+===========================================================================================================================================================================================================================+
-| ```text                                                                                                                         | ```mermaid                                                                                                                                                                                                                |
-| timeline                                                                                                                        | timeline                                                                                                                                                                                                                  |
-|         title England's History Timeline                                                                                        |         title England's History Timeline                                                                                                                                                                                  |
-|         section Stone Age                                                                                                       |         section Stone Age                                                                                                                                                                                                 |
-|           7600 BC : Britain's oldest known house was built in Orkney, Scotland                                                  |           7600 BC : Britain's oldest known house was built in Orkney, Scotland                                                                                                                                            |
-|           6000 BC : Sea levels rise and Britain becomes an island.<br> The people who live here are hunter-gatherers.           |           6000 BC : Sea levels rise and Britain becomes an island.<br> The people who live here are hunter-gatherers.                                                                                                     |
-|         section Bronze Age                                                                                                      |         section Bronze Age                                                                                                                                                                                                |
-|           2300 BC : People arrive from Europe and settle in Britain. <br>They bring farming and metalworking.                   |           2300 BC : People arrive from Europe and settle in Britain. <br>They bring farming and metalworking.                                                                                                             |
-|                   : New styles of pottery and ways of burying the dead appear.                                                  |                   : New styles of pottery and ways of burying the dead appear.                                                                                                                                            |
-|           2200 BC : The last major building works are completed at Stonehenge.<br> People now bury their dead in stone circles. |           2200 BC : The last major building works are completed at Stonehenge.<br> People now bury their dead in stone circles.                                                                                           |
-|                   : The first metal objects are made in Britain.Some other nice things happen. it is a good time to be alive.   |                   : The first metal objects are made in Britain.Some other nice things happen. it is a good time to be alive.                                                                                             |
-| ```                                                                                                                             | ```                                                                                                                                                                                                                       |
-+---------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
++-------------------------------------------+-------------------------------------------------------------------------+
+| Source Mermaid                            | Rendu dans Word                                                         |
++===========================================+=========================================================================+
+| ```text                                   | ```mermaid                                                              |
+| timeline                                  | timeline                                                                |
+|     title History                         |     title History                                                       |
+|     section Stone Age                     |     section Stone Age                                                   |
+|       7600 BC : Oldest known house        |       7600 BC : Oldest known house                                      |
+|       6000 BC : Britain becomes an island |       6000 BC : Britain becomes an island                               |
+|     section Bronze Age                    |     section Bronze Age                                                  |
+|       2300 BC : Farming and metalworking  |       2300 BC : Farming and metalworking                                |
+|               : New pottery styles        |               : New pottery styles                                      |
+|       2200 BC : Stonehenge completed      |       2200 BC : Stonehenge completed                                    |
+| ```                                       | ```                                                                     |
++-------------------------------------------+-------------------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -1581,22 +1626,16 @@ Cadres de temps, événements, données et scénarios.
 | ```text                                                        | ```mermaid                                                                                                  |
 | eventmodeling                                                  | eventmodeling                                                                                               |
 | tf 01 ui CartScreen                                            | tf 01 ui CartScreen                                                                                         |
-| tf 02 cmd AddItem [[AddItem01]]                                | tf 02 cmd AddItem [[AddItem01]]                                                                             |
-| tf 03 evt ItemAdded ->> 02 {"itemId": "42", "qty": 1}          | tf 03 evt ItemAdded ->> 02 {"itemId": "42", "qty": 1}                                                       |
+| tf 02 cmd AddItem                                              | tf 02 cmd AddItem                                                                                           |
+| tf 03 evt ItemAdded ->> 02                                     | tf 03 evt ItemAdded ->> 02                                                                                  |
 | tf 04 rmo CartItems ->> 03                                     | tf 04 rmo CartItems ->> 03                                                                                  |
-| tf 05 ui CartScreenUpdated ->> 04                              | tf 05 ui CartScreenUpdated ->> 04                                                                           |
-| tf 06 pcr PriceCalculator ->> 04                               | tf 06 pcr PriceCalculator ->> 04                                                                            |
-| tf 07 cmd ApplyDiscount ->> 06                                 | tf 07 cmd ApplyDiscount ->> 06                                                                              |
-| tf 08 evt Billing.DiscountApplied ->> 07                       | tf 08 evt Billing.DiscountApplied ->> 07                                                                    |
-| rf 09 ui Checkout ->> 04                                       | rf 09 ui Checkout ->> 04                                                                                    |
-| tf 10 cmd Pay ->> 09                                           | tf 10 cmd Pay ->> 09                                                                                        |
-| tf 11 evt Billing.Paid ->> 10                                  | tf 11 evt Billing.Paid ->> 10                                                                               |
-| data AddItem01 {                                               | data AddItem01 {                                                                                            |
-|   description: 'john'                                          |   description: 'john'                                                                                       |
+| tf 05 cmd Pay ->> 04                                           | tf 05 cmd Pay ->> 04                                                                                        |
+| tf 06 evt Paid ->> 05                                          | tf 06 evt Paid ->> 05                                                                                       |
+| data AddItem {                                                 | data AddItem {                                                                                              |
 |   price: 20.4                                                  |   price: 20.4                                                                                               |
 | }                                                              | }                                                                                                           |
 | note 03 {                                                      | note 03 {                                                                                                   |
-|   stock reserved elsewhere                                     |   stock reserved elsewhere                                                                                  |
+|   stock reserved                                               |   stock reserved                                                                                            |
 | }                                                              | }                                                                                                           |
 | gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded | gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded                                              |
 | ```                                                            | ```                                                                                                         |
