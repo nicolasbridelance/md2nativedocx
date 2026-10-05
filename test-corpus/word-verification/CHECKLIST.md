@@ -351,13 +351,15 @@ reference. Existing `simple`, `colorful`, `intense` are unchanged; four new ones
 `smartart-v10-subtle.docx`, `-moderate.docx`, `-intense-accent.docx`, `-colorful-moderate.docx`; each holds a chain,
 a 4-step cycle and a 3-child tree, with cached drawing.
 
-- [ ] All four open with no repair prompt.
-- [ ] The look matches the table (flat vs soft gradient vs strong gradient; shadow light vs strong; one colour vs several).
-- [ ] In Word's SmartArt Design tab, the diagram's own quick style / colours show as ours and can be changed to
+- [x] All four open with no repair prompt.
+- [x] The look matches the table (flat vs soft gradient vs strong gradient; shadow light vs strong; one colour vs several).
+- [x] In Word's SmartArt Design tab, the diagram's own quick style / colours show as ours and can be changed to
       another one without breaking the diagram.
-- [ ] Open the file, then restyle in Word to "Intense Effect": it should look like `intense-accent` (same indexes).
+- [x] Open the file, then restyle in Word to "Intense Effect": it should look like `intense-accent` (same indexes).
 - Not covered: Word's 3-D quick styles (Polished, Inset, Cartoon, scenes). They need `scene3d`/`sp3d` in the style
   definition and have no sample here to read; to be decided with a real Word-authored reference.
+
+**Result (maintainer, real Word, 2026-10-05): all confirmed on the v10 files. The four new profiles are validated.**
 
 ## Recording the result
 
