@@ -1058,7 +1058,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 
 ### Chantiers confiés à l'agent (mainteneur : « c'est dans ta banette »)
 
-- [ ] **Graphiques Word natifs `c:chart` + classeur embarqué** (pie → xychart → radar). Plan par paliers
+- ✅/⏳ **Graphiques Word natifs `c:chart` + classeur embarqué** : `pie` livré et **confirmé dans un vrai Word** (paliers 1-2, Edit Data OK, `64e2739`) ; `xychart` et `radar` livrés (palier 3), validés par schéma + rendu, **Word réel en attente** (CHECKLIST Round 5). Opt-in `MD2NATIVEDOCX_NATIVE_CHARTS=1`. Reste : réglage dans l'extension VS Code, documentation utilisateur, décision de défaut. Historique du chantier : Plan par paliers
       en Phase 6/7. Livrable d'abord : l'ADR (exception à la règle 7 déjà créée par SmartArt) puis le
       spike palier 1 (pie, valeurs en cache, sans classeur) validé par `test:oxml-validate` + LibreOffice,
       puis le classeur, puis vérification dans un vrai Word (le mainteneur ouvre/clique Edit Data).

@@ -1,9 +1,10 @@
 # ADR 0011 — Graphiques Word natifs (`c:chart`) avec classeur embarqué
 
-- **Statut :** Paliers 1 et 2 **implémentés pour `pie`** (2026-10-05), validés par le validateur Open XML
-  (graphique **et** classeur, 0 erreur) et le rendu LibreOffice ; **en attente de la vérification dans un
-  vrai Word** (`test-corpus/word-verification/CHECKLIST.md`, Round 4). Désactivé par défaut
-  (`MD2NATIVEDOCX_NATIVE_CHARTS=1`). Palier 3 (xychart, radar) non commencé.
+- **Statut :** **Implémenté pour `pie`, `xychart` et `radar`** (2026-10-05), opt-in
+  (`MD2NATIVEDOCX_NATIVE_CHARTS=1`, défaut : formes). Validé par le validateur Open XML (graphiques **et**
+  classeurs : 0 erreur, dans `test:oxml-validate`) et le rendu LibreOffice. **Confirmé dans un vrai Word
+  par le mainteneur pour `pie` (paliers 1 et 2, Edit Data compris)** ; `xychart` et `radar` en attente de
+  la même vérification (`test-corpus/word-verification/CHECKLIST.md`, Round 5).
 - **Date :** 2026-10-05
 - **Décideur :** Nicolas Bridelance (mainteneur) — chantier confié à l'agent le 2026-10-05
   (« dans ta banette »).
@@ -53,7 +54,7 @@ classeur est une partie interne), aucune nouvelle dépendance (le `.xlsx` est un
 |---|---|---|
 | 1 | `pie`, `c:chart` avec valeurs en cache, **sans** classeur | `test:oxml-validate` (le SDK Open XML valide `c:`), rendu LibreOffice, tests unitaires |
 | 2 | classeur `.xlsx` embarqué + `c:externalData` | idem + ouverture du `.xlsx` extrait (LibreOffice) + **Word réel : Edit Data** |
-| 3 | `xychart` (barre/ligne), puis `radar` | idem |
+| 3 | `xychart` (barres + lignes, un seul graphique), puis `radar` | idem ; **fait** (2026-10-05), Word réel en attente |
 
 ## Conséquences
 
@@ -74,3 +75,12 @@ classeur est une partie interne), aucune nouvelle dépendance (le `.xlsx` est un
 
 `sankey`, `gantt`, `quadrant`, `radar` sans axes comparables, `treemap` (cx:chartex, schéma distinct) et
 tout graphique lié à un fichier externe (`TargetMode="External"` — interdit, règle 3).
+
+## Dégradations assumées (palier 3)
+
+- `xychart` : un axe X numérique devient des étiquettes de catégories régulièrement espacées ; les
+  étiquettes par point d'une ligne (`[25 "tard"]`) ne sont pas reprises ; un `xychart horizontal` avec une
+  série `line` n'est **pas** convertible (les lignes Word sont verticales) — le pont retombe sur les formes
+  et le dit sur stderr (`native chart not used, drawn as shapes instead: …`).
+- `radar` : la grille Word est toujours polygonale (`graticule circle` est tracé en polygone) ; moins de
+  trois axes retombe sur les formes.

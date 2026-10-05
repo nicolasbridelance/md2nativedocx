@@ -29,29 +29,44 @@ function esc(text) {
     .replace(/'/g, '&apos;');
 }
 
-/** Column letter for a 0-based index (A..Z is all a two-column chart table needs). */
-const col = (i) => String.fromCharCode(65 + i);
+/** Column letters for a 0-based index: A..Z, AA..AZ, … */
+function col(index) {
+  let n = index;
+  let out = '';
+  do {
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return out;
+}
 
 function textCell(ref, text) {
   return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${esc(text)}</t></is></c>`;
 }
 
 /**
- * Build the embedded workbook: one sheet, a header row, then one row per data point (label, value).
+ * Build the embedded workbook: one sheet, a header row, then one row per category (label, then one
+ * value per series; an `undefined`/`null` value is an empty cell).
  *
- * @param {{ sheetName: string, header: [string, string], rows: Array<[string, number]> }} data
+ * @param {{ sheetName: string, header: string[], rows: Array<[string, ...Array<number|null|undefined>]> }} data
  * @returns {Buffer} the `.xlsx` file
  */
 export function buildWorkbookXlsx(data) {
-  const rows = [
-    `<row r="1">${textCell('A1', data.header[0])}${textCell('B1', data.header[1])}</row>`,
-    ...data.rows.map(([label, value], i) => {
-      const r = i + 2;
-      const n = Number(value);
-      if (!Number.isFinite(n)) throw new Error('md2nativedocx: chart value is not a finite number');
-      return `<row r="${r}">${textCell(`${col(0)}${r}`, label)}<c r="${col(1)}${r}"><v>${n}</v></c></row>`;
-    }),
-  ].join('');
+  const headerRow = `<row r="1">${data.header.map((h, c) => textCell(`${col(c)}1`, h)).join('')}</row>`;
+  const dataRows = data.rows.map((row, i) => {
+    const r = i + 2;
+    const [label, ...values] = row;
+    const cells = values
+      .map((value, c) => {
+        if (value === undefined || value === null) return '';
+        const n = Number(value);
+        if (!Number.isFinite(n)) throw new Error('md2nativedocx: chart value is not a finite number');
+        return `<c r="${col(c + 1)}${r}"><v>${n}</v></c>`;
+      })
+      .join('');
+    return `<row r="${r}">${textCell(`A${r}`, label)}${cells}</row>`;
+  });
+  const rows = [headerRow, ...dataRows].join('');
   const main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
   const zip = new AdmZip();
   const add = (name, xml) => zip.addFile(name, Buffer.from(XML_DECL + xml, 'utf8'));

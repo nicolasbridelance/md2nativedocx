@@ -238,6 +238,11 @@ export type { PieChart, PieSlice } from './diagrams/pie/types.js';
 // Opt-in native Word chart for `pie` (ADR 0011): chart part + workbook data, caller embeds them.
 export { translatePieToChart, CHART_PLACEHOLDER_PREFIX } from './diagrams/pie/chart.js';
 export type { NativeChart, ChartWorkbook, PieChartOptions } from './diagrams/pie/chart.js';
+export { translateXyChartToChart } from './diagrams/xychart/chart.js';
+export type { XyChartOptions } from './diagrams/xychart/chart.js';
+export { translateRadarToChart } from './diagrams/radar/chart.js';
+export type { RadarChartOptions } from './diagrams/radar/chart.js';
+export type { NativeChartOptions } from './translator/native-chart.js';
 
 // timeline module (Family D — columns of calculated boxes on a wpc:wpc canvas;
 // see diagrams/timeline/translator.ts's module doc comment).

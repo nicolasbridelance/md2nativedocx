@@ -192,13 +192,16 @@ function main() {
       }
     }
 
-    // Native pie chart (ADR 0011): the chart part is this project's output, and so is the embedded
+    // Native charts (ADR 0011): the chart part is this project's output, and so is the embedded
     // workbook — validated as its own package, where any schema error fails the run.
-    {
-      const docxPath = buildDocx(workDir, 'oxml-native-pie', 'pie showData\n  title Pets\n  "Dogs" : 386\n  "Cats" : 85.5\n', {
-        smartArt: false,
-        nativeCharts: true,
-      });
+    const NATIVE_CHARTS = [
+      ['pie', 'pie showData\n  title Pets\n  "Dogs" : 386\n  "Cats" : 85.5\n'],
+      ['xychart', 'xychart-beta\n  title "Sales"\n  x-axis [jan, feb, mar]\n  y-axis "Revenue" 0 --> 10\n  bar [5, 6, 7]\n  line [4, 6, 8]\n'],
+      ['radar', 'radar-beta\n  title Grades\n  axis m["Math"], s["Science"], e["English"]\n  curve a["Alice"]{85, 90, 80}\n  curve b["Bob"]{70, 75, 85}\n  max 100\n'],
+    ];
+    for (const [kind, mermaid] of NATIVE_CHARTS) {
+      const label = `oxml-native-${kind}`;
+      const docxPath = buildDocx(workDir, label, mermaid, { smartArt: false, nativeCharts: true });
       const zip = new AdmZip(docxPath);
       const workbook = zip.getEntries().find((e) => /^word\/embeddings\/.*\.xlsx$/.test(e.entryName));
       const chartPart = zip.getEntry('word/charts/chart1.xml');
@@ -206,7 +209,7 @@ function main() {
       knownOtherErrorTotal += otherErrors.length;
       let workbookErrors = [];
       if (workbook) {
-        const xlsxPath = join(workDir, 'oxml-native-pie-workbook.xlsx');
+        const xlsxPath = join(workDir, `${label}-workbook.xlsx`);
         writeFileSync(xlsxPath, workbook.getData());
         const result = validate(xlsxPath);
         workbookErrors = [...result.diagramErrors, ...result.otherErrors];
@@ -214,12 +217,12 @@ function main() {
       if (!chartPart || !workbook || diagramErrors.length > 0 || workbookErrors.length > 0) {
         failures++;
         console.error(
-          `✖ oxml-native-pie: chart part ${chartPart ? 'present' : 'MISSING'}, workbook ${workbook ? 'present' : 'MISSING'}, ` +
+          `✖ ${label}: chart part ${chartPart ? 'present' : 'MISSING'}, workbook ${workbook ? 'present' : 'MISSING'}, ` +
             `${diagramErrors.length} chart/diagram error(s), ${workbookErrors.length} workbook error(s)`,
         );
         for (const e of [...diagramErrors, ...workbookErrors].slice(0, 20)) console.error(`    ${e.Path}: ${e.Description}`);
       } else {
-        console.log('✔ oxml-native-pie: chart part + embedded workbook, 0 schema errors');
+        console.log(`✔ ${label}: chart part + embedded workbook, 0 schema errors`);
       }
     }
 

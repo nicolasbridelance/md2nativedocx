@@ -80,3 +80,38 @@ test('the workbook builder escapes labels, writes numbers as numbers, and reject
   assert.match(sheet, /<c r="B2"><v>12.5<\/v><\/c>/);
   assert.throws(() => buildWorkbookXlsx({ sheetName: 'S', header: ['a', 'b'], rows: [['x', Number.NaN]] }), /finite/);
 });
+
+test('xychart and radar become native charts too; an unconvertible one falls back to shapes with a warning', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-test-'));
+  try {
+    const md = join(dir, 'c.md');
+    const out = join(dir, 'c.docx');
+    writeFileSync(
+      md,
+      [
+        '```mermaid\nxychart-beta\n  x-axis [a, b]\n  bar [1, 2]\n  line [2, 1]\n```',
+        '```mermaid\nradar-beta\n  axis a["A"], b["B"], c["C"]\n  curve x["X"]{1, 2, 3}\n```',
+        '```mermaid\nxychart-beta horizontal\n  x-axis [a, b]\n  bar [1, 2]\n  line [2, 1]\n```',
+      ].join('\n\n'),
+    );
+    const r = spawnSync('node', [cli, md, '-o', out], { encoding: 'utf8', env: { ...process.env, MD2NATIVEDOCX_NATIVE_CHARTS: '1' } });
+    assert.equal(r.status, 0);
+    assert.match(r.stderr, /native chart not used, drawn as shapes instead: a horizontal xychart with a line series/);
+    const zip = new AdmZip(out);
+    const charts = zip.getEntries().filter((e) => /^word\/charts\/chart\d+\.xml$/.test(e.entryName));
+    assert.equal(charts.length, 2); // the horizontal bar+line one stayed shapes
+    const sheet = new AdmZip(zip.getEntry('word/embeddings/Microsoft_Excel_Sheet1.xlsx').getData()).readAsText('xl/worksheets/sheet1.xml');
+    assert.match(sheet, /<c r="C2"><v>2<\/v><\/c>/); // second series lands in column C
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the workbook builder writes empty cells for missing values and names columns past Z', () => {
+  const header = ['Category', ...Array.from({ length: 27 }, (_, i) => `S${i + 1}`)];
+  const rows = [['a', ...Array.from({ length: 27 }, (_, i) => (i === 1 ? undefined : i))]];
+  const sheet = new AdmZip(buildWorkbookXlsx({ sheetName: 'Sheet1', header, rows })).readAsText('xl/worksheets/sheet1.xml');
+  assert.match(sheet, /<c r="AB1" t="inlineStr">/); // 28th column
+  assert.doesNotMatch(sheet, /<c r="C2"/); // the undefined value
+  assert.match(sheet, /<c r="B2"><v>0<\/v><\/c>/);
+});

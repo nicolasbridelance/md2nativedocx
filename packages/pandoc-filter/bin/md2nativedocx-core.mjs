@@ -105,6 +105,8 @@ import {
   parsePieChart,
   translatePieToOoxml,
   translatePieToChart,
+  translateXyChartToChart,
+  translateRadarToChart,
   parseTimeline,
   translateTimelineToOoxml,
   parseKanban,
@@ -192,17 +194,20 @@ function trySmartArt(ast, smartArtDir) {
 }
 
 /**
- * Opt-in native Word chart for `pie` (ADR 0011). Same hand-off as SmartArt: the chart part and the
- * workbook data are written to `<MD2NATIVEDOCX_CHART_DIR>/<random id>/` and the returned `<w:p>`
- * carries a `CHART_PLACEHOLDER:<id>` relationship id that the CLI's post-processing replaces. Never
- * throws: any failure falls back to the shape-built pie.
+ * Opt-in native Word chart (ADR 0011) for `pie`, `xychart` and `radar`. Same hand-off as SmartArt: the
+ * chart part and the workbook data are written to `<MD2NATIVEDOCX_CHART_DIR>/<random id>/` and the
+ * returned `<w:p>` carries a `CHART_PLACEHOLDER:<id>` relationship id that the CLI's post-processing
+ * replaces. Never throws: any failure (including a diagram Word cannot chart, e.g. a horizontal xychart
+ * with a line series) falls back to the shape-built diagram and says why on stderr.
+ *
+ * @param {(chartId: string, options: object) => import('@md2nativedocx/core').NativeChart} translate
  */
-function tryNativePieChart(ast, chartDir, options) {
-  if (!chartDir || ast.slices.length === 0) return null;
+function tryNativeChart(translate, chartDir, options) {
+  if (!chartDir) return null;
   try {
     const id = randomUUID();
     const embedWorkbook = process.env.MD2NATIVEDOCX_CHART_WORKBOOK !== '0';
-    const chart = translatePieToChart(ast, id, { ...options, embedWorkbook });
+    const chart = translate(id, { ...options, embedWorkbook });
     const dir = join(chartDir, id);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'chart.xml'), chart.chartXml, 'utf8');
@@ -211,7 +216,7 @@ function tryNativePieChart(ast, chartDir, options) {
     return chart.paragraphXml;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`md2nativedocx: native chart failed, falling back to shapes: ${message}\n`);
+    process.stderr.write(`md2nativedocx: warning: native chart not used, drawn as shapes instead: ${message}\n`);
     return null;
   }
 }
@@ -328,7 +333,11 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    const nativeChart = tryNativePieChart(ast, process.env.MD2NATIVEDOCX_CHART_DIR, translateOptionsFromEnv());
+    const nativeChart = tryNativeChart(
+      (id, o) => translatePieToChart(ast, id, o),
+      process.env.MD2NATIVEDOCX_CHART_DIR,
+      translateOptionsFromEnv(),
+    );
     process.stdout.write(nativeChart ?? translatePieToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'timeline') {
     // Fifteenth non-flowchart diagram type shipped, fourth of Family D.
@@ -378,7 +387,12 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateRadarToOoxml(ast, translateOptionsFromEnv()));
+    const nativeChart = tryNativeChart(
+      (id, o) => translateRadarToChart(ast, id, o),
+      process.env.MD2NATIVEDOCX_CHART_DIR,
+      translateOptionsFromEnv(),
+    );
+    process.stdout.write(nativeChart ?? translateRadarToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'ishikawa') {
     // Twenty-second non-flowchart diagram type shipped, eleventh of Family D.
     const { ast, warnings } = parseIshikawa(input);
@@ -392,7 +406,12 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateXyChartToOoxml(ast, translateOptionsFromEnv()));
+    const nativeChart = tryNativeChart(
+      (id, o) => translateXyChartToChart(ast, id, o),
+      process.env.MD2NATIVEDOCX_CHART_DIR,
+      translateOptionsFromEnv(),
+    );
+    process.stdout.write(nativeChart ?? translateXyChartToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'block') {
     // Twenty-fourth non-flowchart diagram type shipped, thirteenth of Family D.
     const { ast, warnings } = parseBlock(input);
