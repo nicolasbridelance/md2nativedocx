@@ -104,8 +104,11 @@ export function cycleLayoutXml(n: number): string {
   '<dgm:ruleLst><dgm:rule type="primFontSz" val="5"/></dgm:ruleLst>' +
   '</dgm:layoutNode>' +
   // One transition arrow after every node, the last one closing the loop back to the first. Same
-  // `conn` node as chain.ts (nested in the node forEach, a sibling of `Main`).
-  '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">' +
+  // `conn` node as chain.ts (nested in the node forEach, a sibling of `Main`). `hideLastTrans` defaults
+  // to true in the schema, which hides the arrow after the last node — right for a process, wrong for a
+  // loop: Word's own cycle layout sets it to 0, and without it the closing arrow is never drawn (found
+  // in real Word: every cycle lacked the last-to-first arrow, with and without the cached drawing).
+  '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" hideLastTrans="0" cnt="1">' +
   '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans">' +
   '<dgm:alg type="conn">' +
   '<dgm:param type="begPts" val="auto"/>' +

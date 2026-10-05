@@ -123,7 +123,10 @@ test('a cycle has one transition per node (the last closes the loop) in the data
   assert.ok(out?.drawingXml);
   assert.equal(out.dataXml.match(/type="sibTrans"><dgm:prSet\/>/g)?.length, 4);
   assert.equal(out.dataXml.match(/presName="sibTrans"/g)?.length, 4);
-  assert.match(out.layoutXml, /<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" cnt="1">/);
+  assert.match(out.layoutXml, /<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" hideLastTrans="0" cnt="1">/);
+  // A chain keeps the schema default (the last transition stays hidden): nothing follows the last step.
+  const chain = generateSmartArt(flow('flowchart LR\n A --> B --> C'));
+  assert.doesNotMatch(chain?.layoutXml ?? '', /hideLastTrans/);
   assert.equal(out.drawingXml.match(/prst="rightArrow"/g)?.length, 4);
   // Arrows follow the circle: each is rotated, and the rotations are distinct.
   const rotations = [...out.drawingXml.matchAll(/<a:xfrm rot="(\d+)"/g)].map((m) => m[1]);

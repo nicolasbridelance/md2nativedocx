@@ -295,6 +295,21 @@ between neighbours for the arrow.
       If they differ, note how.
 - [ ] If arrows are still missing or squashed: note which, and whether the boxes are where you expect.
 
+## Round 11 — 2026-10-05: the closing arrow of a cycle (v8)
+
+Round 10 (v7), maintainer: the two files (with / without cached drawing) are functional and **identical** in
+Word, with every arrow present **except** the one from the last element back to the first, on every cycle.
+Cause: the transition `forEach` of the layout carries a schema attribute `hideLastTrans`, true by default, which
+hides the arrow after the last node — right for a process, wrong for a loop. Found by reading how a real
+Word-authored cycle (`handmade_samples/cycle-simple.docx`, structure only) writes it: `hideLastTrans="0"`.
+`cycle` now sets it; `chain` keeps the default.
+
+`smartart-v8-cycles-colorful.docx` and `smartart-v8-cycles-intense.docx` (3, 4 and 6 steps).
+
+- [ ] Both open with no repair prompt.
+- [ ] 3-step cycle: **3 arrows including the last-to-first**; 4-step: **4**; 6-step: **6**, all clockwise.
+- [ ] Edit a text or add a step in Word: the loop stays closed.
+
 ## Recording the result
 
 Once done, either:

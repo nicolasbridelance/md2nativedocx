@@ -1,4 +1,4 @@
-# SmartArt — cycles avec flèches (v7)
+# SmartArt — cycles avec flèches (v8)
 
 ## 1. Cycle à 3 étapes
 
