@@ -3,6 +3,14 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- New setting `md2nativedocx.nativeCharts.enabled` (off by default): a Mermaid `pie`, `xychart` or
+  `radar` becomes a native Word chart with an embedded workbook — Chart Design → Edit Data changes the
+  values — instead of editable shapes. A horizontal `xychart` with a line series, or a radar with fewer
+  than three axes, stays shapes with a warning. Confirmed in real Word for `pie`; `xychart`/`radar` pending.
+
 ## [0.5.6] — 2026-10-05
 
 ### Changed

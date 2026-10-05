@@ -135,6 +135,11 @@
           "default": false,
           "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%"
         },
+        "md2nativedocx.nativeCharts.enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%configuration.nativeCharts.enabled.markdownDescription%"
+        },
         "md2nativedocx.layout.pageSize": {
           "type": "string",
           "enum": ["A3", "A4", "Letter", "Legal"],

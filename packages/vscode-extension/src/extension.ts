@@ -69,6 +69,12 @@ function referenceDocumentSetting(): string | undefined {
   return resolved;
 }
 
+/** `md2nativedocx.nativeCharts.enabled` — `false` (default) keeps every `pie`/`xychart`/`radar` as editable
+ * shapes. `true` opts into native Word charts with an embedded workbook (ADR 0011). */
+function nativeChartsEnabledSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('nativeCharts.enabled', false);
+}
+
 /** `md2nativedocx.smartArt.enabled` — `false` (default, flipped 2026-09-03:
  * a real-Word test of `cycle.ts`'s output failed to open at all on the
  * simplest possible input, see `docs/markdown-mermaid-compliance-table.md` §2 point
@@ -189,13 +195,14 @@ async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
       const pandocBin = await resolvePandocBin(progress);
       const referenceDoc = referenceDocumentSetting();
       const smartArtEnabled = smartArtEnabledSetting();
+      const nativeChartsEnabled = nativeChartsEnabledSetting();
       const layout = layoutOptionsSetting();
       warnIfLayoutOptionsIgnored(referenceDoc, layout);
       const toc = tocEnabledSetting();
       const tocDepth = tocDepthSetting();
       const emojiFont = emojiFontEnabledSetting();
       const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
-      const options = { pandocBin, referenceDoc, smartArtEnabled, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
+      const options = { pandocBin, referenceDoc, smartArtEnabled, nativeChartsEnabled, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
       return isMermaidFilePath(uri.fsPath)
         ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
         : exportDocument(uri.fsPath, outputDirectorySetting(), options);
@@ -247,6 +254,7 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
       const pandocBin = await resolvePandocBin(progress);
       const referenceDoc = referenceDocumentSetting();
       const smartArtEnabled = smartArtEnabledSetting();
+      const nativeChartsEnabled = nativeChartsEnabledSetting();
       const layout = layoutOptionsSetting();
       warnIfLayoutOptionsIgnored(referenceDoc, layout);
       const toc = tocEnabledSetting();
@@ -257,6 +265,7 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
         pandocBin,
         referenceDoc,
         smartArtEnabled,
+        nativeChartsEnabled,
         layout,
         toc,
         tocDepth,
