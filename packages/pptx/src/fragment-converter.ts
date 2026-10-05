@@ -154,7 +154,10 @@ function convertShape(
   const styleNode = child(wsp, 'wps:style');
   const style = styleNode ? serialize(styleNode, { rename: 'p:style' }) : '';
 
-  const cnv = child(wsp, 'wps:cNvCnPr');
+  // A routed edge (polyline) carries a custom geometry. PowerPoint rejects `a:custGeom` on a
+  // `p:cxnSp` (connectors take preset geometry only) and offers to "repair" the file, so such an
+  // edge becomes a plain `p:sp`. It loses its magnetic attachment, which a polyline cannot keep anyway.
+  const cnv = spPrNode && descendants(spPrNode, 'a:custGeom').length > 0 ? undefined : child(wsp, 'wps:cNvCnPr');
   if (cnv) {
     const links = kids(cnv)
       .filter((k) => ['a:stCxn', 'a:endCxn'].includes(tagOf(k)))

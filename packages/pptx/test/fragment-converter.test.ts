@@ -77,3 +77,12 @@ test('unknown run properties are dropped with a warning, not passed through', ()
   assert.doesNotMatch(out.notesXml[0] ?? '', /emboss/);
   assert.equal(out.warnings.length, 1);
 });
+
+test('a routed (custGeom) edge is a p:sp, never a p:cxnSp: PowerPoint repairs a connector with custom geometry', () => {
+  const src = 'flowchart TD\n A --> B\n B --> C\n C --> D\n A --> D\n A --> C\n B --> D';
+  const xml = convertFragment(flowchartFragment(src), { x: 0, y: 0 }).shapesXml.join('');
+  assert.match(xml, /<a:custGeom>/, 'fixture must contain a routed edge');
+  for (const m of xml.matchAll(/<p:cxnSp>.*?<\/p:cxnSp>/gs)) {
+    assert.doesNotMatch(m[0], /custGeom/);
+  }
+});
