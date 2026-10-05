@@ -30,7 +30,14 @@
 
 import type { CynefinDiagram, CynefinDomain } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
-import { createIdAllocator, scaledExtent, scaledFontSizeHalfPt, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledFontSizeHalfPt,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { connector, edgePoint, ellipse, parallelEdgeOffset, perpendicularUnit, rect, scalePt, shiftPoint, textBoxLines } from '../../translator/graph-shapes.js';
 
 const GRID_SIZE = 480;
@@ -110,13 +117,13 @@ function itemBadge(nextId: () => number, text: string, x: number, y: number, s: 
  * every one — matching the docs' own "Empty framework" example — so there
  * is no "zero content" note path here unlike every other Family D
  * translator (a Cynefin diagram is never truly empty). */
-export function translateCynefinToOoxml(chart: CynefinDiagram): string {
+export function translateCynefinToOoxml(chart: CynefinDiagram, options: CanvasOptions = {}): string {
   const nextId = createIdAllocator();
   const hasTitle = Boolean(chart.title);
   const topMargin = hasTitle ? TITLE_H : NO_TITLE_TOP_MARGIN;
   const canvasW = MARGIN * 2 + GRID_SIZE;
   const canvasH = topMargin + GRID_SIZE + MARGIN_BOTTOM;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const gridX0 = MARGIN;
   const gridY0 = topMargin;
@@ -224,5 +231,5 @@ export function translateCynefinToOoxml(chart: CynefinDiagram): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Cynefin framework');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Cynefin framework', options);
 }

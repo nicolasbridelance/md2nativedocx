@@ -8,7 +8,12 @@
 
 import type { JourneyChart } from './types.js';
 import { boxShape, fitFont, noteParagraph, scalePt, tint, wrapText, type BoxStyle } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 
 const COL_W = 120;
 const COL_GAP = 8;
@@ -29,7 +34,7 @@ const ACTOR_PALETTE = ['5B9BD5', 'ED7D31', '70AD47', 'FFC000', '7030A0', 'C00000
 const SCORE_COLORS = ['E06666', 'F6B26B', 'FFD966', 'B6D7A8', '6AA84F'];
 
 /** Translate a parsed journey into a self-contained WordprocessingML paragraph. */
-export function translateJourneyToOoxml(chart: JourneyChart): string {
+export function translateJourneyToOoxml(chart: JourneyChart, options: CanvasOptions = {}): string {
   if (chart.tasks.length === 0) return noteParagraph('This journey has no tasks to render.');
 
   const nextId = createIdAllocator();
@@ -46,7 +51,7 @@ export function translateJourneyToOoxml(chart: JourneyChart): string {
   const lanesH = chart.actors.length * (LANE_H + ROW_GAP);
   const canvasW = PAD * 2 + gutter + n * COL_W + (n - 1) * COL_GAP;
   const canvasH = PAD * 2 + topMargin + sectionRow + taskH + ROW_GAP + SCORE_H + ROW_GAP + lanesH;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const colX = (i: number): number => PAD + gutter + i * (COL_W + COL_GAP);
   const sectionColor = (i: number): string => SECTION_PALETTE[Math.max(0, i) % SECTION_PALETTE.length] ?? '4472C4';
 
@@ -101,5 +106,5 @@ export function translateJourneyToOoxml(chart: JourneyChart): string {
     y += LANE_H + ROW_GAP;
   });
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'User journey');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'User journey', options);
 }

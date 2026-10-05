@@ -14,6 +14,7 @@ import {
   createIdAllocator,
   scaledExtent,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 
 const COL_W = 160;
@@ -36,7 +37,7 @@ function boxHeight(lines: string[]): number {
 }
 
 /** Translate a parsed timeline into a self-contained WordprocessingML paragraph. */
-export function translateTimelineToOoxml(chart: TimelineChart): string {
+export function translateTimelineToOoxml(chart: TimelineChart, options: CanvasOptions = {}): string {
   if (chart.periods.length === 0) return noteParagraph('This timeline has no periods to render.');
 
   const nextId = createIdAllocator();
@@ -60,7 +61,7 @@ export function translateTimelineToOoxml(chart: TimelineChart): string {
   const sectionRow = hasSections ? SECTION_H + BOX_GAP : 0;
   const canvasW = PAD * 2 + n * COL_W + (n - 1) * COL_GAP;
   const canvasH = PAD * 2 + topMargin + sectionRow + periodH + AXIS_H + BOX_GAP + eventsH;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const colX = (i: number): number => PAD + i * (COL_W + COL_GAP);
 
   const parts: string[] = [];
@@ -106,7 +107,7 @@ export function translateTimelineToOoxml(chart: TimelineChart): string {
     });
   });
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Timeline');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Timeline', options);
 }
 
 function box(id: number, x: number, y: number, w: number, h: number, lines: string[], style: BoxStyle, scale: number): string {

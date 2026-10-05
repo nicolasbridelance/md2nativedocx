@@ -8,7 +8,12 @@
 
 import type { TreeViewDiagram } from './types.js';
 import { boxShape, noteParagraph, scalePt, type BoxStyle } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 
 const PAD = 24;
@@ -21,7 +26,7 @@ const TEXT_PAD = 10;
 const LINE_COLOR = '7F7F7F';
 
 /** Translate a parsed tree view into a self-contained WordprocessingML paragraph. */
-export function translateTreeViewToOoxml(diagram: TreeViewDiagram): string {
+export function translateTreeViewToOoxml(diagram: TreeViewDiagram, options: CanvasOptions = {}): string {
   const { nodes } = diagram;
   if (nodes.length === 0) return noteParagraph('This tree view has no nodes to render.');
 
@@ -35,7 +40,7 @@ export function translateTreeViewToOoxml(diagram: TreeViewDiagram): string {
     canvasW = Math.max(canvasW, textX(nd.depth) + (labelW[i] ?? 0) + (descW[i] ?? 0) + PAD);
   });
   const canvasH = PAD * 2 + nodes.length * ROW_H;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const box = (x: number, y: number, w: number, h: number, lines: string[], style: BoxStyle): string =>
     boxShape(nextId(), scalePt(x, s), scalePt(y, s), scalePt(w, s), scalePt(h, s), lines, style, FONT_PX, s);
@@ -81,5 +86,5 @@ export function translateTreeViewToOoxml(diagram: TreeViewDiagram): string {
     }
   });
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Tree view');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Tree view', options);
 }

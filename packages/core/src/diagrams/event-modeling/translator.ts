@@ -14,7 +14,13 @@
 
 import type { EventModelingDiagram, EventModelingFrame, EventModelingKind, EventModelingStatement } from './types.js';
 import { boxShape, fitFont, noteParagraph, scalePt, wrapText } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { connector, edgePoint, rect } from '../../translator/graph-shapes.js';
 
 const LABEL_W = 120;
@@ -57,7 +63,7 @@ function dataLines(frame: EventModelingFrame, ast: EventModelingDiagram): string
 const statementText = (list: EventModelingStatement[]): string => list.map((s) => `${KIND_LABEL[s.kind]} ${s.name}`).join(', ');
 
 /** Translate a parsed Event Modeling diagram into a self-contained WordprocessingML paragraph. */
-export function translateEventModelingToOoxml(ast: EventModelingDiagram): string {
+export function translateEventModelingToOoxml(ast: EventModelingDiagram, options: CanvasOptions = {}): string {
   if (ast.frames.length === 0) return noteParagraph('An Event Modeling diagram needs at least one frame to render.');
 
   const nextId = createIdAllocator();
@@ -103,7 +109,7 @@ export function translateEventModelingToOoxml(ast: EventModelingDiagram): string
   const scenarioWrapped = scenarioLines.flatMap((t) => wrapText(t, SMALL + 1, W - 2 * PAD - 8));
   const H = lanesBottom + (scenarioWrapped.length > 0 ? 16 + scenarioWrapped.length * 13 + 8 : PAD);
 
-  const { scale: s } = scaledExtent(W, H);
+  const { scale: s } = scaledExtent(W, H, options);
   const emu = (v: number): number => scalePt(v, s);
   const thin = scaledLineWidthEmu(9525, s);
   const text = (x: number, ty: number, w: number, lines: string[], opts: { align?: 'left' | 'center'; bold?: boolean; color?: string; fontPx?: number; italic?: boolean; lineH?: number } = {}): void => {
@@ -169,5 +175,5 @@ export function translateEventModelingToOoxml(ast: EventModelingDiagram): string
     text(PAD, lanesBottom + 4, W - 2 * PAD, scenarioWrapped, { fontPx: SMALL + 1, lineH: 13, italic: true, color: '404040' });
   }
 
-  return wrapDrawingCanvas(parts.join('\n'), W, H, nextId(), 'Event Modeling diagram');
+  return wrapDrawingCanvas(parts.join('\n'), W, H, nextId(), 'Event Modeling diagram', options);
 }

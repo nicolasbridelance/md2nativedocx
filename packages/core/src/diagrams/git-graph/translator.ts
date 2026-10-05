@@ -44,7 +44,14 @@
 
 import type { GitBranch, GitCommit, GitCommitType, GitGraphDiagram, GitOrientation } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
-import { createIdAllocator, scaledExtent, scaledFontSizeHalfPt, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledFontSizeHalfPt,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { connector, ellipse, rect, scalePt, textBoxLines } from '../../translator/graph-shapes.js';
 
 /** This project's own 8-color cyclic branch palette (Mermaid's real
@@ -114,7 +121,7 @@ function commitShapes(nextId: () => number, type: GitCommitType, cxPx: number, c
 /** Translate a parsed gitGraph diagram into a self-contained WordprocessingML
  * paragraph. An empty diagram (no commits at all) renders a visible note,
  * matching every other Family B/D/F translator's zero-content convention. */
-export function translateGitGraphToOoxml(chart: GitGraphDiagram): string {
+export function translateGitGraphToOoxml(chart: GitGraphDiagram, options: CanvasOptions = {}): string {
   if (chart.commits.length === 0) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -166,7 +173,7 @@ export function translateGitGraphToOoxml(chart: GitGraphDiagram): string {
   const mainExtent = mainStart + (maxSeq + 1) * commitGap + branchLabelRoom + MARGIN;
   const canvasW = orientation === 'LR' ? mainExtent : crossExtent;
   const canvasH = topPad + (orientation === 'LR' ? crossExtent : mainExtent);
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -302,5 +309,5 @@ export function translateGitGraphToOoxml(chart: GitGraphDiagram): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'GitGraph diagram');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'GitGraph diagram', options);
 }

@@ -14,12 +14,13 @@ import type { PieChart } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
+  EMU_PER_PX,
   scaledExtent,
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 
 const RADIUS = 150;
@@ -118,7 +119,7 @@ function note(text: string): string {
 }
 
 /** Translate a parsed pie chart into a self-contained WordprocessingML paragraph. */
-export function translatePieToOoxml(chart: PieChart): string {
+export function translatePieToOoxml(chart: PieChart, options: CanvasOptions = {}): string {
   if (chart.slices.length === 0) return note('This pie chart has no data to render.');
 
   const nextId = createIdAllocator();
@@ -132,7 +133,7 @@ export function translatePieToOoxml(chart: PieChart): string {
   const legendX = PAD + RADIUS * 2 + LEGEND_GAP;
   const canvasW = legendX + SWATCH + 8 + legendTextW + PAD;
   const canvasH = PAD * 2 + topMargin + chartH;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const cx = PAD + RADIUS;
   const cy = PAD + topMargin + chartH / 2;
@@ -170,5 +171,5 @@ export function translatePieToOoxml(chart: PieChart): string {
     parts.push(textBox(nextId(), scalePt(legendX + SWATCH + 8, s), scalePt(rowY, s), scalePt(legendTextW, s), scalePt(LEGEND_ROW, s), legendLabels[i] ?? '', 20, '000000', 'left', false, s));
   });
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Pie chart');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Pie chart', options);
 }

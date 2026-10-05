@@ -26,6 +26,7 @@ import {
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, diamond, edgePoint, ellipse, rect, scalePt, textBoxLines } from '../../translator/graph-shapes.js';
 
@@ -111,7 +112,7 @@ const MARKER_SIZE = 'sm';
  * paragraph. An empty diagram renders a visible note, matching the other
  * Family B/C translators' zero-content convention — never a silent blank
  * canvas. */
-export function translateStateDiagramToOoxml(chart: StateDiagram): string {
+export function translateStateDiagramToOoxml(chart: StateDiagram, options: CanvasOptions = {}): string {
   if (chart.states.length === 0) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -155,7 +156,7 @@ export function translateStateDiagramToOoxml(chart: StateDiagram): string {
   const canvasH = maxY - minY + 2 * PAD;
   const dx = -minX + PAD;
   const dy = -minY + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -211,5 +212,5 @@ export function translateStateDiagramToOoxml(chart: StateDiagram): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'State diagram');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'State diagram', options);
 }

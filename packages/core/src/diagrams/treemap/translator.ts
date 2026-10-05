@@ -12,7 +12,12 @@
 
 import type { TreemapDiagram, TreemapNode } from './types.js';
 import { boxShape, fitFont, noteParagraph, scalePt, tint, wrapText } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { validateHexColor } from '../../translator/xml-escape.js';
 
 const CANVAS_W = 640;
@@ -100,12 +105,12 @@ function squarify(items: Sized[], rect: Rect): Rect[] {
 }
 
 /** Translate a parsed treemap into a self-contained WordprocessingML paragraph. */
-export function translateTreemapToOoxml(diagram: TreemapDiagram): string {
+export function translateTreemapToOoxml(diagram: TreemapDiagram, options: CanvasOptions = {}): string {
   const roots = diagram.roots.map(size).filter((r) => r.value > 0).sort((a, b) => b.value - a.value);
   if (roots.length === 0) return noteParagraph('This treemap has no values to render.');
 
   const nextId = createIdAllocator();
-  const { scale: s } = scaledExtent(CANVAS_W, CANVAS_H);
+  const { scale: s } = scaledExtent(CANVAS_W, CANVAS_H, options);
   const parts: string[] = [];
 
   const emit = (rect: Rect, lines: string[], fill: string, color: string, line: string, bold: boolean): void => {
@@ -155,5 +160,5 @@ export function translateTreemapToOoxml(diagram: TreemapDiagram): string {
 
   draw(roots, { x: PAD, y: PAD, w: CANVAS_W - 2 * PAD, h: CANVAS_H - 2 * PAD }, (i) => PALETTE[i % PALETTE.length] ?? '4472C4', 0);
 
-  return wrapDrawingCanvas(parts.join('\n'), CANVAS_W, CANVAS_H, nextId(), 'Treemap');
+  return wrapDrawingCanvas(parts.join('\n'), CANVAS_W, CANVAS_H, nextId(), 'Treemap', options);
 }

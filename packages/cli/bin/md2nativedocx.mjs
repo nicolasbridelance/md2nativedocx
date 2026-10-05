@@ -341,9 +341,12 @@ async function main() {
   // inherited into process.env above and passed through unchanged). Setting
   // this unconditionally is harmless on Unix — nothing reads it there.
   pandocEnv.MD2NATIVEDOCX_NODE_BIN = process.execPath;
+  // An explicit MD2NATIVEDOCX_MAX_DRAWING_CX/_CY already in the environment wins over the
+  // page-derived cap, so a caller can size diagrams for a layout the page geometry can't
+  // know about (e.g. a diagram placed inside a half-width table cell).
   if (maxDrawingExtentEmu) {
-    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CX = String(Math.round(maxDrawingExtentEmu.cx));
-    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CY = String(Math.round(maxDrawingExtentEmu.cy));
+    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CX ??= String(Math.round(maxDrawingExtentEmu.cx));
+    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CY ??= String(Math.round(maxDrawingExtentEmu.cy));
   }
   if (landscapeTablesGeometry) {
     pandocEnv.MD2NATIVEDOCX_LANDSCAPE_TABLES = '1';

@@ -13,7 +13,13 @@ import type { XyChart } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, fitFont, noteParagraph, scalePt } from '../../translator/boxes.js';
 import { pathShape } from '../../translator/path-shape.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 
 const FONT_PX = 12;
 const PAD = 24;
@@ -38,7 +44,7 @@ function formatTick(v: number, step: number): string {
 }
 
 /** Translate a parsed XY chart into a self-contained WordprocessingML paragraph. */
-export function translateXyChartToOoxml(chart: XyChart): string {
+export function translateXyChartToOoxml(chart: XyChart, options: CanvasOptions = {}): string {
   const series = chart.series.filter((s) => s.values.length > 0);
   const categories = chart.xAxis.categories;
   const points = Math.max(categories?.length ?? 0, ...series.map((s) => s.values.length));
@@ -88,7 +94,7 @@ export function translateXyChartToOoxml(chart: XyChart): string {
   const bottomLabels = 24;
   const canvasW = left + plotW + PAD + 20;
   const canvasH = top + plotH + bottomLabels + (belowTitle ? AXIS_TITLE_H : 0) + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const emu = (v: number): number => scalePt(v, s);
   const pt = (x: number, y: number): { x: number; y: number } => ({ x: emu(x), y: emu(y) });
   const thin = scaledLineWidthEmu(9525, s);
@@ -185,5 +191,5 @@ export function translateXyChartToOoxml(chart: XyChart): string {
   parts.push(pathShape(nextId(), baseline, false, undefined, 0, AXIS, lineW));
   if (belowTitle) parts.push(text(left, top + plotH + bottomLabels, plotW, AXIS_TITLE_H, belowTitle, { bold: true }));
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'XY chart');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'XY chart', options);
 }

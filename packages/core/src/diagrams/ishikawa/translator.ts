@@ -11,7 +11,13 @@ import type { IshikawaCategory, IshikawaDiagram } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, noteParagraph, scalePt, tint } from '../../translator/boxes.js';
 import { pathShape } from '../../translator/path-shape.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 
 const FONT_PX = 13;
 const ROW_H = 22;
@@ -31,7 +37,7 @@ function textWidth(cat: IshikawaCategory): number {
 }
 
 /** Translate a parsed Ishikawa diagram into a self-contained WordprocessingML paragraph. */
-export function translateIshikawaToOoxml(diagram: IshikawaDiagram): string {
+export function translateIshikawaToOoxml(diagram: IshikawaDiagram, options: CanvasOptions = {}): string {
   if (diagram.effect.length === 0) return noteParagraph('An Ishikawa diagram needs an effect on its first line.');
 
   const nextId = createIdAllocator();
@@ -59,7 +65,7 @@ export function translateIshikawaToOoxml(diagram: IshikawaDiagram): string {
   const bodyW = columns.reduce((sum, c) => sum + c.width, 0) + 40;
   const canvasW = PAD + bodyW + effectW + PAD;
   const canvasH = spineY + bottomH + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const emu = (v: number): number => scalePt(v, s);
   const pt = (x: number, y: number): { x: number; y: number } => ({ x: emu(x), y: emu(y) });
   const thin = scaledLineWidthEmu(9525, s);
@@ -104,5 +110,5 @@ export function translateIshikawaToOoxml(diagram: IshikawaDiagram): string {
     x += col.width;
   }
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), diagram.effect);
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), diagram.effect, options);
 }

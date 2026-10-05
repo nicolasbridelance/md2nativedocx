@@ -19,7 +19,13 @@
 import type { SequenceDiagram, SequenceItem } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, noteParagraph, scalePt, tint, wrapText } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { connector, ellipse, rect } from '../../translator/graph-shapes.js';
 
 const PAD = 20;
@@ -46,7 +52,7 @@ interface Frame {
 const widest = (lines: string[], fontPx: number): number => Math.max(0, ...lines.map((l) => estimateTextWidth(l, fontPx)));
 
 /** Translate a parsed sequence diagram into a self-contained WordprocessingML paragraph. */
-export function translateSequenceToOoxml(ast: SequenceDiagram): string {
+export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOptions = {}): string {
   const n = ast.participants.length;
   if (n === 0) return noteParagraph('A sequence diagram needs at least one participant to render.');
 
@@ -305,9 +311,9 @@ export function translateSequenceToOoxml(ast: SequenceDiagram): string {
     for (const start of starts[i] ?? []) box(bars, barX(i, 0), start, BAR_W, Math.max(6, bottomY - 10 - start), 'F2F2F2', INK, 'Activation');
   });
 
-  const { scale: s } = scaledExtent(W, H);
+  const { scale: s } = scaledExtent(W, H, options);
   const emu = (v: number): number => scalePt(v, s);
   const thin = scaledLineWidthEmu(9525, s);
   for (const op of ops) op(emu, s, thin);
-  return wrapDrawingCanvas([...bg, ...framesXml, ...lifelines, ...bars, ...notes, ...msgs, ...boxes].join('\n'), W, H, nextId(), 'Sequence diagram');
+  return wrapDrawingCanvas([...bg, ...framesXml, ...lifelines, ...bars, ...notes, ...msgs, ...boxes].join('\n'), W, H, nextId(), 'Sequence diagram', options);
 }

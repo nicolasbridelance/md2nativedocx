@@ -77,6 +77,18 @@ export function scaledLineWidthEmu(baseEmu: number, scale: number): number {
 const MAX_DRAWING_CX = 5943600;
 const MAX_DRAWING_CY = 8229600;
 
+/**
+ * Optional override of the usable area (EMU) a drawing is scaled down to fit.
+ * Same meaning as `TranslateOptions.maxDrawingCx`/`maxDrawingCy` for flowcharts;
+ * absent fields fall back to the Pandoc-default-page constants above.
+ */
+export interface CanvasOptions {
+  /** Maximum drawing width in EMU. */
+  maxDrawingCx?: number;
+  /** Maximum drawing height in EMU. */
+  maxDrawingCy?: number;
+}
+
 /** See `ooxml-translator.ts`'s `TALL_RATIO_RISK_HEIGHT`/`MIN_SAFE_ASPECT_RATIO`
  * doc comment — the empirically-found LibreOffice headless-render cliff for a
  * tall, narrow `wpc:wpc`. */
@@ -99,9 +111,17 @@ function nativeExtent(widthPx: number, heightPx: number): { cx: number; cy: numb
  * there is no enclosing group transform here (see `ooxml-translator.ts`'s
  * `renderContent` doc comment for why this project stopped relying on one).
  */
-export function scaledExtent(widthPx: number, heightPx: number): { cx: number; cy: number; scale: number } {
+export function scaledExtent(
+  widthPx: number,
+  heightPx: number,
+  options: CanvasOptions = {},
+): { cx: number; cy: number; scale: number } {
   const { cx: nativeCx, cy: nativeCy } = nativeExtent(widthPx, heightPx);
-  const scale = Math.min(1, MAX_DRAWING_CX / nativeCx, MAX_DRAWING_CY / nativeCy);
+  const scale = Math.min(
+    1,
+    (options.maxDrawingCx ?? MAX_DRAWING_CX) / nativeCx,
+    (options.maxDrawingCy ?? MAX_DRAWING_CY) / nativeCy,
+  );
   return {
     cx: Math.max(1, Math.round(nativeCx * scale)),
     cy: Math.max(1, Math.round(nativeCy * scale)),
@@ -125,8 +145,9 @@ export function wrapDrawingCanvas(
   heightPx: number,
   docPrId: number,
   name: string,
+  options: CanvasOptions = {},
 ): string {
-  const { cx, cy } = scaledExtent(widthPx, heightPx);
+  const { cx, cy } = scaledExtent(widthPx, heightPx, options);
   return [
     `<w:p ${NS.w}>`,
     '  <w:r>',

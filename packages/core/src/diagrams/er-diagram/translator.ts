@@ -27,6 +27,7 @@ import {
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, edgePoint, rect, scalePt, textBoxLines, type ArrowMarker } from '../../translator/graph-shapes.js';
 
@@ -110,7 +111,7 @@ function entityShapes(nextId: () => number, entity: ErEntity, size: EntitySize, 
  * paragraph. An empty diagram renders a visible note, matching the other
  * Family B translators' zero-content convention — never a silent blank
  * canvas. */
-export function translateErDiagramToOoxml(chart: ErDiagram): string {
+export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptions = {}): string {
   if (chart.entities.length === 0) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -154,7 +155,7 @@ export function translateErDiagramToOoxml(chart: ErDiagram): string {
   const canvasH = maxY - minY + 2 * PAD;
   const dx = -minX + PAD;
   const dy = -minY + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -210,5 +211,5 @@ export function translateErDiagramToOoxml(chart: ErDiagram): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'ER diagram');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'ER diagram', options);
 }

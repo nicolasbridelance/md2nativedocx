@@ -51,6 +51,7 @@ import {
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, edgePoint, parallelEdgeOffset, perpendicularUnit, rect, scalePt, shiftPoint, textBoxLines } from '../../translator/graph-shapes.js';
 
@@ -143,7 +144,7 @@ function elementShapes(nextId: () => number, el: C4Element, bodyLines: string[],
  * paragraph. An empty diagram renders a visible note, matching the other
  * Family B translators' zero-content convention — never a silent blank
  * canvas. */
-export function translateC4DiagramToOoxml(chart: C4Diagram): string {
+export function translateC4DiagramToOoxml(chart: C4Diagram, options: CanvasOptions = {}): string {
   if (chart.elements.length === 0) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -192,7 +193,7 @@ export function translateC4DiagramToOoxml(chart: C4Diagram): string {
   const canvasH = maxY - minY + 2 * PAD + topMargin;
   const dx = -minX + PAD;
   const dy = -minY + PAD + topMargin;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -293,5 +294,5 @@ export function translateC4DiagramToOoxml(chart: C4Diagram): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'C4 diagram');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'C4 diagram', options);
 }

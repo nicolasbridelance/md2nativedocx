@@ -23,11 +23,12 @@ import type { VennChart, VennSet, VennUnion } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml, validateHexColor } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
+  EMU_PER_PX,
   scaledExtent,
   scaledFontSizeHalfPt,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 
 const CIRCLE_R = 130;
@@ -155,7 +156,7 @@ function note(text: string): string {
 
 /** Translate a parsed Venn chart into a self-contained WordprocessingML
  * paragraph (+ a trailing degradation note paragraph for 4+ sets or 0 sets). */
-export function translateVennToOoxml(chart: VennChart): string {
+export function translateVennToOoxml(chart: VennChart, options: CanvasOptions = {}): string {
   if (chart.sets.length === 0) {
     return note('This Venn diagram has no sets to render.');
   }
@@ -180,7 +181,7 @@ export function translateVennToOoxml(chart: VennChart): string {
   const canvasH = maxY - minY + 2 * PAD + topMargin;
   const dx = -minX + PAD;
   const dy = -minY + PAD + topMargin;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const parts: string[] = [];
 
@@ -283,7 +284,7 @@ export function translateVennToOoxml(chart: VennChart): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  let output = wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Venn diagram');
+  let output = wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Venn diagram', options);
 
   if (!overlapping) {
     output +=

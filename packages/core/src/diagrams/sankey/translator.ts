@@ -13,7 +13,13 @@
 import type { SankeyDiagram } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, noteParagraph, scalePt } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { pathShape } from '../../translator/path-shape.js';
 
 const FONT_PX = 12;
@@ -44,7 +50,7 @@ function formatValue(v: number): string {
 }
 
 /** Translate a parsed Sankey diagram into a self-contained WordprocessingML paragraph. */
-export function translateSankeyToOoxml(diagram: SankeyDiagram): string {
+export function translateSankeyToOoxml(diagram: SankeyDiagram, options: CanvasOptions = {}): string {
   const { nodes, links } = diagram;
   if (links.length === 0) return noteParagraph('A Sankey diagram needs at least one link to render.');
 
@@ -98,7 +104,7 @@ export function translateSankeyToOoxml(diagram: SankeyDiagram): string {
     }
   }
 
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const emu = (v: number): number => scalePt(v, s);
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -151,5 +157,5 @@ export function translateSankeyToOoxml(diagram: SankeyDiagram): string {
     );
   }
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Sankey diagram');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Sankey diagram', options);
 }

@@ -207,21 +207,21 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateQuadrantToOoxml(ast));
+    process.stdout.write(translateQuadrantToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'venn') {
     // Second non-flowchart diagram type shipped, same module convention.
     const { ast, warnings } = parseVennChart(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateVennToOoxml(ast));
+    process.stdout.write(translateVennToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'mindmap') {
     // Third non-flowchart diagram type shipped, same module convention.
     const { ast, warnings } = parseMindmap(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateMindmapToOoxml(ast));
+    process.stdout.write(translateMindmapToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'class') {
     // Fifth non-flowchart diagram type shipped (swimlane-beta, the fourth,
     // is a flowchart alias with no dedicated branch here — see
@@ -231,35 +231,35 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateClassDiagramToOoxml(ast));
+    process.stdout.write(translateClassDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'state') {
     // Sixth non-flowchart diagram type shipped, second of Family B.
     const { ast, warnings } = parseStateDiagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateStateDiagramToOoxml(ast));
+    process.stdout.write(translateStateDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'er') {
     // Seventh non-flowchart diagram type shipped, third of Family B.
     const { ast, warnings } = parseErDiagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateErDiagramToOoxml(ast));
+    process.stdout.write(translateErDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'requirement') {
     // Eighth non-flowchart diagram type shipped, fourth of Family B.
     const { ast, warnings } = parseRequirementDiagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateRequirementDiagramToOoxml(ast));
+    process.stdout.write(translateRequirementDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'architecture') {
     // Ninth non-flowchart diagram type shipped, fifth of Family B.
     const { ast, warnings } = parseArchitectureDiagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateArchitectureDiagramToOoxml(ast));
+    process.stdout.write(translateArchitectureDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'gantt') {
     // Tenth non-flowchart diagram type shipped, first of Family D (calendar
     // shapes, no `c:chart` — docs/adr/spikes/spike-gantt-parser/spike.md).
@@ -267,14 +267,14 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateGanttToOoxml(ast));
+    process.stdout.write(translateGanttToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'c4') {
     // Eleventh non-flowchart diagram type shipped, sixth of Family B.
     const { ast, warnings } = parseC4Diagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateC4DiagramToOoxml(ast));
+    process.stdout.write(translateC4DiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'gitGraph') {
     // Twelfth non-flowchart diagram type shipped, first of Family F (fixed
     // branch lanes + fixed commit-sequence axis, no Dagre — re-classified
@@ -284,7 +284,7 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateGitGraphToOoxml(ast));
+    process.stdout.write(translateGitGraphToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'cynefin') {
     // Thirteenth non-flowchart diagram type shipped, second of Family D
     // (calculated shapes, no c:chart — same shape as quadrant/venn, NOT a
@@ -294,7 +294,7 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateCynefinToOoxml(ast));
+    process.stdout.write(translateCynefinToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'pie') {
     // Fourteenth non-flowchart diagram type shipped, third of Family D
     // (calculated `pie`-preset shapes, no c:chart).
@@ -302,112 +302,112 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translatePieToOoxml(ast));
+    process.stdout.write(translatePieToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'timeline') {
     // Fifteenth non-flowchart diagram type shipped, fourth of Family D.
     const { ast, warnings } = parseTimeline(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateTimelineToOoxml(ast));
+    process.stdout.write(translateTimelineToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'kanban') {
     // Sixteenth non-flowchart diagram type shipped, fifth of Family D.
     const { ast, warnings } = parseKanban(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateKanbanToOoxml(ast));
+    process.stdout.write(translateKanbanToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'packet') {
     // Seventeenth non-flowchart diagram type shipped, sixth of Family D.
     const { ast, warnings } = parsePacketDiagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translatePacketToOoxml(ast));
+    process.stdout.write(translatePacketToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'treemap') {
     // Eighteenth non-flowchart diagram type shipped, seventh of Family D.
     const { ast, warnings } = parseTreemap(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateTreemapToOoxml(ast));
+    process.stdout.write(translateTreemapToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'journey') {
     // Nineteenth non-flowchart diagram type shipped, eighth of Family D.
     const { ast, warnings } = parseJourney(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateJourneyToOoxml(ast));
+    process.stdout.write(translateJourneyToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'treeView') {
     // Twentieth non-flowchart diagram type shipped, ninth of Family D.
     const { ast, warnings } = parseTreeView(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateTreeViewToOoxml(ast));
+    process.stdout.write(translateTreeViewToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'radar') {
     // Twenty-first non-flowchart diagram type shipped, tenth of Family D.
     const { ast, warnings } = parseRadar(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateRadarToOoxml(ast));
+    process.stdout.write(translateRadarToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'ishikawa') {
     // Twenty-second non-flowchart diagram type shipped, eleventh of Family D.
     const { ast, warnings } = parseIshikawa(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateIshikawaToOoxml(ast));
+    process.stdout.write(translateIshikawaToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'xychart') {
     // Twenty-third non-flowchart diagram type shipped, twelfth of Family D.
     const { ast, warnings } = parseXyChart(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateXyChartToOoxml(ast));
+    process.stdout.write(translateXyChartToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'block') {
     // Twenty-fourth non-flowchart diagram type shipped, thirteenth of Family D.
     const { ast, warnings } = parseBlock(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateBlockToOoxml(ast));
+    process.stdout.write(translateBlockToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'sankey') {
     // Twenty-fifth non-flowchart diagram type shipped, fourteenth of Family D.
     const { ast, warnings } = parseSankey(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateSankeyToOoxml(ast));
+    process.stdout.write(translateSankeyToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'wardley') {
     // Twenty-sixth non-flowchart diagram type shipped, fifteenth of Family D.
     const { ast, warnings } = parseWardley(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateWardleyToOoxml(ast));
+    process.stdout.write(translateWardleyToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'eventModeling') {
     // Twenty-seventh non-flowchart diagram type shipped, sixteenth of Family D.
     const { ast, warnings } = parseEventModeling(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateEventModelingToOoxml(ast));
+    process.stdout.write(translateEventModelingToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'sequence') {
     // Twenty-eighth non-flowchart diagram type shipped, first of Family E.
     const { ast, warnings } = parseSequence(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateSequenceToOoxml(ast));
+    process.stdout.write(translateSequenceToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'zenuml') {
     // Same AST and translator as sequenceDiagram; only the parser differs.
     const { ast, warnings } = parseZenuml(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateSequenceToOoxml(ast));
+    process.stdout.write(translateSequenceToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
     process.stderr.write(
       `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,

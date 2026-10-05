@@ -14,7 +14,13 @@
 import type { BlockCell, BlockDiagram } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, fitFont, noteParagraph } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { connector, diamond, edgePoint, ellipse, rect, scalePt } from '../../translator/graph-shapes.js';
 
 const FONT_PX = 13;
@@ -94,7 +100,7 @@ function neededCellWidth(group: BlockCell): number {
 }
 
 /** Translate a parsed block diagram into a self-contained WordprocessingML paragraph. */
-export function translateBlockToOoxml(diagram: BlockDiagram): string {
+export function translateBlockToOoxml(diagram: BlockDiagram, options: CanvasOptions = {}): string {
   const root = diagram.root;
   if (!root.children.some((c) => c.kind !== 'space')) return noteParagraph('A block diagram needs at least one block to render.');
 
@@ -106,7 +112,7 @@ export function translateBlockToOoxml(diagram: BlockDiagram): string {
   const canvasW = innerW + 2 * PAD;
   const canvasH = innerH + 2 * PAD;
 
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const emu = (v: number): number => scalePt(v, s);
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -149,5 +155,5 @@ export function translateBlockToOoxml(diagram: BlockDiagram): string {
     }
   }
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Block diagram');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Block diagram', options);
 }

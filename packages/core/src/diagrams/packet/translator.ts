@@ -11,7 +11,12 @@
 
 import type { PacketDiagram } from './types.js';
 import { boxShape, noteParagraph, scalePt, tint, wrapText } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 
 const BITS_PER_ROW = 32;
@@ -28,7 +33,7 @@ const MIN_WIDTH_FOR_END_NUMBER = 3 * BIT_W;
 const PALETTE = ['4472C4', 'ED7D31', '70AD47', 'FFC000', '7030A0', '5B9BD5', 'C00000', '2E8B8B'];
 
 /** Translate a parsed packet diagram into a self-contained WordprocessingML paragraph. */
-export function translatePacketToOoxml(diagram: PacketDiagram): string {
+export function translatePacketToOoxml(diagram: PacketDiagram, options: CanvasOptions = {}): string {
   if (diagram.fields.length === 0) return noteParagraph('This packet diagram has no fields to render.');
 
   const nextId = createIdAllocator();
@@ -38,7 +43,7 @@ export function translatePacketToOoxml(diagram: PacketDiagram): string {
   const rowW = BITS_PER_ROW * BIT_W;
   const canvasW = PAD * 2 + rowW;
   const canvasH = PAD * 2 + topMargin + rowCount * (NUM_H + ROW_H + ROW_GAP);
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const parts: string[] = [];
 
   if (diagram.title) {
@@ -75,5 +80,5 @@ export function translatePacketToOoxml(diagram: PacketDiagram): string {
     }
   });
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), diagram.title ?? 'Packet diagram');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), diagram.title ?? 'Packet diagram', options);
 }

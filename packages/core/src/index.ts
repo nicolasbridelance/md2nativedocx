@@ -36,6 +36,7 @@ export { translateToOoxml } from './translator/ooxml-translator.js';
 // rule for this different guard-rail.
 export { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
 export type { TranslateOptions } from './translator/ooxml-translator.js';
+export type { CanvasOptions } from './translator/canvas.js';
 
 // XML escaping for user-controlled text (rule #2)
 export { escapeXml } from './translator/xml-escape.js';

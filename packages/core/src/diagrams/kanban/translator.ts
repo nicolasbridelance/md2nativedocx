@@ -10,7 +10,12 @@
 
 import type { KanbanBoard, KanbanPriority } from './types.js';
 import { boxShape, noteParagraph, scalePt, tint, wrapText } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 
 const COL_W = 200;
 const COL_GAP = 14;
@@ -31,7 +36,7 @@ const PRIORITY_COLORS: Record<KanbanPriority, string> = {
 };
 
 /** Translate a parsed kanban board into a self-contained WordprocessingML paragraph. */
-export function translateKanbanToOoxml(board: KanbanBoard): string {
+export function translateKanbanToOoxml(board: KanbanBoard, options: CanvasOptions = {}): string {
   if (board.columns.length === 0) return noteParagraph('This kanban board has no columns to render.');
 
   const nextId = createIdAllocator();
@@ -54,7 +59,7 @@ export function translateKanbanToOoxml(board: KanbanBoard): string {
   const n = board.columns.length;
   const canvasW = PAD * 2 + n * COL_W + (n - 1) * COL_GAP;
   const canvasH = PAD * 2 + headerH + bodyH;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const parts: string[] = [];
 
   board.columns.forEach((column, i) => {
@@ -80,5 +85,5 @@ export function translateKanbanToOoxml(board: KanbanBoard): string {
     });
   });
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Kanban board');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), 'Kanban board', options);
 }

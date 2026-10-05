@@ -23,11 +23,12 @@ import type { GanttChart, GanttTag, GanttTask } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
+  EMU_PER_PX,
   scaledExtent,
   scaledFontSizeHalfPt,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { addDays, daysBetween, isWeekend } from './date-utils.js';
 
@@ -203,7 +204,7 @@ function buildTicks(dateMin: Date, dateMax: Date): { date: Date; label: string }
   return ticks;
 }
 
-export function translateGanttToOoxml(chart: GanttChart): string {
+export function translateGanttToOoxml(chart: GanttChart, options: CanvasOptions = {}): string {
   const nextId = createIdAllocator();
   const hasTitle = Boolean(chart.title);
   const topMargin = (hasTitle ? TITLE_HEIGHT : 0) + HEADER_HEIGHT;
@@ -211,13 +212,13 @@ export function translateGanttToOoxml(chart: GanttChart): string {
   if (chart.tasks.length === 0) {
     const canvasW = 400;
     const canvasH = topMargin + ROW_HEIGHT;
-    const { scale: s } = scaledExtent(canvasW, canvasH);
+    const { scale: s } = scaledExtent(canvasW, canvasH, options);
     const parts: string[] = [];
     if (chart.title) {
       parts.push(textBox(nextId(), scale(0, s), scale(0, s), scale(canvasW, s), scale(TITLE_HEIGHT, s), chart.title, { sizeHalfPt: 28, color: '000000', bold: true, align: 'center' }, s));
     }
     parts.push(textBox(nextId(), scale(0, s), scale(topMargin, s), scale(canvasW, s), scale(ROW_HEIGHT, s), '(no tasks)', { sizeHalfPt: 18, color: '808080' }, s));
-    return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Gantt chart');
+    return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Gantt chart', options);
   }
 
   const dateMin = chart.tasks.reduce((min, t) => (t.start < min ? t.start : min), chart.tasks[0]!.start);
@@ -235,7 +236,7 @@ export function translateGanttToOoxml(chart: GanttChart): string {
 
   const canvasW = gutterWidth + chartWidth + RIGHT_MARGIN;
   const canvasH = topMargin + rowsHeight;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const chartX0 = gutterWidth;
   const gridTop = topMargin;
@@ -304,5 +305,5 @@ export function translateGanttToOoxml(chart: GanttChart): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, Math.max(canvasH, gridBottom), docPrId, chart.title ?? 'Gantt chart');
+  return wrapDrawingCanvas(content, canvasW, Math.max(canvasH, gridBottom), docPrId, chart.title ?? 'Gantt chart', options);
 }

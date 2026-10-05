@@ -13,7 +13,13 @@
 import type { WardleyMap, WardleyNode, WardleyStage } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, noteParagraph, scalePt } from '../../translator/boxes.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 import { connector, diamond, ellipse, rect } from '../../translator/graph-shapes.js';
 import { pathShape } from '../../translator/path-shape.js';
 
@@ -29,12 +35,12 @@ const EVOLVE_COLOR = 'DC3545';
 const INK = '000000';
 
 /** Translate a parsed Wardley map into a self-contained WordprocessingML paragraph. */
-export function translateWardleyToOoxml(map: WardleyMap): string {
+export function translateWardleyToOoxml(map: WardleyMap, options: CanvasOptions = {}): string {
   if (map.nodes.length === 0) return noteParagraph('A Wardley map needs at least one component or anchor to render.');
 
   const W = map.size?.width ?? DEFAULT_W;
   const H = map.size?.height ?? DEFAULT_H;
-  const { scale: s } = scaledExtent(W, H);
+  const { scale: s } = scaledExtent(W, H, options);
   const emu = (v: number): number => scalePt(v, s);
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -191,5 +197,5 @@ export function translateWardleyToOoxml(map: WardleyMap): string {
     text(x + 4, y + 4, w - 8, lines);
   }
 
-  return wrapDrawingCanvas(parts.join('\n'), W, H, nextId(), 'Wardley map');
+  return wrapDrawingCanvas(parts.join('\n'), W, H, nextId(), 'Wardley map', options);
 }

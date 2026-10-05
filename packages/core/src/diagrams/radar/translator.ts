@@ -12,7 +12,13 @@ import { estimateTextWidth } from '../../layout/layout.js';
 import { boxShape, noteParagraph, scalePt } from '../../translator/boxes.js';
 import { pathShape } from '../../translator/path-shape.js';
 import type { Pt } from '../../translator/path-shape.js';
-import { createIdAllocator, scaledExtent, scaledLineWidthEmu, wrapDrawingCanvas } from '../../translator/canvas.js';
+import {
+  createIdAllocator,
+  scaledExtent,
+  scaledLineWidthEmu,
+  wrapDrawingCanvas,
+  type CanvasOptions,
+} from '../../translator/canvas.js';
 
 const R = 190;
 const LABEL_ROOM = 110;
@@ -41,7 +47,7 @@ function circleShape(id: number, cx: number, cy: number, r: number, line: string
 }
 
 /** Translate a parsed radar chart into a self-contained WordprocessingML paragraph. */
-export function translateRadarToOoxml(chart: RadarChart): string {
+export function translateRadarToOoxml(chart: RadarChart, options: CanvasOptions = {}): string {
   const n = chart.axes.length;
   if (n < 3) return noteParagraph('A radar chart needs at least 3 axes to render.');
 
@@ -51,7 +57,7 @@ export function translateRadarToOoxml(chart: RadarChart): string {
   const topMargin = TOP + (chart.title ? TITLE_H : 0);
   const canvasW = (R + LABEL_ROOM) * 2 + legendW;
   const canvasH = topMargin + (R + 40) * 2;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
   const cx = R + LABEL_ROOM;
   const cy = topMargin + R + 40;
   const emu = (v: number): number => scalePt(v, s);
@@ -108,5 +114,5 @@ export function translateRadarToOoxml(chart: RadarChart): string {
     });
   }
 
-  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Radar chart');
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, nextId(), chart.title ?? 'Radar chart', options);
 }
