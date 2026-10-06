@@ -46,7 +46,10 @@ créations Microsoft/Word, pas du contenu qu'on a le droit de redistribuer), ave
 par échantillon, nommé comme indiqué dans chaque entrée ci-dessous. Si c'est plus simple pour toi
 de tout mettre à plat avec des noms de fichiers explicites, ça marche aussi.
 
-## Échantillon actif — `Nested Target` pour représenter un `subgraph`
+## Clos (2026-10-06) — `Nested Target` pour représenter un `subgraph`
+
+> **Reçu (`handmade_samples/cible.docx`, en fait *Basic Target*) et analysé : piste écartée**, voir
+> `docs/smartart-layout-catalog.md`. Plus besoin d'échantillon *Nested Target*. Texte d'origine conservé :
 
 **Objectif** : `Labeled Hierarchy` (voir §"Clos" plus bas) ne couvre qu'un cas restreint de
 `subgraph`. `Nested Target` (cercles concentriques, containment réel) est un candidat mieux

@@ -974,14 +974,15 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 - ✅ Piste "subgraph = hiérarchie libellée" testée, cas général écarté (2026-09-03) — l'étiquette
   de `Labeled Hierarchy` s'applique par niveau de profondeur, pas par branche ; ne couvre que le
   cas restreint où tous les nœuds d'une même profondeur partagent le même `subgraph`.
-- [ ] **Nouvelle piste "subgraph = `Nested Target`" (2026-09-03)** — cercles concentriques,
-      containment réel, mieux motivée que `Labeled Hierarchy`. Pas encore de générateur ni
-      d'échantillon Word analysé — échantillon demandé dans `docs/smartart-samples-wishlist.md`,
-      en attente.
+- ✅ Piste "subgraph = `Nested Target`" écartée (2026-10-06) — l'échantillon `handmade_samples/cible.docx`
+  (en fait *Basic Target*, `target1`) montre des anneaux frères dans le modèle de données (imbrication
+  seulement visuelle, 5 max), les nœuds d'un anneau en texte à puces, et aucune arête possible ; des
+  anneaux concentriques ne savent pas non plus montrer deux `subgraph` côte à côte. Détail :
+  `docs/smartart-layout-catalog.md`. Les flowcharts avec `subgraph` restent en formes Word.
 - ✅ Piste définitivement close (2026-09-03, 3 essais réels indépendants) : `subgraph` = boîte de
   titre existante + diagramme SmartArt intégré via `wpc:graphicFrame` — 3 hypothèses distinctes,
-  le même échec dur à l'ouverture dans un vrai Word à chaque fois. `Nested Target` reste la piste
-  active.
+  le même échec dur à l'ouverture dans un vrai Word à chaque fois. `Nested Target` a depuis été écartée aussi
+  (2026-10-06).
 - ✅ Tableau de compliance livré (2026-09-03) — `docs/markdown-mermaid-compliance-table.md` (3
   colonnes : SmartArt seul / hybride / OOXML seul), livré avant même que `cycle.ts` existe, sur
   priorité explicite du mainteneur. A mis au jour au passage un bug de guillemets/entités/Markdown

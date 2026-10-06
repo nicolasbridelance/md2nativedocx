@@ -132,7 +132,30 @@ même sens** :
    variante de cette famille non encore vérifiée, à considérer seulement si un contre-exemple
    apparaît qui invaliderait la conclusion ci-dessus.
 
-## Piste à creuser (nouvelle, 2026-09-03) : `Nested Target` pour représenter un `subgraph`
+## Piste écartée (2026-10-06) : `Nested Target` / `Basic Target` pour représenter un `subgraph`
+
+**Verdict (2026-10-06, échantillon Word réel `handmade_samples/cible.docx`, fourni le 2026-09-03, analysé
+seulement maintenant) : écartée pour le cas général, comme `Labeled Hierarchy`.** Le fichier est en fait
+*Basic Target* (`layout/target1`, `Cible simple`), pas *Nested Target* — mais les trois constats qui comptent
+viennent de la géométrie « anneaux concentriques » elle-même, pas du `layoutDef` exact :
+
+1. **Aucun containment dans le modèle de données.** Les anneaux sont trois points frères, enfants directs du
+   `doc` (`srcOrd` 0/1/2 = extérieur → centre) ; l'imbrication n'existe qu'à l'affichage. `chMax="5"` :
+   5 anneaux au plus.
+2. **Un anneau peut porter plusieurs éléments, mais seulement en texte à puces.** La zone de texte de chaque
+   anneau (`text1`…, `presOf axis="desOrSelf"`, `bulletEnabled`) affiche les enfants de niveau 2 comme des
+   puces, dans un rectangle relié à l'anneau par un trait (`line1`/`d1`). Les nœuds d'un `subgraph`
+   deviendraient des puces, pas des formes distinctes.
+3. **Aucune arête possible, et pas de `subgraph` frères.** Rien dans ce layout ne dessine de lien entre deux
+   éléments ; et des anneaux concentriques affirment que chaque groupe *contient* le suivant, ce qui est
+   faux pour deux `subgraph` côte à côte (« Frontend »/« Backend », le cas courant).
+
+Seul cas restant : des `subgraph` imbriqués en une seule chaîne (A ⊃ B ⊃ C, 5 au plus) **sans aucune arête**,
+rare dans un flowchart réel. Pas de générateur prévu ; les flowcharts avec `subgraph` restent en formes Word
+(cadres + connecteurs), qui montrent déjà le groupe *et* ses arêtes. Un échantillon *Nested Target* ne
+changerait pas les points 1 et 3.
+
+Texte d'origine (2026-09-03) :
 
 Suggérée en reconsidérant la catégorie Relationship après l'échec de `Labeled Hierarchy` sur le cas
 général — `Nested Target` (cercles concentriques, sémantique de **containment** réel) n'a pas la
