@@ -92,7 +92,7 @@ flowchart exports as a native, editable Word **SmartArt** graphic instead of pla
 possible (toggle: `md2nativedocx.smartArt.enabled`); everything else still gets individually
 selectable/editable OOXML shapes with dynamic connectors.
 
-![Mermaid flowcharts and a mindmap exported as native Word SmartArt: a process, a cycle, an org chart, a mindmap hierarchy, and one process in four looks](docs/showcase/smartart.png)
+![Mermaid diagrams exported as native Word SmartArt: a process keeping its node shapes, a cycle, an org chart, a mindmap, a timeline, a kanban board, and one process in four looks](docs/showcase/smartart.png)
 
 *Mermaid source → native Word SmartArt: add a step or a branch from Word's Text Pane, switch layout or restyle from
 the SmartArt Design tab. Rendered here with LibreOffice; same result in Word. Regenerate with

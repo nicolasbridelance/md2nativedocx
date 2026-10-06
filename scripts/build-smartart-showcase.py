@@ -18,10 +18,12 @@ base_env = {**os.environ, 'FONTCONFIG_FILE': os.path.join(root, 'test-corpus/vis
 
 # (title, what Word makes of it, Mermaid source, look)
 SAMPLES = [
- ('Process', 'a chain becomes a SmartArt process', 'flowchart LR\n  A[Idea] --> B[Draft]\n  B --> C[Review]\n  C --> D[Publish]', 'colorful'),
+ ('Process', 'a chain becomes a SmartArt process, shapes kept', 'flowchart LR\n  A([Idea]) --> B[Draft]\n  B --> C{Review}\n  C --> D[(Archive)]', 'colorful'),
  ('Cycle', 'a loop becomes a SmartArt cycle', 'flowchart LR\n  P[Plan] --> D[Do]\n  D --> C[Check]\n  C --> A[Act]\n  A --> P', 'colorful'),
  ('Org chart', 'a tree becomes a SmartArt hierarchy', 'flowchart TD\n  CEO --> CTO\n  CEO --> CFO\n  CTO --> Dev[Engineering]\n  CTO --> Ops[Operations]\n  CFO --> Acc[Accounting]', 'colorful'),
  ('Mindmap', 'a mindmap becomes a SmartArt hierarchy', 'mindmap\n  root((Launch))\n    Product\n      Pricing\n      Docs\n    Marketing\n      Blog\n      Webinar', 'colorful'),
+ ('Timeline', 'a timeline becomes a SmartArt time line', 'timeline\n  2021 : Prototype\n  2022 : First customer\n  2023 : Series A\n  2024 : Europe', 'colorful'),
+ ('Kanban', 'a board becomes a SmartArt grouped list', 'kanban\n  Todo\n    t1[Write spec]\n    t2[Pick fonts]\n  Doing\n    t3[Build export]\n  Done\n    t4[Kick-off]', 'colorful'),
 ]
 LOOK_SRC = 'flowchart LR\n  A[Plan] --> B[Build]\n  B --> C[Test]\n  C --> D[Ship]'
 LOOKS = ['simple', 'moderate', 'colorful', 'intense']
@@ -54,10 +56,11 @@ PAD, HEAD, SW, PW, PH = 16, 40, 250, 520, 300   # source panel width, picture pa
 TW = SW + PW + 3 * 8
 W = 2 * TW + 3 * PAD
 LH = 150                                        # looks strip panel height
-H = 100 + 2 * (HEAD + PH + 8 + PAD) + 40 + LH + 40 + 36
+ROWS = (len(SAMPLES) + 1) // 2
+H = 100 + ROWS * (HEAD + PH + 8 + PAD) + 40 + LH + 40 + 36
 canvas = Image.new('RGB', (W, H), '#F6F5FA'); d = ImageDraw.Draw(canvas)
 d.text((PAD, 16), 'md2nativedocx — Mermaid to native Word SmartArt', font=font(24, True), fill='#2B2140')
-d.text((PAD, 52), 'A chain, cycle or tree-shaped flowchart (and a mindmap) exports as a real SmartArt graphic: add a step or a branch from',
+d.text((PAD, 52), 'Chains, cycles, trees, mindmaps, timelines and kanban boards export as real SmartArt graphics: add a step or a branch from',
        font=font(13), fill='#555')
 d.text((PAD, 72), "Word's Text Pane, switch layout or restyle from the SmartArt Design tab. Rendered here with LibreOffice; same result in Word.",
        font=font(13), fill='#555')
@@ -81,7 +84,7 @@ for i, (title, sub, src, im) in enumerate(tiles):
     d.text((px + 10, sy + 8), 'Word SmartArt', font=font(11, True), fill='#7C3AED')
     paste_fit(im, px, sy + 20, PW - 8, PH - 20)
 
-ly = 100 + 2 * (HEAD + PH + 8 + PAD) + 4
+ly = 100 + ROWS * (HEAD + PH + 8 + PAD) + 4
 d.text((PAD, ly), 'Same process, four of the seven looks (md2nativedocx.smartArt.style) — all follow the document theme’s colours',
        font=font(16, True), fill='#2B2140')
 lw = (W - PAD * (len(looks) + 1)) // len(looks)

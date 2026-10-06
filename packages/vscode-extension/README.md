@@ -115,12 +115,12 @@ export's own `.log` file.
 *Same Mermaid source, two outputs: **left = rendered by Mermaid.js**, **right = md2nativedocx** (native, editable Word shapes,
 rendered here with LibreOffice).*
 
-## SmartArt for processes, cycles, org charts and mindmaps
+## SmartArt for processes, cycles, org charts, mindmaps, timelines and boards
 
-<img src="docs/smartart.png" width="900" alt="Mermaid flowcharts and a mindmap exported as native Word SmartArt: a process, a cycle, an org chart, a mindmap hierarchy, and one process in four looks"/>
+<img src="docs/smartart.png" width="900" alt="Mermaid diagrams exported as native Word SmartArt: a process keeping its node shapes, a cycle, an org chart, a mindmap, a timeline, a kanban board, and one process in four looks"/>
 
-*A chain, cycle or tree-shaped flowchart (and a mindmap) becomes a real
-SmartArt graphic: add a step or a branch from Word's Text Pane, switch layout or restyle from the SmartArt Design tab.
+*A chain, cycle or tree-shaped flowchart, a mindmap, a timeline or a kanban board becomes a real
+SmartArt graphic (each node keeps its Mermaid shape): add a step or a branch from Word's Text Pane, switch layout or restyle from the SmartArt Design tab.
 `md2nativedocx.smartArt.style` picks the starting look; `md2nativedocx.smartArt.enabled` turns it off.*
 
 ## Frequently asked
