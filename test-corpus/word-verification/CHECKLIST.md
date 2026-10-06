@@ -1,6 +1,6 @@
 # Word verification checklist — MVP closure (spec §9)
 
-> **Files kept (2026-10-06):** one `.docx`/`.pptx` per diagram type, the `all-types-*` files, the flowchart
+> **Files kept (2026-10-06):** one `.docx` per diagram type, the `all-types-*` files (`all-types-deck.pptx` holds every type as slides), the flowchart
 > probes and the latest SmartArt round (v18). The files of the earlier rounds below (SmartArt v3-v17,
 > cycle/tree rechecks, pie variants, emoji review) were removed once confirmed; their results stay recorded
 > here. To reopen one: `git checkout 21a49a8 -- test-corpus/word-verification/<file>`.

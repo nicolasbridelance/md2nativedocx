@@ -107,6 +107,6 @@ if MM:
     try: ver = ' %s' % json.load(open(os.path.join(MM, 'node_modules/mermaid/package.json')))['version']
     except OSError: pass
 d.text((PAD, H - 28), 'Mermaid%s is MIT-licensed (c) Knut Sveidqvist and contributors — https://mermaid.js.org. Left panels rendered with it unmodified.' % ver, font=font(12), fill='#777')
-canvas.save(os.path.join(out, 'preview.png'), optimize=True); print('wrote preview.png', canvas.size)
+canvas.quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(os.path.join(out, 'preview.png'), optimize=True)  # 256 colours: about 3x smaller, no visible change on these flat renders; print('wrote preview.png', canvas.size)
 if server: server.shutdown()
 shutil.rmtree(work)

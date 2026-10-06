@@ -21,7 +21,7 @@ document to can edit in Word, without Markdown, Mermaid or you:
 All 29 Mermaid diagram types are supported. (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
 means Word's own editable objects, not pictures.)
 
-<img src="docs/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
+<img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
 
 *Mermaid source → one click → native shapes (rendered here with LibreOffice; every shape is editable in Word).*
 
@@ -112,14 +112,14 @@ export's own `.log` file.
 
 ## All 29 Mermaid diagram types
 
-<img src="docs/showcase.png" width="900" alt="Side-by-side gallery of all 29 supported Mermaid diagram types: Mermaid.js rendering on the left, md2nativedocx native Word shapes on the right"/>
+<img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/preview.png" width="900" alt="Side-by-side gallery of all 29 supported Mermaid diagram types: Mermaid.js rendering on the left, md2nativedocx native Word shapes on the right"/>
 
 *Same Mermaid source, two outputs: **left = rendered by Mermaid.js**, **right = md2nativedocx** (native, editable Word shapes,
 rendered here with LibreOffice).*
 
 ## SmartArt for processes, cycles, org charts, mindmaps, timelines and boards
 
-<img src="docs/smartart.png" width="900" alt="Mermaid diagrams exported as native Word SmartArt: a process keeping its node shapes, a cycle, an org chart, a mindmap, a timeline, a kanban board, and one process in four looks"/>
+<img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/smartart.png" width="900" alt="Mermaid diagrams exported as native Word SmartArt: a process keeping its node shapes, a cycle, an org chart, a mindmap, a timeline, a kanban board, and one process in four looks"/>
 
 *A chain, cycle or tree-shaped flowchart, a mindmap, a timeline or a kanban board becomes a real
 SmartArt graphic (each node keeps its Mermaid shape): add a step or a branch from Word's Text Pane, switch layout or restyle from the SmartArt Design tab.

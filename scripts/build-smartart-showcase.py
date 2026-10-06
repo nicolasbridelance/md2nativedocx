@@ -98,5 +98,5 @@ d.text((PAD, H - 30), 'Regenerate with scripts/build-smartart-showcase.py. Smart
 
 out = next((a for a in sys.argv[1:] if not a.startswith('--')), os.path.join(root, 'docs/showcase'))
 os.makedirs(out, exist_ok=True)
-canvas.save(os.path.join(out, 'smartart.png'), optimize=True); print('wrote smartart.png', canvas.size)
+canvas.quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(os.path.join(out, 'smartart.png'), optimize=True)  # 256 colours: about 3x smaller, no visible change on these flat renders; print('wrote smartart.png', canvas.size)
 shutil.rmtree(work)
