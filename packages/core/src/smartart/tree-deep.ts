@@ -20,11 +20,12 @@
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
-import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { validateHexColor } from '../translator/xml-escape.js';
 import { buildColorsXml, buildStyleXml } from './styles.js';
 import { TREE_COLORS_XML, TREE_STYLE_XML, type SmartArtTreeOutput } from './tree.js';
 import { DEEP_COLUMN_INDENT, DRAWING_EXT_LST_XML, buildDiagramDrawingXml, deepTreeIsCompact, deepTreeShapes, type DeepTreeNode } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { boxText, pointTextXml } from './text.js';
 import type { SmartArtStyle } from './styles.js';
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
@@ -236,7 +237,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     const pt = newId();
     const model: DeepModelNode = {
       id: '', // box presentation point, assigned in the second pass
-      text: label ? `${label} : ${n.label}` : n.label,
+      text: boxText(n, label),
       ...(n.fill ? { fill: n.fill } : {}),
       pt,
       pRoot: '',
@@ -279,7 +280,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     .map(
       (n) =>
         `<dgm:pt modelId="${n.pt}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(n.fill)}` +
-        `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>${escapeXml(n.text)}</a:t></a:r></a:p></dgm:t></dgm:pt>` +
+        `${pointTextXml(n.text)}</dgm:pt>` +
         `<dgm:pt modelId="${n.parTrans}" type="parTrans" cxnId="${n.parOf}"><dgm:prSet/><dgm:spPr/></dgm:pt>` +
         `<dgm:pt modelId="${n.sibTrans}" type="sibTrans" cxnId="${n.parOf}"><dgm:prSet/><dgm:spPr/></dgm:pt>`
     )

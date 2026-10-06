@@ -21,10 +21,11 @@
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
-import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { validateHexColor } from '../translator/xml-escape.js';
 import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
 import { CYCLE_FRAME, DRAWING_EXT_LST_XML, buildDiagramDrawingXml, cycleBoxWidth, cycleShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { boxText, pointTextXml } from './text.js';
 
 /** The four OOXML diagram parts a `cycle` SmartArt diagram needs. */
 export interface SmartArtCycleOutput {
@@ -271,15 +272,13 @@ function buildCycleDataXml(
   const contentPts = nodes
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
-      const text = label ? `${label} : ${node.label}` : node.label;
+      const text = boxText(node, label);
       const fill = validateHexColor(node.fill, '');
       const spPr = fill
         ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
         : '<dgm:spPr/>';
       return (
-        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}` +
-        `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>` +
+        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text)}</dgm:pt>` +
         `<dgm:pt modelId="${parTransIds[i]}" type="parTrans"><dgm:prSet/></dgm:pt>` +
         `<dgm:pt modelId="${sibTransIds[i]}" type="sibTrans"><dgm:prSet/></dgm:pt>`
       );
@@ -349,7 +348,7 @@ function buildCycleDataXml(
         const fill = validateHexColor(node.fill, '');
         return {
           id: pMainIds.get(nodeIds[i] as string) as string,
-          text: label ? `${label} : ${node.label}` : node.label,
+          text: boxText(node, label),
           ...(fill ? { fill } : {}),
         };
       }),

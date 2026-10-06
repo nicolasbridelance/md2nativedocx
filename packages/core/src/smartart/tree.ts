@@ -20,10 +20,11 @@
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
-import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { validateHexColor } from '../translator/xml-escape.js';
 import { CONN_STYLE_DEF, buildColorsXml, buildStyleXml, connColorsDef, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, treeShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { boxText, pointTextXml } from './text.js';
 
 /** The four OOXML diagram parts a `tree` SmartArt diagram needs. */
 export interface SmartArtTreeOutput {
@@ -448,19 +449,12 @@ function buildTreeDataXml(
   const pConnIds = new Map(childIds.map((id) => [id, newModelId()]));
 
   const rootPt =
-    `<dgm:pt modelId="${rootId}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(root.fill)}` +
-    `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-    `<a:t>${escapeXml(root.label)}</a:t></a:r></a:p></dgm:t></dgm:pt>`;
+    `<dgm:pt modelId="${rootId}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(root.fill)}${pointTextXml(boxText(root))}</dgm:pt>`;
 
   const childPts = children
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
-      const text = label ? `${label} : ${node.label}` : node.label;
-      return (
-        `<dgm:pt modelId="${childIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(node.fill)}` +
-        `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`
-      );
+      return `<dgm:pt modelId="${childIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(node.fill)}${pointTextXml(boxText(node, label))}</dgm:pt>`;
     })
     .join('');
 
@@ -543,14 +537,14 @@ function buildTreeDataXml(
   const drawingXml = buildDiagramDrawingXml(
     treeShapes(
       flowchart.direction,
-      { id: pLevel1MainId, text: root.label, ...(rootFill ? { fill: rootFill } : {}) },
+      { id: pLevel1MainId, text: boxText(root), ...(rootFill ? { fill: rootFill } : {}) },
       children.map((node, i) => {
         const label = incomingLabel.get(node.id);
         const fill = validateHexColor(node.fill, '');
         return {
           id: pLevel2MainIds.get(childIds[i] as string) as string,
           connId: pConnIds.get(childIds[i] as string) as string,
-          text: label ? `${label} : ${node.label}` : node.label,
+          text: boxText(node, label),
           ...(fill ? { fill } : {}),
         };
       }),

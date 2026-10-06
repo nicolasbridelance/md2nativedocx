@@ -22,10 +22,11 @@
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
-import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { validateHexColor } from '../translator/xml-escape.js';
 import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, chainShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { boxText, pointTextXml, textLines } from './text.js';
 
 /** The four OOXML diagram parts a `chain` SmartArt diagram needs. */
 export interface SmartArtChainOutput {
@@ -441,6 +442,7 @@ function buildChainDataXml(
   layoutUrn: string,
   withDrawing: boolean,
   style: SmartArtStyle,
+  aspect: number,
 ): { xml: string; drawingXml?: string } {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
@@ -463,15 +465,13 @@ function buildChainDataXml(
   const contentPts = nodes
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
-      const text = label ? `${label} : ${node.label}` : node.label;
+      const text = boxText(node, label);
       const fill = validateHexColor(node.fill, '');
       const spPr = fill
         ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
         : '<dgm:spPr/>';
       const nodePt =
-        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}` +
-        `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`;
+        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text)}</dgm:pt>`;
       const parTransId = parTransIds[i];
       const sibTransId = sibTransIds[i];
       const transPts =
@@ -557,16 +557,42 @@ function buildChainDataXml(
         const fill = validateHexColor(node.fill, '');
         return {
           id: pMainIds.get(nodeIds[i] as string) as string,
-          text: label ? `${label} : ${node.label}` : node.label,
+          text: boxText(node, label),
           ...(fill ? { fill } : {}),
         };
       }),
       pSibTransIds,
       style,
+      aspect,
     ),
     style,
   );
   return { xml, drawingXml };
+}
+
+/** Box height / width of every chain layout above. */
+const CHAIN_BOX_ASPECT = 0.6;
+
+/**
+ * Box height / width for `nodes`: the layouts' 0.6, or taller when a box holds three or more lines (a
+ * `<br/>` label, a timeline period and its events) — 0.3 per line, at most 1.6.
+ */
+function chainBoxAspect(flowchart: Flowchart, nodes: FlowNode[]): number {
+  const incoming = incomingLabelByNodeId(flowchart);
+  const lines = Math.max(1, ...nodes.map((n) => textLines(boxText(n, incoming.get(n.id))).length));
+  return lines < 3 ? CHAIN_BOX_ASPECT : Math.min(1.6, Math.round(lines * 3) / 10);
+}
+
+/**
+ * A chain layout with taller boxes: only the box `h`/`w` constraint changes, under its own `uniqueId`
+ * (`…-h120` for 1.2) since a document keeps one definition per layout id.
+ */
+function tallChainLayout(base: { layoutXml: string; layoutUrn: string }, aspect: number): { layoutXml: string; layoutUrn: string } {
+  const layoutUrn = `${base.layoutUrn}-h${Math.round(aspect * 100)}`;
+  const layoutXml = base.layoutXml
+    .replace(`uniqueId="${base.layoutUrn}"`, `uniqueId="${layoutUrn}"`)
+    .replace(`<dgm:constr type="h" refType="w" fact="${CHAIN_BOX_ASPECT}"/>`, `<dgm:constr type="h" refType="w" fact="${aspect}"/>`);
+  return { layoutXml, layoutUrn };
 }
 
 /** Maps `flowchart.direction` to the matching layout XML/URN pair. */
@@ -596,8 +622,10 @@ const CHAIN_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: str
 export function generateChain(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtChainOutput {
   const style: SmartArtStyle = options.style ?? 'simple';
   const nodes = orderedChainNodes(flowchart);
-  const { layoutXml, layoutUrn } = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
-  const data = buildChainDataXml(flowchart, nodes, layoutUrn, options.drawing === true, style);
+  const aspect = chainBoxAspect(flowchart, nodes);
+  const base = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
+  const { layoutXml, layoutUrn } = aspect === CHAIN_BOX_ASPECT ? base : tallChainLayout(base, aspect);
+  const data = buildChainDataXml(flowchart, nodes, layoutUrn, options.drawing === true, style, aspect);
   return {
     dataXml: data.xml,
     layoutXml,

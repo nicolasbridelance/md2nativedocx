@@ -15,7 +15,8 @@
  */
 
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
-import type { Flowchart } from '../types.js';
+import type { Flowchart, LabelToken } from '../types.js';
+import { paragraphRunsXml, textLines } from './text.js';
 import { accentOf, profileOf, type SmartArtStyle } from './styles.js';
 
 /** Frame size (EMU) the diagram is embedded in — keep in sync with `embed.ts`'s defaults. */
@@ -62,7 +63,7 @@ export interface DrawingShape {
   /** `connector` only: the elbow line's corner points, in EMU relative to the shape's own top-left. */
   path?: Array<[number, number]>;
   /** Node text (absent for arrows). */
-  text?: string;
+  text?: LabelToken[];
   /** Font size in hundredths of a point. */
   fontSize?: number;
   /** `RRGGBB` override from `classDef`/`style`; otherwise the theme's accent colour. */
@@ -151,7 +152,7 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
       'numCol="1" spcCol="1270" anchor="ctr" anchorCtr="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>' +
       '<a:p><a:pPr marL="0" lvl="0" indent="0" algn="ctr"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:spcBef><a:spcPct val="0"/></a:spcBef>' +
       '<a:spcAft><a:spcPct val="35000"/></a:spcAft><a:buNone/></a:pPr>' +
-      `<a:r><a:rPr lang="fr-FR" sz="${sz}" kern="1200"/><a:t>${escapeXml(shape.text ?? '')}</a:t></a:r></a:p></dsp:txBody>`;
+      `${paragraphRunsXml(shape.text ?? [], ` sz="${sz}" kern="1200"`)}</a:p></dsp:txBody>`;
   const rect = `<a:off x="${shape.x}" y="${shape.y}"/><a:ext cx="${shape.cx}" cy="${shape.cy}"/>`;
   const geometry = isConn
     ? `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="0" b="0"/><a:pathLst><a:path>${(shape.path ?? [])
@@ -178,17 +179,27 @@ export function buildDiagramDrawingXml(shapes: DrawingShape[], style: SmartArtSt
   );
 }
 
-/** Largest font (1/100 pt, `minPt`-24 pt, default floor 10 pt) at which `labels` fit a `cx` x `cy` box in at most three lines. */
-export function fitFontSize(labels: string[], cx: number, cy: number, minPt = 10): number {
+/**
+ * Whether `labels` fit a `cx` x `cy` box at `size` pt without breaking a word: at most three wrapped lines, or one
+ * per explicit line break when a label has more.
+ */
+export function textFits(labels: LabelToken[][], cx: number, cy: number, size: number): boolean {
   const widthPt = cx / EMU_PER_PT;
   const heightPt = cy / EMU_PER_PT;
-  const longestWord = Math.max(1, ...labels.flatMap((l) => l.split(/\s+/).map((w) => w.length)));
-  const longest = Math.max(1, ...labels.map((l) => l.length));
+  const lineSets = labels.map(textLines);
+  const words = lineSets.flatMap((lines) => lines.flatMap((l) => l.split(/\s+/)));
+  const longestWord = Math.max(1, ...words.map((w) => w.length));
+  const maxLines = Math.max(3, ...lineSets.map((lines) => lines.length));
+  const usable = widthPt - 2 * size * 0.3;
+  const perLine = Math.max(1, Math.floor(usable / (size * 0.55)));
+  const lines = Math.max(1, ...lineSets.map((ls) => ls.reduce((sum, l) => sum + Math.max(1, Math.ceil(l.length / perLine)), 0)));
+  return longestWord <= perLine && lines <= maxLines && lines * size * 1.1 <= heightPt;
+}
+
+/** Largest font (1/100 pt, `minPt`-24 pt, default floor 10 pt) at which `labels` fit a `cx` x `cy` box ({@link textFits}). */
+export function fitFontSize(labels: LabelToken[][], cx: number, cy: number, minPt = 10): number {
   for (let size = 24; size > minPt; size -= 1) {
-    const usable = widthPt - 2 * size * 0.3;
-    const perLine = Math.max(1, Math.floor(usable / (size * 0.55)));
-    const lines = Math.ceil(longest / perLine);
-    if (longestWord <= perLine && lines <= 3 && lines * size * 1.1 <= heightPt) return size * 100;
+    if (textFits(labels, cx, cy, size)) return size * 100;
   }
   return minPt * 100;
 }
@@ -196,37 +207,38 @@ export function fitFontSize(labels: string[], cx: number, cy: number, minPt = 10
 interface Labelled {
   /** Presentation point id of the node's shape. */
   id: string;
-  text: string;
+  text: LabelToken[];
   fill?: string;
   /** Presentation point id of the connector line leading into this node (tree children only). */
   connId?: string;
 }
 
+/** Box width/height and gap (EMU) of an `n`-box chain in the default frame, box height `aspect` of its width. */
+export function chainBoxSize(direction: Flowchart['direction'], n: number, aspect = 0.6): { bw: number; bh: number; gap: number } {
+  const { cx: FW, cy: FH } = DRAWING_FRAME;
+  if (direction === 'LR' || direction === 'RL') {
+    const bw = Math.min(FW / (n + 0.4 * (n - 1)), FH / aspect);
+    return { bw, bh: aspect * bw, gap: 0.4 * bw };
+  }
+  const bh = Math.min(FH / (n + 0.45 * (n - 1)), aspect * FW);
+  return { bw: bh / aspect, bh, gap: 0.45 * bh };
+}
+
 /**
  * Chain geometry: `n` boxes in a row (or column) with a transition arrow between consecutive ones,
- * using the `layoutDef`'s ratios — box height 0.6 of its width, transition 0.4 of a box wide.
+ * using the `layoutDef`'s ratios — box height `aspect` (default 0.6) of its width, transition 0.4 of a box wide.
  */
 export function chainShapes(
   direction: Flowchart['direction'],
   nodes: Labelled[],
   transIds: string[],
   style: SmartArtStyle = 'simple',
+  aspect = 0.6,
 ): DrawingShape[] {
   const n = nodes.length;
   const horizontal = direction === 'LR' || direction === 'RL';
   const { cx: FW, cy: FH } = DRAWING_FRAME;
-  let bw: number;
-  let bh: number;
-  let gap: number;
-  if (horizontal) {
-    bw = Math.min(FW / (n + 0.4 * (n - 1)), FH / 0.6);
-    bh = 0.6 * bw;
-    gap = 0.4 * bw;
-  } else {
-    bh = Math.min(FH / (n + 0.45 * (n - 1)), 0.6 * FW);
-    bw = bh / 0.6;
-    gap = 0.45 * bh;
-  }
+  const { bw, bh, gap } = chainBoxSize(direction, n, aspect);
   const total = n * (horizontal ? bw : bh) + (n - 1) * gap;
   const start = ((horizontal ? FW : FH) - total) / 2;
   const reverse = direction === 'RL' || direction === 'BT';
@@ -466,7 +478,7 @@ export function deepTreeShapes(
     return horizontal ? { x: flow, y: c, cx: fs, cy: cs } : { x: c, y: flow, cx: cs, cy: fs };
   };
 
-  const labels: string[] = [];
+  const labels: LabelToken[][] = [];
   const collect = (n: DeepTreeNode): void => {
     labels.push(n.text);
     n.children.forEach(collect);
