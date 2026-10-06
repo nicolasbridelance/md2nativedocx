@@ -1021,6 +1021,10 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       en vrai Word (CHECKLIST Round 19, v17, `no-drawing` compris). Option ouverte
       (décision produit) : `venn-beta` sans texte d'intersection en SmartArt « Venn simple » ; `quadrantChart`
       reste en formes (les points `[x, y]` n'ont pas d'équivalent SmartArt).
+- [x] **Formes Mermaid par nœud dans les SmartArt (2026-10-06, confirmé en vrai Word, v18)** — losange, cercle,
+      cylindre, hexagone… en override `a:prstGeom` sur le point de présentation de la boîte, comme Word écrit
+      *Changer la forme* (`smartart/node-shape.ts`, `41f74ae`). CHECKLIST Round 20 : formes redessinées par Word en
+      `no-drawing`, *Rétablir la forme* OK.
 - [ ] **SmartArt « pixel perfect » : pas de conclusion à ce jour (2026-10-05)** — `smartArt.enabled`
       reste à `false` par défaut. ADR 0006 : corruption corrigée (ids `modelId`) mais « en attente de
       confirmation Word réelle finale » ; `smartart-cycle-recheck.docx` rend encore des formes vides

@@ -546,18 +546,18 @@ Word writes right-click > Change Shape (an `a:prstGeom` on the box's presentatio
 `smartart-v18-node-shapes-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`.
 
 - [x] All three open with no repair prompt.
-- [ ] Chain: diamond "Valide ?", cylinder "Base", circle "Fin"; tree: hexagon root, parallelogram, subroutine, flag;
+- [x] Chain: diamond "Valide ?", cylinder "Base", circle "Fin"; tree: hexagon root, parallelogram, subroutine, flag;
       cycle: circle, diamond, cylinder, plain box.
-- [ ] **`no-drawing`**: Word itself draws the same shapes (the override survives Word's own layout).
-- [ ] Click a shaped box > SmartArt Format > Change Shape shows its shape; Reset Shape brings back the default box.
-- [ ] Add a step in the Text Pane: the new box gets the default shape, the others keep theirs.
+- [x] **`no-drawing`**: Word itself draws the same shapes (the override survives Word's own layout).
+- [x] Click a shaped box > SmartArt Format > Change Shape shows its shape; Reset Shape brings back the default box.
+- [x] Add a step in the Text Pane: the new box gets the default shape, the others keep theirs.
 - Verified here: Open XML validator, 0 errors under `/word/diagrams` and in `document.xml`; LibreOffice renders the
   cached drawing with the shapes.
 - Known: the font is shared by every box of a diagram, sized for the smaller text area of a diamond or circle, so a
   chain with a diamond has slightly smaller text overall. Mirrored variants (`[\Text\]`) keep the unmirrored shape.
 
-**Result (maintainer, real Word, 2026-10-06): "v18 s'ouvre parfaitement".** Opening confirmed; the shape-specific
-items above (shapes redrawn by Word in `no-drawing`, Reset Shape) not reported item by item yet.
+**Result (maintainer, real Word, 2026-10-06): "v18 s'ouvre parfaitement".** Then "oui tout marche": shapes redrawn by
+Word in `no-drawing` and Reset Shape confirmed too. Per-node shapes in SmartArt are validated.
 
 ## Recording the result
 
