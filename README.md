@@ -1,11 +1,16 @@
-# md2nativedocx — Markdown to Word, with diagrams your readers can edit
+# md2nativedocx — complete Markdown to Word conversion, with diagrams your readers can edit
 
 [![CI](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](LICENSE)
 
-**Write in Markdown. Hand over a Word document anyone can keep editing — diagrams included.**
+**A complete Markdown-to-Word converter. The whole document becomes a proper `.docx`, and its Mermaid diagrams
+stay editable in Word.**
+
+Headings, tables, lists, footnotes, code, LaTeX math (as Word equations), a table of contents, page size,
+margins, fonts and your company's Word template: `md2nativedocx` does everything you expect from a Markdown to
+Word converter, on top of Pandoc. What sets it apart is the diagrams.
 
 You (or an AI assistant) write a report, a spec or a proposal in Markdown, with Mermaid diagrams in it. The
 people who receive it work in Word. With today's converters, the text arrives fine but every diagram arrives
@@ -24,8 +29,7 @@ so the people who own the document after you can change it in Word, without Mark
 - **Send it with confidence:** every file is checked against Word's own file-format rules before you get it.
 
 All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
-graph, …), and so is the rest of the Markdown: headings, tables, lists, footnotes, code, LaTeX math (as
-Word equations). Use it from the
+graph, …). A document without any diagram converts just as well. Use it from the
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (one
 click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc filter. It can also write a
 `.pptx` deck. Public domain (CC0).

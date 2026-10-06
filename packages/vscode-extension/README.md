@@ -1,11 +1,12 @@
-# md2nativedocx — Markdown to Word, with diagrams your readers can edit
+# md2nativedocx — complete Markdown to Word conversion, with diagrams your readers can edit
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
 
 **Write in Markdown. Hand over a Word document anyone can keep editing — diagrams included.**
 
-One click exports your Markdown to a complete `.docx`: text, tables, footnotes, LaTeX math. The difference is
+One click exports your Markdown to a complete `.docx`: headings, tables, lists, footnotes, code, LaTeX math, a
+table of contents, your page layout, fonts and company template, with or without diagrams. The difference is
 what happens to the Mermaid diagrams. Elsewhere they become pictures, and fixing a typo in one box means
 finding the source and re-exporting. Here they become **real Word objects** that the people you send the
 document to can edit in Word, without Markdown, Mermaid or you:

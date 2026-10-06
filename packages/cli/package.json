@@ -1,7 +1,7 @@
 {
   "name": "@md2nativedocx/cli",
   "version": "0.1.0",
-  "description": "Markdown to Word (.docx) or PowerPoint (.pptx) with editable diagrams — all 29 Mermaid types become real shapes, SmartArt and charts that readers can change in Word, not flattened PNGs.",
+  "description": "Complete Markdown to Word (.docx) converter, or PowerPoint (.pptx), with editable diagrams — all 29 Mermaid types become real shapes, SmartArt and charts that readers can change in Word, not flattened PNGs.",
   "license": "CC0-1.0",
   "repository": {
     "type": "git",

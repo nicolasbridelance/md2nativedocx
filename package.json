@@ -1,7 +1,7 @@
 {
   "name": "md2nativedocx",
   "version": "0.1.0",
-  "description": "Markdown to Word (.docx) with editable diagrams — Mermaid diagrams become real Word shapes, SmartArt and charts that readers can change in Word, not flattened PNGs.",
+  "description": "Complete Markdown to Word (.docx) converter with editable diagrams — Mermaid diagrams become real Word shapes, SmartArt and charts that readers can change in Word, not flattened PNGs.",
   "license": "CC0-1.0",
   "private": true,
   "type": "module",

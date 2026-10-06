@@ -1,5 +1,5 @@
 {
-  "extension.description": "将 Markdown 导出为 Word（.docx）—— Mermaid 图表在 Word 中仍可编辑：真正的形状、SmartArt 和图表，而非图片。",
+  "extension.description": "将 Markdown 导出为完整的 Word 文档（.docx）：标题、表格、脚注、公式、目录。Mermaid 图表在 Word 中仍可编辑：真正的形状、SmartArt 和图表，而非图片。",
   "command.exportDocument.title": "导出为 Word",
   "command.exportDocument.shortTitle": "导出为 Word",
   "command.exportBlock.title": "导出此图表…",

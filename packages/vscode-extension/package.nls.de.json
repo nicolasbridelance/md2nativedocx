@@ -1,5 +1,5 @@
 {
-  "extension.description": "Exportiert Markdown nach Word (.docx) — und die Mermaid-Diagramme bleiben in Word bearbeitbar: echte Formen, SmartArt und Diagramme statt Bilder.",
+  "extension.description": "Exportiert Markdown in ein vollständiges Word-Dokument (.docx): Überschriften, Tabellen, Fußnoten, Formeln, Inhaltsverzeichnis. Und die Mermaid-Diagramme bleiben in Word bearbeitbar: echte Formen, SmartArt und Diagramme statt Bilder.",
   "command.exportDocument.title": "Nach Word exportieren",
   "command.exportDocument.shortTitle": "Nach Word exportieren",
   "command.exportBlock.title": "Dieses Diagramm exportieren…",
