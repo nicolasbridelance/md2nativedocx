@@ -1,6 +1,6 @@
 {
   "name": "md2nativedocx",
-  "displayName": "md2nativedocx — Markdown to native Word (.docx), Mermaid included",
+  "displayName": "md2nativedocx — Markdown to Word with editable diagrams",
   "description": "%extension.description%",
   "version": "0.5.6",
   "publisher": "md2nativedocx",

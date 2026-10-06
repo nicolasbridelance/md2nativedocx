@@ -1,13 +1,23 @@
-# md2nativedocx — Markdown to native Word (.docx), Mermaid diagrams included
+# md2nativedocx — Markdown to Word, with diagrams your readers can edit
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
 
-**Convert Markdown to native Word — Mermaid diagrams included, as editable Word objects instead of pictures.** (`md` = Markdown, the input; *native* describes the Word output.) Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
-LaTeX math — with one standout difference: if the document contains Mermaid diagrams, those don't
-get flattened into an image like everywhere else. They become real vector Word shapes
-(OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
-once the file is open in Word.
+**Write in Markdown. Hand over a Word document anyone can keep editing — diagrams included.**
+
+One click exports your Markdown to a complete `.docx`: text, tables, footnotes, LaTeX math. The difference is
+what happens to the Mermaid diagrams. Elsewhere they become pictures, and fixing a typo in one box means
+finding the source and re-exporting. Here they become **real Word objects** that the people you send the
+document to can edit in Word, without Markdown, Mermaid or you:
+
+- **Fix a diagram like any Word drawing:** retype a label, drag a box; the arrows stay attached.
+- **Match the company look:** recolour any shape; flowcharts and SmartArt follow the theme colours, and SmartArt restyles from Word's SmartArt Design tab.
+- **Update a chart's figures:** pie, bar/line and radar charts can be native Word charts with *Edit Data* (opt-in).
+- **Grow an org chart or a process:** tree, chain and cycle flowcharts can become SmartArt (opt-in); add a step in one click.
+- **Send it with confidence:** every export is checked against Word's own file-format rules.
+
+All 29 Mermaid diagram types are supported. (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
+means Word's own editable objects, not pictures.)
 
 <img src="docs/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
 

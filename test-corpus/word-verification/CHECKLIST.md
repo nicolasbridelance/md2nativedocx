@@ -373,15 +373,20 @@ levels and 8 leaves; other directions still fall back to native shapes. Nested-l
 definition only). Five SmartArt trees (3 levels uneven, 4 levels, edge labels + one forced colour, 5 levels, 8
 leaves) and a sixth `LR` tree that must stay native shapes.
 
-- [ ] All three open with no repair prompt.
+- [x] All three open with no repair prompt.
 - [ ] Each diagram shows boxes at every level with a line from each parent to each child, parents centred over
       their children, nothing overlapping.
 - [ ] Do "with drawing" and "no drawing" look alike? (`no-drawing` is Word laying the diagram out from our
       `layoutDef` alone: this is the real test of the `hierRoot`/`hierChild` recursion.)
-- [ ] Edit a text, add a child to a leaf, add a grandchild in Word: lines follow, nothing breaks.
+- [x] Edit a text, add a child to a leaf, add a grandchild in Word: lines follow, nothing breaks.
 - [ ] Section 6 (`LR`) is ordinary native shapes, not SmartArt.
 - Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing.
 - Known: with 8 leaves the boxes are ~0.5 in wide and long words (e.g. "Organisation") wrap mid-word at 10 pt.
+
+**Result (maintainer, real Word, 2026-10-06): all three files open fine. Growing a tree in Word up to depth 10
+and 23 leaves works with no problem**, so the `hierRoot`/`hierChild` recursion holds well beyond the generator's
+caps (5 levels, 8 leaves), which are a legibility choice for the export, not a Word limit. Not yet answered:
+"with drawing" vs "no drawing" side by side, and section 6 staying native shapes.
 
 ## Recording the result
 
