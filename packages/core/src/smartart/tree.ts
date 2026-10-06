@@ -64,7 +64,7 @@ export const TREE_LAYOUT_RL_URN = 'urn:md2nativedocx/smartart-layout/tree1-rl';
  *
  * Verified empirically by rendering this exact XML under headless
  * LibreOffice with a hand-built `presOf`/`presParOf` mirror (this session,
- * `docs/adr/spikes/spike-smartart/custom-algo/`): renders a root box above
+ * `docs/adr/spikes/spike-smartart/spike.md`): renders a root box above
  * a correctly-styled 2-box child row. Two bugs found and fixed en route,
  * both against the file that had shipped in the spike, neither ever caught
  * by the (XML-structure-only) unit test suite:
