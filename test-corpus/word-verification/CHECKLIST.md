@@ -399,16 +399,20 @@ from the ECMA-376 enumerations, not from a Word sample: **the `no-drawing` file 
 `smartart-v12-deep-trees-directions-colorful.docx`, `-intense.docx` (cached drawing), `-colorful-no-drawing.docx`.
 Same 4-level tree in `LR`, `BT`, `RL`, `TD` (reference), then a 16-leaf tree and an 8-level tree.
 
-- [ ] All three open with no repair prompt.
-- [ ] `no-drawing`: are `LR`, `BT`, `RL` laid out by Word in the right direction (root left / bottom / right),
+- [x] All three open with no repair prompt.
+- [x] `no-drawing`: are `LR`, `BT`, `RL` laid out by Word in the right direction (root left / bottom / right),
       children aligned, lines attached? If one comes out top-down or jumbled, that direction's parameters are
       wrong — a hand-made Word "Horizontal Hierarchy" sample would then settle it.
-- [ ] Add a child in Word to the `LR` tree: it grows to the right, not downwards.
-- [ ] Section 5 (16 leaves): readable in Word? (In the cached drawing the boxes are ~7 mm wide and words break.)
+- [x] Add a child in Word to the `LR` tree: it grows to the right, not downwards.
+- [x] Section 5 (16 leaves): readable in Word? (In the cached drawing the boxes are ~7 mm wide and words break.)
 - Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing in
   all four directions with no overlap.
 - Known: past ~12 leaves the cached drawing is too narrow to read in portrait. A fix would be to stack a parent's
   leaf children in a column under it (org-chart style, `hierChild` secondary direction) — not done.
+
+**Result (maintainer, real Word, 2026-10-06): works perfectly in all four directions, `no-drawing` included — the
+ECMA direction parameters are what Word expects. The 16-leaf tree is "vaguely readable".** Multi-level trees are
+validated; wide trees are the open point (leaf columns, see above).
 
 ## Recording the result
 
