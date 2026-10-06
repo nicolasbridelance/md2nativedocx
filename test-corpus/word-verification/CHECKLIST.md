@@ -443,6 +443,27 @@ must keep the row layout.
 **Result (maintainer, real Word, 2026-10-06): v13 validated, everything works.** The compact org-chart layout
 is confirmed, `no-drawing` included.
 
+## Round 17 — 2026-10-06: mindmap and treeView as SmartArt (v14)
+
+`mindmap` and `treeView-beta` are already trees, so with SmartArt on they now go through the validated tree
+generators (`smartart/from-tree.ts`): mindmap left to right, file tree top-down (the compact layout stacks each
+folder's files in a column). Not through the flowchart classifier, so a straight-line mindmap stays a hierarchy,
+never a chain with arrows. Lost compared with the shape-built rendering: the mindmap's radial layout and node
+shapes, the file tree's bold folders and italic descriptions (folded into the text as `name — description`). A
+file tree with several top-level entries is not one tree and keeps the shape-built rendering.
+
+`smartart-v14-mindmap-treeview-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`: a 3-level mindmap, a
+2-level mindmap, a one-root file tree (with a highlighted file), and a two-root file tree (must stay shapes).
+
+- [ ] All three open with no repair prompt.
+- [ ] Sections 1-3 are SmartArt (click: SmartArt Design tab appears); section 4 is plain shapes.
+- [ ] `no-drawing`: Word lays the mindmap out left to right and the file tree with its columns.
+- [ ] Is a SmartArt hierarchy an acceptable stand-in for a mindmap, compared with the radial shapes you get
+      with SmartArt off? (Product call: it could also stay shapes and only `treeView` switch.)
+- Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing.
+- Known: the 2-level mindmap goes through the original 2-level generator, whose root takes a full-height 35%
+  strip — correct but oversized next to the children. The file tree's font is small (17 boxes, compact layout).
+
 ## Recording the result
 
 Once done, either:

@@ -84,6 +84,8 @@ import {
   parseVennChart,
   translateVennToOoxml,
   parseMindmap,
+  generateMindmapSmartArt,
+  generateTreeViewSmartArt,
   translateMindmapToOoxml,
   parseClassDiagram,
   translateClassDiagramToOoxml,
@@ -161,19 +163,22 @@ function translateOptionsFromEnv() {
 }
 
 /**
- * Try the SmartArt path for `ast`; returns the `<w:p>` fragment to emit, or
+ * Try the SmartArt path; `generate(options)` runs the generator for this
+ * diagram (`generateSmartArt` for a flowchart, `generateMindmapSmartArt` /
+ * `generateTreeViewSmartArt` for those tree-shaped types) and returns its
+ * parts or `null`. Returns the `<w:p>` fragment to emit, or
  * `null` to fall back to the `wpg:wgp` translator. Never throws — any
  * failure here (including `generateSmartArt` itself, defensively) falls
  * back rather than failing the whole export over an alternate rendering
  * path that was never guaranteed in the first place.
  */
-function trySmartArt(ast, smartArtDir) {
+function trySmartArt(generate, smartArtDir) {
   if (!smartArtDir) return null;
   try {
     // The pre-rendered dsp:drawing (fifth part) is opt-in until a real Word confirms it.
     const requestedStyle = process.env.MD2NATIVEDOCX_SMARTART_STYLE;
     const style = SMARTART_STYLES.includes(requestedStyle) ? requestedStyle : 'simple';
-    const generated = generateSmartArt(ast, { drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING === '1', style });
+    const generated = generate({ drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING === '1', style });
     if (!generated) return null;
 
     const id = randomUUID();
@@ -257,7 +262,10 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateMindmapToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, a mindmap becomes a left-to-right SmartArt hierarchy (editable as such in Word);
+    // otherwise, or if it cannot (empty, too deep), the radial shape-built mindmap.
+    const smartArtXml = trySmartArt((options) => generateMindmapSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ?? translateMindmapToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'class') {
     // Fifth non-flowchart diagram type shipped (swimlane-beta, the fourth,
     // is a flowchart alias with no dedicated branch here — see
@@ -385,7 +393,9 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateTreeViewToOoxml(ast, translateOptionsFromEnv()));
+    // Same as mindmap: a top-down SmartArt hierarchy when SmartArt is on and the file tree has one root.
+    const smartArtXml = trySmartArt((options) => generateTreeViewSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ?? translateTreeViewToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'radar') {
     // Twenty-first non-flowchart diagram type shipped, tenth of Family D.
     const { ast, warnings } = parseRadar(input);
@@ -471,7 +481,7 @@ try {
     }
 
     const smartArtDir = process.env.MD2NATIVEDOCX_SMARTART_DIR;
-    const smartArtXml = trySmartArt(ast, smartArtDir);
+    const smartArtXml = trySmartArt((options) => generateSmartArt(ast, options), smartArtDir);
     if (smartArtXml) {
       process.stdout.write(smartArtXml);
     } else {

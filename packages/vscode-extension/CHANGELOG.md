@@ -16,6 +16,8 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 - SmartArt trees with grandchildren (up to 10 levels, any width, all four directions) are now real SmartArt
   instead of falling back to native shapes; each subtree gets room in proportion to its leaves. A wide
   top-down tree switches to an org-chart layout (leaves in a column under their parent) to stay readable.
+- With SmartArt on, `mindmap` (left to right) and single-root `treeView-beta` (top-down) diagrams become
+  SmartArt hierarchies too. The SmartArt setting's description no longer calls it experimental.
 - New settings `md2nativedocx.smartArt.style` (`simple` | `colorful` — default | `intense`) and
   `md2nativedocx.smartArt.preRenderedDrawing` (default on) for SmartArt diagrams: a different theme
   accent per shape, optionally the theme's gradient + drop shadow, and the cached drawing Word itself

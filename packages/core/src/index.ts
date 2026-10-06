@@ -205,6 +205,13 @@ export type { SmartArtCycleOutput } from './smartart/cycle.js';
 // (spec §7 step 5). Pure — no filesystem/ZIP knowledge, see dispatch.ts.
 export { generateSmartArt } from './smartart/dispatch.js';
 export type { SmartArtGenerated } from './smartart/dispatch.js';
+// SmartArt for diagram types that are already trees (mindmap, treeView-beta), through the tree generators.
+export {
+  generateMindmapSmartArt,
+  generateTreeViewSmartArt,
+  mindmapToFlowchart,
+  treeViewToFlowchart,
+} from './smartart/from-tree.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
 export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';
