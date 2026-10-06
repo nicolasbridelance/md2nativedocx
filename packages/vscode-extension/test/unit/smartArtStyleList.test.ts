@@ -16,5 +16,8 @@ function coreProfileNames(): string[] {
 test('the settings enum and constant list the same SmartArt profiles as the core', () => {
   assert.deepEqual([...SMARTART_STYLE_NAMES], coreProfileNames());
   const pkg = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'package.json'), 'utf8'));
-  assert.deepEqual(pkg.contributes.configuration.properties['md2nativedocx.smartArt.style'].enum, coreProfileNames());
+  // Settings are grouped into sections (an array), each with its own `properties`.
+  const sections = pkg.contributes.configuration as Array<{ properties: Record<string, { enum?: string[] }> }>;
+  const style = sections.map((section) => section.properties['md2nativedocx.smartArt.style']).find(Boolean);
+  assert.deepEqual(style?.enum, coreProfileNames());
 });

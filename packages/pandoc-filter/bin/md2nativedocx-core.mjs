@@ -203,6 +203,13 @@ function trySmartArt(generate, smartArtDir) {
   }
 }
 
+/** `MD2NATIVEDOCX_NATIVE_CHARTS`: `1` enables every chart type, a comma-separated list only those types. */
+function nativeChartTypeEnabled(type) {
+  const value = (process.env.MD2NATIVEDOCX_NATIVE_CHARTS ?? '').trim();
+  if (value === '1') return true;
+  return value.split(',').map((t) => t.trim()).includes(type);
+}
+
 /**
  * Opt-in native Word chart (ADR 0011) for `pie`, `xychart` and `radar`. Same hand-off as SmartArt: the
  * chart part and the workbook data are written to `<MD2NATIVEDOCX_CHART_DIR>/<random id>/` and the
@@ -210,10 +217,11 @@ function trySmartArt(generate, smartArtDir) {
  * replaces. Never throws: any failure (including a diagram Word cannot chart, e.g. a horizontal xychart
  * with a line series) falls back to the shape-built diagram and says why on stderr.
  *
+ * @param {'pie' | 'xychart' | 'radar'} type
  * @param {(chartId: string, options: object) => import('@md2nativedocx/core').NativeChart} translate
  */
-function tryNativeChart(translate, chartDir, options) {
-  if (!chartDir) return null;
+function tryNativeChart(type, translate, chartDir, options) {
+  if (!chartDir || !nativeChartTypeEnabled(type)) return null;
   try {
     const id = randomUUID();
     const embedWorkbook = process.env.MD2NATIVEDOCX_CHART_WORKBOOK !== '0';
@@ -347,6 +355,7 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     const nativeChart = tryNativeChart(
+      'pie',
       (id, o) => translatePieToChart(ast, id, o),
       process.env.MD2NATIVEDOCX_CHART_DIR,
       translateOptionsFromEnv(),
@@ -403,6 +412,7 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     const nativeChart = tryNativeChart(
+      'radar',
       (id, o) => translateRadarToChart(ast, id, o),
       process.env.MD2NATIVEDOCX_CHART_DIR,
       translateOptionsFromEnv(),
@@ -422,6 +432,7 @@ try {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
     const nativeChart = tryNativeChart(
+      'xychart',
       (id, o) => translateXyChartToChart(ast, id, o),
       process.env.MD2NATIVEDOCX_CHART_DIR,
       translateOptionsFromEnv(),

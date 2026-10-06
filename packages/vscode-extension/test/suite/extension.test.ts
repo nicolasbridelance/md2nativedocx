@@ -60,11 +60,10 @@ suite('md2nativedocx extension host', () => {
     const onBlock = lenses.filter((l) => l.range.start.line > 0);
     assert.equal(onBlock.length, 2, 'what the diagram becomes + Export this diagram…');
     assert.ok(onBlock.some((l) => l.command?.command === 'md2nativedocx.exportBlock'));
-    // Default settings (SmartArt off) on `A --> B`: Word shapes, with SmartArt offered — the lens is the enable action.
+    // Default settings (SmartArt on since the UX review, D1) on `A --> B`: a SmartArt process, plain text.
     const plan = onBlock.find((l) => l.command?.command !== 'md2nativedocx.exportBlock');
     assert.match(plan?.command?.title ?? '', /SmartArt/);
-    assert.equal(plan?.command?.command, 'md2nativedocx.enableSetting');
-    assert.deepEqual(plan?.command?.arguments, ['smartArt.enabled']);
+    assert.equal(plan?.command?.command, '');
   });
 
   test('hovering the ```mermaid line explains what the diagram becomes in Word', async () => {
@@ -74,7 +73,7 @@ suite('md2nativedocx extension host', () => {
     const hovers = (await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', doc.uri, new vscode.Position(fence, 3))) ?? [];
     const text = hovers.flatMap((h) => h.contents.map((c) => (typeof c === 'string' ? c : c.value))).join('\n');
     assert.match(text, /Flowchart/);
-    assert.match(text, /command:md2nativedocx\.enableSetting/);
+    assert.match(text, /SmartArt/);
   });
 
   test('a Markdown document with no mermaid block: Word and Settings only (no deck to make)', async () => {
@@ -86,7 +85,7 @@ suite('md2nativedocx extension host', () => {
     const lenses = await codeLensesFor(vscode.Uri.file(MMD_FIXTURE));
     assert.deepEqual(
       lenses.map((l) => l.command?.command).sort(),
-      ['md2nativedocx.enableSetting', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings'],
+      ['', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings'],
       'the .mmd diagram\'s own "what it becomes" lens sits on line 0 too',
     );
   });
@@ -96,6 +95,20 @@ suite('md2nativedocx extension host', () => {
     const top = lenses.filter((l) => l.range.start.line === 0).map((l) => l.command?.command).sort();
     assert.deepEqual(top, ['md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
     assert.ok(lenses.some((l) => l.command?.command === 'md2nativedocx.exportBlock' && l.range.start.line > 0));
+  });
+
+  test('settings come in six titled sections, SmartArt and native charts on by default', async () => {
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext);
+    const sections = ext.packageJSON.contributes.configuration as Array<{ id: string; properties: Record<string, { default?: unknown }> }>;
+    assert.deepEqual(
+      sections.map((sec) => sec.id),
+      ['md2nativedocx.output', 'md2nativedocx.diagrams', 'md2nativedocx.layout', 'md2nativedocx.typography', 'md2nativedocx.structure', 'md2nativedocx.advanced'],
+    );
+    const config = vscode.workspace.getConfiguration('md2nativedocx');
+    assert.equal(config.get('smartArt.enabled'), true);
+    assert.equal(config.get('nativeCharts.enabled'), true);
+    assert.equal(config.get('nativeCharts.includeUnverified'), false);
   });
 
   test('right-click (Explorer, editor, tab bar) opens an md2nativedocx submenu for .md/.mmd/.qmd', async () => {

@@ -6,7 +6,7 @@
   "command.exportBlock.shortTitle": "Exporter ce diagramme…",
   "configuration.outputDirectory.markdownDescription": "Dossier de sortie des fichiers `.docx` générés. Vide (par défaut) = même dossier que le fichier `.md` source — aucune configuration requise avant le premier usage.",
   "configuration.referenceDocument.markdownDescription": "Chemin d'un fichier `.docx` utilisé comme modèle Word pour chaque export (équivalent de l'option `--reference-doc` de Pandoc) — pointez vers le modèle de votre entreprise pour reprendre ses polices, couleurs et styles. Vide (par défaut) = modèle intégré à l'extension. Les chemins relatifs sont résolus par rapport au dossier de l'espace de travail.",
-  "configuration.smartArt.enabled.markdownDescription": "Désactivé par défaut. Activé, un flowchart en forme de chaîne, d'arbre (jusqu'à 10 niveaux, arbres larges en disposition d'organigramme) ou de cycle, ainsi que les diagrammes `mindmap` et `treeView-beta` à une seule racine, deviennent des graphiques SmartArt natifs : ajout d'une étape ou d'une branche, changement de style ou de couleurs depuis l'onglet Création SmartArt de Word. Les autres diagrammes restent en formes éditables individuelles. Vérifié dans Word réel.",
+  "configuration.smartArt.enabled.markdownDescription": "Activé par défaut (désactivez pour garder chaque diagramme en formes individuelles). Activé, un flowchart en forme de chaîne, d'arbre (jusqu'à 10 niveaux, arbres larges en disposition d'organigramme) ou de cycle, ainsi que les diagrammes `mindmap` et `treeView-beta` à une seule racine, deviennent des graphiques SmartArt natifs : ajout d'une étape ou d'une branche, changement de style ou de couleurs depuis l'onglet Création SmartArt de Word. Les autres diagrammes restent en formes éditables individuelles. Vérifié dans Word réel.",
   "configuration.smartArt.style.markdownDescription": "Apparence des SmartArt produits quand `#md2nativedocx.smartArt.enabled#` est activé. Ils restent de vrais SmartArt dans tous les cas : on peut les remettre en forme depuis l'onglet Création de SmartArt de Word.",
   "configuration.smartArt.style.simple": "Une seule couleur d'accent, remplissage uni.",
   "configuration.smartArt.style.colorful": "Une couleur d'accent différente du thème par forme (comme « Coloré – Nuances d'accentuation » de Word).",
@@ -16,7 +16,7 @@
   "configuration.smartArt.style.colorful-moderate": "Une couleur d'accent différente par forme, dégradé doux, ombre légère et contour blanc.",
   "configuration.smartArt.style.intense": "Coloré, avec le dégradé du thème, une ombre portée et un contour blanc plus épais.",
   "configuration.smartArt.preRenderedDrawing.markdownDescription": "Intègre le dessin pré-calculé que Word enregistre toujours avec un SmartArt : Word et LibreOffice affichent les mêmes formes tant que le diagramme n'est pas modifié. Désactivé, chaque application calcule sa propre mise en page.",
-  "configuration.nativeCharts.enabled.markdownDescription": "Désactivé par défaut. Activé, un `pie`, `xychart` ou `radar` Mermaid devient un graphique Word natif avec un classeur embarqué (Création de graphique → Modifier les données permet de changer les valeurs) au lieu de formes modifiables. Tous les diagrammes ne sont pas éligibles (par exemple un `xychart` horizontal avec une série `line` reste en formes, avec un avertissement). Le graphique garde l'apparence propre à Word, pas celle de Mermaid.",
+  "configuration.nativeCharts.enabled.markdownDescription": "Activé par défaut : un `pie` Mermaid devient un graphique Word natif avec un classeur embarqué (Création de graphique → Modifier les données change les valeurs) au lieu de formes modifiables. Le graphique garde l'apparence de Word, pas celle de Mermaid. Les `xychart` et `radar` dépendent de #md2nativedocx.nativeCharts.includeUnverified#.",
   "walkthrough.title": "md2nativedocx — Diagrammes Mermaid vers Word",
   "walkthrough.description": "Exportez vos diagrammes Mermaid en formes Word natives, éditables — pas des images PNG figées.",
   "walkthrough.step1.title": "Ouvrez un document Markdown",
@@ -31,5 +31,12 @@
   "command.exportBlockPptx.title": "Exporter ce diagramme en PowerPoint",
   "command.openSettings.title": "Réglages",
   "configuration.pptx.showSource.markdownDescription": "Export PowerPoint : afficher la source Mermaid de chaque diagramme dans un panneau à côté de lui, sur sa diapositive.",
-  "command.enableSetting.title": "Activer un réglage de diagramme"
+  "command.enableSetting.title": "Activer un réglage de diagramme",
+  "configuration.section.output": "Sortie",
+  "configuration.section.diagrams": "Diagrammes",
+  "configuration.section.layout": "Mise en page",
+  "configuration.section.typography": "Typographie",
+  "configuration.section.structure": "Structure du document",
+  "configuration.section.advanced": "Avancé",
+  "configuration.nativeCharts.includeUnverified.markdownDescription": "Faire aussi des `xychart` et `radar` des graphiques Word natifs. Désactivé par défaut : ces graphiques respectent le format de fichier Word mais ne sont pas encore confirmés dans un vrai Word. Certains restent de toute façon en formes (par exemple un `xychart` horizontal avec une série `line`, avec un avertissement)."
 }

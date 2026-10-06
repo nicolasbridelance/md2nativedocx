@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { join } from 'node:path';
+import { nativeChartTypesSetting } from './settings';
 
 /**
  * "What will this diagram become?" for the CodeLens, the hover and the status bar
@@ -21,7 +22,7 @@ export interface RenderingPlan {
   error?: string;
 }
 
-type PlanRendering = (source: string, settings: { smartArt: boolean; nativeCharts: boolean }) => RenderingPlan;
+type PlanRendering = (source: string, settings: { smartArt: boolean; nativeCharts: boolean | readonly string[] }) => RenderingPlan;
 
 let planRenderingFn: PlanRendering | null | undefined;
 
@@ -45,8 +46,8 @@ export function planFor(source: string): RenderingPlan | null {
   if (!planner) return null;
   const config = vscode.workspace.getConfiguration('md2nativedocx');
   return planner(source, {
-    smartArt: config.get<boolean>('smartArt.enabled', false),
-    nativeCharts: config.get<boolean>('nativeCharts.enabled', false),
+    smartArt: config.get<boolean>('smartArt.enabled', true),
+    nativeCharts: nativeChartTypesSetting(),
   });
 }
 
@@ -93,7 +94,13 @@ export function planSummary(plan: RenderingPlan): string {
 /** The setting that would change this diagram's rendering, if any (for "Enable …" actions). */
 export function settingToEnable(plan: RenderingPlan): { key: string; label: string } | undefined {
   if (plan.smartArtWouldApply) return { key: 'smartArt.enabled', label: vscode.l10n.t('Enable SmartArt') };
-  if (plan.chartWouldApply) return { key: 'nativeCharts.enabled', label: vscode.l10n.t('Enable Word charts') };
+  if (plan.chartWouldApply) {
+    // Charts on but this type not yet confirmed in Word: the switch to offer is the "unverified" one.
+    const chartsOn = vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('nativeCharts.enabled', true);
+    return chartsOn
+      ? { key: 'nativeCharts.includeUnverified', label: vscode.l10n.t('Enable Word charts (not yet confirmed in Word)') }
+      : { key: 'nativeCharts.enabled', label: vscode.l10n.t('Enable Word charts') };
+  }
   return undefined;
 }
 

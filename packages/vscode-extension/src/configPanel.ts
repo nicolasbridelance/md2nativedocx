@@ -52,19 +52,21 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
     return this.nlsStrings[`configuration.${settingPath}.markdownDescription`] ?? '';
   };
 
-  /** Reads `package.nls.json` directly (not `package.nls.<locale>.json` —
-   * none of the Lot 1-3 keys are translated yet, same gap already flagged
-   * in TODO.md/HANDOVER.md) so every tooltip is the exact same string
-   * `contributes.configuration` already declares — no text duplicated
-   * between the two surfaces (spec §3.2). */
+  /** Reads the setting descriptions `contributes.configuration` declares, in the editor's language
+   * (`package.nls.<lang>.json`, e.g. `fr` or `zh-cn`) over the English `package.nls.json` — so every
+   * tooltip is the exact string the native Settings UI shows (spec §3.2), translated the same way. */
   private loadNlsStrings(): Record<string, string> {
-    try {
-      const path = join(this.context.extensionUri.fsPath, 'package.nls.json');
-      if (!existsSync(path)) return {};
-      return JSON.parse(readFileSync(path, 'utf8')) as Record<string, string>;
-    } catch {
-      return {};
-    }
+    const read = (file: string): Record<string, string> => {
+      try {
+        const path = join(this.context.extensionUri.fsPath, file);
+        return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, string>) : {};
+      } catch {
+        // Unreadable file: no tooltip text rather than a broken panel.
+        return {};
+      }
+    };
+    const lang = vscode.env.language.toLowerCase();
+    return { ...read('package.nls.json'), ...read(`package.nls.${lang.split('-')[0]}.json`), ...read(`package.nls.${lang}.json`) };
   }
 
   private readState(): ConfigState {
@@ -91,6 +93,13 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       emojiForceColorFont: config.get<boolean>('emoji.forceColorFont', true),
       wordCompatibilityCheckEnabled: config.get<boolean>('wordCompatibilityCheck.enabled', true),
       referenceDocument: config.get<string>('referenceDocument', ''),
+      outputDirectory: config.get<string>('outputDirectory', ''),
+      smartArtEnabled: config.get<boolean>('smartArt.enabled', true),
+      smartArtStyle: config.get<string>('smartArt.style', 'colorful'),
+      smartArtDrawing: config.get<boolean>('smartArt.preRenderedDrawing', true),
+      nativeChartsEnabled: config.get<boolean>('nativeCharts.enabled', true),
+      nativeChartsIncludeUnverified: config.get<boolean>('nativeCharts.includeUnverified', false),
+      pptxShowSource: config.get<boolean>('pptx.showSource', false),
       scope: this.scope,
     };
   }
@@ -98,7 +107,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
   private render(): void {
     if (!this.view) return;
     const nonce = randomBytes(16).toString('hex');
-    this.view.webview.html = buildConfigPanelHtml(this.readState(), this.describe, nonce);
+    this.view.webview.html = buildConfigPanelHtml(this.readState(), this.describe, nonce, (message) => vscode.l10n.t(message));
   }
 
   private handleMessage(message: unknown): void {
@@ -148,8 +157,8 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
   private async browseReferenceDocument(target: vscode.ConfigurationTarget): Promise<void> {
     const picked = await vscode.window.showOpenDialog({
       canSelectMany: false,
-      filters: { 'Word document': ['docx'] },
-      openLabel: 'Utiliser comme gabarit',
+      filters: { [vscode.l10n.t('Word document')]: ['docx'] },
+      openLabel: vscode.l10n.t('Use as template'),
     });
     const uri = picked?.[0];
     if (!uri) return;

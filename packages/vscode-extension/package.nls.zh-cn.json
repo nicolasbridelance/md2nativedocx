@@ -6,7 +6,7 @@
   "command.exportBlock.shortTitle": "导出此图表…",
   "configuration.outputDirectory.markdownDescription": "生成的 `.docx` 文件的输出文件夹。留空（默认）= 与源 `.md` 文件相同的文件夹 —— 首次使用前无需任何配置。",
   "configuration.referenceDocument.markdownDescription": "用作每次导出时 Word 模板的 `.docx` 文件路径（相当于 Pandoc 的 `--reference-doc` 选项）—— 指向你公司的模板即可套用其字体、颜色和样式。留空（默认）= 扩展内置的模板。相对路径相对于工作区文件夹解析。",
-  "configuration.smartArt.enabled.markdownDescription": "默认关闭。开启后，链式、树形（最多 10 层，较宽的树采用组织结构图布局）或环形的流程图，以及只有一个根的 `mindmap` 和 `treeView-beta` 图，会生成原生 SmartArt 图形：可在 Word 的“SmartArt 设计”选项卡中添加步骤或分支、更改样式或颜色。其他图表仍为可单独编辑的形状。已在真实 Word 中验证。",
+  "configuration.smartArt.enabled.markdownDescription": "默认开启（关闭后每个图表都保留为单独的形状）。开启后，链式、树形（最多 10 层，较宽的树采用组织结构图布局）或环形的流程图，以及只有一个根的 `mindmap` 和 `treeView-beta` 图，会生成原生 SmartArt 图形：可在 Word 的“SmartArt 设计”选项卡中添加步骤或分支、更改样式或颜色。其他图表仍为可单独编辑的形状。已在真实 Word 中验证。",
   "walkthrough.title": "md2nativedocx —— 将 Mermaid 图表转换为 Word",
   "walkthrough.description": "将 Mermaid 图表导出为原生可编辑的 Word 图形 —— 而非扁平化的 PNG 图片。",
   "walkthrough.step1.title": "打开一个 Markdown 文档",
@@ -21,5 +21,13 @@
   "command.exportBlockPptx.title": "将此图表导出为 PowerPoint",
   "command.openSettings.title": "设置",
   "configuration.pptx.showSource.markdownDescription": "PowerPoint 导出：在每张幻灯片上的图表旁显示其 Mermaid 源代码面板。",
-  "command.enableSetting.title": "启用图表设置"
+  "command.enableSetting.title": "启用图表设置",
+  "configuration.section.output": "输出",
+  "configuration.section.diagrams": "图表",
+  "configuration.section.layout": "页面布局",
+  "configuration.section.typography": "排版",
+  "configuration.section.structure": "文档结构",
+  "configuration.section.advanced": "高级",
+  "configuration.nativeCharts.enabled.markdownDescription": "默认开启：Mermaid `pie` 会生成带嵌入工作簿的原生 Word 图表（“图表设计”→“编辑数据”可修改数值），而不是可编辑形状。图表保留 Word 的外观，而非 Mermaid 的外观。`xychart` 和 `radar` 取决于 #md2nativedocx.nativeCharts.includeUnverified#。",
+  "configuration.nativeCharts.includeUnverified.markdownDescription": "同时将 `xychart` 和 `radar` 生成为原生 Word 图表。默认关闭：这些图表符合 Word 文件格式，但尚未在真实 Word 中确认。部分图表仍会保留为形状（例如带折线系列的水平 `xychart`，并给出警告）。"
 }

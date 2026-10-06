@@ -6,7 +6,7 @@
   "command.exportBlock.shortTitle": "Dieses Diagramm exportieren…",
   "configuration.outputDirectory.markdownDescription": "Ausgabeordner für generierte `.docx`-Dateien. Leer (Standard) = derselbe Ordner wie die `.md`-Quelldatei — keine Konfiguration vor der ersten Nutzung erforderlich.",
   "configuration.referenceDocument.markdownDescription": "Pfad zu einer `.docx`-Datei, die als Word-Vorlage für jeden Export verwendet wird (entspricht Pandocs Option `--reference-doc`) — verweisen Sie damit auf die Unternehmensvorlage, um deren Schriftarten, Farben und Formatvorlagen zu übernehmen. Leer (Standard) = die in die Erweiterung eingebaute Vorlage. Relative Pfade werden relativ zum Arbeitsbereichsordner aufgelöst.",
-  "configuration.smartArt.enabled.markdownDescription": "Standardmäßig deaktiviert. Aktiviert werden Flussdiagramme in Form einer Kette, eines Baums (bis zu 10 Ebenen, breite Bäume im Organigramm-Layout) oder eines Zyklus sowie `mindmap`- und `treeView-beta`-Diagramme mit einer einzigen Wurzel zu nativen SmartArt-Grafiken: Schritt oder Zweig hinzufügen, Stil oder Farben über die Registerkarte SmartArt-Entwurf in Word ändern. Andere Diagramme bleiben einzeln bearbeitbare Formen. In echtem Word geprüft.",
+  "configuration.smartArt.enabled.markdownDescription": "Standardmäßig aktiviert (ausschalten, um jedes Diagramm als einzelne Formen zu behalten). Aktiviert werden Flussdiagramme in Form einer Kette, eines Baums (bis zu 10 Ebenen, breite Bäume im Organigramm-Layout) oder eines Zyklus sowie `mindmap`- und `treeView-beta`-Diagramme mit einer einzigen Wurzel zu nativen SmartArt-Grafiken: Schritt oder Zweig hinzufügen, Stil oder Farben über die Registerkarte SmartArt-Entwurf in Word ändern. Andere Diagramme bleiben einzeln bearbeitbare Formen. In echtem Word geprüft.",
   "walkthrough.title": "md2nativedocx — Mermaid-Diagramme nach Word",
   "walkthrough.description": "Exportieren Sie Ihre Mermaid-Diagramme als native, bearbeitbare Word-Formen — keine abgeflachten PNG-Bilder.",
   "walkthrough.step1.title": "Öffnen Sie ein Markdown-Dokument",
@@ -21,5 +21,13 @@
   "command.exportBlockPptx.title": "Dieses Diagramm nach PowerPoint exportieren",
   "command.openSettings.title": "Einstellungen",
   "configuration.pptx.showSource.markdownDescription": "PowerPoint-Export: den Mermaid-Quelltext jedes Diagramms in einem Feld daneben auf seiner Folie anzeigen.",
-  "command.enableSetting.title": "Diagrammeinstellung aktivieren"
+  "command.enableSetting.title": "Diagrammeinstellung aktivieren",
+  "configuration.section.output": "Ausgabe",
+  "configuration.section.diagrams": "Diagramme",
+  "configuration.section.layout": "Seitenlayout",
+  "configuration.section.typography": "Typografie",
+  "configuration.section.structure": "Dokumentstruktur",
+  "configuration.section.advanced": "Erweitert",
+  "configuration.nativeCharts.enabled.markdownDescription": "Standardmäßig aktiviert: ein Mermaid-`pie` wird zu einem nativen Word-Diagramm mit eingebetteter Arbeitsmappe (Diagrammentwurf → Daten bearbeiten ändert die Werte) statt bearbeitbarer Formen. Das Diagramm behält das Aussehen von Word, nicht das von Mermaid. `xychart` und `radar` richten sich nach #md2nativedocx.nativeCharts.includeUnverified#.",
+  "configuration.nativeCharts.includeUnverified.markdownDescription": "Auch `xychart` und `radar` zu nativen Word-Diagrammen machen. Standardmäßig deaktiviert: diese Diagramme entsprechen dem Word-Dateiformat, sind aber in echtem Word noch nicht bestätigt. Manche bleiben ohnehin Formen (z. B. ein horizontales `xychart` mit Linienreihe, mit Warnung)."
 }

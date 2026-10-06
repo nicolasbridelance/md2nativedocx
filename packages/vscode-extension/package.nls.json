@@ -7,7 +7,7 @@
   "view.configView.name": "Configuration",
   "configuration.outputDirectory.markdownDescription": "Output folder for generated `.docx` files. Empty (default) = same folder as the source `.md` file — no configuration required before first use.",
   "configuration.referenceDocument.markdownDescription": "Path to a `.docx` file used as the Word template for every export (mirrors Pandoc's `--reference-doc`) — point this at your company's template to match its fonts, colors, and styles. Empty (default) = the extension's built-in template. Relative paths are resolved against the workspace folder.",
-  "configuration.smartArt.enabled.markdownDescription": "Off by default. When on, a flowchart shaped as a chain, a tree (up to 10 levels, wide trees in org-chart layout) or a cycle, and `mindmap` / single-root `treeView-beta` diagrams, become native SmartArt graphics: add a step or a branch, restyle or recolour them from Word's SmartArt Design tab. Other diagrams keep individual editable shapes. Verified in real Word.",
+  "configuration.smartArt.enabled.markdownDescription": "On by default (turn off to keep every diagram as individual shapes). When on, a flowchart shaped as a chain, a tree (up to 10 levels, wide trees in org-chart layout) or a cycle, and `mindmap` / single-root `treeView-beta` diagrams, become native SmartArt graphics: add a step or a branch, restyle or recolour them from Word's SmartArt Design tab. Other diagrams keep individual editable shapes. Verified in real Word.",
   "configuration.smartArt.style.markdownDescription": "Look of the SmartArt diagrams produced when `#md2nativedocx.smartArt.enabled#` is on. They stay real SmartArt either way: you can restyle them from Word's SmartArt Design tab.",
   "configuration.smartArt.style.simple": "One accent colour, flat fill.",
   "configuration.smartArt.style.colorful": "A different theme accent colour per shape (like Word's \"Colorful – Accent Colors\").",
@@ -17,7 +17,7 @@
   "configuration.smartArt.style.colorful-moderate": "A different accent colour per shape, soft gradient, light shadow and white outline.",
   "configuration.smartArt.style.intense": "Colourful, with the theme's gradient fill, a drop shadow and a heavier white outline.",
   "configuration.smartArt.preRenderedDrawing.markdownDescription": "Embed the pre-rendered drawing Word itself always stores with a SmartArt, so Word and LibreOffice display the same shapes until the diagram is edited. Turn it off to let each application lay the diagram out on its own.",
-  "configuration.nativeCharts.enabled.markdownDescription": "Off by default. When on, a Mermaid `pie`, `xychart` or `radar` becomes a native Word chart with an embedded workbook (Chart Design → Edit Data lets you change the values) instead of editable shapes. Not every diagram qualifies (for example a horizontal `xychart` with a line series stays shapes, with a warning). The chart keeps Word's own look rather than Mermaid's.",
+  "configuration.nativeCharts.enabled.markdownDescription": "On by default: a Mermaid `pie` becomes a native Word chart with an embedded workbook (Chart Design → Edit Data changes the values) instead of editable shapes. The chart keeps Word's own look rather than Mermaid's. `xychart` and `radar` charts follow #md2nativedocx.nativeCharts.includeUnverified#.",
   "configuration.layout.pageSize.markdownDescription": "Page format for the generated document. Ignored (with a note in the export log) when `#md2nativedocx.referenceDocument#` points at a custom template — its own page setup is used instead.",
   "configuration.layout.orientation.markdownDescription": "Default page orientation. Ignored when `#md2nativedocx.referenceDocument#` is set, same as page format above.",
   "configuration.layout.margins.markdownDescription": "Page margins preset, or `custom` to use the four `md2nativedocx.layout.marginsCustom*` values below (in centimeters). Ignored when `#md2nativedocx.referenceDocument#` is set.",
@@ -66,5 +66,12 @@
   "command.exportBlockPptx.title": "Export this diagram to PowerPoint",
   "command.openSettings.title": "Settings",
   "configuration.pptx.showSource.markdownDescription": "PowerPoint export: put each diagram's Mermaid source in a panel beside it on its slide.",
-  "command.enableSetting.title": "Enable a diagram setting"
+  "command.enableSetting.title": "Enable a diagram setting",
+  "configuration.section.output": "Output",
+  "configuration.section.diagrams": "Diagrams",
+  "configuration.section.layout": "Page layout",
+  "configuration.section.typography": "Typography",
+  "configuration.section.structure": "Document structure",
+  "configuration.section.advanced": "Advanced",
+  "configuration.nativeCharts.includeUnverified.markdownDescription": "Also make `xychart` and `radar` native Word charts. Off by default: their charts are valid for Word's file format but not yet confirmed in a real Word install. Some diagrams stay shapes anyway (for example a horizontal `xychart` with a line series, with a warning)."
 }

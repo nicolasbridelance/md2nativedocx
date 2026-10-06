@@ -29,6 +29,10 @@ test('pie / xychart / radar: chart when native charts are on, else shapes + "wou
   const pie = 'pie\n  "A" : 1\n  "B" : 2';
   assert.equal(planRendering(pie, ON).rendering, 'chart');
   assert.deepEqual(planRendering(pie, OFF), { type: 'pie', label: 'Pie chart', rendering: 'shapes', chartWouldApply: true });
+  // Per-type list: pie on, radar not yet.
+  const pieOnly = { smartArt: true, nativeCharts: ['pie'] };
+  assert.equal(planRendering(pie, pieOnly).rendering, 'chart');
+  assert.equal(planRendering('radar-beta\n  axis a, b, c\n  curve x{1, 2, 3}', pieOnly).chartWouldApply, true);
 });
 
 test('mindmap and single-root treeView: SmartArt hierarchy when on; a two-root treeView stays shapes', () => {

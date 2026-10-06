@@ -25,6 +25,13 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     emojiForceColorFont: true,
     wordCompatibilityCheckEnabled: true,
     referenceDocument: '',
+    outputDirectory: '',
+    smartArtEnabled: true,
+    smartArtStyle: 'colorful',
+    smartArtDrawing: true,
+    nativeChartsEnabled: true,
+    nativeChartsIncludeUnverified: false,
+    pptxShowSource: false,
     scope: 'user',
     ...overrides,
   };
@@ -44,9 +51,10 @@ test('stripLightMarkdown strips code spans, #setting# references, and markdown l
   assert.equal(stripLightMarkdown('Use `--toc` and `#md2nativedocx.toc.depth#` — see [docs](https://x)'), 'Use --toc and md2nativedocx.toc.depth — see docs');
 });
 
-test('buildConfigPanelHtml renders all 5 groups', () => {
+test('buildConfigPanelHtml renders all 7 groups, Diagrams first', () => {
   const html = buildConfigPanelHtml(baseState(), describe, 'nonce123');
-  for (const heading of ['Mise en page', 'Typographie', 'Structure du document', 'Emoji', 'Avancé']) {
+  assert.ok(html.indexOf('<span>Diagrams</span>') < html.indexOf('<span>Page layout</span>'));
+  for (const heading of ['Diagrams', 'Page layout', 'Typography', 'Document structure', 'Emoji', 'Output', 'Advanced']) {
     assert.ok(html.includes(heading), `missing group heading: ${heading}`);
   }
 });
@@ -67,8 +75,8 @@ test('buildConfigPanelHtml escapes a free-text font/color value (XSS safety)', (
 test('buildConfigPanelHtml greys out Lot 1 layout/typography rows when a custom reference document is set, but not TOC/emoji', () => {
   const html = buildConfigPanelHtml(baseState({ referenceDocument: '/path/to/custom.docx' }), describe, 'n');
   const rows = html.split('<div class="row').slice(1);
-  const pageSizeRow = rows.find((r) => r.includes('layout.pageSize'));
-  const tocRow = rows.find((r) => r.includes('toc.enabled'));
+  const pageSizeRow = rows.find((r) => r.includes('description for layout.pageSize'));
+  const tocRow = rows.find((r) => r.includes('description for toc.enabled'));
   assert.ok(pageSizeRow?.startsWith(' greyed"'), 'layout.pageSize must be greyed when a custom reference doc is set');
   assert.ok(!tocRow?.startsWith(' greyed"'), 'toc.enabled must stay active regardless of a custom reference doc');
   assert.ok(html.includes('/path/to/custom.docx'), 'the effective reference document path must be shown');
@@ -77,7 +85,7 @@ test('buildConfigPanelHtml greys out Lot 1 layout/typography rows when a custom 
 test('buildConfigPanelHtml includes the Lot 5 landscape tables row, greyed with the rest of Lot 1 when a custom reference doc is set', () => {
   const html = buildConfigPanelHtml(baseState({ referenceDocument: '/path/to/custom.docx' }), describe, 'n');
   const rows = html.split('<div class="row').slice(1);
-  const row = rows.find((r) => r.includes('layout.landscapeTables'));
+  const row = rows.find((r) => r.includes('description for layout.landscapeTables'));
   assert.ok(row, 'expected a row for layout.landscapeTables');
   assert.ok(row?.startsWith(' greyed"'), 'layout.landscapeTables must be greyed when a custom reference doc is set');
 });
@@ -118,9 +126,9 @@ test('buildConfigPanelHtml reflects the scope toggle', () => {
 test('buildConfigPanelHtml renders each group as a closed <details> with its own reset button', () => {
   const html = buildConfigPanelHtml(baseState(), describe, 'n');
   const detailsCount = (html.match(/<details class="group">/g) || []).length;
-  assert.equal(detailsCount, 5, 'one <details> per group, none pre-opened');
+  assert.equal(detailsCount, 7, 'one <details> per group, none pre-opened');
   assert.ok(!html.includes('<details class="group" open'), 'groups must be closed by default');
-  assert.equal((html.match(/class="reset-btn"/g) || []).length, 5, 'one reset button per group');
+  assert.equal((html.match(/class="reset-btn"/g) || []).length, 7, 'one reset button per group');
   assert.ok(html.includes('id="reset-all"'), 'a global reset-all button must exist');
 });
 
@@ -168,7 +176,7 @@ test('buildConfigPanelHtml renders tableHeaderColor as a color row with swatches
   assert.ok(html.includes('data-swatch-for="typography.tableHeaderColor"'));
 });
 
-test('buildConfigPanelHtml includes a "Parcourir…" button for referenceDocument', () => {
+test('buildConfigPanelHtml includes a "Browse…" button for referenceDocument', () => {
   const html = buildConfigPanelHtml(baseState(), describe, 'n');
   assert.ok(html.includes('id="browse-reference-doc"'));
 });
@@ -184,4 +192,32 @@ test('every tooltip is produced via the injected describe() function (single sou
   assert.ok(calledWith.includes('typography.accentColor'));
   assert.ok(calledWith.includes('toc.enabled'));
   assert.ok(html.includes('title="d(layout.pageSize)"'));
+});
+
+test('Diagrams section reflects the SmartArt / chart / PowerPoint settings; dependent controls are disabled when their switch is off', () => {
+  const on = buildConfigPanelHtml(baseState({ smartArtStyle: 'intense', pptxShowSource: true }), describe, 'n');
+  assert.match(on, /data-key="smartArt\.enabled" checked/);
+  assert.match(on, /<option value="intense" selected>/);
+  assert.match(on, /data-key="pptx\.showSource" checked/);
+  assert.match(on, /data-key="nativeCharts\.includeUnverified"\/>/, 'unverified charts: off, not disabled while charts are on');
+  const off = buildConfigPanelHtml(baseState({ smartArtEnabled: false, nativeChartsEnabled: false }), describe, 'n');
+  assert.match(off, /<select data-key="smartArt\.style" disabled>/);
+  assert.match(off, /data-key="smartArt\.preRenderedDrawing" checked disabled/);
+  assert.match(off, /data-key="nativeCharts\.includeUnverified" disabled/);
+});
+
+test('Output section holds the output folder and the custom template, escaped', () => {
+  const html = buildConfigPanelHtml(baseState({ outputDirectory: 'out"<x>' }), describe, 'n');
+  assert.match(html, /data-key="outputDirectory" value="out&quot;&lt;x&gt;"/);
+  assert.ok(html.indexOf('data-key="outputDirectory"') < html.indexOf('data-key="referenceDocument"'));
+});
+
+test('every visible label goes through the injected translate function (the panel follows the editor language)', () => {
+  const t = (message: string) => `«${message}»`;
+  const html = buildConfigPanelHtml(baseState(), describe, 'n', t);
+  const labels = [...html.matchAll(/<label(?: class="small")?>([^<]*)<\/label>/g)].map((m) => m[1]!.trim()).filter((l) => l !== '');
+  assert.ok(labels.length > 20);
+  for (const label of labels) assert.match(label, /^«.*»$/, `untranslated label: ${label}`);
+  for (const span of [...html.matchAll(/<summary><span>([^<]*)<\/span>/g)].map((m) => m[1]!)) assert.match(span, /^«.*»$/);
+  assert.ok(!/[àéèù]/.test(html.replace(/<script[\s\S]*<\/script>/, '')), 'no French text hard-coded outside translations');
 });

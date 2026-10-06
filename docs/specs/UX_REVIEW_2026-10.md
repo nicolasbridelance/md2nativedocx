@@ -1,6 +1,6 @@
 # Revue UX de l'extension VS Code — octobre 2026
 
-Statut : **décisions D1–D9 validées telles que recommandées par le mainteneur (2026-10-06)** ; lots A et B livrés (2026-10-06), lot C ensuite. Une fois livrée,
+Statut : **décisions D1–D9 validées telles que recommandées par le mainteneur (2026-10-06)** ; lots A, B et C livrés (2026-10-06), lot D ensuite. Une fois livrée,
 la cible (section 3) remplacera la Partie 1 de `UX_SPEC.md`, qui décrit l'état de septembre.
 
 Pourquoi maintenant : l'extension a été pensée pour « un document Markdown → un `.docx` ». Depuis,

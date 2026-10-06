@@ -29,8 +29,9 @@ import type { Flowchart } from './types.js';
 export interface RenderingSettings {
   /** SmartArt export on (`MD2NATIVEDOCX_ENABLE_SMARTART`, VS Code `md2nativedocx.smartArt.enabled`). */
   smartArt: boolean;
-  /** Native Word charts on (`MD2NATIVEDOCX_NATIVE_CHARTS`, VS Code `md2nativedocx.nativeCharts.enabled`). */
-  nativeCharts: boolean;
+  /** Native Word charts: `true` for every chartable type, or the list of types turned on (e.g. `['pie']`),
+   * as `MD2NATIVEDOCX_NATIVE_CHARTS` takes them (`1`, or `pie,xychart`). */
+  nativeCharts: boolean | readonly string[];
 }
 
 /** What a diagram will become in the Word document. */
@@ -71,7 +72,8 @@ export function planRendering(source: string, settings: RenderingSettings): Rend
   const { type, label } = detectDiagramType(source);
   try {
     if (CHART_TYPES.has(type)) {
-      return settings.nativeCharts ? { type, label, rendering: 'chart' } : { type, label, rendering: 'shapes', chartWouldApply: true };
+      const on = settings.nativeCharts === true || (Array.isArray(settings.nativeCharts) && settings.nativeCharts.includes(type));
+      return on ? { type, label, rendering: 'chart' } : { type, label, rendering: 'shapes', chartWouldApply: true };
     }
     if (type === 'mindmap' || type === 'treeView') {
       const shape =

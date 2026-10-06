@@ -331,8 +331,11 @@ async function main() {
   // keeps this code path identical whether or not any block turns out
   // eligible.
   const smartArtDir = smartArtEnabled ? mktempSmartArtDir() : null;
-  // Native Word charts (ADR 0011) are opt-in and off by default until a real Word confirms them.
-  const chartDir = process.env.MD2NATIVEDOCX_NATIVE_CHARTS === '1' ? mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-')) : null;
+  // Native Word charts (ADR 0011) are opt-in. MD2NATIVEDOCX_NATIVE_CHARTS is `1` (pie, xychart and radar)
+  // or a comma-separated list of those types (e.g. `pie`, the ones confirmed in real Word); the core bridge
+  // reads the same variable and keeps every other type as shapes.
+  const nativeCharts = (process.env.MD2NATIVEDOCX_NATIVE_CHARTS ?? '').trim();
+  const chartDir = nativeCharts !== '' && nativeCharts !== '0' ? mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-')) : null;
   const pandocEnv = { ...process.env };
   if (smartArtDir) pandocEnv.MD2NATIVEDOCX_SMARTART_DIR = smartArtDir;
   if (chartDir) pandocEnv.MD2NATIVEDOCX_CHART_DIR = chartDir;

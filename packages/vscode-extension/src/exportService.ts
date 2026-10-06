@@ -150,9 +150,10 @@ export interface RunCliOptions {
    * (the CLI's default, as of the 2026-09-03 flip — see
    * `md2nativedocx.mjs`'s doc comment on `smartArtEnabled`). */
   smartArtEnabled?: boolean;
-  /** Mirrors `md2nativedocx.nativeCharts.enabled`: `pie`/`xychart`/`radar` become native Word charts with
-   * an embedded workbook (ADR 0011). Omitted/`false` keeps the shape-built diagrams. */
-  nativeChartsEnabled?: boolean;
+  /** Chart types to make native Word charts with an embedded workbook (ADR 0011), from
+   * `md2nativedocx.nativeCharts.enabled` + `.includeUnverified` — e.g. `['pie']`. Omitted/empty keeps every
+   * chart as shapes. */
+  nativeChartTypes?: readonly string[];
   /** Mirrors `md2nativedocx.smartArt.style` (only used when SmartArt is enabled). */
   smartArtStyle?: SmartArtStyleName;
   /** Mirrors `md2nativedocx.smartArt.preRenderedDrawing`: embed the cached `dsp:drawing`. */
@@ -222,7 +223,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
   if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
   if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
-  if (options.nativeChartsEnabled === true) env.MD2NATIVEDOCX_NATIVE_CHARTS = '1';
+  if (options.nativeChartTypes && options.nativeChartTypes.length > 0) env.MD2NATIVEDOCX_NATIVE_CHARTS = options.nativeChartTypes.join(',');
   if (options.smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = options.smartArtStyle;
   if (options.smartArtDrawing === true) env.MD2NATIVEDOCX_SMARTART_DRAWING = '1';
   const layout = options.layout;

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { MermaidCodeLensProvider } from './codeLensProvider';
 import { planFor, planHover } from './diagramPlan';
+import { nativeChartTypesSetting } from './settings';
 import { registerStatusBar } from './statusBar';
 import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
 import {
@@ -101,13 +102,9 @@ function smartArtDrawingSetting(): boolean {
   return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.preRenderedDrawing', true);
 }
 
-/** `md2nativedocx.nativeCharts.enabled` — `false` (default) keeps every `pie`/`xychart`/`radar` as editable
- * shapes. `true` opts into native Word charts with an embedded workbook (ADR 0011). */
-function nativeChartsEnabledSetting(): boolean {
-  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('nativeCharts.enabled', false);
-}
 
-/** `md2nativedocx.smartArt.enabled` — `false` (default, flipped 2026-09-03:
+/** `md2nativedocx.smartArt.enabled` — `true` by default since the 2026-10 UX review (D1: every SmartArt
+ * layout confirmed in real Word). Before that it was `false` (flipped 2026-09-03:
  * a real-Word test of `cycle.ts`'s output failed to open at all on the
  * simplest possible input, see `docs/markdown-mermaid-compliance-table.md` §2 point
  * 5) uses the OOXML canvas fallback for everything. `true` opts into an
@@ -115,7 +112,7 @@ function nativeChartsEnabledSetting(): boolean {
  * graphic instead — until chain/tree/cycle are confirmed to open reliably in
  * real Word, treat this as experimental. */
 function smartArtEnabledSetting(): boolean {
-  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', false);
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.enabled', true);
 }
 
 /** `md2nativedocx.toc.enabled`/`md2nativedocx.toc.depth` (spec §1.10/§2.2,
@@ -240,7 +237,7 @@ async function exportOptions(progress: vscode.Progress<{ message?: string }>, fo
     pandocBin,
     referenceDoc,
     smartArtEnabled: smartArtEnabledSetting(),
-    nativeChartsEnabled: nativeChartsEnabledSetting(),
+    nativeChartTypes: nativeChartTypesSetting(),
     smartArtStyle: smartArtStyleSetting(),
     smartArtDrawing: smartArtDrawingSetting(),
     layout,
@@ -389,7 +386,7 @@ function provideDiagramHover(document: vscode.TextDocument, position: vscode.Pos
 }
 
 /** The two settings a diagram's lens or hover may offer to turn on (nothing else can be set this way). */
-const ENABLEABLE_SETTINGS = new Set(['smartArt.enabled', 'nativeCharts.enabled']);
+const ENABLEABLE_SETTINGS = new Set(['smartArt.enabled', 'nativeCharts.enabled', 'nativeCharts.includeUnverified']);
 
 async function handleEnableSetting(key: string): Promise<void> {
   if (!ENABLEABLE_SETTINGS.has(key)) return;

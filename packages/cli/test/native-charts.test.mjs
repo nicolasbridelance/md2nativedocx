@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -114,4 +114,19 @@ test('the workbook builder writes empty cells for missing values and names colum
   assert.match(sheet, /<c r="AB1" t="inlineStr">/); // 28th column
   assert.doesNotMatch(sheet, /<c r="C2"/); // the undefined value
   assert.match(sheet, /<c r="B2"><v>0<\/v><\/c>/);
+});
+
+test('a type list (MD2NATIVEDOCX_NATIVE_CHARTS=pie) charts the pie but keeps a radar as shapes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-list-'));
+  try {
+    const md = join(dir, 'c.md');
+    const out = join(dir, 'c.docx');
+    writeFileSync(md, '```mermaid\npie\n  "A" : 1\n  "B" : 2\n```\n\n```mermaid\nradar-beta\n  axis a, b, c\n  curve x{1, 2, 3}\n```\n');
+    const r = spawnSync('node', [cli, md, '-o', out], { encoding: 'utf8', env: { ...process.env, MD2NATIVEDOCX_NATIVE_CHARTS: 'pie' } });
+    assert.equal(r.status, 0, r.stderr);
+    const listing = execFileSync('unzip', ['-l', out], { encoding: 'utf8' });
+    assert.equal((listing.match(/word\/charts\/chart\d+\.xml/g) ?? []).length, 1, 'only the pie becomes a chart');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

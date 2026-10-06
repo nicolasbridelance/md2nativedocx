@@ -35,6 +35,8 @@
  * XML output.
  */
 
+import { SMARTART_STYLE_NAMES } from './exportService';
+
 export interface ConfigState {
   pageSize: string;
   orientation: string;
@@ -66,6 +68,15 @@ export interface ConfigState {
    * schema and reports the result in the export's `.log`. Never greyed by
    * a custom reference doc (works regardless, same category as TOC/emoji). */
   wordCompatibilityCheckEnabled: boolean;
+  /** `md2nativedocx.outputDirectory`, `''` = next to the source file. */
+  outputDirectory: string;
+  /** Diagrams section (2026-10 UX review, lot C). */
+  smartArtEnabled: boolean;
+  smartArtStyle: string;
+  smartArtDrawing: boolean;
+  nativeChartsEnabled: boolean;
+  nativeChartsIncludeUnverified: boolean;
+  pptxShowSource: boolean;
   /** The effective `md2nativedocx.referenceDocument` value, `''` if unset.
    * Non-empty greys out every Lot 1 layout/typography control (spec §2.1/
    * §3.2 "Avancé" — confirmed with the maintainer alongside option (a)). */
@@ -101,6 +112,11 @@ export function stripLightMarkdown(markdown: string): string {
  * configuration` and this panel both read, so the two surfaces can never
  * drift apart (spec §3.2, "ne pas dupliquer de texte"). */
 export type Describe = (settingPath: string) => string;
+
+/** Translates a panel string (English source text, `{0}` placeholders) into the editor's language — the
+ * extension passes `vscode.l10n.t`; tests and the default pass it through unchanged. */
+export type Translate = (message: string) => string;
+const identity: Translate = (message) => message;
 
 function tooltip(describe: Describe, settingPath: string): string {
   return escapeHtmlAttr(stripLightMarkdown(describe(settingPath)));
@@ -165,7 +181,7 @@ const JUSTIFY = ['left', 'right', 'center', 'both'] as const;
  * "leave the template's own default alone", already a meaningful value
  * today, not a placeholder. */
 const FONT_CHOICES: readonly { value: string; label: string }[] = [
-  { value: '', label: '(par défaut du gabarit)' },
+  { value: '', label: '(template default)' },
   { value: 'Aptos Display', label: 'Aptos Display' },
   { value: 'Aptos', label: 'Aptos' },
   { value: 'Calibri Light', label: 'Calibri Light' },
@@ -188,7 +204,7 @@ const FONT_CUSTOM_SENTINEL = '__custom__';
  * substitution this project already pins for `test:visual` — not arbitrary
  * picks. */
 const FONT_PRESETS: readonly { id: string; label: string; heading: string; body: string }[] = [
-  { id: 'word2025', label: 'Word 2025 / 365 (Aptos) — par défaut', heading: '', body: '' },
+  { id: 'word2025', label: 'Word 2025 / 365 (Aptos) — default', heading: '', body: '' },
   { id: 'word2016', label: 'Word 2016–2021 (Calibri)', heading: 'Calibri Light', body: 'Calibri' },
   { id: 'word2007', label: 'Word 2007–2010 (Cambria / Calibri)', heading: 'Cambria', body: 'Calibri' },
   { id: 'libreoffice', label: 'LibreOffice (Liberation)', heading: 'Liberation Sans', body: 'Liberation Serif' },
@@ -196,9 +212,9 @@ const FONT_PRESETS: readonly { id: string; label: string; heading: string; body:
 
 /** Page/orientation/margins bundled presets for the top macro row. */
 const PAGE_PRESETS: readonly { id: string; label: string; pageSize: string; orientation: string; margins: string }[] = [
-  { id: 'report-a4', label: 'Rapport standard — A4 portrait', pageSize: 'A4', orientation: 'portrait', margins: 'normal' },
-  { id: 'compact-a4', label: 'Compact — A4 portrait, marges étroites', pageSize: 'A4', orientation: 'portrait', margins: 'narrow' },
-  { id: 'presentation-a3', label: 'Présentation — A3 paysage', pageSize: 'A3', orientation: 'landscape', margins: 'normal' },
+  { id: 'report-a4', label: 'Standard report — A4 portrait', pageSize: 'A4', orientation: 'portrait', margins: 'normal' },
+  { id: 'compact-a4', label: 'Compact — A4 portrait, narrow margins', pageSize: 'A4', orientation: 'portrait', margins: 'narrow' },
+  { id: 'presentation-a3', label: 'Presentation — A3 landscape', pageSize: 'A3', orientation: 'landscape', margins: 'normal' },
   { id: 'letter', label: 'US Letter portrait', pageSize: 'Letter', orientation: 'portrait', margins: 'normal' },
 ];
 
@@ -234,9 +250,18 @@ const GROUP_KEYS = {
     'typography.accentColor',
     'typography.tableHeaderColor',
   ],
+  diagrams: [
+    'smartArt.enabled',
+    'smartArt.style',
+    'smartArt.preRenderedDrawing',
+    'nativeCharts.enabled',
+    'nativeCharts.includeUnverified',
+    'pptx.showSource',
+  ],
   structure: ['toc.enabled', 'toc.depth'],
   emoji: ['emoji.forceColorFont'],
-  advanced: ['wordCompatibilityCheck.enabled', 'referenceDocument'],
+  output: ['outputDirectory', 'referenceDocument'],
+  advanced: ['wordCompatibilityCheck.enabled'],
 } as const;
 
 const ALL_SETTING_KEYS = Object.values(GROUP_KEYS).flat();
@@ -248,33 +273,33 @@ function resetButton(keys: readonly string[], label: string): string {
 /** A `<details>` section, closed by default (maintainer feedback: macro
  * choices visible up top, detailed per-category controls folded away) with
  * a "Réinitialiser cette section" button in its own `<summary>`. */
-function section(title: string, keys: readonly string[], bodyHtml: string): string {
+function section(title: string, keys: readonly string[], bodyHtml: string, resetLabel: string): string {
   return (
     `<details class="group"><summary><span>${escapeHtmlText(title)}</span>` +
-    `${resetButton(keys, 'Réinitialiser')}</summary><div class="group-body">${bodyHtml}</div></details>`
+    `${resetButton(keys, resetLabel)}</summary><div class="group-body">${bodyHtml}</div></details>`
   );
 }
 
-/** A dropdown of {@link FONT_CHOICES} plus "Personnalisé…", paired with a
+/** A dropdown of {@link FONT_CHOICES} plus "Custom…", paired with a
  * manual text input revealed only when the current value isn't one of the
  * curated choices (or the user explicitly picks "Personnalisé…" — handled
  * client-side). The manual input keeps `data-key` on the *real* setting so
  * it round-trips through the exact same generic update logic as every other
  * control; the dropdown itself is never posted directly (`data-choice-
  * target`, intercepted separately). */
-function fontRow(label: string, settingPath: string, current: string, describe: Describe, hasCustomRef: boolean): string {
+function fontRow(label: string, settingPath: string, current: string, describe: Describe, hasCustomRef: boolean, t: Translate): string {
   const isKnown = FONT_CHOICES.some((f) => f.value === current);
   const selectValue = isKnown ? current : FONT_CUSTOM_SENTINEL;
   const options = FONT_CHOICES.map(
-    (f) => `<option value="${escapeHtmlAttr(f.value)}"${f.value === selectValue ? ' selected' : ''}>${escapeHtmlText(f.label)}</option>`,
+    (f) => `<option value="${escapeHtmlAttr(f.value)}"${f.value === selectValue ? ' selected' : ''}>${escapeHtmlText(f.value === '' ? t(f.label) : f.label)}</option>`,
   ).join('');
   const disabled = hasCustomRef;
   const control =
     `<div class="font-controls">` +
     `<select data-choice-target="${escapeHtmlAttr(settingPath)}"${disabled ? ' disabled' : ''}>` +
-    `${options}<option value="${FONT_CUSTOM_SENTINEL}"${selectValue === FONT_CUSTOM_SENTINEL ? ' selected' : ''}>Personnalisé…</option>` +
+    `${options}<option value="${FONT_CUSTOM_SENTINEL}"${selectValue === FONT_CUSTOM_SENTINEL ? ' selected' : ''}>${escapeHtmlText(t('Custom…'))}</option>` +
     `</select>` +
-    textInput(settingPath, current, disabled, ' placeholder="Nom de la police" class="manual-font' + (selectValue === FONT_CUSTOM_SENTINEL ? '' : ' hidden') + '"') +
+    textInput(settingPath, current, disabled, ` placeholder="${escapeHtmlAttr(t('Font name'))}" class="manual-font` + (selectValue === FONT_CUSTOM_SENTINEL ? '' : ' hidden') + '"') +
     `</div>`;
   return row({ label, settingPath, control, describe, greyWhenCustomRef: true, hasCustomRef, extraClass: 'font-row' });
 }
@@ -330,12 +355,12 @@ function matchPagePreset(pageSize: string, orientation: string, margins: string)
  * inline `<script>` under a strict CSP (`default-src 'none'`) — no external
  * resource is ever loaded, consistent with this project never adding an
  * external OOXML relationship for the same "self-contained output" reason. */
-export function buildConfigPanelHtml(state: ConfigState, describe: Describe, nonce: string): string {
+export function buildConfigPanelHtml(state: ConfigState, describe: Describe, nonce: string, t: Translate = identity): string {
   const hasCustomRef = state.referenceDocument.trim() !== '';
 
   const layoutGroup = [
     row({
-      label: 'Format de page',
+      label: t('Page size'),
       settingPath: 'layout.pageSize',
       control: select('layout.pageSize', state.pageSize, PAGE_SIZES, hasCustomRef),
       describe,
@@ -343,7 +368,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     row({
-      label: 'Orientation',
+      label: t('Orientation'),
       settingPath: 'layout.orientation',
       control: select('layout.orientation', state.orientation, ORIENTATIONS, hasCustomRef),
       describe,
@@ -351,7 +376,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     row({
-      label: 'Marges',
+      label: t('Margins'),
       settingPath: 'layout.margins',
       control: select('layout.margins', state.margins, MARGINS, hasCustomRef),
       describe,
@@ -359,18 +384,18 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     `<div class="row custom-margins${state.margins === 'custom' ? '' : ' hidden'}${hasCustomRef ? ' greyed' : ''}">` +
-      `<label>${escapeHtmlText('Marges custom (cm)')}</label>` +
+      `<label>${escapeHtmlText(t('Custom margins (cm)'))}</label>` +
       `<div class="margins-grid">` +
       ['Top', 'Right', 'Bottom', 'Left']
         .map((side) => {
           const key = `layout.marginsCustom${side}`;
           const value = state[`marginsCustom${side}` as keyof ConfigState] as number;
-          return `<label class="small">${side}</label>${numberInput(key, value, 0.1, 15, 0.1, hasCustomRef)}`;
+          return `<label class="small">${escapeHtmlText(t(side))}</label>${numberInput(key, value, 0.1, 15, 0.1, hasCustomRef)}`;
         })
         .join('') +
       `</div></div>`,
     row({
-      label: 'Pied de page avec numéro de page',
+      label: t('Footer with page number'),
       settingPath: 'layout.footerPageNumber',
       control: checkbox('layout.footerPageNumber', state.footerPageNumber, hasCustomRef),
       describe,
@@ -378,7 +403,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     row({
-      label: 'Tableaux en section paysage dédiée',
+      label: t('Tables in their own landscape section'),
       settingPath: 'layout.landscapeTables',
       control: checkbox('layout.landscapeTables', state.landscapeTables, hasCustomRef),
       describe,
@@ -388,10 +413,10 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
   ].join('\n');
 
   const typographyGroup = [
-    fontRow('Police des titres', 'typography.headingFont', state.headingFont, describe, hasCustomRef),
-    fontRow('Police du corps de texte', 'typography.bodyFont', state.bodyFont, describe, hasCustomRef),
+    fontRow(t('Heading font'), 'typography.headingFont', state.headingFont, describe, hasCustomRef, t),
+    fontRow(t('Body text font'), 'typography.bodyFont', state.bodyFont, describe, hasCustomRef, t),
     row({
-      label: 'Taille de police (pt)',
+      label: t('Font size (pt)'),
       settingPath: 'typography.fontSize',
       control: numberInput('typography.fontSize', state.fontSize, 9, 14, 1, hasCustomRef),
       describe,
@@ -399,7 +424,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     row({
-      label: 'Interligne',
+      label: t('Line spacing'),
       settingPath: 'typography.lineSpacing',
       control: select('typography.lineSpacing', state.lineSpacing, LINE_SPACINGS, hasCustomRef),
       describe,
@@ -407,20 +432,20 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     row({
-      label: 'Justification',
+      label: t('Alignment'),
       settingPath: 'typography.justify',
       control: select('typography.justify', state.justify, JUSTIFY, hasCustomRef),
       describe,
       greyWhenCustomRef: true,
       hasCustomRef,
     }),
-    colorRow("Couleur d'accent (titres + liens)", 'typography.accentColor', state.accentColor, describe, hasCustomRef, 'ex. 2E7D32'),
-    colorRow("Couleur d'en-tête de tableau", 'typography.tableHeaderColor', state.tableHeaderColor, describe, hasCustomRef, 'ex. 4472C4'),
+    colorRow(t('Accent colour (headings + links)'), 'typography.accentColor', state.accentColor, describe, hasCustomRef, t('e.g. {0}').replace('{0}', '2E7D32')),
+    colorRow(t('Table header colour'), 'typography.tableHeaderColor', state.tableHeaderColor, describe, hasCustomRef, t('e.g. {0}').replace('{0}', '4472C4')),
   ].join('\n');
 
   const structureGroup = [
     row({
-      label: 'Sommaire automatique (TOC)',
+      label: t('Automatic table of contents'),
       settingPath: 'toc.enabled',
       control: checkbox('toc.enabled', state.tocEnabled, false),
       describe,
@@ -428,7 +453,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
       hasCustomRef,
     }),
     row({
-      label: 'Profondeur du sommaire',
+      label: t('Table of contents depth'),
       settingPath: 'toc.depth',
       control: numberInput('toc.depth', state.tocDepth, 2, 4, 1, false),
       describe,
@@ -438,7 +463,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
   ].join('\n');
 
   const emojiGroup = row({
-    label: 'Rendu couleur des emoji/badges',
+    label: t('Colour emoji and badges'),
     settingPath: 'emoji.forceColorFont',
     control: checkbox('emoji.forceColorFont', state.emojiForceColorFont, false),
     describe,
@@ -446,42 +471,61 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
     hasCustomRef,
   });
 
-  const advancedGroup =
+  const outputGroup =
+    `<div class="row" title="${tooltip(describe, 'outputDirectory')}"><label>${escapeHtmlText(t('Output folder'))}</label>` +
+    textInput('outputDirectory', state.outputDirectory, false, ` placeholder="${escapeHtmlAttr(t('(next to the source file)'))}"`) +
+    `</div>` +
     `<p class="advanced-note">${escapeHtmlText(
       hasCustomRef
-        ? 'Un gabarit personnalisé est actif (md2nativedocx.referenceDocument) — les réglages de mise en page et typographie ci-dessus sont ignorés et grisés ; le sommaire et le rendu emoji restent actifs.'
-        : "Renseignez un gabarit Word personnalisé pour l'utiliser à la place des réglages ci-dessus.",
+        ? t('A custom template is active (md2nativedocx.referenceDocument): the page layout and typography settings are ignored and greyed; the table of contents and emoji rendering still apply.')
+        : t('Set a custom Word template (your company\'s, for instance) to use it instead of the page layout and typography settings.'),
     )}</p>` +
-    `<div class="row"><label>Gabarit personnalisé (.docx)</label>` +
+    `<div class="row" title="${tooltip(describe, 'referenceDocument')}"><label>${escapeHtmlText(t('Custom Word template (.docx)'))}</label>` +
     `<div class="reference-doc-controls">` +
-    textInput('referenceDocument', state.referenceDocument, false, ' placeholder="(aucun)"') +
-    `<button type="button" id="browse-reference-doc">Parcourir…</button>` +
-    `</div></div>` +
-    row({
-      label: 'Vérification de conformité Word',
-      settingPath: 'wordCompatibilityCheck.enabled',
-      control: checkbox('wordCompatibilityCheck.enabled', state.wordCompatibilityCheckEnabled, false),
-      describe,
-      greyWhenCustomRef: false,
-      hasCustomRef,
-    });
+    textInput('referenceDocument', state.referenceDocument, false, ` placeholder="${escapeHtmlAttr(t('(none)'))}"`) +
+    `<button type="button" id="browse-reference-doc">${escapeHtmlText(t('Browse…'))}</button>` +
+    `</div></div>`;
+
+  const advancedGroup = row({
+    label: t('Word compatibility check'),
+    settingPath: 'wordCompatibilityCheck.enabled',
+    control: checkbox('wordCompatibilityCheck.enabled', state.wordCompatibilityCheckEnabled, false),
+    describe,
+    greyWhenCustomRef: false,
+    hasCustomRef,
+  });
+
+  const diagramRow = (label: string, settingPath: string, control: string) =>
+    row({ label, settingPath, control, describe, greyWhenCustomRef: false, hasCustomRef });
+  const diagramsGroup = [
+    diagramRow(t('SmartArt for processes, hierarchies and cycles'), 'smartArt.enabled', checkbox('smartArt.enabled', state.smartArtEnabled, false)),
+    diagramRow(t('SmartArt look'), 'smartArt.style', select('smartArt.style', state.smartArtStyle, SMARTART_STYLE_NAMES, !state.smartArtEnabled)),
+    diagramRow(t('Pre-rendered SmartArt drawing'), 'smartArt.preRenderedDrawing', checkbox('smartArt.preRenderedDrawing', state.smartArtDrawing, !state.smartArtEnabled)),
+    diagramRow(t('Native Word charts (pie)'), 'nativeCharts.enabled', checkbox('nativeCharts.enabled', state.nativeChartsEnabled, false)),
+    diagramRow(
+      t('Also xychart and radar (not yet confirmed in Word)'),
+      'nativeCharts.includeUnverified',
+      checkbox('nativeCharts.includeUnverified', state.nativeChartsIncludeUnverified, !state.nativeChartsEnabled),
+    ),
+    diagramRow(t('PowerPoint: Mermaid source beside each diagram'), 'pptx.showSource', checkbox('pptx.showSource', state.pptxShowSource, false)),
+  ].join('\n');
 
   const scopeSelector =
     `<div class="scope-toggle">` +
-    `<label><input type="radio" name="scope" value="user" ${state.scope === 'user' ? 'checked' : ''}/> Utilisateur</label>` +
-    `<label><input type="radio" name="scope" value="workspace" ${state.scope === 'workspace' ? 'checked' : ''}/> Espace de travail</label>` +
+    `<label><input type="radio" name="scope" value="user" ${state.scope === 'user' ? 'checked' : ''}/> ${escapeHtmlText(t('User'))}</label>` +
+    `<label><input type="radio" name="scope" value="workspace" ${state.scope === 'workspace' ? 'checked' : ''}/> ${escapeHtmlText(t('Workspace'))}</label>` +
     `</div>`;
 
   const activeFontPreset = matchFontPreset(state.headingFont, state.bodyFont);
   const fontPresetOptions = [
-    ...FONT_PRESETS.map((p) => `<option value="${p.id}"${p.id === activeFontPreset ? ' selected' : ''}>${escapeHtmlText(p.label)}</option>`),
-    `<option value="custom"${activeFontPreset === 'custom' ? ' selected' : ''}>Personnalisé (réglages détaillés ci-dessous)</option>`,
+    ...FONT_PRESETS.map((p) => `<option value="${p.id}"${p.id === activeFontPreset ? ' selected' : ''}>${escapeHtmlText(t(p.label))}</option>`),
+    `<option value="custom"${activeFontPreset === 'custom' ? ' selected' : ''}>${escapeHtmlText(t('Custom (detailed settings below)'))}</option>`,
   ].join('');
 
   const activePagePreset = matchPagePreset(state.pageSize, state.orientation, state.margins);
   const pagePresetOptions = [
-    ...PAGE_PRESETS.map((p) => `<option value="${p.id}"${p.id === activePagePreset ? ' selected' : ''}>${escapeHtmlText(p.label)}</option>`),
-    `<option value="custom"${activePagePreset === 'custom' ? ' selected' : ''}>Personnalisé (réglages détaillés ci-dessous)</option>`,
+    ...PAGE_PRESETS.map((p) => `<option value="${p.id}"${p.id === activePagePreset ? ' selected' : ''}>${escapeHtmlText(t(p.label))}</option>`),
+    `<option value="custom"${activePagePreset === 'custom' ? ' selected' : ''}>${escapeHtmlText(t('Custom (detailed settings below)'))}</option>`,
   ].join('');
 
   const accentSwatchesQuick = ACCENT_SWATCHES.map(
@@ -491,13 +535,14 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
   ).join('');
 
   const quickSettings =
-    `<div class="quick-row"><label>Modèle de police</label>` +
+    `<div class="quick-row"><label>${escapeHtmlText(t('Font set'))}</label>` +
     `<select id="font-preset"${hasCustomRef ? ' disabled' : ''}>${fontPresetOptions}</select></div>` +
-    `<div class="quick-row"><label>Mise en page</label>` +
+    `<div class="quick-row"><label>${escapeHtmlText(t('Page layout'))}</label>` +
     `<select id="page-preset"${hasCustomRef ? ' disabled' : ''}>${pagePresetOptions}</select></div>` +
-    `<div class="quick-row"><label>Couleur d'accent</label><span class="swatches">${accentSwatchesQuick}</span></div>`;
+    `<div class="quick-row"><label>${escapeHtmlText(t('Accent colour'))}</label><span class="swatches">${accentSwatchesQuick}</span></div>`;
 
-  const preview = buildPreview();
+  const preview = buildPreview(t);
+  const reset = t('Reset');
 
   return `<!doctype html>
 <html>
@@ -554,19 +599,21 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
 </style>
 </head>
 <body>
-  <h2>Aperçu</h2>
+  <h2>${escapeHtmlText(t('Preview'))}</h2>
   ${preview}
 
   ${scopeSelector}
 
-  <div class="top-bar"><h2>Réglages rapides</h2><button type="button" id="reset-all">Tout réinitialiser</button></div>
+  <div class="top-bar"><h2>${escapeHtmlText(t('Quick settings'))}</h2><button type="button" id="reset-all">${escapeHtmlText(t('Reset all'))}</button></div>
   ${quickSettings}
 
-  ${section('Mise en page', GROUP_KEYS.layout, layoutGroup)}
-  ${section('Typographie', GROUP_KEYS.typography, typographyGroup)}
-  ${section('Structure du document', GROUP_KEYS.structure, structureGroup)}
-  ${section('Emoji & badges', GROUP_KEYS.emoji, emojiGroup)}
-  ${section('Avancé', GROUP_KEYS.advanced, advancedGroup)}
+  ${section(t('Diagrams'), GROUP_KEYS.diagrams, diagramsGroup, reset)}
+  ${section(t('Page layout'), GROUP_KEYS.layout, layoutGroup, reset)}
+  ${section(t('Typography'), GROUP_KEYS.typography, typographyGroup, reset)}
+  ${section(t('Document structure'), GROUP_KEYS.structure, structureGroup, reset)}
+  ${section(t('Emoji & badges'), GROUP_KEYS.emoji, emojiGroup, reset)}
+  ${section(t('Output'), GROUP_KEYS.output, outputGroup, reset)}
+  ${section(t('Advanced'), GROUP_KEYS.advanced, advancedGroup, reset)}
 
 <script nonce="${nonce}">
 (function () {
@@ -767,10 +814,9 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
 </html>`;
 }
 
-function buildPreview(): string {
+function buildPreview(t: Translate): string {
   return (
-    `<div id="preview-page"><h3>Titre du document</h3>` +
-    `<p>Ceci est un aperçu simplifié de la mise en page et de la typographie choisies. Le rendu final ` +
-    `dans Word peut différer legerement.</p></div>`
+    `<div id="preview-page"><h3>${escapeHtmlText(t('Document title'))}</h3>` +
+    `<p>${escapeHtmlText(t('A simplified preview of the chosen page layout and typography. The final result in Word may differ slightly.'))}</p></div>`
   );
 }

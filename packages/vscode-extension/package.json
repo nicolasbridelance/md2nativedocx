@@ -1,6 +1,6 @@
 {
   "name": "md2nativedocx",
-  "displayName": "md2nativedocx — Markdown to Word with editable diagrams",
+  "displayName": "md2nativedocx — Markdown to Word with editable diagrams (+ PowerPoint)",
   "description": "%extension.description%",
   "version": "0.5.6",
   "publisher": "md2nativedocx",
@@ -178,211 +178,287 @@
         }
       ]
     },
-    "configuration": {
-      "title": "md2nativedocx",
-      "properties": {
-        "md2nativedocx.outputDirectory": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%configuration.outputDirectory.markdownDescription%"
-        },
-        "md2nativedocx.referenceDocument": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%configuration.referenceDocument.markdownDescription%"
-        },
-        "md2nativedocx.smartArt.enabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%"
-        },
-        "md2nativedocx.smartArt.style": {
-          "type": "string",
-          "enum": ["simple", "subtle", "moderate", "intense-accent", "colorful", "colorful-moderate", "intense"],
-          "default": "colorful",
-          "enumDescriptions": [
-            "%configuration.smartArt.style.simple%",
-            "%configuration.smartArt.style.subtle%",
-            "%configuration.smartArt.style.moderate%",
-            "%configuration.smartArt.style.intense-accent%",
-            "%configuration.smartArt.style.colorful%",
-            "%configuration.smartArt.style.colorful-moderate%",
-            "%configuration.smartArt.style.intense%"
-          ],
-          "markdownDescription": "%configuration.smartArt.style.markdownDescription%"
-        },
-        "md2nativedocx.smartArt.preRenderedDrawing": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%configuration.smartArt.preRenderedDrawing.markdownDescription%"
-        },
-        "md2nativedocx.nativeCharts.enabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%configuration.nativeCharts.enabled.markdownDescription%"
-        },
-        "md2nativedocx.layout.pageSize": {
-          "type": "string",
-          "enum": ["A3", "A4", "Letter", "Legal"],
-          "default": "A4",
-          "markdownDescription": "%configuration.layout.pageSize.markdownDescription%"
-        },
-        "md2nativedocx.layout.orientation": {
-          "type": "string",
-          "enum": ["portrait", "landscape"],
-          "default": "portrait",
-          "markdownDescription": "%configuration.layout.orientation.markdownDescription%"
-        },
-        "md2nativedocx.layout.margins": {
-          "type": "string",
-          "enum": ["normal", "narrow", "moderate", "wide", "custom"],
-          "enumDescriptions": [
-            "%configuration.layout.margins.normal%",
-            "%configuration.layout.margins.narrow%",
-            "%configuration.layout.margins.moderate%",
-            "%configuration.layout.margins.wide%",
-            "%configuration.layout.margins.custom%"
-          ],
-          "default": "normal",
-          "markdownDescription": "%configuration.layout.margins.markdownDescription%"
-        },
-        "md2nativedocx.layout.marginsCustomTop": {
-          "type": "number",
-          "default": 2.5,
-          "minimum": 0.1,
-          "maximum": 15,
-          "markdownDescription": "%configuration.layout.marginsCustomTop.markdownDescription%"
-        },
-        "md2nativedocx.layout.marginsCustomRight": {
-          "type": "number",
-          "default": 2.5,
-          "minimum": 0.1,
-          "maximum": 15,
-          "markdownDescription": "%configuration.layout.marginsCustomRight.markdownDescription%"
-        },
-        "md2nativedocx.layout.marginsCustomBottom": {
-          "type": "number",
-          "default": 2.5,
-          "minimum": 0.1,
-          "maximum": 15,
-          "markdownDescription": "%configuration.layout.marginsCustomBottom.markdownDescription%"
-        },
-        "md2nativedocx.layout.marginsCustomLeft": {
-          "type": "number",
-          "default": 2.5,
-          "minimum": 0.1,
-          "maximum": 15,
-          "markdownDescription": "%configuration.layout.marginsCustomLeft.markdownDescription%"
-        },
-        "md2nativedocx.typography.headingFont": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%configuration.typography.headingFont.markdownDescription%"
-        },
-        "md2nativedocx.typography.bodyFont": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%configuration.typography.bodyFont.markdownDescription%"
-        },
-        "md2nativedocx.typography.fontSize": {
-          "type": "number",
-          "default": 11,
-          "minimum": 9,
-          "maximum": 14,
-          "markdownDescription": "%configuration.typography.fontSize.markdownDescription%"
-        },
-        "md2nativedocx.typography.lineSpacing": {
-          "type": "string",
-          "enum": ["default", "single", "1.15", "1.5", "double"],
-          "enumDescriptions": [
-            "%configuration.typography.lineSpacing.default%",
-            "%configuration.typography.lineSpacing.single%",
-            "%configuration.typography.lineSpacing.1.15%",
-            "%configuration.typography.lineSpacing.1.5%",
-            "%configuration.typography.lineSpacing.double%"
-          ],
-          "default": "default",
-          "markdownDescription": "%configuration.typography.lineSpacing.markdownDescription%"
-        },
-        "md2nativedocx.typography.justify": {
-          "type": "string",
-          "enum": ["left", "right", "center", "both"],
-          "default": "left",
-          "markdownDescription": "%configuration.typography.justify.markdownDescription%"
-        },
-        "md2nativedocx.typography.accentColor": {
-          "type": "string",
-          "default": "",
-          "pattern": "^$|^[0-9A-Fa-f]{6}$",
-          "markdownDescription": "%configuration.typography.accentColor.markdownDescription%"
-        },
-        "md2nativedocx.typography.tableHeaderColor": {
-          "type": "string",
-          "default": "",
-          "pattern": "^$|^[0-9A-Fa-f]{6}$",
-          "markdownDescription": "%configuration.typography.tableHeaderColor.markdownDescription%"
-        },
-        "md2nativedocx.layout.footerPageNumber": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%configuration.layout.footerPageNumber.markdownDescription%"
-        },
-        "md2nativedocx.layout.landscapeTables": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%configuration.layout.landscapeTables.markdownDescription%"
-        },
-        "md2nativedocx.toc.enabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%configuration.toc.enabled.markdownDescription%"
-        },
-        "md2nativedocx.toc.depth": {
-          "type": "number",
-          "default": 3,
-          "minimum": 2,
-          "maximum": 4,
-          "markdownDescription": "%configuration.toc.depth.markdownDescription%"
-        },
-        "md2nativedocx.emoji.forceColorFont": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%configuration.emoji.forceColorFont.markdownDescription%"
-        },
-        "md2nativedocx.wordCompatibilityCheck.enabled": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%configuration.wordCompatibilityCheck.enabled.markdownDescription%"
-        },
-        "md2nativedocx.pandoc.downloadUrl": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%configuration.pandoc.downloadUrl.markdownDescription%"
-        },
-        "md2nativedocx.pandoc.sha256": {
-          "type": "string",
-          "default": "",
-          "pattern": "^$|^[0-9a-f]{64}$",
-          "markdownDescription": "%configuration.pandoc.sha256.markdownDescription%"
-        },
-        "md2nativedocx.dotnet.downloadUrl": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%configuration.dotnet.downloadUrl.markdownDescription%"
-        },
-        "md2nativedocx.dotnet.sha512": {
-          "type": "string",
-          "default": "",
-          "pattern": "^$|^[0-9a-f]{128}$",
-          "markdownDescription": "%configuration.dotnet.sha512.markdownDescription%"
-        },
-        "md2nativedocx.pptx.showSource": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%configuration.pptx.showSource.markdownDescription%"
+    "configuration": [
+      {
+        "id": "md2nativedocx.output",
+        "title": "%configuration.section.output%",
+        "order": 0,
+        "properties": {
+          "md2nativedocx.outputDirectory": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%configuration.outputDirectory.markdownDescription%",
+            "order": 0
+          },
+          "md2nativedocx.referenceDocument": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%configuration.referenceDocument.markdownDescription%",
+            "order": 1
+          }
+        }
+      },
+      {
+        "id": "md2nativedocx.diagrams",
+        "title": "%configuration.section.diagrams%",
+        "order": 1,
+        "properties": {
+          "md2nativedocx.smartArt.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "%configuration.smartArt.enabled.markdownDescription%",
+            "order": 0
+          },
+          "md2nativedocx.smartArt.style": {
+            "type": "string",
+            "enum": ["simple", "subtle", "moderate", "intense-accent", "colorful", "colorful-moderate", "intense"],
+            "default": "colorful",
+            "enumDescriptions": [
+              "%configuration.smartArt.style.simple%",
+              "%configuration.smartArt.style.subtle%",
+              "%configuration.smartArt.style.moderate%",
+              "%configuration.smartArt.style.intense-accent%",
+              "%configuration.smartArt.style.colorful%",
+              "%configuration.smartArt.style.colorful-moderate%",
+              "%configuration.smartArt.style.intense%"
+            ],
+            "markdownDescription": "%configuration.smartArt.style.markdownDescription%",
+            "order": 1
+          },
+          "md2nativedocx.smartArt.preRenderedDrawing": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "%configuration.smartArt.preRenderedDrawing.markdownDescription%",
+            "order": 2
+          },
+          "md2nativedocx.nativeCharts.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "%configuration.nativeCharts.enabled.markdownDescription%",
+            "order": 3
+          },
+          "md2nativedocx.nativeCharts.includeUnverified": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%configuration.nativeCharts.includeUnverified.markdownDescription%",
+            "order": 4
+          },
+          "md2nativedocx.pptx.showSource": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%configuration.pptx.showSource.markdownDescription%",
+            "order": 5
+          }
+        }
+      },
+      {
+        "id": "md2nativedocx.layout",
+        "title": "%configuration.section.layout%",
+        "order": 2,
+        "properties": {
+          "md2nativedocx.layout.pageSize": {
+            "type": "string",
+            "enum": ["A3", "A4", "Letter", "Legal"],
+            "default": "A4",
+            "markdownDescription": "%configuration.layout.pageSize.markdownDescription%",
+            "order": 0
+          },
+          "md2nativedocx.layout.orientation": {
+            "type": "string",
+            "enum": ["portrait", "landscape"],
+            "default": "portrait",
+            "markdownDescription": "%configuration.layout.orientation.markdownDescription%",
+            "order": 1
+          },
+          "md2nativedocx.layout.margins": {
+            "type": "string",
+            "enum": ["normal", "narrow", "moderate", "wide", "custom"],
+            "enumDescriptions": [
+              "%configuration.layout.margins.normal%",
+              "%configuration.layout.margins.narrow%",
+              "%configuration.layout.margins.moderate%",
+              "%configuration.layout.margins.wide%",
+              "%configuration.layout.margins.custom%"
+            ],
+            "default": "normal",
+            "markdownDescription": "%configuration.layout.margins.markdownDescription%",
+            "order": 2
+          },
+          "md2nativedocx.layout.marginsCustomTop": {
+            "type": "number",
+            "default": 2.5,
+            "minimum": 0.1,
+            "maximum": 15,
+            "markdownDescription": "%configuration.layout.marginsCustomTop.markdownDescription%",
+            "order": 3
+          },
+          "md2nativedocx.layout.marginsCustomRight": {
+            "type": "number",
+            "default": 2.5,
+            "minimum": 0.1,
+            "maximum": 15,
+            "markdownDescription": "%configuration.layout.marginsCustomRight.markdownDescription%",
+            "order": 4
+          },
+          "md2nativedocx.layout.marginsCustomBottom": {
+            "type": "number",
+            "default": 2.5,
+            "minimum": 0.1,
+            "maximum": 15,
+            "markdownDescription": "%configuration.layout.marginsCustomBottom.markdownDescription%",
+            "order": 5
+          },
+          "md2nativedocx.layout.marginsCustomLeft": {
+            "type": "number",
+            "default": 2.5,
+            "minimum": 0.1,
+            "maximum": 15,
+            "markdownDescription": "%configuration.layout.marginsCustomLeft.markdownDescription%",
+            "order": 6
+          },
+          "md2nativedocx.layout.footerPageNumber": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%configuration.layout.footerPageNumber.markdownDescription%",
+            "order": 7
+          },
+          "md2nativedocx.layout.landscapeTables": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%configuration.layout.landscapeTables.markdownDescription%",
+            "order": 8
+          }
+        }
+      },
+      {
+        "id": "md2nativedocx.typography",
+        "title": "%configuration.section.typography%",
+        "order": 3,
+        "properties": {
+          "md2nativedocx.typography.headingFont": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%configuration.typography.headingFont.markdownDescription%",
+            "order": 0
+          },
+          "md2nativedocx.typography.bodyFont": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%configuration.typography.bodyFont.markdownDescription%",
+            "order": 1
+          },
+          "md2nativedocx.typography.fontSize": {
+            "type": "number",
+            "default": 11,
+            "minimum": 9,
+            "maximum": 14,
+            "markdownDescription": "%configuration.typography.fontSize.markdownDescription%",
+            "order": 2
+          },
+          "md2nativedocx.typography.lineSpacing": {
+            "type": "string",
+            "enum": ["default", "single", "1.15", "1.5", "double"],
+            "enumDescriptions": [
+              "%configuration.typography.lineSpacing.default%",
+              "%configuration.typography.lineSpacing.single%",
+              "%configuration.typography.lineSpacing.1.15%",
+              "%configuration.typography.lineSpacing.1.5%",
+              "%configuration.typography.lineSpacing.double%"
+            ],
+            "default": "default",
+            "markdownDescription": "%configuration.typography.lineSpacing.markdownDescription%",
+            "order": 3
+          },
+          "md2nativedocx.typography.justify": {
+            "type": "string",
+            "enum": ["left", "right", "center", "both"],
+            "default": "left",
+            "markdownDescription": "%configuration.typography.justify.markdownDescription%",
+            "order": 4
+          },
+          "md2nativedocx.typography.accentColor": {
+            "type": "string",
+            "default": "",
+            "pattern": "^$|^[0-9A-Fa-f]{6}$",
+            "markdownDescription": "%configuration.typography.accentColor.markdownDescription%",
+            "order": 5
+          },
+          "md2nativedocx.typography.tableHeaderColor": {
+            "type": "string",
+            "default": "",
+            "pattern": "^$|^[0-9A-Fa-f]{6}$",
+            "markdownDescription": "%configuration.typography.tableHeaderColor.markdownDescription%",
+            "order": 6
+          }
+        }
+      },
+      {
+        "id": "md2nativedocx.structure",
+        "title": "%configuration.section.structure%",
+        "order": 4,
+        "properties": {
+          "md2nativedocx.toc.enabled": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%configuration.toc.enabled.markdownDescription%",
+            "order": 0
+          },
+          "md2nativedocx.toc.depth": {
+            "type": "number",
+            "default": 3,
+            "minimum": 2,
+            "maximum": 4,
+            "markdownDescription": "%configuration.toc.depth.markdownDescription%",
+            "order": 1
+          },
+          "md2nativedocx.emoji.forceColorFont": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "%configuration.emoji.forceColorFont.markdownDescription%",
+            "order": 2
+          }
+        }
+      },
+      {
+        "id": "md2nativedocx.advanced",
+        "title": "%configuration.section.advanced%",
+        "order": 5,
+        "properties": {
+          "md2nativedocx.wordCompatibilityCheck.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "%configuration.wordCompatibilityCheck.enabled.markdownDescription%",
+            "order": 0
+          },
+          "md2nativedocx.pandoc.downloadUrl": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%configuration.pandoc.downloadUrl.markdownDescription%",
+            "order": 1
+          },
+          "md2nativedocx.pandoc.sha256": {
+            "type": "string",
+            "default": "",
+            "pattern": "^$|^[0-9a-f]{64}$",
+            "markdownDescription": "%configuration.pandoc.sha256.markdownDescription%",
+            "order": 2
+          },
+          "md2nativedocx.dotnet.downloadUrl": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%configuration.dotnet.downloadUrl.markdownDescription%",
+            "order": 3
+          },
+          "md2nativedocx.dotnet.sha512": {
+            "type": "string",
+            "default": "",
+            "pattern": "^$|^[0-9a-f]{128}$",
+            "markdownDescription": "%configuration.dotnet.sha512.markdownDescription%",
+            "order": 4
+          }
         }
       }
-    },
+    ],
     "walkthroughs": [
       {
         "id": "md2nativedocx.gettingStarted",
