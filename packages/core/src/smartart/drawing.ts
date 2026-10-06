@@ -367,6 +367,10 @@ const DEEP_SIBLING_GAP = 0.3;
 const DEEP_LEVEL_GAP = 0.4;
 /** Tallest frame (EMU) a multi-level tree may ask for (5 in). */
 const DEEP_MAX_FRAME_CY = 4572000;
+/** Compact (org-chart) layout: how far right of its parent's left edge a column of leaves starts, in box widths. */
+export const DEEP_COLUMN_INDENT = 0.6;
+/** A top-down tree whose boxes would come out narrower than this (EMU, 0.9 in) switches to the compact layout. */
+const DEEP_COMPACT_BELOW = 822960;
 /** Smallest font in a multi-level tree's cached drawing (wide trees get small boxes; Word can enlarge them). */
 const DEEP_MIN_FONT_PT = 8;
 
@@ -380,6 +384,29 @@ export function deepTreeSize(root: { children: unknown[] }): { depth: number; le
   return walk(root);
 }
 
+/** In the compact layout, a non-root node whose children are all leaves stacks them in a column under itself. */
+function isColumnParent(n: DeepTreeNode, root: DeepTreeNode): boolean {
+  return n !== root && n.children.length > 0 && n.children.every((c) => c.children.length === 0);
+}
+
+/** Width of a subtree in box widths (`compact`: leaf-only families are a 1 + indent wide column). */
+function deepSpan(n: DeepTreeNode, root: DeepTreeNode, compact: boolean): number {
+  if (n.children.length === 0) return 1;
+  if (compact && isColumnParent(n, root)) return 1 + DEEP_COLUMN_INDENT;
+  return Math.max(1, n.children.reduce((s, c) => s + deepSpan(c, root, compact), 0) + DEEP_SIBLING_GAP * (n.children.length - 1));
+}
+
+/**
+ * Whether a multi-level tree should use the compact (org-chart) layout: only top-down, only when the ordinary
+ * layout would make boxes narrower than 0.9 in, and only if stacking leaf families actually narrows the tree.
+ * This is how Word's own organisation chart keeps wide trees readable (leaves in a column under their parent).
+ */
+export function deepTreeIsCompact(root: DeepTreeNode, direction: Flowchart['direction']): boolean {
+  if (direction !== 'TD') return false;
+  const normal = deepSpan(root, root, false);
+  return DRAWING_FRAME.cx / normal < DEEP_COMPACT_BELOW && deepSpan(root, root, true) < normal;
+}
+
 /**
  * Multi-level tree geometry, in the four Mermaid directions. Space is shared by the **real shape of each
  * subtree**: a leaf takes one box along the sibling axis, a parent's subtree the sum of its children's (plus
@@ -389,20 +416,29 @@ export function deepTreeSize(root: { children: unknown[] }): { depth: number; le
  *
  * Computed on two abstract axes — *cross* (siblings) and *flow* (levels, root first) — then mapped to x/y:
  * `TD` flow = down, `BT` flow = up, `LR` flow = right, `RL` flow = left.
+ *
+ * `compact` (top-down only, see {@link deepTreeIsCompact}): a node whose children are all leaves keeps its
+ * box at the left of its slot and stacks the leaves in a column below it, indented by
+ * {@link DEEP_COLUMN_INDENT}; each leaf's line runs down from the parent and enters the leaf's left side.
  */
 export function deepTreeShapes(
   root: DeepTreeNode,
   style: SmartArtStyle = 'simple',
   direction: Flowchart['direction'] = 'TD',
+  compact = false,
 ): { shapes: DrawingShape[]; frame: { cx: number; cy: number } } {
   const FW = DRAWING_FRAME.cx;
   const horizontal = direction === 'LR' || direction === 'RL';
   const reversed = direction === 'BT' || direction === 'RL';
-  const { depth } = deepTreeSize(root);
-  const span = (n: DeepTreeNode): number =>
-    n.children.length === 0 ? 1 : Math.max(1, n.children.reduce((s, c) => s + span(c), 0) + DEEP_SIBLING_GAP * (n.children.length - 1));
+  const columns = compact && direction === 'TD';
+  const isColumn = (n: DeepTreeNode): boolean => columns && isColumnParent(n, root);
+  const span = (n: DeepTreeNode): number => deepSpan(n, root, columns);
   const totalSpan = span(root);
-  const levels = depth + DEEP_LEVEL_GAP * (depth - 1);
+  // Rows of boxes along the flow axis: one per level, plus one per leaf in a stacked column.
+  const lastRow = (n: DeepTreeNode, row: number): number =>
+    isColumn(n) ? row + n.children.length : Math.max(row, ...n.children.map((c) => lastRow(c, row + 1)));
+  const rows = lastRow(root, 0) + 1;
+  const levels = rows + DEEP_LEVEL_GAP * (rows - 1);
 
   // Box size along each axis, and the frame. Vertical trees spread siblings across the page width; horizontal
   // ones spread the levels across it and the siblings down a frame of at most 5 in.
@@ -441,8 +477,8 @@ export function deepTreeShapes(
   // Pass 1: centre of every node along the cross axis, in box units from the start of the tree.
   const centreOf = new Map<DeepTreeNode, number>();
   const centre = (n: DeepTreeNode, start: number): void => {
-    if (n.children.length === 0) {
-      centreOf.set(n, start + 0.5);
+    if (n.children.length === 0 || isColumn(n)) {
+      centreOf.set(n, start + 0.5); // a column parent's box sits at the left of its slot
       return;
     }
     let childStart = start;
@@ -498,6 +534,45 @@ export function deepTreeShapes(
         ],
         accent: accentOf(style, 'parChTrans1D2', 0),
       });
+    }
+    if (isColumn(n)) {
+      // Leaves stacked below, indented; each line drops from the parent's bottom centre and turns into the leaf.
+      const leafCross = c + DEEP_COLUMN_INDENT * boxCross;
+      n.children.forEach((leaf, k) => {
+        const lf = (level + 1 + k) * boxFlow * (1 + DEEP_LEVEL_GAP);
+        const lr = toRect(leafCross, lf, boxCross, boxFlow);
+        shapes.push({
+          modelId: leaf.id,
+          x: Math.round(lr.x),
+          y: Math.round(lr.y),
+          cx: Math.round(lr.cx),
+          cy: Math.round(lr.cy),
+          prst: 'roundRect',
+          text: leaf.text,
+          fontSize: font,
+          accent: accentOf(style, 'node2', nonRootCount++),
+          ...(leaf.fill ? { fill: leaf.fill } : {}),
+        });
+        if (leaf.connId === undefined) return;
+        const drop = lf + boxFlow / 2 - (f + boxFlow);
+        const stub = leafCross - midCross;
+        const box = toRect(midCross, f + boxFlow, stub, drop);
+        shapes.push({
+          modelId: leaf.connId,
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          cx: Math.round(box.cx),
+          cy: Math.round(box.cy),
+          prst: 'connector',
+          path: [
+            [0, 0],
+            [0, drop],
+            [stub, drop],
+          ],
+          accent: accentOf(style, 'parChTrans1D2', 0),
+        });
+      });
+      return;
     }
     for (const child of n.children) emit(child, level + 1, { midCross, flowEnd: f + boxFlow });
   };

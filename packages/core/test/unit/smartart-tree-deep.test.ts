@@ -209,9 +209,53 @@ test('cached drawing in every direction: inside the frame, no overlap, root on t
   }
 });
 
-test('a very wide tree still fits the frame, with the font floored at 8 pt', () => {
+test('a very wide tree still fits the frame, with a small font never below 8 pt', () => {
+  // Left-to-right: no compact layout there, so 24 leaves down a 5 in frame get small boxes.
   const leaves = Array.from({ length: 24 }, (_, i) => `${i % 2 ? 'B' : 'S'} --> L${i}[Organisation ${i}]`).join('\n  ');
-  const out = deep(`graph TD\n  A --> B\n  A --> S\n  ${leaves}`, { drawing: true });
-  for (const s of rects(out.drawingXml ?? '')) assert.ok(s.x + s.cx <= out.frame.cx + 1, 'inside frame');
-  assert.ok(out.drawingXml?.includes('sz="800"'));
+  const out = deep(`graph LR\n  A --> B\n  A --> S\n  ${leaves}`, { drawing: true });
+  for (const s of rects(out.drawingXml ?? '')) assert.ok(s.y + s.cy <= out.frame.cy + 1, 'inside frame');
+  const sizes = [...(out.drawingXml ?? '').matchAll(/ sz="(\d+)"/g)].map((m) => Number(m[1]));
+  assert.ok(sizes.length > 0 && sizes.every((sz) => sz >= 800 && sz <= 1200), `font between 8 and 12 pt: ${sizes[0]}`);
+});
+
+const WIDE = [
+  'graph TD',
+  '  R[Groupe] --> A[Filiale A]',
+  '  R --> B[Filiale B]',
+  '  R --> C[Filiale C]',
+  '  R --> D[Filiale D]',
+  ...['A', 'B', 'C', 'D'].map((p) => `  ${p} --> ${p}1[Ventes] & ${p}2[Achats] & ${p}3[RH] & ${p}4[IT]`),
+].join('\n');
+
+test('compact (org-chart) layout: chosen for a wide top-down tree only', () => {
+  assert.ok(deep(WIDE).layoutXml.includes('tree-deep1-compact'));
+  assert.ok(!deep(SAMPLE).layoutXml.includes('compact'), 'a small tree keeps the validated layout');
+  assert.ok(!deep(WIDE.replace('graph TD', 'graph LR')).layoutXml.includes('compact'), 'top-down only');
+  const { layoutXml } = deep(WIDE);
+  assertBalanced(layoutXml);
+  assert.equal((layoutXml.match(/<dgm:choose /g) ?? []).length, 3);
+  assert.ok(layoutXml.includes('<dgm:param type="endPts" val="midL"/>'));
+  assert.ok(layoutXml.includes('<dgm:param type="hierAlign" val="tL"/>'));
+});
+
+test('compact drawing: leaves stacked in an indented column, boxes much wider, nothing overlaps', () => {
+  const compact = deep(WIDE, { drawing: true });
+  const boxes = rects(compact.drawingXml ?? '').filter((s) => !s.connector);
+  assert.equal(boxes.length, 21);
+  // Preorder: root, A, A1..A4, B, ... -> A's four leaves share one x, indented from A, one below the other.
+  const [, a, a1, a2, a3, a4] = boxes as [(typeof boxes)[0], (typeof boxes)[0], (typeof boxes)[0], (typeof boxes)[0], (typeof boxes)[0], (typeof boxes)[0]];
+  for (const leaf of [a2, a3, a4]) assert.equal(leaf.x, a1.x);
+  assert.ok(a1.x > a.x + a.cx / 2, 'column starts right of the parent centre');
+  assert.ok(a1.y > a.y && a2.y > a1.y && a3.y > a2.y && a4.y > a3.y);
+  assert.ok(a.cx > 700000, 'boxes ~2 cm wide, against ~7 mm in the row layout');
+  for (const s of rects(compact.drawingXml ?? '')) {
+    assert.ok(s.x >= 0 && s.y >= 0 && s.x + s.cx <= compact.frame.cx + 1 && s.y + s.cy <= compact.frame.cy + 1, 'inside frame');
+  }
+  for (const p of boxes)
+    for (const q of boxes) {
+      if (p.id >= q.id) continue;
+      assert.ok(!(p.x < q.x + q.cx && q.x < p.x + p.cx && p.y < q.y + q.cy && q.y < p.y + p.cy), `${p.id}/${q.id} overlap`);
+    }
+  // The data model is the same shape whichever layout is chosen.
+  assert.equal((compact.dataXml.match(/presName="levelNConn"/g) ?? []).length, 20);
 });

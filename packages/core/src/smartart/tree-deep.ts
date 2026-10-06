@@ -23,7 +23,7 @@ import type { Flowchart, FlowNode } from '../types.js';
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
 import { buildColorsXml, buildStyleXml } from './styles.js';
 import { TREE_COLORS_XML, TREE_STYLE_XML, type SmartArtTreeOutput } from './tree.js';
-import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, deepTreeShapes, type DeepTreeNode } from './drawing.js';
+import { DEEP_COLUMN_INDENT, DRAWING_EXT_LST_XML, buildDiagramDrawingXml, deepTreeIsCompact, deepTreeShapes, type DeepTreeNode } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 import type { SmartArtStyle } from './styles.js';
 
@@ -147,6 +147,45 @@ export function deepTreeLayout(direction: Flowchart['direction']): { layoutXml: 
   return { layoutXml, layoutUrn };
 }
 
+/**
+ * The compact (org-chart) variant of the top-down layout, used for wide trees ({@link deepTreeIsCompact}).
+ * Same nodes and presentation names as {@link TREE_DEEP_LAYOUT_XML} — the data model is identical — with three
+ * `dgm:choose` blocks keyed on `axis="des" func="maxDepth" op="lte" val="1"` ("all my children are leaves"),
+ * the rule Word's own organisation chart applies by default (read from
+ * `handmade_samples/smartart-v12-deep-trees-directions-colorful-no-drawing-organigramme.docx`, structure only):
+ * such a node aligns top-left over its children (`hierRoot` `hierAlign="tL"` + `alignOff`), its children run
+ * in a column (`hierChild` `linDir="fromT"` `chAlign="l"`), and the line to each of them enters the child's
+ * left side (`endPts="midL"`). Word starts that line from a hidden shape near the parent's left edge; this
+ * layout starts it from the parent's bottom centre and indents the column past it instead.
+ */
+export const TREE_DEEP_COMPACT_LAYOUT_URN = `${TREE_DEEP_LAYOUT_URN}-compact`;
+const ALL_CHILDREN_LEAVES = 'axis="des" func="maxDepth" op="lte" val="1"';
+const CONN_PARAMS = '<dgm:param type="dim" val="1D"/><dgm:param type="endSty" val="noArr"/><dgm:param type="connRout" val="bend"/>';
+export const TREE_DEEP_COMPACT_LAYOUT_XML = TREE_DEEP_LAYOUT_XML.replace(
+  `uniqueId="${TREE_DEEP_LAYOUT_URN}"`,
+  `uniqueId="${TREE_DEEP_COMPACT_LAYOUT_URN}"`
+)
+  .replace(
+    `<dgm:layoutNode name="levelNRoot"><dgm:alg type="hierRoot"/>${SHAPE}<dgm:presOf/><dgm:constrLst/><dgm:ruleLst/>`,
+    '<dgm:layoutNode name="levelNRoot"><dgm:choose name="rootChoose">' +
+      `<dgm:if name="rootOfColumn" ${ALL_CHILDREN_LEAVES}><dgm:alg type="hierRoot"><dgm:param type="hierAlign" val="tL"/></dgm:alg>` +
+      `<dgm:constrLst><dgm:constr type="alignOff" val="${DEEP_COLUMN_INDENT}"/></dgm:constrLst></dgm:if>` +
+      '<dgm:else name="rootOfRow"><dgm:alg type="hierRoot"/></dgm:else></dgm:choose>' +
+      `${SHAPE}<dgm:presOf/><dgm:ruleLst/>`
+  )
+  .replace(
+    '<dgm:layoutNode name="levelNChildren"><dgm:alg type="hierChild"><dgm:param type="linDir" val="fromL"/></dgm:alg>',
+    '<dgm:layoutNode name="levelNChildren"><dgm:choose name="childrenChoose">' +
+      `<dgm:if name="childrenColumn" ${ALL_CHILDREN_LEAVES}><dgm:alg type="hierChild"><dgm:param type="chAlign" val="l"/><dgm:param type="linDir" val="fromT"/></dgm:alg></dgm:if>` +
+      '<dgm:else name="childrenRow"><dgm:alg type="hierChild"><dgm:param type="linDir" val="fromL"/></dgm:alg></dgm:else></dgm:choose>'
+  )
+  .replace(
+    `<dgm:alg type="conn">${CONN_PARAMS}<dgm:param type="begPts" val="bCtr"/><dgm:param type="endPts" val="tCtr"/></dgm:alg>`,
+    '<dgm:choose name="connChoose">' +
+      `<dgm:if name="connIntoColumn" axis="par des" func="maxDepth" op="lte" val="1"><dgm:alg type="conn">${CONN_PARAMS}<dgm:param type="begPts" val="bCtr"/><dgm:param type="endPts" val="midL"/></dgm:alg></dgm:if>` +
+      `<dgm:else name="connIntoRow"><dgm:alg type="conn">${CONN_PARAMS}<dgm:param type="begPts" val="bCtr"/><dgm:param type="endPts" val="tCtr"/></dgm:alg></dgm:else></dgm:choose>`
+  );
+
 /** A tree node with everything the data model needs, ids included. */
 interface DeepModelNode extends DeepTreeNode {
   /** Content point id. */
@@ -174,7 +213,6 @@ function spPrFor(fill: string | undefined): string {
  */
 export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtTreeOutput & { frame: { cx: number; cy: number } } {
   const style: SmartArtStyle = options.style ?? 'simple';
-  const { layoutXml, layoutUrn } = deepTreeLayout(flowchart.direction);
   const hasIncoming = new Set(flowchart.edges.map((e) => e.to));
   const rootNode = flowchart.nodes.find((n) => !hasIncoming.has(n.id));
   if (!rootNode) throw new Error('generateDeepTree: no node with in-degree 0 -- flowchart is not a valid tree');
@@ -211,6 +249,10 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     return model;
   };
   const root = build(rootNode);
+  const compact = deepTreeIsCompact(root, flowchart.direction);
+  const { layoutXml, layoutUrn } = compact
+    ? { layoutXml: TREE_DEEP_COMPACT_LAYOUT_XML, layoutUrn: TREE_DEEP_COMPACT_LAYOUT_URN }
+    : deepTreeLayout(flowchart.direction);
 
   // Second pass (depth-first, same order as the drawing): presentation and transition ids.
   const preorder: DeepModelNode[] = [];
@@ -299,7 +341,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns.join('')}${presOfCxns.join('')}${presParOfCxns.join('')}</dgm:cxnLst>` +
     `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`;
 
-  const { shapes, frame } = deepTreeShapes(root, style, flowchart.direction);
+  const { shapes, frame } = deepTreeShapes(root, style, flowchart.direction, compact);
   return {
     dataXml: xml,
     layoutXml,

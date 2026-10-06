@@ -414,6 +414,32 @@ Same 4-level tree in `LR`, `BT`, `RL`, `TD` (reference), then a 16-leaf tree and
 ECMA direction parameters are what Word expects. The 16-leaf tree is "vaguely readable".** Multi-level trees are
 validated; wide trees are the open point (leaf columns, see above).
 
+## Round 16 — 2026-10-06: compact (org-chart) layout for wide top-down trees (v13)
+
+The 16-leaf tree of v12 was "vaguely readable". The maintainer's sample
+(`handmade_samples/smartart-v12-deep-trees-directions-colorful-no-drawing-organigramme.docx`: our own v12 file
+switched to Word's Organization Chart) shows the rule Word applies by default: a box whose children are all
+leaves (`axis="des" func="maxDepth" op="lte" val="1"`) aligns top-left (`hierRoot` `hierAlign="tL"` +
+`alignOff`), stacks its children in a column (`hierChild` `linDir="fromT"` `chAlign="l"`), and each line enters the
+child's left side (`endPts="midL"`). New layout `tree-deep1-compact` carries exactly these three `dgm:choose`
+blocks; the data model is unchanged. Difference from Word: Word starts the line from a hidden shape near the
+parent's left edge; here it starts at the parent's bottom centre and the column is indented 0.6 box widths.
+Used only top-down, and only when the ordinary layout's boxes would be narrower than 0.9 in.
+
+`smartart-v13-wide-trees-compact-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`: the 16-leaf tree,
+an irregular org chart (columns of 1-5 leaves, one branch one level deeper, a lone leaf), and a small tree that
+must keep the row layout.
+
+- [ ] All three open with no repair prompt.
+- [ ] `no-drawing`: Word lays out the columns itself — leaves under their parent, indented, lines entering
+      from the left; the deeper branch (Technique) keeps a row of two columns.
+- [ ] Add a leaf to a column in Word: it joins the column. Add a child to a leaf in a column: that branch
+      switches back to a row (Word's own rule).
+- [ ] Section 3 looks exactly like v11/v12.
+- Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing.
+- Known: in the irregular example, boxes are ~1.5 cm and long words ("Comptabilité", "Partenariats") still
+  break at 8 pt; the font is shared by every box, sized for the longest label.
+
 ## Recording the result
 
 Once done, either:
