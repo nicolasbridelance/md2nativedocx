@@ -208,7 +208,7 @@ export type { SmartArtCycleOutput } from './smartart/cycle.js';
 // SmartArt dispatch: classify + run the matching generator in one call
 // (spec §7 step 5). Pure — no filesystem/ZIP knowledge, see dispatch.ts.
 export { generateSmartArt } from './smartart/dispatch.js';
-export type { SmartArtGenerated } from './smartart/dispatch.js';
+export type { SmartArtGenerated, SmartArtGeneratedLayout } from './smartart/dispatch.js';
 // SmartArt for diagram types that are already trees (mindmap, treeView-beta), through the tree generators.
 export {
   generateMindmapSmartArt,
@@ -216,6 +216,8 @@ export {
   mindmapToFlowchart,
   treeViewToFlowchart,
 } from './smartart/from-tree.js';
+// SmartArt for a section-less `timeline`: a process of periods, through the chain generator.
+export { generateTimelineSmartArt, timelineFitsSmartArt } from './smartart/from-timeline.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
 export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';

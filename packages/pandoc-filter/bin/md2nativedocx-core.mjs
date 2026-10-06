@@ -85,6 +85,8 @@ import {
   translateVennToOoxml,
   parseMindmap,
   generateMindmapSmartArt,
+  generateTimelineSmartArt,
+  escapeXml,
   generateTreeViewSmartArt,
   translateMindmapToOoxml,
   parseClassDiagram,
@@ -367,7 +369,13 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateTimelineToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, a section-less timeline becomes a SmartArt process (one box per period, events
+    // under it); its title, not part of the SmartArt, goes in a bold centred paragraph above.
+    const smartArtXml = trySmartArt((options) => generateTimelineSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    const titleXml = smartArtXml && ast.title
+      ? `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">${escapeXml(ast.title)}</w:t></w:r></w:p>`
+      : '';
+    process.stdout.write(smartArtXml ? titleXml + smartArtXml : translateTimelineToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'kanban') {
     // Sixteenth non-flowchart diagram type shipped, fifth of Family D.
     const { ast, warnings } = parseKanban(input);

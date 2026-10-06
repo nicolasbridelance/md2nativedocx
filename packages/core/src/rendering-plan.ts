@@ -22,7 +22,10 @@ import {
 } from './smartart/classify.js';
 import { parseMindmap } from './diagrams/mindmap/parser.js';
 import { parseTreeView } from './diagrams/tree-view/parser.js';
+import { parseTimeline } from './diagrams/timeline/parser.js';
 import { mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
+import { timelineFitsSmartArt } from './smartart/from-timeline.js';
+import type { SmartArtGeneratedLayout } from './smartart/dispatch.js';
 import type { Flowchart } from './types.js';
 
 /** Which settings the export will run with. */
@@ -44,7 +47,7 @@ export interface RenderingPlan {
    * `invalid`: the source does not parse (the export will report it). */
   rendering: 'smartart' | 'chart' | 'shapes' | 'invalid';
   /** `rendering === 'smartart'`: which SmartArt family, and for a tree its number of levels. */
-  smartArt?: { layout: SmartArtLayout; depth?: number };
+  smartArt?: { layout: SmartArtGeneratedLayout; depth?: number };
   /** SmartArt is on but this flowchart cannot be one: the structured reason (merge, subgraph…). */
   smartArtRejected?: SmartArtIneligible;
   /** SmartArt is off, and turning it on would make this diagram a SmartArt graphic. */
@@ -81,6 +84,12 @@ export function planRendering(source: string, settings: RenderingSettings): Rend
       if (!shape) return { type, label, rendering: 'shapes' };
       return settings.smartArt
         ? { type, label, rendering: 'smartart', smartArt: shape }
+        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
+    }
+    if (type === 'timeline') {
+      if (!timelineFitsSmartArt(parseTimeline(source).ast)) return { type, label, rendering: 'shapes' };
+      return settings.smartArt
+        ? { type, label, rendering: 'smartart', smartArt: { layout: 'timeline' } }
         : { type, label, rendering: 'shapes', smartArtWouldApply: true };
     }
     if (type !== 'flowchart' && type !== 'unknown') return { type, label, rendering: 'shapes' };

@@ -1008,6 +1008,13 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 - ✅ Volet "corporate" (2026-09-03) — décision du mainteneur : un réglage
   (`md2nativedocx.referenceDocument`), pas une commande. Voir aussi `docs/specs/export_customization_SPEC.md`
   §2.1 pour son évolution vers un gabarit généré dynamiquement (Phase 8).
+- [ ] **`timeline` en frise SmartArt + texte riche dans les boîtes (2026-10-06, en attente de vrai Word)** —
+      `smartart/timeline.ts` (layout original `timeline1-n<N>` : axe en flèche, pastille par période, boîtes
+      alternées au-dessus/en dessous via `posOdd`), branché quand SmartArt est actif, sans sections et si le texte
+      tient à 10 pt ; titre en paragraphe gras au-dessus. `<br/>`/gras/italique désormais conservés dans toutes
+      les boîtes SmartArt (`smartart/text.ts`, `7d79e39`). Un premier essai en simple chaîne de boîtes (v15) a été
+      rejeté par le mainteneur (« ressemble à du flowchart classique »). À vérifier : CHECKLIST Round 18 (v16),
+      surtout que Word honore `posOdd` dans `no-drawing`. Suite possible : `journey` sur la même frise.
 - [ ] **SmartArt « pixel perfect » : pas de conclusion à ce jour (2026-10-05)** — `smartArt.enabled`
       reste à `false` par défaut. ADR 0006 : corruption corrigée (ids `modelId`) mais « en attente de
       confirmation Word réelle finale » ; `smartart-cycle-recheck.docx` rend encore des formes vides

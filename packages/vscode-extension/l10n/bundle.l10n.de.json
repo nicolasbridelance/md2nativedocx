@@ -133,5 +133,7 @@
   "Word document": "Word-Dokument",
   "Workspace": "Arbeitsbereich",
   "e.g. {0}": "z. B. {0}",
-  "Native Word charts": "Native Word-Diagramme"
+  "Native Word charts": "Native Word-Diagramme",
+  "Not kept as SmartArt: sections (a timeline with sections stays as Word shapes); the title becomes a bold paragraph above.": "Nicht als SmartArt erhalten: Abschnitte (eine Zeitachse mit Abschnitten bleibt als Word-Formen); der Titel wird zu einem fetten Absatz darüber.",
+  "SmartArt — timeline": "SmartArt — Zeitachse"
 }

@@ -23,10 +23,13 @@ import { generateDeepTree } from './tree-deep.js';
 import { generateCycle } from './cycle.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
+/** Which SmartArt generator produced a diagram: a flowchart topology, or the timeline. */
+export type SmartArtGeneratedLayout = SmartArtLayout | 'timeline';
+
 /** The four OOXML diagram parts for whichever topology `flowchart` matched. */
 export interface SmartArtGenerated {
   /** Which generator produced this — lets a caller log/report the choice. */
-  layout: SmartArtLayout;
+  layout: SmartArtGeneratedLayout;
   dataXml: string;
   layoutXml: string;
   colorsXml: string;

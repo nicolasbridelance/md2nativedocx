@@ -137,5 +137,7 @@
   "Word document": "Document Word",
   "Workspace": "Espace de travail",
   "e.g. {0}": "ex. {0}",
-  "Native Word charts": "Graphiques Word natifs"
+  "Native Word charts": "Graphiques Word natifs",
+  "Not kept as SmartArt: sections (a timeline with sections stays as Word shapes); the title becomes a bold paragraph above.": "Non conservé en SmartArt : les sections (une frise avec sections reste en formes Word) ; le titre devient un paragraphe en gras au-dessus.",
+  "SmartArt — timeline": "SmartArt — frise chronologique"
 }

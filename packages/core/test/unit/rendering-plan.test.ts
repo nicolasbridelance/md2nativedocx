@@ -41,6 +41,12 @@ test('mindmap and single-root treeView: SmartArt hierarchy when on; a two-root t
   assert.equal(planRendering('treeView-beta\n  a/\n    x\n  b/\n    y', ON).rendering, 'shapes');
 });
 
+test('section-less timeline: SmartArt time line when on; with sections it stays shapes', () => {
+  assert.deepEqual(planRendering('timeline\n  2002 : a\n  2003 : b', ON).smartArt, { layout: 'timeline' });
+  assert.equal(planRendering('timeline\n  2002 : a\n  2003 : b', OFF).smartArtWouldApply, true);
+  assert.equal(planRendering('timeline\n  section A\n    2002 : a\n  section B\n    2003 : b', ON).rendering, 'shapes');
+});
+
 test('other types are shapes; never throws, even on empty or garbled input', () => {
   assert.equal(planRendering('sequenceDiagram\n  A->>B: hi', ON).rendering, 'shapes');
   for (const src of ['', '%% only a comment', 'graph TD\n  A -->', 'graph TD\n  A[[[', 'pie\n  "x" : nope']) {

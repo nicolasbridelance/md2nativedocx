@@ -470,6 +470,33 @@ file tree with several top-level entries is not one tree and keeps the shape-bui
 **Result (maintainer, real Word, 2026-10-06): "v14 fonctionne parfaitement".** mindmap and treeView as SmartArt
 are validated, and the SmartArt hierarchy is accepted as the mindmap's rendering when SmartArt is on.
 
+## Round 18 — 2026-10-06: timeline as a SmartArt time line, line breaks and bold/italic in boxes (v16)
+
+Two changes. (1) Every SmartArt box now keeps its label's structure: `<br/>` is a real line break (`<a:br/>`, what
+Shift+Enter makes in the Text Pane) and Markdown-string bold/italic are real bold/italic runs; a chain whose boxes
+hold three lines or more gets taller boxes (layout `chain1-h90` etc.). (2) A section-less `timeline` becomes a
+SmartArt **time line** (`smartart/timeline.ts`, self-authored layout `timeline1-n<periods>`): an arrow axis across,
+a dot per period, the period (bold) and its events in a box alternately above and below the axis. Its title is a
+bold paragraph above the diagram. A timeline with sections, or too crowded for whole words at 10 pt, stays shapes.
+
+`smartart-v16-timeline-richtext-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`.
+
+- [ ] All three open with no repair prompt.
+- [ ] Sections 1-5 are SmartArt (click: SmartArt Design tab appears); sections 6 and 7 are plain shapes.
+- [ ] **`no-drawing` is the real test of the new layout**: does Word itself draw the axis, the dots, and the boxes
+      alternating above/below (1st above, 2nd below…)? If every box lands on the same side, Word ignored the
+      `posOdd` switch — say so, the fix is small.
+- [ ] Still `no-drawing`: in section 2, do the boxes overhang their slot (wider than the gap between two dots)
+      without being shrunk or cut off?
+- [ ] In the Text Pane of section 1, add a period (Enter after "2006 / Twitter"): a new dot and box appear on the
+      axis. (The diagram's layout id is per period count; Word keeps using the same definition, which is fine.)
+- [ ] Line breaks: sections 3 and 5 show two/three lines per box; section 4 shows "produit" in italic and
+      "technique" in bold.
+- Verified here: Open XML validator, 0 errors under `/word/diagrams` and in `document.xml`; LibreOffice renders the
+  cached drawing (sections 1-5 as SmartArt, 6-7 as shapes).
+- Known: section 5 (cycle) boxes are small for three lines; the text slightly overflows in the cached drawing (Word
+  shrinks it when it recomputes).
+
 ## Recording the result
 
 Once done, either:

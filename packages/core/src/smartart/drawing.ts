@@ -58,8 +58,8 @@ export interface DrawingShape {
   y: number;
   cx: number;
   cy: number;
-  /** Preset geometry: `roundRect` for nodes, an arrow for chain transitions. */
-  prst: 'roundRect' | 'rightArrow' | 'leftArrow' | 'downArrow' | 'upArrow' | 'connector';
+  /** Preset geometry: `roundRect` for nodes (`ellipse` for timeline dots), an arrow for chain transitions. */
+  prst: 'roundRect' | 'ellipse' | 'rightArrow' | 'leftArrow' | 'downArrow' | 'upArrow' | 'connector';
   /** `connector` only: the elbow line's corner points, in EMU relative to the shape's own top-left. */
   path?: Array<[number, number]>;
   /** Node text (absent for arrows). */
@@ -116,7 +116,7 @@ function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
   const fill = validateHexColor(shape.fill, '');
   if (fill) return `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
   const accent = shape.accent ?? 'accent1';
-  if (shape.tintPercent === undefined && shape.prst === 'roundRect') {
+  if (shape.tintPercent === undefined && (shape.prst === 'roundRect' || shape.prst === 'ellipse')) {
     const { fillIdx } = profileOf(style);
     if (fillIdx === 3) return intenseGradient(accent);
     if (fillIdx === 2) return moderateGradient(accent);
@@ -127,7 +127,7 @@ function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
 
 function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
   const isConn = shape.prst === 'connector';
-  const isArrow = shape.prst !== 'roundRect';
+  const isArrow = shape.prst !== 'roundRect' && shape.prst !== 'ellipse';
   const fill = validateHexColor(shape.fill, '');
   const profile = profileOf(style);
   const lineWidth = profile.lineW;
