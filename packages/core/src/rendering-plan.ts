@@ -28,6 +28,15 @@ import { journeyFitsSmartArt, timelineFitsSmartArt } from './smartart/from-timel
 import { parseJourney } from './diagrams/journey/parser.js';
 import { parseKanban } from './diagrams/kanban/parser.js';
 import { kanbanFitsSmartArt } from './smartart/kanban.js';
+import {
+  classDiagramSmartArtLayout,
+  classDiagramToFlowchart,
+  gitGraphSmartArtLayout,
+  stateDiagramSmartArtLayout,
+} from './smartart/from-graph.js';
+import { parseGitGraphDiagram } from './diagrams/git-graph/parser.js';
+import { parseStateDiagram } from './diagrams/state-diagram/parser.js';
+import { parseClassDiagram } from './diagrams/class-diagram/parser.js';
 import type { SmartArtGeneratedLayout } from './smartart/dispatch.js';
 import type { Flowchart } from './types.js';
 
@@ -87,6 +96,24 @@ export function planRendering(source: string, settings: RenderingSettings): Rend
       if (!shape) return { type, label, rendering: 'shapes' };
       return settings.smartArt
         ? { type, label, rendering: 'smartart', smartArt: shape }
+        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
+    }
+    if (type === 'gitGraph' || type === 'state' || type === 'class') {
+      let smartArt: { layout: SmartArtLayout; depth?: number } | undefined;
+      if (type === 'gitGraph') {
+        const layout = gitGraphSmartArtLayout(parseGitGraphDiagram(source).ast);
+        if (layout) smartArt = { layout };
+      } else if (type === 'state') {
+        const layout = stateDiagramSmartArtLayout(parseStateDiagram(source).ast);
+        if (layout) smartArt = { layout };
+      } else {
+        const classes = parseClassDiagram(source).ast;
+        const tree = classDiagramToFlowchart(classes);
+        if (tree && classDiagramSmartArtLayout(classes)) smartArt = { layout: 'tree', depth: flowchartTreeDepth(tree) };
+      }
+      if (!smartArt) return { type, label, rendering: 'shapes' };
+      return settings.smartArt
+        ? { type, label, rendering: 'smartart', smartArt }
         : { type, label, rendering: 'shapes', smartArtWouldApply: true };
     }
     if (type === 'kanban') {

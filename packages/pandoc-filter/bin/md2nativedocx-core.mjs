@@ -88,6 +88,9 @@ import {
   generateTimelineSmartArt,
   generateJourneySmartArt,
   generateKanbanSmartArt,
+  generateClassDiagramSmartArt,
+  generateGitGraphSmartArt,
+  generateStateDiagramSmartArt,
   escapeXml,
   generateTreeViewSmartArt,
   translateMindmapToOoxml,
@@ -297,14 +300,18 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateClassDiagramToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, an inheritance-only class tree becomes a SmartArt hierarchy (members in each box).
+    const smartArtXml = trySmartArt((options) => generateClassDiagramSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ?? translateClassDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'state') {
     // Sixth non-flowchart diagram type shipped, second of Family B.
     const { ast, warnings } = parseStateDiagram(input);
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateStateDiagramToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, a state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
+    const smartArtXml = trySmartArt((options) => generateStateDiagramSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ?? translateStateDiagramToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'er') {
     // Seventh non-flowchart diagram type shipped, third of Family B.
     const { ast, warnings } = parseErDiagram(input);
@@ -350,7 +357,9 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateGitGraphToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, a main-branch-only history becomes a SmartArt process (one box per commit).
+    const smartArtXml = trySmartArt((options) => generateGitGraphSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ? smartArtTitleXml(ast.title) + smartArtXml : translateGitGraphToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'cynefin') {
     // Thirteenth non-flowchart diagram type shipped, second of Family D
     // (calculated shapes, no c:chart — same shape as quadrant/venn, NOT a

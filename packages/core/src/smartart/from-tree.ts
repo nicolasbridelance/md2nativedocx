@@ -61,7 +61,7 @@ export function treeViewToFlowchart(diagram: TreeViewDiagram): Flowchart | null 
 }
 
 /** The tree generators for a flowchart-shaped tree, or `null` below 2 nodes or past `MAX_TREE_DEPTH`. */
-function treeSmartArt(flowchart: Flowchart | null, options: SmartArtGenerateOptions): SmartArtGenerated | null {
+export function treeSmartArt(flowchart: Flowchart | null, options: SmartArtGenerateOptions): SmartArtGenerated | null {
   if (!flowchart || flowchart.nodes.length < 2) return null;
   const depth = flowchartTreeDepth(flowchart);
   if (depth < 2 || depth > MAX_TREE_DEPTH) return null;

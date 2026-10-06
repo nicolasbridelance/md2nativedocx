@@ -225,6 +225,15 @@ export {
 } from './smartart/from-timeline.js';
 // SmartArt for a `kanban` board: a grouped list (columns, then cards).
 export { generateKanbanSmartArt, kanbanFitsSmartArt } from './smartart/kanban.js';
+// SmartArt for the simple cases of gitGraph (main branch only), stateDiagram (chain/loop), classDiagram (inheritance tree).
+export {
+  classDiagramSmartArtLayout,
+  generateClassDiagramSmartArt,
+  generateGitGraphSmartArt,
+  generateStateDiagramSmartArt,
+  gitGraphSmartArtLayout,
+  stateDiagramSmartArtLayout,
+} from './smartart/from-graph.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
 export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';

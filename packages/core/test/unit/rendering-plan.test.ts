@@ -54,6 +54,14 @@ test('kanban: SmartArt grouped list when on and it fits', () => {
   assert.equal(planRendering('kanban\n  todo[Todo]', ON).rendering, 'shapes');
 });
 
+test('gitGraph (main only), state machine (chain/loop), class inheritance tree: SmartArt when on', () => {
+  assert.deepEqual(planRendering('gitGraph\n  commit\n  commit', ON).smartArt, { layout: 'chain' });
+  assert.deepEqual(planRendering('stateDiagram-v2\n  A --> B\n  B --> A', ON).smartArt, { layout: 'cycle' });
+  assert.deepEqual(planRendering('classDiagram\n  A <|-- B\n  B <|-- C', ON).smartArt, { layout: 'tree', depth: 3 });
+  assert.equal(planRendering('classDiagram\n  A <|-- B', OFF).smartArtWouldApply, true);
+  assert.equal(planRendering('classDiagram\n  A --> B', ON).rendering, 'shapes');
+});
+
 test('other types are shapes; never throws, even on empty or garbled input', () => {
   assert.equal(planRendering('sequenceDiagram\n  A->>B: hi', ON).rendering, 'shapes');
   for (const src of ['', '%% only a comment', 'graph TD\n  A -->', 'graph TD\n  A[[[', 'pie\n  "x" : nope']) {
