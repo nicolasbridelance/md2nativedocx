@@ -34,3 +34,13 @@ test('a flowchart of plain boxes is unchanged: no shape override anywhere', () =
   const out = generateSmartArt(flow('flowchart LR\n  A[a] --> B(b) --> C[c]'), { drawing: true });
   assert.ok(!out?.dataXml.includes('prstGeom'));
 });
+
+test('a diamond gets a font small enough for its half-width text area (no word broken in the cached drawing)', () => {
+  const size = (src: string) => {
+    const out = generateSmartArt(flow(src), { drawing: true });
+    return Math.min(...[...(out?.drawingXml ?? '').matchAll(/ sz="(\d+)"/g)].map((m) => Number(m[1])));
+  };
+  const circle = size('flowchart LR\n  A([Idea]) --> B[Draft] --> C((Review)) --> D[(Archive)]');
+  const diamond = size('flowchart LR\n  A([Idea]) --> B[Draft] --> C{Review} --> D[(Archive)]');
+  assert.ok(diamond < circle, `diamond ${diamond} < circle ${circle}`);
+});

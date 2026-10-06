@@ -221,16 +221,21 @@ interface Labelled {
   connId?: string;
 }
 
-/** Share of a box's width and height a non-rectangular shape (diamond, circle…) leaves to its text. */
+/** Share of a box's width and height a non-rectangular shape (circle, cylinder…) leaves to its text. */
 const SHAPED_TEXT_SHARE = 0.65;
+
+/** Presets whose text rectangle is only the middle half of the box (a diamond's is `w/4`..`3w/4`). */
+const HALF_TEXT_PRESETS = new Set(['diamond', 'flowChartExtract', 'flowChartCollate']);
 
 /** {@link fitFontSize} for node boxes, the shaped ones (`geom`) having less room for their text. */
 function fitNodeFont(nodes: Array<{ text: LabelToken[]; geom?: string }>, cx: number, cy: number, minPt = 10): number {
   const plain = nodes.filter((n) => !n.geom).map((n) => n.text);
-  const shaped = nodes.filter((n) => n.geom).map((n) => n.text);
+  const half = nodes.filter((n) => n.geom && HALF_TEXT_PRESETS.has(n.geom)).map((n) => n.text);
+  const shaped = nodes.filter((n) => n.geom && !HALF_TEXT_PRESETS.has(n.geom)).map((n) => n.text);
   return Math.min(
     plain.length > 0 ? fitFontSize(plain, cx, cy, minPt) : 2400,
-    shaped.length > 0 ? fitFontSize(shaped, cx * SHAPED_TEXT_SHARE, cy * SHAPED_TEXT_SHARE, minPt) : 2400
+    shaped.length > 0 ? fitFontSize(shaped, cx * SHAPED_TEXT_SHARE, cy * SHAPED_TEXT_SHARE, minPt) : 2400,
+    half.length > 0 ? fitFontSize(half, cx * 0.5, cy * 0.5, minPt) : 2400
   );
 }
 
