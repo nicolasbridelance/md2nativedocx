@@ -455,14 +455,17 @@ file tree with several top-level entries is not one tree and keeps the shape-bui
 `smartart-v14-mindmap-treeview-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`: a 3-level mindmap, a
 2-level mindmap, a one-root file tree (with a highlighted file), and a two-root file tree (must stay shapes).
 
-- [ ] All three open with no repair prompt.
-- [ ] Sections 1-3 are SmartArt (click: SmartArt Design tab appears); section 4 is plain shapes.
-- [ ] `no-drawing`: Word lays the mindmap out left to right and the file tree with its columns.
-- [ ] Is a SmartArt hierarchy an acceptable stand-in for a mindmap, compared with the radial shapes you get
+- [x] All three open with no repair prompt.
+- [x] Sections 1-3 are SmartArt (click: SmartArt Design tab appears); section 4 is plain shapes.
+- [x] `no-drawing`: Word lays the mindmap out left to right and the file tree with its columns.
+- [x] Is a SmartArt hierarchy an acceptable stand-in for a mindmap, compared with the radial shapes you get
       with SmartArt off? (Product call: it could also stay shapes and only `treeView` switch.)
 - Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing.
 - Known: the 2-level mindmap goes through the original 2-level generator, whose root takes a full-height 35%
   strip — correct but oversized next to the children. The file tree's font is small (17 boxes, compact layout).
+
+**Result (maintainer, real Word, 2026-10-06): "v14 fonctionne parfaitement".** mindmap and treeView as SmartArt
+are validated, and the SmartArt hierarchy is accepted as the mindmap's rendering when SmartArt is on.
 
 ## Recording the result
 
