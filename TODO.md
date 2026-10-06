@@ -12,7 +12,7 @@
 
 ## 1. En attente du mainteneur
 
-- [ ] **Installer la 0.6.0 depuis la Marketplace sur le poste Windows d'entreprise** et exporter un
+- [ ] **Installer la 0.7.0 depuis la Marketplace sur le poste Windows d'entreprise** et exporter un
       document mixte. Les nouveaux défauts (SmartArt et graphiques Word activés) changent le rendu des
       utilisateurs existants à la mise à jour automatique. Profiter de la même occasion pour clore les
       deux incidents Windows de septembre (`spawnSync unzip ENOENT`, crash Pandoc/Lua `os.tmpname`), qui

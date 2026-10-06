@@ -6,7 +6,7 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 ## Where the project stands
 
 - **The product works end to end.** Markdown with Mermaid becomes a `.docx` where every diagram is
-  editable in Word, from the VS Code extension (0.6.0 on the Marketplace, tag `vscode-v0.6.0`), the
+  editable in Word, from the VS Code extension (0.7.0 on the Marketplace, tag `vscode-v0.7.0`), the
   CLI, or the Pandoc filter. The same source can also become a `.pptx` deck (`packages/pptx`), which
   opens in PowerPoint and imports into Google Slides.
 - **All 29 Mermaid types are covered.** What each one becomes (SmartArt, Word chart or shapes), under
@@ -19,7 +19,7 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 - **Same defaults everywhere.** SmartArt (with its pre-rendered drawing, `colorful` look) and Word charts
   are on in the extension, the CLI and the Pandoc filter; `MD2NATIVEDOCX_ENABLE_SMARTART=0` /
   `MD2NATIVEDOCX_NATIVE_CHARTS=0` turn them off at the CLI.
-- **Versions.** Only the extension is released (0.6.0). `core`, `cli`, `pptx`, `pandoc-filter` are
+- **Versions.** Only the extension is released (0.7.0). `core`, `cli`, `pptx`, `pandoc-filter` are
   0.1.0 and not on npm yet (waiting on a token, see `TODO.md` §1).
 
 ## Health (2026-10-06)
@@ -56,14 +56,14 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   `MD2NATIVEDOCX_CHART_WORKBOOK` removed; the extension's "pre-rendered drawing" setting removed
   (`MD2NATIVEDOCX_SMARTART_DRAWING=0` stays for the no-drawing Word checks); the core barrel reduced
   from 227 to about 90 exports (per-type AST types are internal now).
-- **Not yet published:** the extension changes above (setting removed, new Marketplace description)
-  reach users only with the next Marketplace release.
+- **Extension 0.7.0 published** (tag `vscode-v0.7.0`): the SmartArt additions above, the new
+  Marketplace description, the drawing setting removed, a smaller `.vsix`.
 
 ## What's next
 
 Everything open is in [`TODO.md`](TODO.md), in four sections:
 
-1. **Maintainer:** install 0.6.0 on the corporate Windows machine and export a mixed document (the new
+1. **Maintainer:** install 0.7.0 on the corporate Windows machine and export a mixed document (the new
    defaults change existing users' output); decide on Venn as SmartArt; npm token; review a one-line
    `ci.yml` change; DCO/CLA before the first external PR. Word add-in on hold, on branch `word-addin-scaffold`.
 2. **Agent, no maintainer needed:** the manual generator into `scripts/` and SmartArt/charts in the
