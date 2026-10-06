@@ -1,9 +1,9 @@
 {
   "extension.description": "Exporta Markdown a Word (.docx) — y los diagramas Mermaid siguen siendo editables en Word: formas reales, SmartArt y gráficos, no imágenes.",
-  "command.exportDocument.title": "md2nativedocx: Exportar documento a Word",
+  "command.exportDocument.title": "Exportar a Word",
   "command.exportDocument.shortTitle": "Exportar a Word",
-  "command.exportBlock.title": "md2nativedocx: Exportar diagrama bajo el cursor",
-  "command.exportBlock.shortTitle": "Exportar solo este bloque",
+  "command.exportBlock.title": "Exportar este diagrama…",
+  "command.exportBlock.shortTitle": "Exportar este diagrama…",
   "configuration.outputDirectory.markdownDescription": "Carpeta de salida para los archivos `.docx` generados. Vacío (por defecto) = misma carpeta que el archivo `.md` de origen — no requiere configuración antes del primer uso.",
   "configuration.referenceDocument.markdownDescription": "Ruta a un archivo `.docx` usado como plantilla de Word para cada exportación (equivale a la opción `--reference-doc` de Pandoc) — apunta a la plantilla de tu empresa para adoptar sus fuentes, colores y estilos. Vacío (por defecto) = la plantilla integrada en la extensión. Las rutas relativas se resuelven respecto a la carpeta del espacio de trabajo.",
   "configuration.smartArt.enabled.markdownDescription": "Desactivado por defecto. Activado, un diagrama de flujo con forma de cadena, árbol (hasta 10 niveles, árboles anchos en disposición de organigrama) o ciclo, y los diagramas `mindmap` y `treeView-beta` con una sola raíz, se convierten en gráficos SmartArt nativos: añadir un paso o una rama, cambiar el estilo o los colores desde la pestaña Diseño de SmartArt de Word. Los demás diagramas siguen siendo formas editables individuales. Verificado en Word real.",
@@ -14,5 +14,11 @@
   "walkthrough.step2.title": "Haz clic en «⚙️ Exportar a Word»",
   "walkthrough.step2.description": "Aparece automáticamente un enlace encima de cada bloque mermaid detectado — no hace falta recordar ningún comando.",
   "walkthrough.step3.title": "Obtén tu `.docx`",
-  "walkthrough.step3.description": "Una notificación ofrece abrir el archivo en Word o mostrarlo en el explorador de archivos — las formas son seleccionables y editables individualmente."
+  "walkthrough.step3.description": "Una notificación ofrece abrir el archivo en Word o mostrarlo en el explorador de archivos — las formas son seleccionables y editables individualmente.",
+  "command.exportDocumentPptx.title": "Exportar a PowerPoint",
+  "command.exportDocumentPptx.shortTitle": "Exportar a PowerPoint",
+  "command.exportBlockDocx.title": "Exportar este diagrama a Word",
+  "command.exportBlockPptx.title": "Exportar este diagrama a PowerPoint",
+  "command.openSettings.title": "Configuración",
+  "configuration.pptx.showSource.markdownDescription": "Exportación a PowerPoint: mostrar el código Mermaid de cada diagrama en un panel junto a él, en su diapositiva."
 }

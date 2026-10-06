@@ -68,12 +68,35 @@
       {
         "command": "md2nativedocx.exportDocument",
         "title": "%command.exportDocument.title%",
-        "shortTitle": "%command.exportDocument.shortTitle%"
+        "shortTitle": "%command.exportDocument.shortTitle%",
+        "category": "md2nativedocx"
+      },
+      {
+        "command": "md2nativedocx.exportDocumentPptx",
+        "title": "%command.exportDocumentPptx.title%",
+        "shortTitle": "%command.exportDocumentPptx.shortTitle%",
+        "category": "md2nativedocx"
       },
       {
         "command": "md2nativedocx.exportBlock",
         "title": "%command.exportBlock.title%",
-        "shortTitle": "%command.exportBlock.shortTitle%"
+        "shortTitle": "%command.exportBlock.shortTitle%",
+        "category": "md2nativedocx"
+      },
+      {
+        "command": "md2nativedocx.exportBlockDocx",
+        "title": "%command.exportBlockDocx.title%",
+        "category": "md2nativedocx"
+      },
+      {
+        "command": "md2nativedocx.exportBlockPptx",
+        "title": "%command.exportBlockPptx.title%",
+        "category": "md2nativedocx"
+      },
+      {
+        "command": "md2nativedocx.openSettings",
+        "title": "%command.openSettings.title%",
+        "category": "md2nativedocx"
       }
     ],
     "viewsContainers": {
@@ -95,25 +118,59 @@
       ]
     },
     "menus": {
-      "explorer/context": [
+      "md2nativedocx.submenu": [
         {
           "command": "md2nativedocx.exportDocument",
+          "group": "1_document@1"
+        },
+        {
+          "command": "md2nativedocx.exportDocumentPptx",
+          "group": "1_document@2"
+        },
+        {
+          "command": "md2nativedocx.exportBlockDocx",
+          "when": "md2nativedocx.cursorInMermaidBlock && editorFocus",
+          "group": "2_diagram@1"
+        },
+        {
+          "command": "md2nativedocx.exportBlockPptx",
+          "when": "md2nativedocx.cursorInMermaidBlock && editorFocus",
+          "group": "2_diagram@2"
+        },
+        {
+          "command": "md2nativedocx.openSettings",
+          "group": "3_settings@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "md2nativedocx.submenu",
           "when": "resourceExtname == .md || resourceExtname == .mmd || resourceExtname == .qmd",
           "group": "7_modification"
         }
       ],
       "editor/context": [
         {
-          "command": "md2nativedocx.exportDocument",
+          "submenu": "md2nativedocx.submenu",
           "when": "resourceExtname == .md || resourceExtname == .mmd || resourceExtname == .qmd",
           "group": "1_modification"
         }
       ],
       "editor/title/context": [
         {
-          "command": "md2nativedocx.exportDocument",
+          "submenu": "md2nativedocx.submenu",
           "when": "resourceExtname == .md || resourceExtname == .mmd || resourceExtname == .qmd",
           "group": "1_modification"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "md2nativedocx.exportBlockDocx",
+          "when": "false"
+        },
+        {
+          "command": "md2nativedocx.exportBlockPptx",
+          "when": "false"
         }
       ]
     },
@@ -314,6 +371,11 @@
           "default": "",
           "pattern": "^$|^[0-9a-f]{128}$",
           "markdownDescription": "%configuration.dotnet.sha512.markdownDescription%"
+        },
+        "md2nativedocx.pptx.showSource": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%configuration.pptx.showSource.markdownDescription%"
         }
       }
     },
@@ -349,15 +411,21 @@
           }
         ]
       }
+    ],
+    "submenus": [
+      {
+        "id": "md2nativedocx.submenu",
+        "label": "md2nativedocx"
+      }
     ]
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pretest": "tsc -p tsconfig.test.json",
-  "test": "node --experimental-test-module-mocks --test dist-test/test/unit/*.test.js",
-  "pretest:ci": "tsc -p tsconfig.test.json && mkdir -p reports",
-  "test:ci": "node --experimental-test-module-mocks --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/unit/*.test.js",
+    "test": "node --experimental-test-module-mocks --test dist-test/test/unit/*.test.js",
+    "pretest:ci": "tsc -p tsconfig.test.json && mkdir -p reports",
+    "test:ci": "node --experimental-test-module-mocks --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/unit/*.test.js",
     "pretest:extension-host": "tsc -p tsconfig.test.json",
     "test:extension-host": "node scripts/run-extension-host-tests.mjs",
     "bundle": "node scripts/bundle-cli.mjs && node scripts/bundle-oxml-validator.mjs",

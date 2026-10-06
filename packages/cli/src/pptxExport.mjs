@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, extname } from 'node:path';
 import { CliError, resolveSafePath } from './cliSupport.mjs';
 
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.pptx> [--show-source]
@@ -58,6 +58,7 @@ export async function runPptxCli(argv, cwd) {
       throw err;
     }
     writeFileSync(output, result.buffer);
+    writePptxLog(input, output, result.warnings, result.slideCount);
     if (result.warnings.length > 0) {
       process.stdout.write(`Warnings: ${result.warnings.length}\n`);
       for (const w of result.warnings) process.stderr.write(`md2nativedocx: ${w}\n`);
@@ -72,4 +73,23 @@ export async function runPptxCli(argv, cwd) {
     process.stderr.write(`md2nativedocx: pptx export failed: ${err instanceof Error ? err.message : String(err)}\n`);
     return 1;
   }
+}
+
+/** Plain-text log next to the deck (`deck.pptx` -> `deck.log`), same header as the .docx export log so
+ * the VS Code extension reads the warning count and opens it the same way. */
+function writePptxLog(input, output, warnings, slideCount) {
+  const logPath = output.slice(0, -extname(output).length) + '.log';
+  const lines = [
+    'md2nativedocx export log',
+    `Date: ${new Date().toISOString()}`,
+    `Input: ${input}`,
+    `Output: ${output}`,
+    `Warnings: ${warnings.length}`,
+    '',
+    ...(warnings.length > 0 ? warnings.map((w) => `- ${w.replace(/^md2nativedocx:\s*(warning:\s*)?/, '')}`) : ['No warnings.']),
+    '',
+    `Slides: ${slideCount}`,
+    '',
+  ];
+  writeFileSync(logPath, lines.join('\n'), 'utf8');
 }

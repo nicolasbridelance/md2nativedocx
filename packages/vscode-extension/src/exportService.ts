@@ -131,7 +131,14 @@ export interface LayoutOptions {
   landscapeTables?: boolean;
 }
 
+/** Output format of an export: a Word document, or a PowerPoint deck (one slide per diagram). */
+export type ExportFormat = 'docx' | 'pptx';
+
 export interface RunCliOptions {
+  /** `docx` (default) or `pptx`. A deck needs no Pandoc and ignores every Word-only option below. */
+  format?: ExportFormat;
+  /** Mirrors `md2nativedocx.pptx.showSource`: put each diagram's Mermaid source beside it on its slide. */
+  pptxShowSource?: boolean;
   pandocBin?: string;
   /** Path to a `.docx` used as Pandoc's `--reference-doc` (mirrors the
    * `md2nativedocx.referenceDocument` setting) — a company/corporate
@@ -247,7 +254,9 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (options.dotnetBin) env.MD2NATIVEDOCX_DOTNET_BIN = options.dotnetBin;
   }
   return new Promise((resolve, reject) => {
-    execFile(process.execPath, [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
+    const args = [cliBin, input, '-o', output];
+    if (options.format === 'pptx' && options.pptxShowSource === true) args.push('--show-source');
+    execFile(process.execPath, args, { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {
         resolve();
         return;
@@ -292,7 +301,8 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
 /** Path to the `.log` file `md2nativedocx.mjs` writes next to `output` —
  * same basename, `.log` extension, mirroring the CLI's own naming. */
 function logPathFor(output: string): string {
-  return output.toLowerCase().endsWith('.docx') ? `${output.slice(0, -'.docx'.length)}.log` : `${output}.log`;
+  const lower = output.toLowerCase();
+  return lower.endsWith('.docx') || lower.endsWith('.pptx') ? `${output.slice(0, -'.docx'.length)}.log` : `${output}.log`;
 }
 
 /** Read back the warning count the CLI recorded in `output`'s `.log` file
@@ -309,11 +319,11 @@ function readWarningCount(logPath: string): number {
   }
 }
 
-/** Where to write a generated `.docx`, honouring `md2nativedocx.outputDirectory`
+/** Where to write a generated `.docx` (or `.pptx`), honouring `md2nativedocx.outputDirectory`
  * (empty = same folder as the source, the zero-config default). */
-export function resolveOutputPath(sourcePath: string, outputBaseName: string, outputDirectory: string): string {
+export function resolveOutputPath(sourcePath: string, outputBaseName: string, outputDirectory: string, format: ExportFormat = 'docx'): string {
   const dir = outputDirectory.trim() || dirname(sourcePath);
-  return join(dir, `${outputBaseName}.docx`);
+  return join(dir, `${outputBaseName}.${format}`);
 }
 
 /** `sourcePath`'s filename with its extension stripped, for whichever of
@@ -333,7 +343,7 @@ export async function exportDocument(
   outputDirectory: string,
   options: RunCliOptions = {},
 ): Promise<ExportResult> {
-  const outputPath = resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory);
+  const outputPath = resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory, options.format);
   await runCli(sourcePath, outputPath, dirname(sourcePath), options);
   const logPath = logPathFor(outputPath);
   return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -363,7 +373,7 @@ export async function exportBlock(
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapBlockAsDocument(block));
     const outputBaseName = `${sourceBaseName(sourcePath)}-diagram-${blockIndex + 1}`;
-    const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory);
+    const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory, options.format);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);
     return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -387,7 +397,7 @@ export async function exportMermaidFile(
   try {
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapMermaidSource(source, title));
-    const outputPath = resolveOutputPath(sourcePath, title, outputDirectory);
+    const outputPath = resolveOutputPath(sourcePath, title, outputDirectory, options.format);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);
     return { outputPath, logPath, warningCount: readWarningCount(logPath) };

@@ -50,3 +50,15 @@ test('rejects an output path escaping the working directory', () => {
     assert.match(r.stderr, /escapes the working directory/);
   });
 });
+
+test('writes an export log next to the deck, same header as the .docx log', () => {
+  withDir((dir) => {
+    const md = join(dir, 'deck.md');
+    writeFileSync(md, '# Flow\n\n```mermaid\ngraph TD\n A --> B\n```\n');
+    execFileSync('node', [cli, md, '-o', join(dir, 'deck.pptx')], { encoding: 'utf8' });
+    const log = readFileSync(join(dir, 'deck.log'), 'utf8');
+    assert.match(log, /^md2nativedocx export log/);
+    assert.match(log, /^Warnings: 0$/m);
+    assert.match(log, /^Slides: 1$/m);
+  });
+});

@@ -25,8 +25,20 @@
   "1 mermaid diagram detected — export the document as a native .docx": "1 diagramme mermaid détecté — exporter le document en .docx natif",
   "{0} mermaid diagrams detected — export the document as a native .docx": "{0} diagrammes mermaid détectés — exporter le document en .docx natif",
   "Converts the whole document (text, tables, formatting, all diagrams) to .docx — each diagram becomes native, editable Word shapes, not an image.": "Convertit tout le document (texte, tableaux, mise en forme, tous les diagrammes) en .docx — chaque diagramme devient des formes Word natives et éditables, pas une image.",
-  "Export this block only": "Exporter le bloc seul",
-  "Converts only this diagram into its own .docx — handy for pasting it elsewhere without the rest of the document.": "Convertit uniquement ce diagramme dans son propre .docx — pratique pour le coller ailleurs sans le reste du document.",
   "Setting up Pandoc (one-time download): {0}%": "Préparation de Pandoc (téléchargement unique) : {0} %",
-  "Setting up Pandoc (one-time download)…": "Préparation de Pandoc (téléchargement unique)…"
+  "Setting up Pandoc (one-time download)…": "Préparation de Pandoc (téléchargement unique)…",
+  "Export to PowerPoint": "Exporter en PowerPoint",
+  "Settings": "Réglages",
+  "One slide per diagram, titled with the heading above it, with editable shapes. Text outside diagrams is not exported.": "Une diapositive par diagramme, titrée par l'intitulé qui le précède, avec des formes modifiables. Le texte hors diagrammes n'est pas exporté.",
+  "Page layout, fonts, diagrams (SmartArt, charts), output folder": "Mise en page, polices, diagrammes (SmartArt, graphiques), dossier de sortie",
+  "Export this diagram…": "Exporter ce diagramme…",
+  "Only this diagram, into its own Word document or a one-slide PowerPoint deck.": "Ce diagramme seul, dans son propre document Word ou une présentation PowerPoint d'une diapositive.",
+  "Open in PowerPoint": "Ouvrir dans PowerPoint",
+  "Exported {0} files": "{0} fichiers exportés",
+  "Exported {0} of {1} files; failed: {2}": "{0} fichiers exportés sur {1} ; échec : {2}",
+  "Word (.docx)": "Word (.docx)",
+  "PowerPoint (.pptx), one slide": "PowerPoint (.pptx), une diapositive",
+  "Export this diagram to…": "Exporter ce diagramme en…",
+  "Setting up .NET for the Word compatibility check (one-time download)…": "Installation de .NET pour la vérification de compatibilité Word (téléchargement unique)…",
+  "Setting up .NET for the Word compatibility check (one-time download): {0}%": "Installation de .NET pour la vérification de compatibilité Word (téléchargement unique) : {0} %"
 }

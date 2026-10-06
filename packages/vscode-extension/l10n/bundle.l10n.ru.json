@@ -23,6 +23,18 @@
   "1 mermaid diagram detected — export the document as a native .docx": "Обнаружена 1 диаграмма mermaid — экспортировать документ в нативный .docx",
   "{0} mermaid diagrams detected — export the document as a native .docx": "Обнаружено диаграмм mermaid: {0} — экспортировать документ в нативный .docx",
   "Converts the whole document (text, tables, formatting, all diagrams) to .docx — each diagram becomes native, editable Word shapes, not an image.": "Преобразует весь документ (текст, таблицы, форматирование, все диаграммы) в .docx — каждая диаграмма становится нативной, редактируемой фигурой Word, а не изображением.",
-  "Export this block only": "Экспортировать только этот блок",
-  "Converts only this diagram into its own .docx — handy for pasting it elsewhere without the rest of the document.": "Преобразует только эту диаграмму в отдельный .docx — удобно, чтобы вставить её в другое место без остального документа."
+  "Export to PowerPoint": "Экспорт в PowerPoint",
+  "Settings": "Настройки",
+  "One slide per diagram, titled with the heading above it, with editable shapes. Text outside diagrams is not exported.": "Один слайд на диаграмму с заголовком над ней и редактируемыми фигурами. Текст вне диаграмм не экспортируется.",
+  "Page layout, fonts, diagrams (SmartArt, charts), output folder": "Макет страницы, шрифты, диаграммы (SmartArt, графики), папка вывода",
+  "Export this diagram…": "Экспортировать эту диаграмму…",
+  "Only this diagram, into its own Word document or a one-slide PowerPoint deck.": "Только эта диаграмма — в отдельный документ Word или презентацию PowerPoint из одного слайда.",
+  "Open in PowerPoint": "Открыть в PowerPoint",
+  "Exported {0} files": "Экспортировано файлов: {0}",
+  "Exported {0} of {1} files; failed: {2}": "Экспортировано {0} из {1}; ошибка: {2}",
+  "Word (.docx)": "Word (.docx)",
+  "PowerPoint (.pptx), one slide": "PowerPoint (.pptx), один слайд",
+  "Export this diagram to…": "Экспортировать эту диаграмму в…",
+  "Setting up .NET for the Word compatibility check (one-time download)…": "Установка .NET для проверки совместимости с Word (однократная загрузка)…",
+  "Setting up .NET for the Word compatibility check (one-time download): {0}%": "Установка .NET для проверки совместимости с Word (однократная загрузка): {0}%"
 }

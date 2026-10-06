@@ -1,9 +1,9 @@
 {
   "extension.description": "Export Markdown to Word (.docx) — and the Mermaid diagrams stay editable in Word: real shapes, SmartArt and charts, not pictures.",
-  "command.exportDocument.title": "md2nativedocx: Export document to Word",
+  "command.exportDocument.title": "Export to Word",
   "command.exportDocument.shortTitle": "Export to Word",
-  "command.exportBlock.title": "md2nativedocx: Export diagram under cursor",
-  "command.exportBlock.shortTitle": "Export this block only",
+  "command.exportBlock.title": "Export this diagram…",
+  "command.exportBlock.shortTitle": "Export this diagram…",
   "view.configView.name": "Configuration",
   "configuration.outputDirectory.markdownDescription": "Output folder for generated `.docx` files. Empty (default) = same folder as the source `.md` file — no configuration required before first use.",
   "configuration.referenceDocument.markdownDescription": "Path to a `.docx` file used as the Word template for every export (mirrors Pandoc's `--reference-doc`) — point this at your company's template to match its fonts, colors, and styles. Empty (default) = the extension's built-in template. Relative paths are resolved against the workspace folder.",
@@ -59,5 +59,11 @@
   "walkthrough.step2.title": "Click \"⚙️ Export to Word\"",
   "walkthrough.step2.description": "A link automatically appears above every detected mermaid block — no command to remember.",
   "walkthrough.step3.title": "Get your `.docx`",
-  "walkthrough.step3.description": "A notification offers to open the file in Word or reveal it in the file explorer — shapes are individually selectable and editable."
+  "walkthrough.step3.description": "A notification offers to open the file in Word or reveal it in the file explorer — shapes are individually selectable and editable.",
+  "command.exportDocumentPptx.title": "Export to PowerPoint",
+  "command.exportDocumentPptx.shortTitle": "Export to PowerPoint",
+  "command.exportBlockDocx.title": "Export this diagram to Word",
+  "command.exportBlockPptx.title": "Export this diagram to PowerPoint",
+  "command.openSettings.title": "Settings",
+  "configuration.pptx.showSource.markdownDescription": "PowerPoint export: put each diagram's Mermaid source in a panel beside it on its slide."
 }

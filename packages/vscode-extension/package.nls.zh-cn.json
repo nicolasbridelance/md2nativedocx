@@ -1,9 +1,9 @@
 {
   "extension.description": "将 Markdown 导出为 Word（.docx）—— Mermaid 图表在 Word 中仍可编辑：真正的形状、SmartArt 和图表，而非图片。",
-  "command.exportDocument.title": "md2nativedocx: 将文档导出为 Word",
+  "command.exportDocument.title": "导出为 Word",
   "command.exportDocument.shortTitle": "导出为 Word",
-  "command.exportBlock.title": "md2nativedocx: 导出光标所在的图表",
-  "command.exportBlock.shortTitle": "仅导出此代码块",
+  "command.exportBlock.title": "导出此图表…",
+  "command.exportBlock.shortTitle": "导出此图表…",
   "configuration.outputDirectory.markdownDescription": "生成的 `.docx` 文件的输出文件夹。留空（默认）= 与源 `.md` 文件相同的文件夹 —— 首次使用前无需任何配置。",
   "configuration.referenceDocument.markdownDescription": "用作每次导出时 Word 模板的 `.docx` 文件路径（相当于 Pandoc 的 `--reference-doc` 选项）—— 指向你公司的模板即可套用其字体、颜色和样式。留空（默认）= 扩展内置的模板。相对路径相对于工作区文件夹解析。",
   "configuration.smartArt.enabled.markdownDescription": "默认关闭。开启后，链式、树形（最多 10 层，较宽的树采用组织结构图布局）或环形的流程图，以及只有一个根的 `mindmap` 和 `treeView-beta` 图，会生成原生 SmartArt 图形：可在 Word 的“SmartArt 设计”选项卡中添加步骤或分支、更改样式或颜色。其他图表仍为可单独编辑的形状。已在真实 Word 中验证。",
@@ -14,5 +14,11 @@
   "walkthrough.step2.title": "点击“⚙️ 导出为 Word”",
   "walkthrough.step2.description": "每个检测到的 mermaid 代码块上方都会自动出现一个链接 —— 无需记住任何命令。",
   "walkthrough.step3.title": "获取你的 `.docx`",
-  "walkthrough.step3.description": "通知会提示在 Word 中打开该文件，或在文件资源管理器中显示它 —— 图形可以单独选中和编辑。"
+  "walkthrough.step3.description": "通知会提示在 Word 中打开该文件，或在文件资源管理器中显示它 —— 图形可以单独选中和编辑。",
+  "command.exportDocumentPptx.title": "导出为 PowerPoint",
+  "command.exportDocumentPptx.shortTitle": "导出为 PowerPoint",
+  "command.exportBlockDocx.title": "将此图表导出为 Word",
+  "command.exportBlockPptx.title": "将此图表导出为 PowerPoint",
+  "command.openSettings.title": "设置",
+  "configuration.pptx.showSource.markdownDescription": "PowerPoint 导出：在每张幻灯片上的图表旁显示其 Mermaid 源代码面板。"
 }

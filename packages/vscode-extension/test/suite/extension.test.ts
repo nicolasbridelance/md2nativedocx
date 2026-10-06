@@ -34,10 +34,12 @@ suite('md2nativedocx extension host', () => {
 
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes('md2nativedocx.exportDocument'), 'exportDocument command missing');
-    assert.ok(commands.includes('md2nativedocx.exportBlock'), 'exportBlock command missing');
+    for (const id of ['exportBlock', 'exportDocumentPptx', 'exportBlockDocx', 'exportBlockPptx', 'openSettings']) {
+      assert.ok(commands.includes(`md2nativedocx.${id}`), `${id} command missing`);
+    }
   });
 
-  test('provides two CodeLenses above a mermaid block in a real Markdown document', async () => {
+  test('document line at the top (Word, PowerPoint, Settings) plus "Export this diagram…" above the block', async () => {
     const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(FIXTURE));
     await vscode.window.showTextDocument(doc);
 
@@ -53,42 +55,63 @@ suite('md2nativedocx extension host', () => {
       await new Promise((r) => setTimeout(r, 250));
     }
 
-    assert.equal(lenses.length, 2, `expected 2 CodeLenses, got ${lenses.length}`);
-    const titles = lenses.map((l) => l.command?.command).sort();
-    assert.deepEqual(titles, ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument']);
+    const commands = lenses.map((l) => l.command?.command).sort();
+    assert.deepEqual(commands, ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
+    const block = lenses.find((l) => l.command?.command === 'md2nativedocx.exportBlock');
+    assert.ok(block && block.range.start.line > 0, 'the diagram lens sits on its fence, not on line 0');
+    assert.ok(lenses.filter((l) => l.command?.command !== 'md2nativedocx.exportBlock').every((l) => l.range.start.line === 0));
   });
 
-  test('provides a single top-of-file CodeLens for a Markdown document with no mermaid block', async () => {
+  test('a Markdown document with no mermaid block: Word and Settings only (no deck to make)', async () => {
     const lenses = await codeLensesFor(vscode.Uri.file(PLAIN_FIXTURE));
-    assert.equal(lenses.length, 1, `expected 1 CodeLens, got ${lenses.length}`);
-    assert.equal(lenses[0]?.command?.command, 'md2nativedocx.exportDocument');
+    assert.deepEqual(lenses.map((l) => l.command?.command).sort(), ['md2nativedocx.exportDocument', 'md2nativedocx.openSettings']);
   });
 
-  test('provides a single top-of-file CodeLens for a raw .mmd file', async () => {
+  test('a raw .mmd file: Word, PowerPoint and Settings at the top', async () => {
     const lenses = await codeLensesFor(vscode.Uri.file(MMD_FIXTURE));
-    assert.equal(lenses.length, 1, `expected 1 CodeLens, got ${lenses.length}`);
-    assert.equal(lenses[0]?.command?.command, 'md2nativedocx.exportDocument');
+    assert.deepEqual(lenses.map((l) => l.command?.command).sort(), ['md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
   });
 
-  test('provides two CodeLenses above a mermaid block in a Quarto (.qmd) document, YAML front matter included', async () => {
+  test('a Quarto (.qmd) document gets the same lenses, YAML front matter included', async () => {
     const lenses = await codeLensesFor(vscode.Uri.file(QMD_FIXTURE));
-    assert.equal(lenses.length, 2, `expected 2 CodeLenses, got ${lenses.length}`);
-    const titles = lenses.map((l) => l.command?.command).sort();
-    assert.deepEqual(titles, ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument']);
+    assert.deepEqual(lenses.map((l) => l.command?.command).sort(), ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
   });
 
-  test('declares the editor/title/context (tab bar right-click) menu entry for .md/.mmd/.qmd', async () => {
+  test('right-click (Explorer, editor, tab bar) opens an md2nativedocx submenu for .md/.mmd/.qmd', async () => {
     const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(ext);
     const contributes = ext.packageJSON.contributes as {
-      menus?: Record<string, Array<{ command: string; when?: string }>>;
+      menus?: Record<string, Array<{ command?: string; submenu?: string; when?: string }>>;
     };
-    const entry = contributes.menus?.['editor/title/context']?.find(
-      (e) => e.command === 'md2nativedocx.exportDocument',
-    );
-    assert.ok(entry, 'expected an editor/title/context entry for md2nativedocx.exportDocument');
-    for (const extName of ['.md', '.mmd', '.qmd']) {
-      assert.ok(entry?.when?.includes(`resourceExtname == ${extName}`), `expected the "when" clause to cover ${extName}`);
+    for (const place of ['explorer/context', 'editor/context', 'editor/title/context']) {
+      const entry = contributes.menus?.[place]?.find((e) => e.submenu === 'md2nativedocx.submenu');
+      assert.ok(entry, `expected the submenu in ${place}`);
+      for (const extName of ['.md', '.mmd', '.qmd']) {
+        assert.ok(entry?.when?.includes(`resourceExtname == ${extName}`), `${place}: "when" should cover ${extName}`);
+      }
+    }
+    const items = (contributes.menus?.['md2nativedocx.submenu'] ?? []).map((e) => e.command);
+    assert.deepEqual(items, [
+      'md2nativedocx.exportDocument',
+      'md2nativedocx.exportDocumentPptx',
+      'md2nativedocx.exportBlockDocx',
+      'md2nativedocx.exportBlockPptx',
+      'md2nativedocx.openSettings',
+    ]);
+  });
+
+  test('exportDocumentPptx command writes a real deck for a Markdown file with a diagram', async () => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'md2nativedocx-pptx-suite-'));
+    const mdCopy = path.join(outDir, 'deck.md');
+    fs.copyFileSync(FIXTURE, mdCopy);
+    try {
+      // Not awaited: the command only resolves once its success toast is dismissed.
+      void vscode.commands.executeCommand('md2nativedocx.exportDocumentPptx', vscode.Uri.file(mdCopy));
+      const out = path.join(outDir, 'deck.pptx');
+      for (let i = 0; i < 40 && !fs.existsSync(out); i++) await new Promise((r) => setTimeout(r, 250));
+      assert.ok(fs.existsSync(out), 'expected deck.pptx next to the source');
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
     }
   });
 

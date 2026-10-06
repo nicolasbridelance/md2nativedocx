@@ -1,7 +1,7 @@
 # Revue UX de l'extension VS Code — octobre 2026
 
-Statut : **proposition, en attente des décisions du mainteneur** (section 4). Une fois tranchée, la
-cible (section 3) remplace la Partie 1 de `UX_SPEC.md`, qui décrit l'état de septembre.
+Statut : **décisions D1–D9 validées telles que recommandées par le mainteneur (2026-10-06)** ; livraison en cours, lot A d'abord. Une fois livrée,
+la cible (section 3) remplacera la Partie 1 de `UX_SPEC.md`, qui décrit l'état de septembre.
 
 Pourquoi maintenant : l'extension a été pensée pour « un document Markdown → un `.docx` ». Depuis,
 le projet a gagné le `.pptx`, les SmartArt (validés dans Word, mais désactivés par défaut), les

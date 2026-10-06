@@ -14,8 +14,10 @@ import {
   PandocBlockedByPolicyError,
   BlockNotFoundError,
   ExportFailedError,
+  type ExportFormat,
   type ExportResult,
   type LayoutOptions,
+  type RunCliOptions,
   SMARTART_STYLE_NAMES,
   type SmartArtStyleName,
 } from './exportService';
@@ -33,16 +35,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd,qmd}' }, new MermaidCodeLensProvider()),
-    vscode.commands.registerCommand('md2nativedocx.exportDocument', (uri?: vscode.Uri) =>
-      handleExportDocument(uri),
+    vscode.commands.registerCommand('md2nativedocx.exportDocument', (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
+      handleExportDocument(uri, selection, 'docx'),
+    ),
+    vscode.commands.registerCommand('md2nativedocx.exportDocumentPptx', (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
+      handleExportDocument(uri, selection, 'pptx'),
     ),
     vscode.commands.registerCommand('md2nativedocx.exportBlock', (uri?: vscode.Uri, blockIndex?: number) =>
       handleExportBlock(uri, blockIndex),
+    ),
+    vscode.commands.registerCommand('md2nativedocx.exportBlockDocx', (uri?: vscode.Uri) => handleExportBlock(uri, undefined, 'docx')),
+    vscode.commands.registerCommand('md2nativedocx.exportBlockPptx', (uri?: vscode.Uri) => handleExportBlock(uri, undefined, 'pptx')),
+    vscode.commands.registerCommand('md2nativedocx.openSettings', () =>
+      vscode.commands.executeCommand(`${CONFIG_VIEW_ID}.focus`),
     ),
     vscode.window.registerWebviewViewProvider(CONFIG_VIEW_ID, new ConfigPanelProvider(context)),
   );
 
   registerStatusBar(context);
+  trackCursorInBlock(context);
 }
 
 export function deactivate(): void {
@@ -200,36 +211,117 @@ async function resolveExportableUri(uri: vscode.Uri | undefined): Promise<vscode
   return null;
 }
 
-async function handleExportDocument(uriArg?: vscode.Uri): Promise<void> {
+/** `md2nativedocx.pptx.showSource` — put each diagram's Mermaid source beside it on its slide. */
+function pptxShowSourceSetting(): boolean {
+  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('pptx.showSource', false);
+}
+
+/**
+ * Everything the CLI needs for one export in `format`. A PowerPoint deck needs no Pandoc and none of the
+ * Word-only settings (template, page layout, SmartArt, Word compatibility check), so none is resolved for it.
+ */
+async function exportOptions(progress: vscode.Progress<{ message?: string }>, format: ExportFormat): Promise<RunCliOptions> {
+  if (format === 'pptx') return { format, pptxShowSource: pptxShowSourceSetting() };
+  const pandocBin = await resolvePandocBin(progress);
+  const referenceDoc = referenceDocumentSetting();
+  const layout = layoutOptionsSetting();
+  warnIfLayoutOptionsIgnored(referenceDoc, layout);
+  const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
+  return {
+    format,
+    pandocBin,
+    referenceDoc,
+    smartArtEnabled: smartArtEnabledSetting(),
+    nativeChartsEnabled: nativeChartsEnabledSetting(),
+    smartArtStyle: smartArtStyleSetting(),
+    smartArtDrawing: smartArtDrawingSetting(),
+    layout,
+    toc: tocEnabledSetting(),
+    tocDepth: tocDepthSetting(),
+    emojiFont: emojiFontEnabledSetting(),
+    ...wordCompatibilityCheck,
+  };
+}
+
+/** Export one document (`.md`/`.qmd`, or a raw `.mmd` diagram) in `format`. */
+function exportOne(uri: vscode.Uri, options: RunCliOptions): Promise<ExportResult> {
+  return isMermaidFilePath(uri.fsPath)
+    ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
+    : exportDocument(uri.fsPath, outputDirectorySetting(), options);
+}
+
+/**
+ * "Exporter en Word" / "Exporter en PowerPoint" for a whole document. From the Explorer with several files
+ * selected, VS Code passes the clicked file then the whole selection: each exportable file is exported.
+ */
+async function handleExportDocument(uriArg?: vscode.Uri, selection?: vscode.Uri[], format: ExportFormat = 'docx'): Promise<void> {
+  const many = (selection ?? []).filter((u) => isExportablePath(u.fsPath));
+  if (many.length > 1) {
+    await handleExportMany(many, format);
+    return;
+  }
   const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
   await runExportFlow(
-    async (progress) => {
-      const pandocBin = await resolvePandocBin(progress);
-      const referenceDoc = referenceDocumentSetting();
-      const smartArtEnabled = smartArtEnabledSetting();
-      const nativeChartsEnabled = nativeChartsEnabledSetting();
-      const smartArtStyle = smartArtStyleSetting();
-      const smartArtDrawing = smartArtDrawingSetting();
-      const layout = layoutOptionsSetting();
-      warnIfLayoutOptionsIgnored(referenceDoc, layout);
-      const toc = tocEnabledSetting();
-      const tocDepth = tocDepthSetting();
-      const emojiFont = emojiFontEnabledSetting();
-      const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
-      const options = { pandocBin, referenceDoc, smartArtEnabled, nativeChartsEnabled, smartArtStyle, smartArtDrawing, layout, toc, tocDepth, emojiFont, ...wordCompatibilityCheck };
-      return isMermaidFilePath(uri.fsPath)
-        ? exportMermaidFile(uri.fsPath, outputDirectorySetting(), options)
-        : exportDocument(uri.fsPath, outputDirectorySetting(), options);
-    },
+    async (progress) => exportOne(uri, await exportOptions(progress, format)),
+    format,
     // "Réessayer" on a Pandoc-missing toast must restart this exact command
-    // with the same target URI (missing_pandoc_bugfix.md §4) — re-resolving
-    // the URI is fine (it's the active editor in the palette-invoked case).
-    () => handleExportDocument(uri),
+    // with the same target URI (missing_pandoc_bugfix.md §4).
+    () => handleExportDocument(uri, undefined, format),
   );
 }
 
-async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): Promise<void> {
+/** Several files selected in the Explorer: one progress notification, one summary at the end. */
+async function handleExportMany(uris: vscode.Uri[], format: ExportFormat): Promise<void> {
+  const failures: string[] = [];
+  let lastOutput: string | undefined;
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
+    async (progress) => {
+      for (const [i, uri] of uris.entries()) {
+        progress.report({ message: `${i + 1}/${uris.length} — ${basename(uri.fsPath)}` });
+        try {
+          lastOutput = (await exportOne(uri, await exportOptions(progress, format))).outputPath;
+        } catch (err) {
+          const detail = err instanceof ExportFailedError ? err.details || err.message : err instanceof Error ? err.message : String(err);
+          outputChannel.appendLine(`${uri.fsPath}: ${detail}`);
+          failures.push(basename(uri.fsPath));
+        }
+      }
+    },
+  );
+  const done = uris.length - failures.length;
+  const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
+  const viewLogs = vscode.l10n.t('View logs');
+  if (failures.length === 0) {
+    const choice = await vscode.window.showInformationMessage(vscode.l10n.t('Exported {0} files', done), revealInExplorer);
+    if (choice === revealInExplorer && lastOutput) await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(lastOutput));
+    return;
+  }
+  const choice = await vscode.window.showWarningMessage(
+    vscode.l10n.t('Exported {0} of {1} files; failed: {2}', done, uris.length, failures.join(', ')),
+    viewLogs,
+  );
+  if (choice === viewLogs) outputChannel.show();
+}
+
+/** Ask Word or PowerPoint (used by "Exporter ce diagramme…"). `undefined` if dismissed. */
+async function pickFormat(): Promise<ExportFormat | undefined> {
+  const pick = await vscode.window.showQuickPick(
+    [
+      { label: `$(file) ${vscode.l10n.t('Word (.docx)')}`, format: 'docx' as const },
+      { label: `$(preview) ${vscode.l10n.t('PowerPoint (.pptx), one slide')}`, format: 'pptx' as const },
+    ],
+    { placeHolder: vscode.l10n.t('Export this diagram to…') },
+  );
+  return pick?.format;
+}
+
+/**
+ * "Exporter ce diagramme…": one diagram, into its own `.docx` or one-slide `.pptx`. `format` comes from a
+ * direct menu entry; without it (CodeLens, palette) the user picks.
+ */
+async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number, formatArg?: ExportFormat): Promise<void> {
   const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
 
@@ -238,8 +330,8 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
   let blockIndex = blockIndexArg;
 
   if (blockIndex === undefined) {
-    // Invoked from the Command Palette (no CodeLens argument): fall back to
-    // the block under the cursor, the sole block if unambiguous, or a picker.
+    // Invoked from the Command Palette or the editor menu (no CodeLens argument): the block under the
+    // cursor, the sole block if unambiguous, or a picker.
     const active = vscode.window.activeTextEditor;
     const cursorLine = active && active.document.uri.toString() === uri.toString() ? active.selection.active.line : 0;
     const resolved = resolveBlockForCursor(text, cursorLine);
@@ -264,37 +356,33 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number): P
     }
   }
 
+  const format = formatArg ?? (await pickFormat());
+  if (!format) return;
   await runExportFlow(
-    async (progress) => {
-      const pandocBin = await resolvePandocBin(progress);
-      const referenceDoc = referenceDocumentSetting();
-      const smartArtEnabled = smartArtEnabledSetting();
-      const nativeChartsEnabled = nativeChartsEnabledSetting();
-      const smartArtStyle = smartArtStyleSetting();
-      const smartArtDrawing = smartArtDrawingSetting();
-      const layout = layoutOptionsSetting();
-      warnIfLayoutOptionsIgnored(referenceDoc, layout);
-      const toc = tocEnabledSetting();
-      const tocDepth = tocDepthSetting();
-      const emojiFont = emojiFontEnabledSetting();
-      const wordCompatibilityCheck = await resolveWordCompatibilityCheck(progress);
-      return exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), {
-        pandocBin,
-        referenceDoc,
-        smartArtEnabled,
-        nativeChartsEnabled,
-        smartArtStyle,
-        smartArtDrawing,
-        layout,
-        toc,
-        tocDepth,
-        emojiFont,
-        ...wordCompatibilityCheck,
-      });
-    },
+    async (progress) => exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), await exportOptions(progress, format)),
+    format,
     // "Réessayer" on a Pandoc-missing toast must restart this exact command
     // with the same target URI + block index (missing_pandoc_bugfix.md §4).
-    () => handleExportBlock(uri, blockIndex),
+    () => handleExportBlock(uri, blockIndex, format),
+  );
+}
+
+/** Keeps `md2nativedocx.cursorInMermaidBlock` up to date, for the editor right-click "this diagram" entries. */
+function trackCursorInBlock(context: vscode.ExtensionContext): void {
+  const update = (editor: vscode.TextEditor | undefined) => {
+    const inBlock =
+      editor !== undefined &&
+      isExportablePath(editor.document.uri.fsPath) &&
+      !isMermaidFilePath(editor.document.uri.fsPath) &&
+      parseMermaidBlocks(editor.document.getText()).some(
+        (b) => editor.selection.active.line >= b.fenceLine && editor.selection.active.line <= b.closingFenceLine,
+      );
+    void vscode.commands.executeCommand('setContext', 'md2nativedocx.cursorInMermaidBlock', inBlock);
+  };
+  update(vscode.window.activeTextEditor);
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(update),
+    vscode.window.onDidChangeTextEditorSelection((e) => update(e.textEditor)),
   );
 }
 
@@ -408,6 +496,7 @@ type ExportOutcome =
  * actually finished (visible as two stacked notifications in the recording). */
 async function runExportFlow(
   run: (progress: vscode.Progress<{ message?: string }>) => Promise<ExportResult>,
+  format: ExportFormat,
   retry?: () => Promise<void>,
 ): Promise<void> {
   const outcome = await vscode.window.withProgress<ExportOutcome>(
@@ -427,7 +516,7 @@ async function runExportFlow(
     return;
   }
 
-  const openInWord = vscode.l10n.t('Open in Word');
+  const openInWord = format === 'pptx' ? vscode.l10n.t('Open in PowerPoint') : vscode.l10n.t('Open in Word');
   const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
   const hasWarnings = outcome.warningCount > 0;
   const viewWarnings = vscode.l10n.t('View warnings');

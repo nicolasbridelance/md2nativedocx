@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveOutputPath, resolveBlockForCursor, exportMermaidFile, exportDocument } from '../../src/exportService';
+import { execFileSync } from 'node:child_process';
+import { resolveOutputPath, resolveBlockForCursor, exportMermaidFile, exportDocument, exportBlock } from '../../src/exportService';
 
 test('resolveOutputPath defaults to the source file\'s own directory (zero-config)', () => {
   const out = resolveOutputPath('/home/user/reports/rapport.md', 'rapport', '');
@@ -104,4 +105,44 @@ test('resolveBlockForCursor returns null when ambiguous (cursor outside any bloc
   ].join('\n');
   const block = resolveBlockForCursor(md, 4);
   assert.equal(block, null);
+});
+
+test('resolveOutputPath uses the .pptx extension for a PowerPoint export', () => {
+  assert.equal(resolveOutputPath('/r/rapport.md', 'rapport', '', 'pptx'), join('/r', 'rapport.pptx'));
+});
+
+test('exportDocument in pptx format writes a deck and its .log, without Pandoc', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-pptx-export-test-'));
+  try {
+    const mdPath = join(dir, 'deck.md');
+    writeFileSync(mdPath, '# One\n\n```mermaid\ngraph TD\n  A --> B\n```\n\n# Two\n\n```mermaid\ngraph LR\n  C --> D\n```\n');
+    const result = await exportDocument(mdPath, '', { format: 'pptx' });
+    assert.equal(result.outputPath, join(dir, 'deck.pptx'));
+    assert.ok(existsSync(result.outputPath));
+    assert.equal(result.logPath, join(dir, 'deck.log'));
+    assert.match(readFileSync(result.logPath, 'utf8'), /^Slides: 2$/m);
+    assert.equal(result.warningCount, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('exportBlock in pptx format makes a one-slide deck named after the diagram; showSource is passed through', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-pptx-block-test-'));
+  try {
+    const mdPath = join(dir, 'rapport.md');
+    const text = '# A\n\n```mermaid\ngraph TD\n  A --> B\n```\n\n# B\n\n```mermaid\ngraph TD\n  SourceMarker --> D\n```\n';
+    writeFileSync(mdPath, text);
+    const result = await exportBlock(mdPath, text, 1, '', { format: 'pptx', pptxShowSource: true });
+    assert.equal(result.outputPath, join(dir, 'rapport-diagram-2.pptx'));
+    assert.match(readFileSync(result.logPath, 'utf8'), /^Slides: 1$/m);
+    // The source panel carries the Mermaid text itself: `graph TD` only appears on the slide when it is shown.
+    const slide = execFileSync('unzip', ['-p', result.outputPath, 'ppt/slides/slide1.xml'], { encoding: 'utf8' });
+    assert.match(slide, /graph TD/);
+    mkdirSync(join(dir, 'plain'));
+    const plain = await exportBlock(mdPath, text, 1, join(dir, 'plain'), { format: 'pptx' });
+    assert.doesNotMatch(execFileSync('unzip', ['-p', plain.outputPath, 'ppt/slides/slide1.xml'], { encoding: 'utf8' }), /graph TD/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

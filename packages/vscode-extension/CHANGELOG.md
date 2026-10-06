@@ -6,6 +6,14 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 ## [Unreleased]
 
 ### Changed
+- **PowerPoint from the extension.** "Export to PowerPoint" (one slide per diagram) sits next to "Export to
+  Word" everywhere. New setting `md2nativedocx.pptx.showSource` puts each diagram's Mermaid source beside it.
+- **Clearer CodeLenses.** One line at the top of the file for the whole document — Export to Word · Export
+  to PowerPoint · Settings — instead of a whole-document "Export to Word" repeated above every diagram.
+  Above each diagram, **Export this diagram…** (Word or a one-slide deck) replaces "Export this block only".
+- **Right-click menu** is now an `md2nativedocx` submenu (Explorer, editor, tab bar): Export to Word, Export
+  to PowerPoint, and — with the cursor inside a diagram — Export this diagram to Word / PowerPoint.
+  Several files selected in the Explorer are exported in one go.
 - Listing and READMEs now say what the name means: `md2nativedocx` converts **Markdown** to a complete Word
   `.docx` (the `md` is the input format, not Mermaid) and "native" describes the Word output (OOXML shapes,
   SmartArt, charts with an embedded workbook), Mermaid diagrams included. README openings now lead with what the

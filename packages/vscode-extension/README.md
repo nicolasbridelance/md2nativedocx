@@ -37,9 +37,10 @@ clip below is short and loops.
 
 <img src="docs/demo-vscode.gif" width="480" alt="Clicking the Export to Word link above a Mermaid diagram in an open file, then the success notification appearing"/>
 
-Open a Markdown file that contains a Mermaid diagram. A small **⚙ Export to Word** link appears
-right above the diagram — click it, and a few seconds later a notification appears with the
-finished `.docx`, plus buttons to open it or reveal it in the file browser.
+Open a Markdown file. At the top of the file, a line of links: **Export to Word**, **Export to
+PowerPoint** (one slide per diagram) and **Settings**. Above each diagram, **Export this diagram…**
+exports that one diagram alone, to Word or to a one-slide PowerPoint deck. A few seconds later a
+notification appears with the finished file, plus buttons to open it or reveal it in the file browser.
 
 **2. Straight from the file list — no need to open anything first**
 
@@ -47,8 +48,8 @@ finished `.docx`, plus buttons to open it or reveal it in the file browser.
 
 Don't want to open the file at all? Right-click it in the file list on the left (the same kind of
 right-click menu you'd use in Windows Explorer or macOS Finder) and choose
-**md2nativedocx: Export document to Word**. Same result, without ever looking at the file's
-contents.
+**md2nativedocx → Export to Word** (or **Export to PowerPoint**). Select several files first to
+export them all at once. In the editor, right-click inside a diagram to export just that diagram.
 
 **3. Works even when there's no diagram in the file**
 
@@ -118,10 +119,10 @@ tables/formatting export either way — and on a raw `.mmd` Mermaid file too.
 
 1. Open a `.md`, `.qmd` or `.mmd` file, **or** just right-click one in the Explorer — no need to
    open it first.
-2. Click **⚙️ Export to Word** (or **Export this block only** for a single diagram, above that
-   block) — from the CodeLens, the status bar item, the right-click menu (Explorer, editor, or the
-   editor tab itself), or the Command Palette.
-3. A notification offers to open the generated `.docx` or reveal it in the file explorer.
+2. Click **Export to Word** or **Export to PowerPoint** (or **Export this diagram…** above a single
+   diagram) — from the links in the file, the status bar item, the right-click **md2nativedocx**
+   menu (Explorer, editor, or the editor tab itself), or the Command Palette.
+3. A notification offers to open the generated file or reveal it in the file explorer.
 
 No configuration required before first use. Optional settings: `md2nativedocx.outputDirectory`
 chooses where `.docx` files are written (default: the same folder as the source);

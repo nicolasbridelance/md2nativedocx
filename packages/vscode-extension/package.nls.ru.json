@@ -1,9 +1,9 @@
 {
   "extension.description": "Экспортирует Markdown в Word (.docx) — а диаграммы Mermaid остаются редактируемыми в Word: настоящие фигуры, SmartArt и диаграммы, а не картинки.",
-  "command.exportDocument.title": "md2nativedocx: Экспортировать документ в Word",
-  "command.exportDocument.shortTitle": "Экспортировать в Word",
-  "command.exportBlock.title": "md2nativedocx: Экспортировать диаграмму под курсором",
-  "command.exportBlock.shortTitle": "Экспортировать только этот блок",
+  "command.exportDocument.title": "Экспорт в Word",
+  "command.exportDocument.shortTitle": "Экспорт в Word",
+  "command.exportBlock.title": "Экспортировать эту диаграмму…",
+  "command.exportBlock.shortTitle": "Экспортировать эту диаграмму…",
   "configuration.outputDirectory.markdownDescription": "Папка для сохранения созданных файлов `.docx`. Пусто (по умолчанию) = та же папка, что и исходный файл `.md` — настройка перед первым использованием не требуется.",
   "configuration.referenceDocument.markdownDescription": "Путь к файлу `.docx`, используемому как шаблон Word для каждого экспорта (аналог параметра Pandoc `--reference-doc`) — укажите шаблон вашей компании, чтобы использовать его шрифты, цвета и стили. Пусто (по умолчанию) = встроенный шаблон расширения. Относительные пути разрешаются относительно папки рабочей области.",
   "configuration.smartArt.enabled.markdownDescription": "По умолчанию отключено. Если включено, блок-схемы в виде цепочки, дерева (до 10 уровней, широкие деревья — в виде оргструктуры) или цикла, а также диаграммы `mindmap` и `treeView-beta` с одним корнем становятся нативными графическими элементами SmartArt: добавление шага или ветви, смена стиля и цветов на вкладке «Конструктор SmartArt» в Word. Остальные диаграммы остаются отдельными редактируемыми фигурами. Проверено в настоящем Word.",
@@ -14,5 +14,11 @@
   "walkthrough.step2.title": "Нажмите «⚙️ Экспортировать в Word»",
   "walkthrough.step2.description": "Над каждым обнаруженным блоком mermaid автоматически появляется ссылка — не нужно запоминать команду.",
   "walkthrough.step3.title": "Получите свой `.docx`",
-  "walkthrough.step3.description": "Уведомление предлагает открыть файл в Word или показать его в проводнике — фигуры можно выбирать и редактировать по отдельности."
+  "walkthrough.step3.description": "Уведомление предлагает открыть файл в Word или показать его в проводнике — фигуры можно выбирать и редактировать по отдельности.",
+  "command.exportDocumentPptx.title": "Экспорт в PowerPoint",
+  "command.exportDocumentPptx.shortTitle": "Экспорт в PowerPoint",
+  "command.exportBlockDocx.title": "Экспортировать эту диаграмму в Word",
+  "command.exportBlockPptx.title": "Экспортировать эту диаграмму в PowerPoint",
+  "command.openSettings.title": "Настройки",
+  "configuration.pptx.showSource.markdownDescription": "Экспорт в PowerPoint: показывать исходный код Mermaid каждой диаграммы на панели рядом с ней на слайде."
 }

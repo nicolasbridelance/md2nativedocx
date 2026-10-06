@@ -1,9 +1,9 @@
 {
   "extension.description": "Exporte du Markdown vers Word (.docx) — et les diagrammes Mermaid restent modifiables dans Word : vraies formes, SmartArt et graphiques, pas des images.",
-  "command.exportDocument.title": "md2nativedocx : Exporter le document en Word",
+  "command.exportDocument.title": "Exporter en Word",
   "command.exportDocument.shortTitle": "Exporter en Word",
-  "command.exportBlock.title": "md2nativedocx : Exporter le diagramme sous le curseur",
-  "command.exportBlock.shortTitle": "Exporter le bloc seul",
+  "command.exportBlock.title": "Exporter ce diagramme…",
+  "command.exportBlock.shortTitle": "Exporter ce diagramme…",
   "configuration.outputDirectory.markdownDescription": "Dossier de sortie des fichiers `.docx` générés. Vide (par défaut) = même dossier que le fichier `.md` source — aucune configuration requise avant le premier usage.",
   "configuration.referenceDocument.markdownDescription": "Chemin d'un fichier `.docx` utilisé comme modèle Word pour chaque export (équivalent de l'option `--reference-doc` de Pandoc) — pointez vers le modèle de votre entreprise pour reprendre ses polices, couleurs et styles. Vide (par défaut) = modèle intégré à l'extension. Les chemins relatifs sont résolus par rapport au dossier de l'espace de travail.",
   "configuration.smartArt.enabled.markdownDescription": "Désactivé par défaut. Activé, un flowchart en forme de chaîne, d'arbre (jusqu'à 10 niveaux, arbres larges en disposition d'organigramme) ou de cycle, ainsi que les diagrammes `mindmap` et `treeView-beta` à une seule racine, deviennent des graphiques SmartArt natifs : ajout d'une étape ou d'une branche, changement de style ou de couleurs depuis l'onglet Création SmartArt de Word. Les autres diagrammes restent en formes éditables individuelles. Vérifié dans Word réel.",
@@ -24,5 +24,11 @@
   "walkthrough.step2.title": "Cliquez sur « ⚙️ Exporter en Word »",
   "walkthrough.step2.description": "Un lien apparaît automatiquement au-dessus de chaque bloc mermaid détecté — pas besoin de connaître une commande.",
   "walkthrough.step3.title": "Récupérez votre `.docx`",
-  "walkthrough.step3.description": "Une notification propose d'ouvrir le fichier dans Word ou de le révéler dans l'explorateur — les formes sont sélectionnables et modifiables individuellement."
+  "walkthrough.step3.description": "Une notification propose d'ouvrir le fichier dans Word ou de le révéler dans l'explorateur — les formes sont sélectionnables et modifiables individuellement.",
+  "command.exportDocumentPptx.title": "Exporter en PowerPoint",
+  "command.exportDocumentPptx.shortTitle": "Exporter en PowerPoint",
+  "command.exportBlockDocx.title": "Exporter ce diagramme en Word",
+  "command.exportBlockPptx.title": "Exporter ce diagramme en PowerPoint",
+  "command.openSettings.title": "Réglages",
+  "configuration.pptx.showSource.markdownDescription": "Export PowerPoint : afficher la source Mermaid de chaque diagramme dans un panneau à côté de lui, sur sa diapositive."
 }

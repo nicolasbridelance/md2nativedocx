@@ -23,6 +23,18 @@
   "1 mermaid diagram detected — export the document as a native .docx": "1 Mermaid-Diagramm erkannt — Dokument als natives .docx exportieren",
   "{0} mermaid diagrams detected — export the document as a native .docx": "{0} Mermaid-Diagramme erkannt — Dokument als natives .docx exportieren",
   "Converts the whole document (text, tables, formatting, all diagrams) to .docx — each diagram becomes native, editable Word shapes, not an image.": "Konvertiert das gesamte Dokument (Text, Tabellen, Formatierung, alle Diagramme) in .docx — jedes Diagramm wird zu einer nativen, bearbeitbaren Word-Form, kein Bild.",
-  "Export this block only": "Nur diesen Block exportieren",
-  "Converts only this diagram into its own .docx — handy for pasting it elsewhere without the rest of the document.": "Konvertiert nur dieses Diagramm in ein eigenes .docx — praktisch, um es ohne den Rest des Dokuments an anderer Stelle einzufügen."
+  "Export to PowerPoint": "Nach PowerPoint exportieren",
+  "Settings": "Einstellungen",
+  "One slide per diagram, titled with the heading above it, with editable shapes. Text outside diagrams is not exported.": "Eine Folie pro Diagramm, betitelt mit der Überschrift darüber, mit bearbeitbaren Formen. Text außerhalb von Diagrammen wird nicht exportiert.",
+  "Page layout, fonts, diagrams (SmartArt, charts), output folder": "Seitenlayout, Schriften, Diagramme (SmartArt, Charts), Ausgabeordner",
+  "Export this diagram…": "Dieses Diagramm exportieren…",
+  "Only this diagram, into its own Word document or a one-slide PowerPoint deck.": "Nur dieses Diagramm, in ein eigenes Word-Dokument oder eine PowerPoint-Präsentation mit einer Folie.",
+  "Open in PowerPoint": "In PowerPoint öffnen",
+  "Exported {0} files": "{0} Dateien exportiert",
+  "Exported {0} of {1} files; failed: {2}": "{0} von {1} Dateien exportiert; fehlgeschlagen: {2}",
+  "Word (.docx)": "Word (.docx)",
+  "PowerPoint (.pptx), one slide": "PowerPoint (.pptx), eine Folie",
+  "Export this diagram to…": "Dieses Diagramm exportieren nach…",
+  "Setting up .NET for the Word compatibility check (one-time download)…": ".NET für die Word-Kompatibilitätsprüfung wird eingerichtet (einmaliger Download)…",
+  "Setting up .NET for the Word compatibility check (one-time download): {0}%": ".NET für die Word-Kompatibilitätsprüfung wird eingerichtet (einmaliger Download): {0} %"
 }
