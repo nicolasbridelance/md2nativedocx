@@ -165,6 +165,10 @@
       ],
       "commandPalette": [
         {
+          "command": "md2nativedocx.enableSetting",
+          "when": "false"
+        },
+        {
           "command": "md2nativedocx.exportBlockDocx",
           "when": "false"
         },
@@ -420,7 +424,7 @@
     ]
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/bundle-analysis.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pretest": "tsc -p tsconfig.test.json",
     "test": "node --experimental-test-module-mocks --test dist-test/test/unit/*.test.js",

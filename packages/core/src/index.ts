@@ -151,6 +151,10 @@ export type { CynefinParseResult } from './diagrams/cynefin/parser.js';
 export { translateCynefinToOoxml } from './diagrams/cynefin/translator.js';
 export type { CynefinDiagram, CynefinDomain, CynefinTransition } from './diagrams/cynefin/types.js';
 
+// What a diagram will become in Word (SmartArt, chart, shapes), without generating it — for editor UIs.
+export { planRendering } from './rendering-plan.js';
+export type { RenderingPlan, RenderingSettings } from './rendering-plan.js';
+
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
 export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';

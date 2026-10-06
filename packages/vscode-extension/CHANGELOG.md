@@ -14,6 +14,11 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 - **Right-click menu** is now an `md2nativedocx` submenu (Explorer, editor, tab bar): Export to Word, Export
   to PowerPoint, and — with the cursor inside a diagram — Export this diagram to Word / PowerPoint.
   Several files selected in the Explorer are exported in one go.
+- **Know before you export.** Above each diagram, the CodeLens now says what it will become in Word —
+  "SmartArt — hierarchy, 3 levels", "Word chart", "Word shapes (no SmartArt: branches merge again at B, C)" —
+  and, when a setting would change that ("SmartArt possible"), clicking it turns the setting on. Hover the
+  ```` ```mermaid ```` line for the details (what you can do with it in Word, what is not kept). The status bar
+  tooltip tallies the document's diagrams. Same rules as the exporter (the core's `planRendering`).
 - Listing and READMEs now say what the name means: `md2nativedocx` converts **Markdown** to a complete Word
   `.docx` (the `md` is the input format, not Mermaid) and "native" describes the Word output (OOXML shapes,
   SmartArt, charts with an embedded workbook), Mermaid diagrams included. README openings now lead with what the

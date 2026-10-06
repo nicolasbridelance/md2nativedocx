@@ -20,5 +20,6 @@
   "command.exportBlockDocx.title": "将此图表导出为 Word",
   "command.exportBlockPptx.title": "将此图表导出为 PowerPoint",
   "command.openSettings.title": "设置",
-  "configuration.pptx.showSource.markdownDescription": "PowerPoint 导出：在每张幻灯片上的图表旁显示其 Mermaid 源代码面板。"
+  "configuration.pptx.showSource.markdownDescription": "PowerPoint 导出：在每张幻灯片上的图表旁显示其 Mermaid 源代码面板。",
+  "command.enableSetting.title": "启用图表设置"
 }

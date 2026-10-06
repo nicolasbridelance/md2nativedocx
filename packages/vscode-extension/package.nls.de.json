@@ -20,5 +20,6 @@
   "command.exportBlockDocx.title": "Dieses Diagramm nach Word exportieren",
   "command.exportBlockPptx.title": "Dieses Diagramm nach PowerPoint exportieren",
   "command.openSettings.title": "Einstellungen",
-  "configuration.pptx.showSource.markdownDescription": "PowerPoint-Export: den Mermaid-Quelltext jedes Diagramms in einem Feld daneben auf seiner Folie anzeigen."
+  "configuration.pptx.showSource.markdownDescription": "PowerPoint-Export: den Mermaid-Quelltext jedes Diagramms in einem Feld daneben auf seiner Folie anzeigen.",
+  "command.enableSetting.title": "Diagrammeinstellung aktivieren"
 }

@@ -39,7 +39,9 @@ clip below is short and loops.
 
 Open a Markdown file. At the top of the file, a line of links: **Export to Word**, **Export to
 PowerPoint** (one slide per diagram) and **Settings**. Above each diagram, **Export this diagram…**
-exports that one diagram alone, to Word or to a one-slide PowerPoint deck. A few seconds later a
+exports that one diagram alone, to Word or to a one-slide PowerPoint deck — and just before it, what
+the diagram will become in Word (a SmartArt graphic, a Word chart, or editable Word shapes, and why);
+hover the ```` ```mermaid ```` line for details. A few seconds later a
 notification appears with the finished file, plus buttons to open it or reveal it in the file browser.
 
 **2. Straight from the file list — no need to open anything first**

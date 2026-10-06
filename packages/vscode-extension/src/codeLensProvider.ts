@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
 import { parseMermaidBlocks, isMermaidFilePath } from './mermaidBlocks';
+import { planFor, planSummary, settingToEnable } from './diagramPlan';
 
 /** CodeLenses (docs/specs/UX_REVIEW_2026-10.md §3.2): one line at the top of the file for the whole
  * document — Export to Word · Export to PowerPoint (when there is a diagram) · Settings — and, above each
  * ```mermaid block, "Export this diagram…" for that diagram alone. The document actions are no longer
  * repeated above every block (they used to be, which made a lens placed on a block act on the whole
- * document). Deliberately redundant with the status bar item — see docs/specs/UX_SPEC.md for why. */
+ * document). Each diagram's lens line starts with what it will become in Word (SmartArt, Word chart, Word
+ * shapes, and why not SmartArt) — §3.2, from the core's `planRendering` via `diagramPlan.ts`; when a setting
+ * would change that, the summary itself is the "enable" action. Deliberately redundant with the status bar
+ * item — see docs/specs/UX_SPEC.md for why. */
 export class MermaidCodeLensProvider implements vscode.CodeLensProvider {
   private readonly onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
   readonly onDidChangeCodeLenses = this.onDidChangeCodeLensesEmitter.event;
@@ -48,10 +52,14 @@ export class MermaidCodeLensProvider implements vscode.CodeLensProvider {
       }),
     );
 
-    // Above each diagram: the action on that diagram alone.
+    if (isMmd) lenses.push(...planLenses(top, document.getText()));
+
+    // Above each diagram: what it will become, then the action on that diagram alone.
     for (const block of blocks) {
+      const range = new vscode.Range(block.fenceLine, 0, block.fenceLine, 0);
+      lenses.push(...planLenses(range, block.source));
       lenses.push(
-        new vscode.CodeLens(new vscode.Range(block.fenceLine, 0, block.fenceLine, 0), {
+        new vscode.CodeLens(range, {
           title: vscode.l10n.t('Export this diagram…'),
           command: 'md2nativedocx.exportBlock',
           arguments: [document.uri, block.index],
@@ -61,4 +69,19 @@ export class MermaidCodeLensProvider implements vscode.CodeLensProvider {
     }
     return lenses;
   }
+}
+
+/** The "what it will become" lens for one diagram: plain text, or the enable action when a setting applies. */
+function planLenses(range: vscode.Range, source: string): vscode.CodeLens[] {
+  const plan = planFor(source);
+  if (!plan) return [];
+  const enable = settingToEnable(plan);
+  return [
+    new vscode.CodeLens(range, {
+      title: planSummary(plan),
+      command: enable ? 'md2nativedocx.enableSetting' : '',
+      arguments: enable ? [enable.key] : [],
+      tooltip: enable ? enable.label : vscode.l10n.t('Hover the ```mermaid line for details'),
+    }),
+  ];
 }

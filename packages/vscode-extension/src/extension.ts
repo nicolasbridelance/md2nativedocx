@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { MermaidCodeLensProvider } from './codeLensProvider';
+import { planFor, planHover } from './diagramPlan';
 import { registerStatusBar } from './statusBar';
 import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
 import {
@@ -33,8 +34,15 @@ export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('md2nativedocx');
   context.subscriptions.push(outputChannel);
 
+  const codeLenses = new MermaidCodeLensProvider();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd,qmd}' }, new MermaidCodeLensProvider()),
+    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd,qmd}' }, codeLenses),
+    vscode.languages.registerHoverProvider({ pattern: '**/*.{md,mmd,qmd}' }, { provideHover: provideDiagramHover }),
+    // The "what it will become" lenses depend on the SmartArt / chart settings.
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('md2nativedocx')) codeLenses.refresh();
+    }),
+    vscode.commands.registerCommand('md2nativedocx.enableSetting', (key: string) => handleEnableSetting(key)),
     vscode.commands.registerCommand('md2nativedocx.exportDocument', (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
       handleExportDocument(uri, selection, 'docx'),
     ),
@@ -365,6 +373,29 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number, fo
     // with the same target URI + block index (missing_pandoc_bugfix.md §4).
     () => handleExportBlock(uri, blockIndex, format),
   );
+}
+
+/** Hover on a ```mermaid fence (or line 0 of a `.mmd`): what the diagram becomes in Word, and why. */
+function provideDiagramHover(document: vscode.TextDocument, position: vscode.Position): vscode.Hover | undefined {
+  if (isMermaidFilePath(document.uri.fsPath)) {
+    if (position.line !== 0) return undefined;
+    const plan = planFor(document.getText());
+    return plan ? new vscode.Hover(planHover(plan)) : undefined;
+  }
+  const block = parseMermaidBlocks(document.getText()).find((b) => b.fenceLine === position.line);
+  if (!block) return undefined;
+  const plan = planFor(block.source);
+  return plan ? new vscode.Hover(planHover(plan), document.lineAt(position.line).range) : undefined;
+}
+
+/** The two settings a diagram's lens or hover may offer to turn on (nothing else can be set this way). */
+const ENABLEABLE_SETTINGS = new Set(['smartArt.enabled', 'nativeCharts.enabled']);
+
+async function handleEnableSetting(key: string): Promise<void> {
+  if (!ENABLEABLE_SETTINGS.has(key)) return;
+  await vscode.workspace.getConfiguration('md2nativedocx').update(key, true, vscode.ConfigurationTarget.Global);
+  const what = key === 'smartArt.enabled' ? vscode.l10n.t('SmartArt') : vscode.l10n.t('Word charts');
+  void vscode.window.showInformationMessage(vscode.l10n.t('{0} enabled for your exports.', what));
 }
 
 /** Keeps `md2nativedocx.cursorInMermaidBlock` up to date, for the editor right-click "this diagram" entries. */

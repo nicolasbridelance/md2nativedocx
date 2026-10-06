@@ -20,5 +20,6 @@
   "command.exportBlockDocx.title": "Экспортировать эту диаграмму в Word",
   "command.exportBlockPptx.title": "Экспортировать эту диаграмму в PowerPoint",
   "command.openSettings.title": "Настройки",
-  "configuration.pptx.showSource.markdownDescription": "Экспорт в PowerPoint: показывать исходный код Mermaid каждой диаграммы на панели рядом с ней на слайде."
+  "configuration.pptx.showSource.markdownDescription": "Экспорт в PowerPoint: показывать исходный код Mermaid каждой диаграммы на панели рядом с ней на слайде.",
+  "command.enableSetting.title": "Включить настройку диаграмм"
 }

@@ -65,5 +65,6 @@
   "command.exportBlockDocx.title": "Export this diagram to Word",
   "command.exportBlockPptx.title": "Export this diagram to PowerPoint",
   "command.openSettings.title": "Settings",
-  "configuration.pptx.showSource.markdownDescription": "PowerPoint export: put each diagram's Mermaid source in a panel beside it on its slide."
+  "configuration.pptx.showSource.markdownDescription": "PowerPoint export: put each diagram's Mermaid source in a panel beside it on its slide.",
+  "command.enableSetting.title": "Enable a diagram setting"
 }

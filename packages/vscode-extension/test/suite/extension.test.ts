@@ -55,11 +55,26 @@ suite('md2nativedocx extension host', () => {
       await new Promise((r) => setTimeout(r, 250));
     }
 
-    const commands = lenses.map((l) => l.command?.command).sort();
-    assert.deepEqual(commands, ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
-    const block = lenses.find((l) => l.command?.command === 'md2nativedocx.exportBlock');
-    assert.ok(block && block.range.start.line > 0, 'the diagram lens sits on its fence, not on line 0');
-    assert.ok(lenses.filter((l) => l.command?.command !== 'md2nativedocx.exportBlock').every((l) => l.range.start.line === 0));
+    const top = lenses.filter((l) => l.range.start.line === 0).map((l) => l.command?.command).sort();
+    assert.deepEqual(top, ['md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
+    const onBlock = lenses.filter((l) => l.range.start.line > 0);
+    assert.equal(onBlock.length, 2, 'what the diagram becomes + Export this diagram…');
+    assert.ok(onBlock.some((l) => l.command?.command === 'md2nativedocx.exportBlock'));
+    // Default settings (SmartArt off) on `A --> B`: Word shapes, with SmartArt offered — the lens is the enable action.
+    const plan = onBlock.find((l) => l.command?.command !== 'md2nativedocx.exportBlock');
+    assert.match(plan?.command?.title ?? '', /SmartArt/);
+    assert.equal(plan?.command?.command, 'md2nativedocx.enableSetting');
+    assert.deepEqual(plan?.command?.arguments, ['smartArt.enabled']);
+  });
+
+  test('hovering the ```mermaid line explains what the diagram becomes in Word', async () => {
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(FIXTURE));
+    await vscode.window.showTextDocument(doc);
+    const fence = doc.getText().split('\n').findIndex((l) => l.startsWith('```mermaid'));
+    const hovers = (await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', doc.uri, new vscode.Position(fence, 3))) ?? [];
+    const text = hovers.flatMap((h) => h.contents.map((c) => (typeof c === 'string' ? c : c.value))).join('\n');
+    assert.match(text, /Flowchart/);
+    assert.match(text, /command:md2nativedocx\.enableSetting/);
   });
 
   test('a Markdown document with no mermaid block: Word and Settings only (no deck to make)', async () => {
@@ -69,12 +84,18 @@ suite('md2nativedocx extension host', () => {
 
   test('a raw .mmd file: Word, PowerPoint and Settings at the top', async () => {
     const lenses = await codeLensesFor(vscode.Uri.file(MMD_FIXTURE));
-    assert.deepEqual(lenses.map((l) => l.command?.command).sort(), ['md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
+    assert.deepEqual(
+      lenses.map((l) => l.command?.command).sort(),
+      ['md2nativedocx.enableSetting', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings'],
+      'the .mmd diagram\'s own "what it becomes" lens sits on line 0 too',
+    );
   });
 
   test('a Quarto (.qmd) document gets the same lenses, YAML front matter included', async () => {
     const lenses = await codeLensesFor(vscode.Uri.file(QMD_FIXTURE));
-    assert.deepEqual(lenses.map((l) => l.command?.command).sort(), ['md2nativedocx.exportBlock', 'md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
+    const top = lenses.filter((l) => l.range.start.line === 0).map((l) => l.command?.command).sort();
+    assert.deepEqual(top, ['md2nativedocx.exportDocument', 'md2nativedocx.exportDocumentPptx', 'md2nativedocx.openSettings']);
+    assert.ok(lenses.some((l) => l.command?.command === 'md2nativedocx.exportBlock' && l.range.start.line > 0));
   });
 
   test('right-click (Explorer, editor, tab bar) opens an md2nativedocx submenu for .md/.mmd/.qmd', async () => {
