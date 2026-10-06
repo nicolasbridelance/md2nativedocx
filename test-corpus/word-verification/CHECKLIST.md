@@ -545,7 +545,7 @@ Word writes right-click > Change Shape (an `a:prstGeom` on the box's presentatio
 
 `smartart-v18-node-shapes-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`.
 
-- [ ] All three open with no repair prompt.
+- [x] All three open with no repair prompt.
 - [ ] Chain: diamond "Valide ?", cylinder "Base", circle "Fin"; tree: hexagon root, parallelogram, subroutine, flag;
       cycle: circle, diamond, cylinder, plain box.
 - [ ] **`no-drawing`**: Word itself draws the same shapes (the override survives Word's own layout).
@@ -555,6 +555,9 @@ Word writes right-click > Change Shape (an `a:prstGeom` on the box's presentatio
   cached drawing with the shapes.
 - Known: the font is shared by every box of a diagram, sized for the smaller text area of a diamond or circle, so a
   chain with a diamond has slightly smaller text overall. Mirrored variants (`[\Text\]`) keep the unmirrored shape.
+
+**Result (maintainer, real Word, 2026-10-06): "v18 s'ouvre parfaitement".** Opening confirmed; the shape-specific
+items above (shapes redrawn by Word in `no-drawing`, Reset Shape) not reported item by item yet.
 
 ## Recording the result
 
