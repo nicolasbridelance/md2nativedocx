@@ -1,7 +1,35 @@
-# Handover — 2026-10-05 (all 29 diagram types shipped; pptx hardened; user manual written)
+# Handover — 2026-10-06 (VS Code extension 0.6.0 published; SmartArt + Word charts on by default)
 
 One entry point for picking this project back up. Check `git log`/`TODO.md` for anything newer
 than this date. Previous handover (2026-09-06, Word add-in scaffold) is folded into "Still open".
+The 2026-10-05 sections below are kept as written; this first section supersedes them where they
+disagree (notably: native charts and SmartArt are no longer opt-in in the extension).
+
+## Update 2026-10-06 — what changed since the 2026-10-05 handover
+
+- **VS Code extension 0.6.0 published to the Marketplace** (`0758e65`, tag `vscode-v0.6.0` — first
+  version tag in this repo; earlier releases were never tagged). Only the extension is versioned
+  for release; `core`/`cli`/`pptx`/`pandoc-filter` stay at 0.1.0, hence the `vscode-` prefix.
+  Full contents: `packages/vscode-extension/CHANGELOG.md` § 0.6.0.
+- **SmartArt, all confirmed in real Word by the maintainer:** tree connectors (v9), look profiles
+  as a table (v10), trees deeper than two levels in all four directions (v11-v12), compact
+  org-chart layout for wide top-down trees (v13), `mindmap` and single-root `treeView-beta` as
+  SmartArt hierarchies (v14). See `test-corpus/word-verification/CHECKLIST.md`.
+- **New extension defaults:** SmartArt on, native Word charts on (`pie`, `xychart`, `radar`). An
+  explicitly set user value is kept. The core/CLI defaults are unchanged (still opt-in via env vars).
+- **Extension UX review** (`6ce17ce`, lots A-D): PowerPoint export from the extension, one
+  document-level CodeLens line + "Export this diagram…", `md2nativedocx` right-click submenu,
+  per-diagram "what this becomes in Word" line + hover + status-bar tally (core `planRendering`),
+  settings in sections, side panel translated (setting descriptions in `package.nls.*` still
+  partly untranslated), re-shot demo GIFs.
+- **CI:** three new high/critical advisories (`compression`, `proxy-addr`, `source-map-js`, all
+  dev-only under `packages/word-addin` → `webpack-dev-server`/`source-map-loader`) turned the audit
+  gate red; fixed by a lockfile-only bump to their patched versions (no new exception).
+
+**Next, for the maintainer:** install 0.6.0 from the Marketplace on the corporate Windows machine
+and export a mixed document (the new defaults change existing users' output on auto-update).
+**Next, for the agent:** manual generator into `scripts/` + document SmartArt/charts (now
+defaults) in the manual; editor-tab right-click export; `.qmd`; the known visual gaps below.
 
 ## State of the project
 

@@ -995,7 +995,7 @@ et l'add-in Word (canal de distribution entièrement nouveau).
 - ✅ Durcissement du parseur Mermaid — dernier lot (2026-09-04) : `<br/>`/codes d'entité/Markdown
   Strings dégradés proprement, directions `TB`/`BT`/`RL` avec avertissement explicite au lieu du
   message générique, `:::` sur une déclaration de nœud isolée.
-- [ ] **Profondeur d'arbre adaptative (> 2)** pour `tree.ts` — le partage de hauteur fixe (35 %
+- [x] **Profondeur d'arbre adaptative (> 2)** (fait, confirmé en vrai Word v11-v13, 2026-10-06) pour `tree.ts` — le partage de hauteur fixe (35 %
       nœud / 55 % rangée d'enfants) ne peut pas simplement se répéter à un niveau supplémentaire
       sans léser un nœud sans petit-enfant. Nécessite un schéma de répartition calculé à partir de
       la forme réelle du sous-arbre (comme `hierarchy1` de Word le fait dynamiquement) — chantier
@@ -1032,6 +1032,25 @@ et l'add-in Word (canal de distribution entièrement nouveau).
         graphique n'est pas le rendu Mermaid 1:1.
       - **Confié à l'agent (mainteneur, 2026-10-05)** : à réaliser (ADR puis spike) ; le changement de
         contrat du traducteur reste signalé au mainteneur avant fusion.
+
+---
+
+## Session 2026-10-06 — extension VS Code 0.6.0 publiée
+
+- ✅ **0.6.0 publiée sur la Marketplace** (`0758e65`, tag `vscode-v0.6.0`, premier tag de version du
+  dépôt). Contenu : `packages/vscode-extension/CHANGELOG.md` § 0.6.0.
+- ✅ SmartArt confirmés dans un vrai Word : connecteurs d'arbre (v9), profils de look (v10), arbres
+  multi-niveaux dans les 4 directions (v11-v12), organigramme compact (v13), `mindmap`/`treeView-beta`
+  (v14). → La case « Profondeur d'arbre adaptative (> 2) » (Phase 6/7) est faite.
+- ✅ Nouveaux défauts de l'extension : SmartArt activé, graphiques Word natifs activés (`pie`, `xychart`,
+  `radar`). Le core et le CLI restent en opt-in (variables d'environnement).
+- ✅ Revue UX de l'extension (lots A-D) : export PowerPoint, CodeLens repensés, sous-menu clic droit, ligne
+  « ce que deviendra ce diagramme » + survol, réglages en sections, panneau traduit (comble le gap l10n
+  Phase 8), nouveaux GIF.
+- ✅ CI : 3 nouveaux avis high/critical (`compression`, `proxy-addr`, `source-map-js`, tous en dev sous
+  `packages/word-addin`) corrigés par simple mise à jour du lockfile vers les versions corrigées.
+- [ ] **Mainteneur** : installer la 0.6.0 depuis la Marketplace sur le poste Windows d'entreprise et
+  exporter un document mixte (les nouveaux défauts changent le rendu des utilisateurs existants).
 
 ---
 
@@ -1112,7 +1131,8 @@ Cadrage complet : `docs/specs/export_customization_SPEC.md`. Détail complet de 
       (toucherait l'API publique de `packages/core`) — demande explicite du mainteneur de garder
       une trace séparée.
 - [ ] **Gap l10n connu** : les réglages Phase 8 et le panneau lui-même ne sont traduits dans aucune
-      des 5 locales existantes.
+      des 5 locales existantes. *Mise à jour 2026-10-06 : le panneau suit maintenant la langue de VS Code
+      (0.6.0) ; les descriptions de réglages (`package.nls.*.json`) restent partiellement traduites.*
 - [ ] Re-vérification en vrai Word demandée au mainteneur (marges "moderate" notamment) —
       `test-corpus/word-verification/CHECKLIST.md` "Round 2".
 
