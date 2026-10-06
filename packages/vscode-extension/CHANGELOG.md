@@ -5,10 +5,24 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-06
+
+### Added
+- More diagrams become SmartArt (each one confirmed in real Word): a `timeline` becomes a SmartArt time
+  line (one bar per section when it has sections), a `journey` a grouped time line, a `kanban` board a
+  grouped list, and simple `gitGraph` (one branch), `stateDiagram` (a chain or a loop) and
+  `classDiagram` (inheritance only) a process, cycle or hierarchy.
+- Each flowchart node keeps its Mermaid shape inside SmartArt (diamond, circle, cylinder, hexagon…), as
+  Word's own *Change Shape* writes it; *Reset Shape* goes back to the layout's box.
+- Line breaks (`<br/>`) and bold/italic Markdown strings are kept in SmartArt boxes.
+
 ### Changed
-- The Marketplace description and README now lead with the complete Markdown-to-Word conversion
-  (headings, tables, footnotes, math, table of contents), diagrams being what sets it apart.
-- Smaller README images (shared with the repository's `docs/showcase/`).
+- The Marketplace description and README lead with the complete Markdown-to-Word conversion (headings,
+  tables, footnotes, math, table of contents), diagrams being what sets it apart.
+- Smaller README images.
+
+### Fixed
+- A word could break mid-letter inside a diamond-shaped SmartArt box.
 
 ### Removed
 - Setting `md2nativedocx.smartArt.preRenderedDrawing`: the pre-rendered SmartArt drawing is always

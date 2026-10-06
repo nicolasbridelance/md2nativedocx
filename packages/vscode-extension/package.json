@@ -2,7 +2,7 @@
   "name": "md2nativedocx",
   "displayName": "md2nativedocx — Markdown to Word with editable diagrams (+ PowerPoint)",
   "description": "%extension.description%",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "publisher": "md2nativedocx",
   "private": true,
   "license": "CC0-1.0",
@@ -228,7 +228,15 @@
           },
           "md2nativedocx.smartArt.style": {
             "type": "string",
-            "enum": ["simple", "subtle", "moderate", "intense-accent", "colorful", "colorful-moderate", "intense"],
+            "enum": [
+              "simple",
+              "subtle",
+              "moderate",
+              "intense-accent",
+              "colorful",
+              "colorful-moderate",
+              "intense"
+            ],
             "default": "colorful",
             "enumDescriptions": [
               "%configuration.smartArt.style.simple%",
@@ -263,21 +271,35 @@
         "properties": {
           "md2nativedocx.layout.pageSize": {
             "type": "string",
-            "enum": ["A3", "A4", "Letter", "Legal"],
+            "enum": [
+              "A3",
+              "A4",
+              "Letter",
+              "Legal"
+            ],
             "default": "A4",
             "markdownDescription": "%configuration.layout.pageSize.markdownDescription%",
             "order": 0
           },
           "md2nativedocx.layout.orientation": {
             "type": "string",
-            "enum": ["portrait", "landscape"],
+            "enum": [
+              "portrait",
+              "landscape"
+            ],
             "default": "portrait",
             "markdownDescription": "%configuration.layout.orientation.markdownDescription%",
             "order": 1
           },
           "md2nativedocx.layout.margins": {
             "type": "string",
-            "enum": ["normal", "narrow", "moderate", "wide", "custom"],
+            "enum": [
+              "normal",
+              "narrow",
+              "moderate",
+              "wide",
+              "custom"
+            ],
             "enumDescriptions": [
               "%configuration.layout.margins.normal%",
               "%configuration.layout.margins.narrow%",
@@ -362,7 +384,13 @@
           },
           "md2nativedocx.typography.lineSpacing": {
             "type": "string",
-            "enum": ["default", "single", "1.15", "1.5", "double"],
+            "enum": [
+              "default",
+              "single",
+              "1.15",
+              "1.5",
+              "double"
+            ],
             "enumDescriptions": [
               "%configuration.typography.lineSpacing.default%",
               "%configuration.typography.lineSpacing.single%",
@@ -376,7 +404,12 @@
           },
           "md2nativedocx.typography.justify": {
             "type": "string",
-            "enum": ["left", "right", "center", "both"],
+            "enum": [
+              "left",
+              "right",
+              "center",
+              "both"
+            ],
             "default": "left",
             "markdownDescription": "%configuration.typography.justify.markdownDescription%",
             "order": 4
