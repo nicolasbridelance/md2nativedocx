@@ -1,6 +1,6 @@
 # @md2nativedocx/pandoc-filter
 
-Pandoc Lua filter of `md2nativedocx` (**Markdown → Word `.docx`, with Mermaid diagrams as native OOXML shapes**). It converts ` ```mermaid ` code blocks into native OOXML/DrawingML fragments
+Pandoc Lua filter of `md2nativedocx` (**Markdown → native Word `.docx`, Mermaid diagrams included**). It converts ` ```mermaid ` code blocks into native OOXML/DrawingML fragments
 via the [`@md2nativedocx/core`](https://www.npmjs.com/package/@md2nativedocx/core) engine. A
 dependency of [`@md2nativedocx/cli`](https://www.npmjs.com/package/@md2nativedocx/cli), not meant
 to be installed directly by most users.

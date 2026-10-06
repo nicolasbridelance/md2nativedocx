@@ -1,24 +1,25 @@
-# md2nativedocx — Markdown to Word (.docx), with Mermaid diagrams as native, editable shapes
+# md2nativedocx — Markdown to native Word (.docx), Mermaid diagrams included
 
 [![CI](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](LICENSE)
 
-**Convert a Markdown file to a complete Word document — Mermaid diagrams included, as native shapes.**
+**Convert a Markdown file to a native Word document — Mermaid diagrams included.**
 `md2nativedocx` turns Markdown (headings, tables, lists, footnotes, code, LaTeX math) into a real `.docx`
-(or a `.pptx` deck), and every ```` ```mermaid ```` block inside it becomes **native, editable OOXML vector
-shapes** instead of a flattened PNG. Open the file in Word and every box, arrow and label is selectable,
-movable and restylable. All 29 Mermaid diagram types are supported (flowchart, sequence, class, state, ER,
-Gantt, mindmap, C4, git graph, …). It runs as a
+(or a `.pptx` deck) built from **native Word constructs**: editable OOXML vector shapes, SmartArt where a
+diagram fits, charts with an embedded workbook (Edit Data works), native equations — never a flattened PNG.
+Every ```` ```mermaid ```` block inside the Markdown is converted this way, so in Word every box, arrow and
+label is selectable, movable and restylable. All 29 Mermaid diagram types are supported (flowchart,
+sequence, class, state, ER, Gantt, mindmap, C4, git graph, …). It runs as a
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx), a CLI
 (`npx md2nativedocx doc.md -o doc.docx`), or a Pandoc filter, and is public domain (CC0).
 
 > **What the name means.** `md2nativedocx` = **M**ark**d**own **to** **native** **docx**. The **`md`** is
-> *Markdown*, the input format — not Mermaid (Mermaid's own file extension is `.mmd`, and this is not
-> `mmd2docx`). The whole document is converted; the **native** part is what happens to the Mermaid
-> diagrams *inside* it: they become real Word shapes (OOXML/DrawingML, and SmartArt where a diagram fits)
-> rather than pictures. In short: **Markdown → Word, including Mermaid → native OOXML.**
+> *Markdown*, the input format — not Mermaid (Mermaid's own extension is `.mmd`; this is not `mmd2docx`).
+> The whole document is converted. **Native** describes the *Word output*: OOXML/DrawingML shapes, SmartArt,
+> charts with an embedded xlsx workbook, equations — real Word objects rather than pictures. In short:
+> **Markdown → native Word, Mermaid diagrams included.**
 
 ![A Mermaid sankey, mindmap, Venn, timeline and treemap being exported to native Word shapes](docs/showcase/wow.gif)
 

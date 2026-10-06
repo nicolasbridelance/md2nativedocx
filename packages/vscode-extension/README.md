@@ -1,9 +1,9 @@
-# md2nativedocx — Markdown to Word (.docx), with Mermaid diagrams as native editable shapes
+# md2nativedocx — Markdown to native Word (.docx), Mermaid diagrams included
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
 
-**Convert Markdown to Word — Mermaid diagrams included, as native shapes instead of pictures.** (`md` = Markdown, the input; not `mmd`/Mermaid-only.) Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
+**Convert Markdown to native Word — Mermaid diagrams included, as editable Word objects instead of pictures.** (`md` = Markdown, the input; *native* describes the Word output.) Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
 LaTeX math — with one standout difference: if the document contains Mermaid diagrams, those don't
 get flattened into an image like everywhere else. They become real vector Word shapes
 (OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
