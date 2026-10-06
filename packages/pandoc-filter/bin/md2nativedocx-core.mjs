@@ -87,6 +87,7 @@ import {
   generateMindmapSmartArt,
   generateTimelineSmartArt,
   generateJourneySmartArt,
+  generateKanbanSmartArt,
   escapeXml,
   generateTreeViewSmartArt,
   translateMindmapToOoxml,
@@ -390,7 +391,9 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateKanbanToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, a board becomes a SmartArt grouped list (columns, then cards) when its text fits.
+    const smartArtXml = trySmartArt((options) => generateKanbanSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ?? translateKanbanToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'packet') {
     // Seventeenth non-flowchart diagram type shipped, sixth of Family D.
     const { ast, warnings } = parsePacketDiagram(input);

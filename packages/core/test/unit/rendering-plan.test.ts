@@ -48,6 +48,12 @@ test('timeline (with or without sections) and journey: SmartArt time line when o
   assert.deepEqual(planRendering('journey\n  section A\n    Tea: 5: Me', ON).smartArt, { layout: 'timeline' });
 });
 
+test('kanban: SmartArt grouped list when on and it fits', () => {
+  assert.deepEqual(planRendering('kanban\n  todo[Todo]\n    a[Doc]', ON).smartArt, { layout: 'list' });
+  assert.equal(planRendering('kanban\n  todo[Todo]\n    a[Doc]', OFF).smartArtWouldApply, true);
+  assert.equal(planRendering('kanban\n  todo[Todo]', ON).rendering, 'shapes');
+});
+
 test('other types are shapes; never throws, even on empty or garbled input', () => {
   assert.equal(planRendering('sequenceDiagram\n  A->>B: hi', ON).rendering, 'shapes');
   for (const src of ['', '%% only a comment', 'graph TD\n  A -->', 'graph TD\n  A[[[', 'pie\n  "x" : nope']) {

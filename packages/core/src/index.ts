@@ -223,6 +223,8 @@ export {
   journeyFitsSmartArt,
   timelineFitsSmartArt,
 } from './smartart/from-timeline.js';
+// SmartArt for a `kanban` board: a grouped list (columns, then cards).
+export { generateKanbanSmartArt, kanbanFitsSmartArt } from './smartart/kanban.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
 export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';

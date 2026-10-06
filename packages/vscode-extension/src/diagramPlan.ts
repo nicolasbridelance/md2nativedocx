@@ -15,7 +15,7 @@ export interface RenderingPlan {
   type: string;
   label: string;
   rendering: 'smartart' | 'chart' | 'shapes' | 'invalid';
-  smartArt?: { layout: 'chain' | 'tree' | 'cycle' | 'timeline'; depth?: number };
+  smartArt?: { layout: 'chain' | 'tree' | 'cycle' | 'timeline' | 'list'; depth?: number };
   smartArtRejected?: { reason: string; at: string[] };
   smartArtWouldApply?: boolean;
   chartWouldApply?: boolean;
@@ -78,6 +78,7 @@ export function planSummary(plan: RenderingPlan): string {
       if (layout === 'chain') return `$(type-hierarchy) ${vscode.l10n.t('SmartArt — process')}`;
       if (layout === 'cycle') return `$(type-hierarchy) ${vscode.l10n.t('SmartArt — cycle')}`;
       if (layout === 'timeline') return `$(type-hierarchy) ${vscode.l10n.t('SmartArt — timeline')}`;
+      if (layout === 'list') return `$(type-hierarchy) ${vscode.l10n.t('SmartArt — grouped list')}`;
       return `$(type-hierarchy) ${vscode.l10n.t('SmartArt — hierarchy, {0} levels', plan.smartArt?.depth ?? 2)}`;
     }
     case 'chart':

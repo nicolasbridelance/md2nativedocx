@@ -26,6 +26,8 @@ import { parseTimeline } from './diagrams/timeline/parser.js';
 import { mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
 import { journeyFitsSmartArt, timelineFitsSmartArt } from './smartart/from-timeline.js';
 import { parseJourney } from './diagrams/journey/parser.js';
+import { parseKanban } from './diagrams/kanban/parser.js';
+import { kanbanFitsSmartArt } from './smartart/kanban.js';
 import type { SmartArtGeneratedLayout } from './smartart/dispatch.js';
 import type { Flowchart } from './types.js';
 
@@ -85,6 +87,12 @@ export function planRendering(source: string, settings: RenderingSettings): Rend
       if (!shape) return { type, label, rendering: 'shapes' };
       return settings.smartArt
         ? { type, label, rendering: 'smartart', smartArt: shape }
+        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
+    }
+    if (type === 'kanban') {
+      if (!kanbanFitsSmartArt(parseKanban(source).ast)) return { type, label, rendering: 'shapes' };
+      return settings.smartArt
+        ? { type, label, rendering: 'smartart', smartArt: { layout: 'list' } }
         : { type, label, rendering: 'shapes', smartArtWouldApply: true };
     }
     if (type === 'timeline' || type === 'journey') {
