@@ -64,6 +64,18 @@
     "onLanguage:quarto"
   ],
   "contributes": {
+    "languages": [
+      {
+        "id": "mermaid",
+        "aliases": [
+          "Mermaid",
+          "mermaid"
+        ],
+        "extensions": [
+          ".mmd"
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "md2nativedocx.exportDocument",
@@ -242,17 +254,11 @@
             "markdownDescription": "%configuration.nativeCharts.enabled.markdownDescription%",
             "order": 3
           },
-          "md2nativedocx.nativeCharts.includeUnverified": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "%configuration.nativeCharts.includeUnverified.markdownDescription%",
-            "order": 4
-          },
           "md2nativedocx.pptx.showSource": {
             "type": "boolean",
             "default": false,
             "markdownDescription": "%configuration.pptx.showSource.markdownDescription%",
-            "order": 5
+            "order": 4
           }
         }
       },
@@ -479,19 +485,29 @@
             }
           },
           {
-            "id": "clickCodeLens",
+            "id": "seeWhatItBecomes",
             "title": "%walkthrough.step2.title%",
             "description": "%walkthrough.step2.description%",
             "media": {
-              "markdown": "walkthrough/02-codelens.md"
+              "image": "docs/demo-hover.gif",
+              "altText": "%walkthrough.step2.altText%"
             }
           },
           {
-            "id": "openResult",
+            "id": "export",
             "title": "%walkthrough.step3.title%",
             "description": "%walkthrough.step3.description%",
             "media": {
-              "markdown": "walkthrough/03-result.md"
+              "image": "docs/demo-vscode.gif",
+              "altText": "%walkthrough.step3.altText%"
+            }
+          },
+          {
+            "id": "editInWord",
+            "title": "%walkthrough.step4.title%",
+            "description": "%walkthrough.step4.description%",
+            "media": {
+              "markdown": "walkthrough/04-edit-in-word.md"
             }
           }
         ]

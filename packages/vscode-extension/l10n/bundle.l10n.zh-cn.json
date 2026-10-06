@@ -78,7 +78,6 @@
   "Accent colour (headings + links)": "强调色（标题 + 链接）",
   "Advanced": "高级",
   "Alignment": "对齐方式",
-  "Also xychart and radar (not yet confirmed in Word)": "同时包括 xychart 和 radar（尚未在 Word 中确认）",
   "Automatic table of contents": "自动目录",
   "Body text font": "正文字体",
   "Bottom": "下",
@@ -93,7 +92,6 @@
   "Document structure": "文档结构",
   "Document title": "文档标题",
   "Emoji & badges": "表情符号和徽章",
-  "Enable Word charts (not yet confirmed in Word)": "启用 Word 图表（尚未在 Word 中确认）",
   "Font name": "字体名称",
   "Font set": "字体组合",
   "Font size (pt)": "字号（磅）",
@@ -103,7 +101,6 @@
   "LibreOffice (Liberation)": "LibreOffice (Liberation)",
   "Line spacing": "行距",
   "Margins": "边距",
-  "Native Word charts (pie)": "原生 Word 图表 (pie)",
   "Orientation": "方向",
   "Output": "输出",
   "Output folder": "输出文件夹",
@@ -135,5 +132,6 @@
   "Word compatibility check": "Word 兼容性检查",
   "Word document": "Word 文档",
   "Workspace": "工作区",
-  "e.g. {0}": "例如 {0}"
+  "e.g. {0}": "例如 {0}",
+  "Native Word charts": "原生 Word 图表"
 }

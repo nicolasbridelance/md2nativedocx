@@ -81,6 +81,11 @@ suite('md2nativedocx extension host', () => {
     assert.deepEqual(lenses.map((l) => l.command?.command).sort(), ['md2nativedocx.exportDocument', 'md2nativedocx.openSettings']);
   });
 
+  test('a .mmd file opens as the mermaid language, so it activates the extension on its own', async () => {
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(MMD_FIXTURE));
+    assert.equal(doc.languageId, 'mermaid');
+  });
+
   test('a raw .mmd file: Word, PowerPoint and Settings at the top', async () => {
     const lenses = await codeLensesFor(vscode.Uri.file(MMD_FIXTURE));
     assert.deepEqual(
@@ -108,7 +113,6 @@ suite('md2nativedocx extension host', () => {
     const config = vscode.workspace.getConfiguration('md2nativedocx');
     assert.equal(config.get('smartArt.enabled'), true);
     assert.equal(config.get('nativeCharts.enabled'), true);
-    assert.equal(config.get('nativeCharts.includeUnverified'), false);
   });
 
   test('right-click (Explorer, editor, tab bar) opens an md2nativedocx submenu for .md/.mmd/.qmd', async () => {
@@ -142,7 +146,7 @@ suite('md2nativedocx extension host', () => {
       // Not awaited: the command only resolves once its success toast is dismissed.
       void vscode.commands.executeCommand('md2nativedocx.exportDocumentPptx', vscode.Uri.file(mdCopy));
       const out = path.join(outDir, 'deck.pptx');
-      for (let i = 0; i < 40 && !fs.existsSync(out); i++) await new Promise((r) => setTimeout(r, 250));
+      for (let i = 0; i < 100 && !fs.existsSync(out); i++) await new Promise((r) => setTimeout(r, 250));
       assert.ok(fs.existsSync(out), 'expected deck.pptx next to the source');
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
@@ -159,7 +163,7 @@ suite('md2nativedocx extension host', () => {
       void vscode.commands.executeCommand('md2nativedocx.exportDocument', vscode.Uri.file(qmdCopy));
       const expected = path.join(outDir, 'report.docx');
       let found = false;
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 100; i++) { // up to 25 s: the first Word export of a run is slow on a busy machine
         if (fs.existsSync(expected)) {
           found = true;
           break;
@@ -189,7 +193,7 @@ suite('md2nativedocx extension host', () => {
       void vscode.commands.executeCommand('md2nativedocx.exportDocument', vscode.Uri.file(mmdCopy));
       const expected = path.join(outDir, 'diagram.docx');
       let found = false;
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 100; i++) { // up to 25 s: the first Word export of a run is slow on a busy machine
         if (fs.existsSync(expected)) {
           found = true;
           break;

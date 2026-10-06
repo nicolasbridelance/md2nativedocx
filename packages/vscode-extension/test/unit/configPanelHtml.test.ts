@@ -30,7 +30,6 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     smartArtStyle: 'colorful',
     smartArtDrawing: true,
     nativeChartsEnabled: true,
-    nativeChartsIncludeUnverified: false,
     pptxShowSource: false,
     scope: 'user',
     ...overrides,
@@ -199,11 +198,10 @@ test('Diagrams section reflects the SmartArt / chart / PowerPoint settings; depe
   assert.match(on, /data-key="smartArt\.enabled" checked/);
   assert.match(on, /<option value="intense" selected>/);
   assert.match(on, /data-key="pptx\.showSource" checked/);
-  assert.match(on, /data-key="nativeCharts\.includeUnverified"\/>/, 'unverified charts: off, not disabled while charts are on');
   const off = buildConfigPanelHtml(baseState({ smartArtEnabled: false, nativeChartsEnabled: false }), describe, 'n');
   assert.match(off, /<select data-key="smartArt\.style" disabled>/);
   assert.match(off, /data-key="smartArt\.preRenderedDrawing" checked disabled/);
-  assert.match(off, /data-key="nativeCharts\.includeUnverified" disabled/);
+  assert.match(off, /data-key="nativeCharts\.enabled"\/>/, 'charts off');
 });
 
 test('Output section holds the output folder and the custom template, escaped', () => {

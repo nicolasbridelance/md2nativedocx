@@ -30,45 +30,57 @@ means Word's own editable objects, not pictures.)
 
 ## See it in action
 
-There's more than one way to trigger the same export — pick whichever fits how you work. Each
-clip below is short and loops.
+Each clip below is short and loops. They are recorded in a real VS Code window by
+`scripts/record-demos.py`, so they always show the current version.
 
-**1. From an open file, one click**
+**1. Know what each diagram becomes, then export**
 
-<img src="docs/demo-vscode.gif" width="480" alt="Clicking the Export to Word link above a Mermaid diagram in an open file, then the success notification appearing"/>
+<img src="docs/demo-vscode.gif" width="720" alt="A Markdown file with three diagrams: above each one a line says SmartArt process, Word shapes (no SmartArt: branches merge again) or Word chart; clicking Export to Word at the top, then the success notification"/>
 
-Open a Markdown file. At the top of the file, a line of links: **Export to Word**, **Export to
-PowerPoint** (one slide per diagram) and **Settings**. Above each diagram, **Export this diagram…**
-exports that one diagram alone, to Word or to a one-slide PowerPoint deck — and just before it, what
-the diagram will become in Word (a SmartArt graphic, a Word chart, or editable Word shapes, and why);
-hover the ```` ```mermaid ```` line for details. A few seconds later a
-notification appears with the finished file, plus buttons to open it or reveal it in the file browser.
+At the top of the file: **Export to Word**, **Export to PowerPoint** and **Settings**. Above each diagram,
+one line says what it will be in Word — a **SmartArt** graphic, a **Word chart**, or **editable Word
+shapes**, and why not SmartArt when it can't be. A few seconds after the click, a notification offers to
+open the file or reveal it in the file browser.
 
-**2. Straight from the file list — no need to open anything first**
+**2. Hover a diagram for the details**
 
-<img src="docs/demo-context-menu.gif" width="480" alt="Right-clicking a Markdown file in the Explorer file list and choosing Export document to Word from the menu"/>
+<img src="docs/demo-hover.gif" width="720" alt="Hovering the mermaid line of a diagram shows a card: Flowchart, Word shapes (no SmartArt: branches merge again at S, F), what can be done with it in Word"/>
 
-Don't want to open the file at all? Right-click it in the file list on the left (the same kind of
-right-click menu you'd use in Windows Explorer or macOS Finder) and choose
-**md2nativedocx → Export to Word** (or **Export to PowerPoint**). Select several files first to
-export them all at once. In the editor, right-click inside a diagram to export just that diagram.
+Hover the ```` ```mermaid ```` line: what the diagram becomes, what you will be able to do with it in Word,
+what is not kept, and a link to turn on a setting when one would change the result.
 
-**3. Works even when there's no diagram in the file**
+**3. PowerPoint: one slide per diagram**
 
-<img src="docs/demo-no-diagram.gif" width="480" alt="A plain Markdown file with a table and no Mermaid diagram, exported to Word from a single link at the top of the file"/>
+<img src="docs/demo-powerpoint.gif" width="720" alt="Clicking Export to PowerPoint at the top of the file, then the notification offering to open the deck in PowerPoint"/>
 
-This extension isn't only for diagrams — any Markdown file (plain text, tables, **bold**/*italic*
-formatting) exports to a complete `.docx` the same way. If the file has no Mermaid diagram, the
-**Export to Word** link still shows up, just once at the very top of the file instead of above
-each diagram.
+**Export to PowerPoint** makes a deck with one slide per diagram, titled with the heading above it, every
+shape editable. Text outside the diagrams is not exported.
 
-**4. A Mermaid diagram by itself, with no surrounding document**
+**4. Just one diagram**
 
-<img src="docs/demo-raw-mmd.gif" width="480" alt="A raw .mmd file containing only a Mermaid diagram, exported to Word the same way as a Markdown file"/>
+<img src="docs/demo-diagram.gif" width="720" alt="Clicking Export this diagram above one diagram, choosing PowerPoint (one slide) in the picker, then the notification"/>
 
-Sometimes all you have is the diagram itself — a `.mmd` file, with no title, no surrounding text.
-It exports exactly the same way, producing a `.docx` with that one diagram as a native, editable
-shape.
+**Export this diagram…** exports that diagram alone, into its own Word document or a one-slide deck —
+handy to paste it into an existing document or presentation.
+
+**5. Straight from the file list**
+
+<img src="docs/demo-context-menu.gif" width="720" alt="Right-clicking a Markdown file in the Explorer, opening the md2nativedocx submenu and choosing Export to Word"/>
+
+No need to open the file: right-click it in the file list, **md2nativedocx → Export to Word** (or
+**Export to PowerPoint**). Select several files first to export them all at once. In the editor,
+right-click inside a diagram to export just that diagram.
+
+**6. With no diagram at all, or a diagram on its own**
+
+<img src="docs/demo-no-diagram.gif" width="720" alt="A plain Markdown file with a table and no Mermaid diagram, exported to Word from the link at the top of the file"/>
+
+Any Markdown file (text, tables, **bold**/*italic*) exports to a complete `.docx` the same way, diagram
+or not.
+
+<img src="docs/demo-raw-mmd.gif" width="720" alt="A raw .mmd Mermaid file: the line at the top says what the diagram becomes, then Export to Word"/>
+
+A bare `.mmd` file (only the diagram, no surrounding text) works too.
 
 **The result, opened**
 

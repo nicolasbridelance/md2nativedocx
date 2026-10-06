@@ -37,7 +37,7 @@ Ajouter, **en option**, une sortie `c:chart` pour `pie` (puis `xychart`, `radar`
 4. Activation : `MD2NATIVEDOCX_NATIVE_CHARTS=1` (variable d'environnement, comme les autres
    réglages). **Défaut : formes.** Un diagramme non éligible, ou toute erreur de génération, retombe
    sur les formes sans échouer.
-   **Mise à jour 2026-10-06 (revue UX, D2)** : la variable accepte aussi une liste de types (`pie`, `pie,xychart`…) ; `1` reste « tous ». L'extension VS Code active désormais les graphiques natifs **par défaut pour `pie` seulement** (confirmé dans Word, Round 4) ; `xychart`/`radar` passent par le réglage `md2nativedocx.nativeCharts.includeUnverified` tant que la Round 5 n'est pas confirmée. La CLI seule reste en opt-in.
+   **Mise à jour 2026-10-06 (revue UX, D2)** : la variable accepte aussi une liste de types (`pie`, `pie,xychart`…) ; `1` reste « tous ». L'extension VS Code active désormais les graphiques natifs **par défaut** pour `pie`, `xychart` et `radar` (tous trois confirmés dans Word, Rounds 4 et 5, le 2026-10-06). La CLI seule reste en opt-in.
 
 ### Exception à la règle 7 (AGENTS.md) — assumée
 

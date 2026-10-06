@@ -98,7 +98,6 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       smartArtStyle: config.get<string>('smartArt.style', 'colorful'),
       smartArtDrawing: config.get<boolean>('smartArt.preRenderedDrawing', true),
       nativeChartsEnabled: config.get<boolean>('nativeCharts.enabled', true),
-      nativeChartsIncludeUnverified: config.get<boolean>('nativeCharts.includeUnverified', false),
       pptxShowSource: config.get<boolean>('pptx.showSource', false),
       scope: this.scope,
     };

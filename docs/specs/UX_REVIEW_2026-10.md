@@ -108,7 +108,7 @@ Regroupés en sections, dans `settings.json` comme dans le panneau (traduit) :
 ### 3.7 Valeurs par défaut
 SmartArt **activé** avec dessin pré-rendu (tout est validé dans Word : chaînes, cycles, arbres 2-10
 niveaux dans 4 directions, organigramme compact, mindmap, treeView, 7 profils). Graphiques natifs :
-activés pour `pie` (validé) ; `xychart`/`radar` à valider d'abord (CHECKLIST Round 5).
+activés pour `pie` (validé) ; `xychart`/`radar` à valider d'abord (CHECKLIST Round 5). **Mise à jour 2026-10-06 :** Round 5 confirmée dans Word, les trois types sont activés par défaut.
 Un utilisateur qui a déjà réglé explicitement un de ces paramètres garde son choix (VS Code ne
 remplace jamais une valeur explicite).
 

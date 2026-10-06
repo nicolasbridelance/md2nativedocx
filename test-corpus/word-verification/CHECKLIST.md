@@ -194,16 +194,19 @@ schema validator reports 0 errors in the chart parts, but only a real Word can c
 in real Word the same day; this adds the other two chart types. Schema validator: 0 errors in the chart
 parts and in the five workbooks.
 
-- [ ] Opens without a repair prompt; 5 **charts** + 1 shape-built diagram (section 4, on purpose).
-- [ ] §1 bars + line on one chart, Y axis from 4 to 12, category labels jan…juin; legend reads
+- [x] Opens without a repair prompt; 5 **charts** + 1 shape-built diagram (section 4, on purpose).
+- [x] §1 bars + line on one chart, Y axis from 4 to 12, category labels jan…juin; legend reads
       "Series 1 / Series 2" (Mermaid names none).
-- [ ] §2 two named bar series (Prévu / Réalisé), axis titles "Sprint" and "Points".
-- [ ] §3 horizontal bars: **Alpha at the top**, value axis at the **bottom**, 0 to 50.
-- [ ] §4 is the shape-built fallback (horizontal chart + line series cannot be a Word chart); the export
+- [x] §2 two named bar series (Prévu / Réalisé), axis titles "Sprint" and "Points".
+- [x] §3 horizontal bars: **Alpha at the top**, value axis at the **bottom**, 0 to 50.
+- [x] §4 is the shape-built fallback (horizontal chart + line series cannot be a Word chart); the export
       printed a warning about it.
-- [ ] §5 numeric x axis shows labels 0, 2, 4 … 10 (evenly spaced categories).
-- [ ] §6 radar: two translucent polygons (Alice, Bob), six axes, rings every 20.
-- [ ] Edit Data on §1 and §6 opens Excel with the matching columns; editing a value updates the chart.
+- [x] §5 numeric x axis shows labels 0, 2, 4 … 10 (evenly spaced categories).
+- [x] §6 radar: two translucent polygons (Alice, Bob), six axes, rings every 20.
+- [x] Edit Data on §1 and §6 opens Excel with the matching columns; editing a value updates the chart.
+
+**Result (maintainer, real Word, 2026-10-06): works perfectly in Word, Edit Data included.** `xychart` and `radar`
+native charts are validated; the VS Code extension now turns all three chart types on by default.
 
 ## Round 6 — 2026-10-05: SmartArt `cycle` restructured (the "blank shapes" bug)
 

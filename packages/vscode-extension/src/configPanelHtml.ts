@@ -75,7 +75,6 @@ export interface ConfigState {
   smartArtStyle: string;
   smartArtDrawing: boolean;
   nativeChartsEnabled: boolean;
-  nativeChartsIncludeUnverified: boolean;
   pptxShowSource: boolean;
   /** The effective `md2nativedocx.referenceDocument` value, `''` if unset.
    * Non-empty greys out every Lot 1 layout/typography control (spec §2.1/
@@ -255,7 +254,6 @@ const GROUP_KEYS = {
     'smartArt.style',
     'smartArt.preRenderedDrawing',
     'nativeCharts.enabled',
-    'nativeCharts.includeUnverified',
     'pptx.showSource',
   ],
   structure: ['toc.enabled', 'toc.depth'],
@@ -501,12 +499,7 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
     diagramRow(t('SmartArt for processes, hierarchies and cycles'), 'smartArt.enabled', checkbox('smartArt.enabled', state.smartArtEnabled, false)),
     diagramRow(t('SmartArt look'), 'smartArt.style', select('smartArt.style', state.smartArtStyle, SMARTART_STYLE_NAMES, !state.smartArtEnabled)),
     diagramRow(t('Pre-rendered SmartArt drawing'), 'smartArt.preRenderedDrawing', checkbox('smartArt.preRenderedDrawing', state.smartArtDrawing, !state.smartArtEnabled)),
-    diagramRow(t('Native Word charts (pie)'), 'nativeCharts.enabled', checkbox('nativeCharts.enabled', state.nativeChartsEnabled, false)),
-    diagramRow(
-      t('Also xychart and radar (not yet confirmed in Word)'),
-      'nativeCharts.includeUnverified',
-      checkbox('nativeCharts.includeUnverified', state.nativeChartsIncludeUnverified, !state.nativeChartsEnabled),
-    ),
+    diagramRow(t('Native Word charts'), 'nativeCharts.enabled', checkbox('nativeCharts.enabled', state.nativeChartsEnabled, false)),
     diagramRow(t('PowerPoint: Mermaid source beside each diagram'), 'pptx.showSource', checkbox('pptx.showSource', state.pptxShowSource, false)),
   ].join('\n');
 

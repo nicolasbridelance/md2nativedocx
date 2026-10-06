@@ -78,7 +78,6 @@
   "Accent colour (headings + links)": "Akzentfarbe (Überschriften + Links)",
   "Advanced": "Erweitert",
   "Alignment": "Ausrichtung",
-  "Also xychart and radar (not yet confirmed in Word)": "Auch xychart und radar (in Word noch nicht bestätigt)",
   "Automatic table of contents": "Automatisches Inhaltsverzeichnis",
   "Body text font": "Schriftart Fließtext",
   "Bottom": "Unten",
@@ -93,7 +92,6 @@
   "Document structure": "Dokumentstruktur",
   "Document title": "Dokumenttitel",
   "Emoji & badges": "Emoji & Badges",
-  "Enable Word charts (not yet confirmed in Word)": "Word-Diagramme aktivieren (in Word noch nicht bestätigt)",
   "Font name": "Schriftname",
   "Font set": "Schriftpaket",
   "Font size (pt)": "Schriftgröße (pt)",
@@ -103,7 +101,6 @@
   "LibreOffice (Liberation)": "LibreOffice (Liberation)",
   "Line spacing": "Zeilenabstand",
   "Margins": "Ränder",
-  "Native Word charts (pie)": "Native Word-Diagramme (pie)",
   "Orientation": "Ausrichtung der Seite",
   "Output": "Ausgabe",
   "Output folder": "Ausgabeordner",
@@ -135,5 +132,6 @@
   "Word compatibility check": "Word-Kompatibilitätsprüfung",
   "Word document": "Word-Dokument",
   "Workspace": "Arbeitsbereich",
-  "e.g. {0}": "z. B. {0}"
+  "e.g. {0}": "z. B. {0}",
+  "Native Word charts": "Native Word-Diagramme"
 }

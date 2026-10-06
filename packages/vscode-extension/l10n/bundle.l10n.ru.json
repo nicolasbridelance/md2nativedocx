@@ -78,7 +78,6 @@
   "Accent colour (headings + links)": "Акцентный цвет (заголовки + ссылки)",
   "Advanced": "Дополнительно",
   "Alignment": "Выравнивание",
-  "Also xychart and radar (not yet confirmed in Word)": "Также xychart и radar (ещё не проверены в Word)",
   "Automatic table of contents": "Автоматическое оглавление",
   "Body text font": "Шрифт основного текста",
   "Bottom": "Снизу",
@@ -93,7 +92,6 @@
   "Document structure": "Структура документа",
   "Document title": "Заголовок документа",
   "Emoji & badges": "Эмодзи и значки",
-  "Enable Word charts (not yet confirmed in Word)": "Включить диаграммы Word (ещё не проверены в Word)",
   "Font name": "Название шрифта",
   "Font set": "Набор шрифтов",
   "Font size (pt)": "Размер шрифта (пт)",
@@ -103,7 +101,6 @@
   "LibreOffice (Liberation)": "LibreOffice (Liberation)",
   "Line spacing": "Межстрочный интервал",
   "Margins": "Поля",
-  "Native Word charts (pie)": "Нативные диаграммы Word (pie)",
   "Orientation": "Ориентация",
   "Output": "Вывод",
   "Output folder": "Папка вывода",
@@ -135,5 +132,6 @@
   "Word compatibility check": "Проверка совместимости с Word",
   "Word document": "Документ Word",
   "Workspace": "Рабочая область",
-  "e.g. {0}": "напр. {0}"
+  "e.g. {0}": "напр. {0}",
+  "Native Word charts": "Нативные диаграммы Word"
 }

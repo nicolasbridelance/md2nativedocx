@@ -18,9 +18,8 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   the Settings UI and in the side panel. The panel gains **Diagrams** (SmartArt on/look/drawing, Word charts,
   PowerPoint source) and **Output** (output folder, company template), and now follows VS Code's language
   (it was French only). Corporate download mirrors for Pandoc/.NET moved under Advanced.
-- **New defaults: SmartArt on, native Word charts on for `pie`.** Both are confirmed in real Word. `xychart`
-  and `radar` charts are valid but not yet confirmed in Word: new setting
-  `md2nativedocx.nativeCharts.includeUnverified` turns them on. A value you set explicitly is kept.
+- **New defaults: SmartArt on, native Word charts on** (`pie`, `xychart`, `radar`) — all confirmed in real Word.
+  A value you set explicitly is kept.
 - Marketplace title: "md2nativedocx — Markdown to Word with editable diagrams (+ PowerPoint)".
 - **Know before you export.** Above each diagram, the CodeLens now says what it will become in Word —
   "SmartArt — hierarchy, 3 levels", "Word chart", "Word shapes (no SmartArt: branches merge again at B, C)" —

@@ -386,7 +386,7 @@ function provideDiagramHover(document: vscode.TextDocument, position: vscode.Pos
 }
 
 /** The two settings a diagram's lens or hover may offer to turn on (nothing else can be set this way). */
-const ENABLEABLE_SETTINGS = new Set(['smartArt.enabled', 'nativeCharts.enabled', 'nativeCharts.includeUnverified']);
+const ENABLEABLE_SETTINGS = new Set(['smartArt.enabled', 'nativeCharts.enabled']);
 
 async function handleEnableSetting(key: string): Promise<void> {
   if (!ENABLEABLE_SETTINGS.has(key)) return;

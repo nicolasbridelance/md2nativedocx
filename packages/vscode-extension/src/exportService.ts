@@ -151,7 +151,7 @@ export interface RunCliOptions {
    * `md2nativedocx.mjs`'s doc comment on `smartArtEnabled`). */
   smartArtEnabled?: boolean;
   /** Chart types to make native Word charts with an embedded workbook (ADR 0011), from
-   * `md2nativedocx.nativeCharts.enabled` + `.includeUnverified` — e.g. `['pie']`. Omitted/empty keeps every
+   * `md2nativedocx.nativeCharts.enabled` — e.g. `['pie', 'xychart', 'radar']`. Omitted/empty keeps every
    * chart as shapes. */
   nativeChartTypes?: readonly string[];
   /** Mirrors `md2nativedocx.smartArt.style` (only used when SmartArt is enabled). */

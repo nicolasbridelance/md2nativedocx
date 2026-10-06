@@ -94,13 +94,7 @@ export function planSummary(plan: RenderingPlan): string {
 /** The setting that would change this diagram's rendering, if any (for "Enable …" actions). */
 export function settingToEnable(plan: RenderingPlan): { key: string; label: string } | undefined {
   if (plan.smartArtWouldApply) return { key: 'smartArt.enabled', label: vscode.l10n.t('Enable SmartArt') };
-  if (plan.chartWouldApply) {
-    // Charts on but this type not yet confirmed in Word: the switch to offer is the "unverified" one.
-    const chartsOn = vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('nativeCharts.enabled', true);
-    return chartsOn
-      ? { key: 'nativeCharts.includeUnverified', label: vscode.l10n.t('Enable Word charts (not yet confirmed in Word)') }
-      : { key: 'nativeCharts.enabled', label: vscode.l10n.t('Enable Word charts') };
-  }
+  if (plan.chartWouldApply) return { key: 'nativeCharts.enabled', label: vscode.l10n.t('Enable Word charts') };
   return undefined;
 }
 
