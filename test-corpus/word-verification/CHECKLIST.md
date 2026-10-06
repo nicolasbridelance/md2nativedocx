@@ -481,21 +481,24 @@ bold paragraph above the diagram. A timeline with sections, or too crowded for w
 
 `smartart-v16-timeline-richtext-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`.
 
-- [ ] All three open with no repair prompt.
-- [ ] Sections 1-5 are SmartArt (click: SmartArt Design tab appears); sections 6 and 7 are plain shapes.
-- [ ] **`no-drawing` is the real test of the new layout**: does Word itself draw the axis, the dots, and the boxes
+- [x] All three open with no repair prompt.
+- [x] Sections 1-5 are SmartArt (click: SmartArt Design tab appears); sections 6 and 7 are plain shapes.
+- [x] **`no-drawing` is the real test of the new layout**: does Word itself draw the axis, the dots, and the boxes
       alternating above/below (1st above, 2nd below…)? If every box lands on the same side, Word ignored the
       `posOdd` switch — say so, the fix is small.
-- [ ] Still `no-drawing`: in section 2, do the boxes overhang their slot (wider than the gap between two dots)
+- [x] Still `no-drawing`: in section 2, do the boxes overhang their slot (wider than the gap between two dots)
       without being shrunk or cut off?
-- [ ] In the Text Pane of section 1, add a period (Enter after "2006 / Twitter"): a new dot and box appear on the
+- [x] In the Text Pane of section 1, add a period (Enter after "2006 / Twitter"): a new dot and box appear on the
       axis. (The diagram's layout id is per period count; Word keeps using the same definition, which is fine.)
-- [ ] Line breaks: sections 3 and 5 show two/three lines per box; section 4 shows "produit" in italic and
+- [x] Line breaks: sections 3 and 5 show two/three lines per box; section 4 shows "produit" in italic and
       "technique" in bold.
 - Verified here: Open XML validator, 0 errors under `/word/diagrams` and in `document.xml`; LibreOffice renders the
   cached drawing (sections 1-5 as SmartArt, 6-7 as shapes).
 - Known: section 5 (cycle) boxes are small for three lines; the text slightly overflows in the cached drawing (Word
   shrinks it when it recomputes).
+
+**Result (maintainer, real Word, 2026-10-06): "ça marche très bien".** The timeline as a SmartArt time line
+(alternating boxes via `posOdd`, `no-drawing` included) and line breaks/bold/italic in SmartArt boxes are validated.
 
 ## Recording the result
 
