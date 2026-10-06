@@ -94,6 +94,11 @@
         "category": "md2nativedocx"
       },
       {
+        "command": "md2nativedocx.enableSetting",
+        "title": "%command.enableSetting.title%",
+        "category": "md2nativedocx"
+      },
+      {
         "command": "md2nativedocx.openSettings",
         "title": "%command.openSettings.title%",
         "category": "md2nativedocx"

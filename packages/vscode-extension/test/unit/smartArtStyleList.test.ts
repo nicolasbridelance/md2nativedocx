@@ -21,3 +21,14 @@ test('the settings enum and constant list the same SmartArt profiles as the core
   const style = sections.map((section) => section.properties['md2nativedocx.smartArt.style']).find(Boolean);
   assert.deepEqual(style?.enum, coreProfileNames());
 });
+
+test('every command a menu or the palette refers to is declared in contributes.commands', () => {
+  // VS Code reports an undeclared one at startup ("Menu item references a command … not defined") —
+  // this happened once (md2nativedocx.enableSetting) and no other test noticed.
+  const pkg = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'package.json'), 'utf8'));
+  const declared = new Set((pkg.contributes.commands as Array<{ command: string }>).map((c) => c.command));
+  const menus = pkg.contributes.menus as Record<string, Array<{ command?: string }>>;
+  for (const [place, items] of Object.entries(menus)) {
+    for (const item of items) if (item.command) assert.ok(declared.has(item.command), `${place}: ${item.command} is not declared`);
+  }
+});
