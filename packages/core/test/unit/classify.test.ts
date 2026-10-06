@@ -79,16 +79,18 @@ test('accepts a two-level tree in every direction', () => {
   }
 });
 
-test('accepts a top-down tree with grandchildren (multi-level generator)', () => {
-  assert.equal(MAX_TREE_DEPTH, 5);
+test('accepts a tree with grandchildren in every direction (multi-level generator)', () => {
+  assert.equal(MAX_TREE_DEPTH, 10);
   // A -> B -> C, A -> D: depth 3; A branches so this is a tree, not a chain.
-  assert.deepEqual(classify('graph TD\n  A --> B\n  A --> D\n  B --> C'), { eligible: true, layout: 'tree' });
+  for (const dir of ['TD', 'LR', 'BT', 'RL']) {
+    assert.deepEqual(classify(`graph ${dir}\n  A --> B\n  A --> D\n  B --> C`), { eligible: true, layout: 'tree' }, dir);
+  }
 });
 
 test('accepts a tree at exactly the maximum depth and rejects one level more', () => {
   const chainDown = (n: number) => Array.from({ length: n - 1 }, (_, i) => `N${i} --> N${i + 1}`).join('\n  ');
-  assert.equal(classify(`graph TD\n  ${chainDown(5)}\n  N0 --> X`).eligible, true);
-  const tooDeep = classify(`graph TD\n  ${chainDown(6)}\n  N0 --> X`);
+  assert.equal(classify(`graph TD\n  ${chainDown(10)}\n  N0 --> X`).eligible, true);
+  const tooDeep = classify(`graph TD\n  ${chainDown(11)}\n  N0 --> X`);
   assert.equal(tooDeep.eligible, false);
   if (!tooDeep.eligible) {
     assert.equal(tooDeep.reason, 'tree-too-deep');
@@ -96,20 +98,9 @@ test('accepts a tree at exactly the maximum depth and rejects one level more', (
   }
 });
 
-test('a tree with grandchildren is only eligible top-down', () => {
-  for (const dir of ['LR', 'BT', 'RL']) {
-    const result = classify(`graph ${dir}\n  A --> B\n  A --> D\n  B --> C`);
-    assert.equal(result.eligible, false, dir);
-    if (!result.eligible) assert.equal(result.reason, 'tree-too-deep', dir);
-  }
-});
-
-test('rejects a multi-level tree with more than MAX_TREE_LEAVES leaves', () => {
-  const leaves = (n: number) => Array.from({ length: n }, (_, i) => `B --> L${i}`).join('\n  ');
-  assert.equal(classify(`graph TD\n  A --> B\n  A --> S\n  ${leaves(7)}`).eligible, true); // 8 leaves
-  const wide = classify(`graph TD\n  A --> B\n  A --> S\n  ${leaves(8)}`); // 9 leaves
-  assert.equal(wide.eligible, false);
-  if (!wide.eligible) assert.equal(wide.reason, 'tree-too-deep');
+test('no width limit: a 3-level tree with 24 leaves stays eligible', () => {
+  const leaves = Array.from({ length: 24 }, (_, i) => `${i % 2 ? 'B' : 'S'} --> L${i}`).join('\n  ');
+  assert.equal(classify(`graph TD\n  A --> B\n  A --> S\n  ${leaves}`).eligible, true);
 });
 
 test('LR direction does not affect classification', () => {

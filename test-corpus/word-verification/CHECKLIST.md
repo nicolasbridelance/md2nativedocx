@@ -388,6 +388,28 @@ and 23 leaves works with no problem**, so the `hierRoot`/`hierChild` recursion h
 caps (5 levels, 8 leaves), which are a legibility choice for the export, not a Word limit. Not yet answered:
 "with drawing" vs "no drawing" side by side, and section 6 staying native shapes.
 
+## Round 15 — 2026-10-06: multi-level trees in all four directions, caps lifted (v12)
+
+After Round 14 (Word handled depth 10 and 23 leaves): depth cap raised to 10, the leaf cap removed, the cached
+drawing's font floor lowered to 8 pt. `LR`/`BT`/`RL` multi-level trees now use the same recursive layout with
+only the direction parameters changed: `hierRoot` `hierAlign` (`lCtrCh` / `bCtrCh` / `rCtrCh`), `hierChild`
+`linDir` + `chAlign` (`fromT`+`l` / `fromL`+`b` / `fromT`+`r`), connector end points. These parameter values come
+from the ECMA-376 enumerations, not from a Word sample: **the `no-drawing` file is the real test here.**
+
+`smartart-v12-deep-trees-directions-colorful.docx`, `-intense.docx` (cached drawing), `-colorful-no-drawing.docx`.
+Same 4-level tree in `LR`, `BT`, `RL`, `TD` (reference), then a 16-leaf tree and an 8-level tree.
+
+- [ ] All three open with no repair prompt.
+- [ ] `no-drawing`: are `LR`, `BT`, `RL` laid out by Word in the right direction (root left / bottom / right),
+      children aligned, lines attached? If one comes out top-down or jumbled, that direction's parameters are
+      wrong — a hand-made Word "Horizontal Hierarchy" sample would then settle it.
+- [ ] Add a child in Word to the `LR` tree: it grows to the right, not downwards.
+- [ ] Section 5 (16 leaves): readable in Word? (In the cached drawing the boxes are ~7 mm wide and words break.)
+- Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing in
+  all four directions with no overlap.
+- Known: past ~12 leaves the cached drawing is too narrow to read in portrait. A fix would be to stack a parent's
+  leaf children in a column under it (org-chart style, `hierChild` secondary direction) — not done.
+
 ## Recording the result
 
 Once done, either:

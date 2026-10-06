@@ -178,19 +178,19 @@ export function buildDiagramDrawingXml(shapes: DrawingShape[], style: SmartArtSt
   );
 }
 
-/** Largest font (1/100 pt, 10-24 pt) at which `labels` fit a `cx` x `cy` box in at most three lines. */
-export function fitFontSize(labels: string[], cx: number, cy: number): number {
+/** Largest font (1/100 pt, `minPt`-24 pt, default floor 10 pt) at which `labels` fit a `cx` x `cy` box in at most three lines. */
+export function fitFontSize(labels: string[], cx: number, cy: number, minPt = 10): number {
   const widthPt = cx / EMU_PER_PT;
   const heightPt = cy / EMU_PER_PT;
   const longestWord = Math.max(1, ...labels.flatMap((l) => l.split(/\s+/).map((w) => w.length)));
   const longest = Math.max(1, ...labels.map((l) => l.length));
-  for (let size = 24; size > 10; size -= 1) {
+  for (let size = 24; size > minPt; size -= 1) {
     const usable = widthPt - 2 * size * 0.3;
     const perLine = Math.max(1, Math.floor(usable / (size * 0.55)));
     const lines = Math.ceil(longest / perLine);
     if (longestWord <= perLine && lines <= 3 && lines * size * 1.1 <= heightPt) return size * 100;
   }
-  return 1000;
+  return minPt * 100;
 }
 
 interface Labelled {
@@ -356,17 +356,19 @@ export function treeShapes(
   return shapes;
 }
 
-/** A node of a multi-level tree, as {@link deepTreeShapes} lays it out (top-down). */
+/** A node of a multi-level tree, as {@link deepTreeShapes} lays it out. */
 export interface DeepTreeNode extends Labelled {
   children: DeepTreeNode[];
 }
 
-/** Horizontal gap between neighbouring subtrees, in box widths. */
+/** Gap between neighbouring subtrees, in box sizes along the sibling axis. */
 const DEEP_SIBLING_GAP = 0.3;
-/** Vertical gap between levels, in box heights (the `layoutDef`'s `sp` constraint). */
+/** Gap between levels, in box sizes along the level axis (the `layoutDef`'s `sp` constraint). */
 const DEEP_LEVEL_GAP = 0.4;
 /** Tallest frame (EMU) a multi-level tree may ask for (5 in). */
 const DEEP_MAX_FRAME_CY = 4572000;
+/** Smallest font in a multi-level tree's cached drawing (wide trees get small boxes; Word can enlarge them). */
+const DEEP_MIN_FONT_PT = 8;
 
 /** Number of levels (the root counts as 1) and of leaves of a tree. */
 export function deepTreeSize(root: { children: unknown[] }): { depth: number; leaves: number } {
@@ -379,26 +381,54 @@ export function deepTreeSize(root: { children: unknown[] }): { depth: number; le
 }
 
 /**
- * Multi-level tree geometry (root on top). Space is shared by the **real shape of each subtree**: a leaf takes
- * one box width, a parent's subtree takes the sum of its children's subtrees (plus a gap between siblings),
- * and the parent is centred over its first and last child — so a branch with grandchildren is wide and a
- * lone leaf next to it stays narrow, instead of every node getting a fixed share. Each parent→child link is
- * an elbow bending halfway down the gap between the two levels. The frame is sized to the result.
+ * Multi-level tree geometry, in the four Mermaid directions. Space is shared by the **real shape of each
+ * subtree**: a leaf takes one box along the sibling axis, a parent's subtree the sum of its children's (plus
+ * a gap between siblings), and the parent is centred on its first and last child — so a branch with
+ * grandchildren is wide and a lone leaf next to it stays narrow. Each parent→child link is an elbow bending
+ * halfway across the gap between the two levels. The frame is sized to the result.
+ *
+ * Computed on two abstract axes — *cross* (siblings) and *flow* (levels, root first) — then mapped to x/y:
+ * `TD` flow = down, `BT` flow = up, `LR` flow = right, `RL` flow = left.
  */
 export function deepTreeShapes(
   root: DeepTreeNode,
   style: SmartArtStyle = 'simple',
+  direction: Flowchart['direction'] = 'TD',
 ): { shapes: DrawingShape[]; frame: { cx: number; cy: number } } {
   const FW = DRAWING_FRAME.cx;
+  const horizontal = direction === 'LR' || direction === 'RL';
+  const reversed = direction === 'BT' || direction === 'RL';
   const { depth } = deepTreeSize(root);
   const span = (n: DeepTreeNode): number =>
     n.children.length === 0 ? 1 : Math.max(1, n.children.reduce((s, c) => s + span(c), 0) + DEEP_SIBLING_GAP * (n.children.length - 1));
   const totalSpan = span(root);
-  const boxW = Math.min(FW / totalSpan, 0.28 * FW);
   const levels = depth + DEEP_LEVEL_GAP * (depth - 1);
-  const boxH = Math.min(0.7 * boxW, 822960, DEEP_MAX_FRAME_CY / levels);
-  const frame = { cx: FW, cy: Math.round(boxH * levels) };
-  const originX = (FW - totalSpan * boxW) / 2;
+
+  // Box size along each axis, and the frame. Vertical trees spread siblings across the page width; horizontal
+  // ones spread the levels across it and the siblings down a frame of at most 5 in.
+  let boxCross: number;
+  let boxFlow: number;
+  if (horizontal) {
+    boxFlow = Math.min(FW / levels, 0.28 * FW);
+    boxCross = Math.min(0.6 * boxFlow, 822960, DEEP_MAX_FRAME_CY / totalSpan);
+  } else {
+    boxCross = Math.min(FW / totalSpan, 0.28 * FW);
+    boxFlow = Math.min(0.7 * boxCross, 822960, DEEP_MAX_FRAME_CY / levels);
+  }
+  const crossTotal = horizontal ? totalSpan * boxCross : FW;
+  const flowTotal = boxFlow * levels;
+  const frame = horizontal
+    ? { cx: Math.round(flowTotal), cy: Math.round(crossTotal) }
+    : { cx: FW, cy: Math.round(flowTotal) };
+  const originCross = (crossTotal - totalSpan * boxCross) / 2;
+  const boxW = horizontal ? boxFlow : boxCross;
+  const boxH = horizontal ? boxCross : boxFlow;
+
+  // Abstract (cross, flow) rectangle -> frame rectangle.
+  const toRect = (c: number, f: number, cs: number, fs: number) => {
+    const flow = reversed ? flowTotal - f - fs : f;
+    return horizontal ? { x: flow, y: c, cx: fs, cy: cs } : { x: c, y: flow, cx: cs, cy: fs };
+  };
 
   const labels: string[] = [];
   const collect = (n: DeepTreeNode): void => {
@@ -406,19 +436,19 @@ export function deepTreeShapes(
     n.children.forEach(collect);
   };
   collect(root);
-  const font = fitFontSize(labels, boxW, boxH);
+  const font = fitFontSize(labels, boxW, boxH, DEEP_MIN_FONT_PT);
 
-  // Pass 1: horizontal centre of every node, in box-width units from the left edge of the tree.
+  // Pass 1: centre of every node along the cross axis, in box units from the start of the tree.
   const centreOf = new Map<DeepTreeNode, number>();
-  const centre = (n: DeepTreeNode, left: number): void => {
+  const centre = (n: DeepTreeNode, start: number): void => {
     if (n.children.length === 0) {
-      centreOf.set(n, left + 0.5);
+      centreOf.set(n, start + 0.5);
       return;
     }
-    let childLeft = left;
+    let childStart = start;
     for (const child of n.children) {
-      centre(child, childLeft);
-      childLeft += span(child) + DEEP_SIBLING_GAP;
+      centre(child, childStart);
+      childStart += span(child) + DEEP_SIBLING_GAP;
     }
     centreOf.set(n, (centreOf.get(n.children[0]!)! + centreOf.get(n.children[n.children.length - 1]!)!) / 2);
   };
@@ -427,43 +457,49 @@ export function deepTreeShapes(
   // Pass 2: shapes in depth-first order (the order the data model numbers the boxes, for `presStyleIdx`).
   const shapes: DrawingShape[] = [];
   let nonRootCount = 0;
-  const emit = (n: DeepTreeNode, level: number, parent: { midX: number; bottom: number } | undefined): void => {
-    const x = originX + (centreOf.get(n)! - 0.5) * boxW;
-    const y = level * boxH * (1 + DEEP_LEVEL_GAP);
+  const emit = (n: DeepTreeNode, level: number, parent: { midCross: number; flowEnd: number } | undefined): void => {
+    const c = originCross + (centreOf.get(n)! - 0.5) * boxCross;
+    const f = level * boxFlow * (1 + DEEP_LEVEL_GAP);
+    const r = toRect(c, f, boxCross, boxFlow);
     shapes.push({
       modelId: n.id,
-      x: Math.round(x),
-      y: Math.round(y),
-      cx: Math.round(boxW),
-      cy: Math.round(boxH),
+      x: Math.round(r.x),
+      y: Math.round(r.y),
+      cx: Math.round(r.cx),
+      cy: Math.round(r.cy),
       prst: 'roundRect',
       text: n.text,
       fontSize: font,
       accent: accentOf(style, level === 0 ? 'node1' : 'node2', level === 0 ? 0 : nonRootCount++),
       ...(n.fill ? { fill: n.fill } : {}),
     });
-    const midX = x + boxW / 2;
+    const midCross = c + boxCross / 2;
     if (parent && n.connId !== undefined) {
-      // Elbow from the middle of the parent's bottom side to the middle of this box's top side.
-      const gap = y - parent.bottom;
-      const left = Math.min(parent.midX, midX);
+      // Elbow from the middle of the parent's far side to the middle of this box's near side.
+      const gap = f - parent.flowEnd;
+      const low = Math.min(parent.midCross, midCross);
+      const box = toRect(low, parent.flowEnd, Math.abs(midCross - parent.midCross), gap);
+      const point = (dc: number, df: number): [number, number] => {
+        const flow = reversed ? gap - df : df;
+        return horizontal ? [flow, dc] : [dc, flow];
+      };
       shapes.push({
         modelId: n.connId,
-        x: Math.round(left),
-        y: Math.round(parent.bottom),
-        cx: Math.round(Math.abs(midX - parent.midX)),
-        cy: Math.round(gap),
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        cx: Math.round(box.cx),
+        cy: Math.round(box.cy),
         prst: 'connector',
         path: [
-          [parent.midX - left, 0],
-          [parent.midX - left, gap / 2],
-          [midX - left, gap / 2],
-          [midX - left, gap],
+          point(parent.midCross - low, 0),
+          point(parent.midCross - low, gap / 2),
+          point(midCross - low, gap / 2),
+          point(midCross - low, gap),
         ],
         accent: accentOf(style, 'parChTrans1D2', 0),
       });
     }
-    for (const child of n.children) emit(child, level + 1, { midX, bottom: y + boxH });
+    for (const child of n.children) emit(child, level + 1, { midCross, flowEnd: f + boxFlow });
   };
   emit(root, 0, undefined);
   return { shapes, frame };

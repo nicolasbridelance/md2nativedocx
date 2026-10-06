@@ -13,8 +13,10 @@
  * `handmade_samples/labeled-hierarchy-basique.docx` shows Word writing for nested levels; every name,
  * constraint value and the XML itself are written here from the public schema (ADR 0004 "Round 5").
  *
- * **Scope: top-down (`TD`) only.** The other three directions need their own `linDir`/`hierAlign`
- * parameters, not yet verified in a real Word (see {@link classifyTopology}).
+ * All four Mermaid directions are covered. `TD` is the layout confirmed in real Word (CHECKLIST Round 14);
+ * `LR`/`BT`/`RL` are derived from it by changing only the direction parameters ECMA-376 defines for these
+ * algorithms — `hierRoot`'s `hierAlign` (where a parent sits relative to its children), `hierChild`'s
+ * `linDir`/`chAlign` (how a row of children runs and which side it aligns on), and the connector's end points.
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
@@ -29,7 +31,7 @@ const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 
-/** `layoutDef` URN of the multi-level (top-down) tree. */
+/** `layoutDef` URN of the multi-level top-down (`TD`) tree; the other directions append `-lr`, `-bt`, `-rl`. */
 export const TREE_DEEP_LAYOUT_URN = 'urn:md2nativedocx/smartart-layout/tree-deep1';
 
 const SHAPE = `<dgm:shape xmlns:r="${R_NS}" r:blip=""><dgm:adjLst/></dgm:shape>`;
@@ -108,6 +110,43 @@ export const TREE_DEEP_LAYOUT_XML =
   '</dgm:layoutNode></dgm:layoutNode></dgm:forEach></dgm:forEach>' +
   '</dgm:layoutNode></dgm:layoutNode></dgm:forEach></dgm:layoutNode></dgm:layoutNode></dgm:layoutNode></dgm:layoutDef>';
 
+/** Direction parameters of the multi-level tree, per Mermaid direction (`TD` is {@link TREE_DEEP_LAYOUT_XML} as is). */
+const DEEP_DIRECTION: Record<Exclude<Flowchart['direction'], 'TD'>, { suffix: string; hierAlign: string; linDir: string; chAlign: string; beg: string; end: string }> = {
+  LR: { suffix: '-lr', hierAlign: 'lCtrCh', linDir: 'fromT', chAlign: 'l', beg: 'rCtr', end: 'lCtr' },
+  BT: { suffix: '-bt', hierAlign: 'bCtrCh', linDir: 'fromL', chAlign: 'b', beg: 'tCtr', end: 'bCtr' },
+  RL: { suffix: '-rl', hierAlign: 'rCtrCh', linDir: 'fromT', chAlign: 'r', beg: 'lCtr', end: 'rCtr' },
+};
+
+/** The multi-level tree's `layoutDef` and URN for `direction`, derived from the top-down one by substitution. */
+export function deepTreeLayout(direction: Flowchart['direction']): { layoutXml: string; layoutUrn: string } {
+  if (direction === 'TD') return { layoutXml: TREE_DEEP_LAYOUT_XML, layoutUrn: TREE_DEEP_LAYOUT_URN };
+  const d = DEEP_DIRECTION[direction];
+  const layoutUrn = TREE_DEEP_LAYOUT_URN + d.suffix;
+  const horizontal = direction !== 'BT';
+  const childRow = `<dgm:alg type="hierChild"><dgm:param type="linDir" val="${d.linDir}"/><dgm:param type="chAlign" val="${d.chAlign}"/></dgm:alg>`;
+  const layoutXml = TREE_DEEP_LAYOUT_XML.replace(`uniqueId="${TREE_DEEP_LAYOUT_URN}"`, `uniqueId="${layoutUrn}"`)
+    .split('<dgm:alg type="hierRoot"/>')
+    .join(`<dgm:alg type="hierRoot"><dgm:param type="hierAlign" val="${d.hierAlign}"/></dgm:alg>`)
+    .split('<dgm:alg type="hierChild"><dgm:param type="linDir" val="fromL"/></dgm:alg>')
+    .join(childRow)
+    .replace(
+      '<dgm:alg type="hierChild"><dgm:param type="linDir" val="fromL"/><dgm:param type="vertAlign" val="t"/></dgm:alg>',
+      childRow
+    )
+    .replace(
+      '<dgm:param type="begPts" val="bCtr"/><dgm:param type="endPts" val="tCtr"/>',
+      `<dgm:param type="begPts" val="${d.beg}"/><dgm:param type="endPts" val="${d.end}"/>`
+    )
+    // Horizontal trees: the gap between levels runs across the box width, not its height.
+    .replace(
+      '<dgm:constr type="sp" for="des" refType="h" refFor="des" refForName="level1Main" op="equ" fact="0.4"/>',
+      horizontal
+        ? '<dgm:constr type="sp" for="des" refType="w" refFor="des" refForName="level1Main" op="equ" fact="0.4"/>'
+        : '<dgm:constr type="sp" for="des" refType="h" refFor="des" refForName="level1Main" op="equ" fact="0.4"/>'
+    );
+  return { layoutXml, layoutUrn };
+}
+
 /** A tree node with everything the data model needs, ids included. */
 interface DeepModelNode extends DeepTreeNode {
   /** Content point id. */
@@ -129,12 +168,13 @@ function spPrFor(fill: string | undefined): string {
 }
 
 /**
- * Generate the five parts of a multi-level, top-down `tree` SmartArt. `flowchart` must already be
+ * Generate the five parts of a multi-level `tree` SmartArt, in `flowchart.direction`. `flowchart` must already be
  * classified `tree` by {@link classifyTopology}; the generated model carries every edge label folded
  * into the destination node's text (`label : node`, as `tree.ts` does).
  */
 export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtTreeOutput & { frame: { cx: number; cy: number } } {
   const style: SmartArtStyle = options.style ?? 'simple';
+  const { layoutXml, layoutUrn } = deepTreeLayout(flowchart.direction);
   const hasIncoming = new Set(flowchart.edges.map((e) => e.to));
   const rootNode = flowchart.nodes.find((n) => !hasIncoming.has(n.id));
   if (!rootNode) throw new Error('generateDeepTree: no node with in-degree 0 -- flowchart is not a valid tree');
@@ -234,7 +274,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     );
 
   const cxn = (type: 'presOf' | 'presParOf', src: string, dest: string, srcOrd: number): string =>
-    `<dgm:cxn modelId="${newId()}" type="${type}" srcId="${src}" destId="${dest}" srcOrd="${srcOrd}" destOrd="0" presId="${TREE_DEEP_LAYOUT_URN}"/>`;
+    `<dgm:cxn modelId="${newId()}" type="${type}" srcId="${src}" destId="${dest}" srcOrd="${srcOrd}" destOrd="0" presId="${layoutUrn}"/>`;
   const presOfCxns = [cxn('presOf', docId, pDocComposite, 0)];
   const presParOfCxns = [cxn('presParOf', pDocComposite, pDocFlow, 0), cxn('presParOf', pDocFlow, pDocTop, 0), cxn('presParOf', pDocTop, root.pRoot, 0)];
   for (const n of preorder) {
@@ -251,7 +291,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
   const xml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
-    `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet loTypeId="${TREE_DEEP_LAYOUT_URN}" loCatId="hierarchy" ` +
+    `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet loTypeId="${layoutUrn}" loCatId="hierarchy" ` +
     'qsTypeId="urn:md2nativedocx/smartart-quickstyle/tree1" qsCatId="simple" ' +
     'csTypeId="urn:md2nativedocx/smartart-colors/tree1" csCatId="accent1"/></dgm:pt>' +
     contentPts +
@@ -259,10 +299,10 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns.join('')}${presOfCxns.join('')}${presParOfCxns.join('')}</dgm:cxnLst>` +
     `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`;
 
-  const { shapes, frame } = deepTreeShapes(root, style);
+  const { shapes, frame } = deepTreeShapes(root, style, flowchart.direction);
   return {
     dataXml: xml,
-    layoutXml: TREE_DEEP_LAYOUT_XML,
+    layoutXml,
     colorsXml:
       style === 'simple'
         ? TREE_COLORS_XML

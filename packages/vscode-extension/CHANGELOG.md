@@ -13,8 +13,8 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   with editable diagrams"; the "mermaid to word / docx" search keywords stay.
 
 ### Added
-- SmartArt trees with grandchildren (up to 5 levels, 8 leaves, top-down) are now real SmartArt instead of
-  falling back to native shapes; each subtree gets room in proportion to its leaves.
+- SmartArt trees with grandchildren (up to 10 levels, any width, all four directions) are now real SmartArt
+  instead of falling back to native shapes; each subtree gets room in proportion to its leaves.
 - New settings `md2nativedocx.smartArt.style` (`simple` | `colorful` — default | `intense`) and
   `md2nativedocx.smartArt.preRenderedDrawing` (default on) for SmartArt diagrams: a different theme
   accent per shape, optionally the theme's gradient + drop shadow, and the cached drawing Word itself

@@ -48,7 +48,7 @@ test('dispatches a top-down tree with grandchildren to the multi-level generator
   assert.ok(result?.frame, 'multi-level trees size their own frame');
 });
 
-test('returns null for a grandchild tree in a direction the multi-level layout does not cover', () => {
+test('dispatches a left-to-right tree with grandchildren to the multi-level generator', () => {
   const { ast } = parseMermaid('graph LR\n  A --> B\n  A --> D\n  B --> C');
-  assert.equal(generateSmartArt(ast), null);
+  assert.ok(generateSmartArt(ast)?.layoutXml.includes('tree-deep1-lr'));
 });

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMermaid } from '../../src/parser/index.js';
 import { generateSmartArt } from '../../src/smartart/dispatch.js';
-import { generateDeepTree, TREE_DEEP_LAYOUT_XML } from '../../src/smartart/tree-deep.js';
+import { deepTreeLayout, generateDeepTree, TREE_DEEP_LAYOUT_XML } from '../../src/smartart/tree-deep.js';
 
 const SAMPLE = [
   'graph TD',
@@ -154,4 +154,64 @@ test('dispatch reaches the multi-level generator and passes the frame through', 
   const out = generateSmartArt(ast, { drawing: true });
   assert.equal(out?.layout, 'tree');
   assert.deepEqual(out?.frame, generateDeepTree(ast, { drawing: true }).frame);
+});
+
+const DIRECTIONS = ['TD', 'LR', 'BT', 'RL'] as const;
+
+test('each direction gets its own layoutDef URN, with the direction parameters substituted', () => {
+  const expected = {
+    TD: { urn: 'tree-deep1"', begEnd: ['bCtr', 'tCtr'], hierAlign: undefined },
+    LR: { urn: 'tree-deep1-lr"', begEnd: ['rCtr', 'lCtr'], hierAlign: 'lCtrCh' },
+    BT: { urn: 'tree-deep1-bt"', begEnd: ['tCtr', 'bCtr'], hierAlign: 'bCtrCh' },
+    RL: { urn: 'tree-deep1-rl"', begEnd: ['lCtr', 'rCtr'], hierAlign: 'rCtrCh' },
+  };
+  for (const dir of DIRECTIONS) {
+    const { layoutXml, layoutUrn } = deepTreeLayout(dir);
+    const e = expected[dir];
+    assert.ok(layoutXml.includes(`uniqueId="${layoutUrn}"`) && layoutXml.includes(e.urn), dir);
+    assert.ok(layoutXml.includes(`<dgm:param type="begPts" val="${e.begEnd[0]}"/><dgm:param type="endPts" val="${e.begEnd[1]}"/>`), dir);
+    if (e.hierAlign) {
+      // Both hierRoot nodes and all three hierChild nodes carry the direction.
+      assert.equal(layoutXml.split(`<dgm:param type="hierAlign" val="${e.hierAlign}"/>`).length - 1, 2, dir);
+      assert.equal(layoutXml.split('type="chAlign"').length - 1, 3, dir);
+      assert.ok(!layoutXml.includes('<dgm:alg type="hierRoot"/>'), dir);
+    }
+    assertBalanced(layoutXml);
+    const { ast } = parseMermaid(`graph ${dir}\n  R --> A\n  R --> B\n  A --> A1`);
+    assert.ok(generateDeepTree(ast).dataXml.includes(`loTypeId="${layoutUrn}"`), dir);
+  }
+});
+
+test('cached drawing in every direction: inside the frame, no overlap, root on the expected side', () => {
+  for (const dir of DIRECTIONS) {
+    const out = deep(SAMPLE.replace('graph TD', `graph ${dir}`), { drawing: true });
+    const shapes = rects(out.drawingXml ?? '');
+    const boxes = shapes.filter((s) => !s.connector);
+    assert.equal(boxes.length, 7, dir);
+    for (const s of shapes) {
+      assert.ok(s.x >= 0 && s.y >= 0, `${dir}: origin inside frame`);
+      assert.ok(s.x + s.cx <= out.frame.cx + 1 && s.y + s.cy <= out.frame.cy + 1, `${dir}: extent inside frame`);
+    }
+    for (const a of boxes)
+      for (const b of boxes) {
+        if (a.id >= b.id) continue;
+        assert.ok(!(a.x < b.x + b.cx && b.x < a.x + a.cx && a.y < b.y + b.cy && b.y < a.y + a.cy), `${dir}: ${a.id}/${b.id} overlap`);
+      }
+    const root = boxes[0]!;
+    const others = boxes.slice(1);
+    const side = {
+      TD: others.every((b) => b.y > root.y),
+      BT: others.every((b) => b.y < root.y),
+      LR: others.every((b) => b.x > root.x),
+      RL: others.every((b) => b.x < root.x),
+    }[dir];
+    assert.ok(side, `${dir}: root first along the flow`);
+  }
+});
+
+test('a very wide tree still fits the frame, with the font floored at 8 pt', () => {
+  const leaves = Array.from({ length: 24 }, (_, i) => `${i % 2 ? 'B' : 'S'} --> L${i}[Organisation ${i}]`).join('\n  ');
+  const out = deep(`graph TD\n  A --> B\n  A --> S\n  ${leaves}`, { drawing: true });
+  for (const s of rects(out.drawingXml ?? '')) assert.ok(s.x + s.cx <= out.frame.cx + 1, 'inside frame');
+  assert.ok(out.drawingXml?.includes('sz="800"'));
 });

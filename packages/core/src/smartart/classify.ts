@@ -10,11 +10,10 @@
  * existing pipeline; this module only ever adds an alternative rendering
  * path for a deliberately narrow subset.
  *
- * Trees come in two generators: `tree.ts` (root + one row of children, any of
- * the four directions) and `tree-deep.ts` (any depth up to
- * {@link MAX_TREE_DEPTH}, top-down only, at most {@link MAX_TREE_LEAVES}
- * leaves so boxes stay readable in the fixed page width). The depth ceiling is
- * not a format limit — it keeps the cached drawing legible.
+ * Trees come in two generators, both in the four directions: `tree.ts` (root +
+ * one row of children) and `tree-deep.ts` (deeper, up to {@link MAX_TREE_DEPTH}).
+ * The depth ceiling is not a format limit (a maintainer grew a tree to depth 10
+ * and 23 leaves in real Word, 2026-10-06) — it keeps the cached drawing legible.
  */
 
 import type { Flowchart } from '../types.js';
@@ -54,10 +53,8 @@ export type SmartArtIneligibleReason =
    * distinct from `merge-after-branch` because the actionable advice differs
    * (no single pair of nodes to point at). */
   | 'irregular-topology'
-  /** The graph is a valid tree shape but larger than the tree generators
-   * support: more than {@link MAX_TREE_DEPTH} levels, more than
-   * {@link MAX_TREE_LEAVES} leaves, or a grandchild level in a direction other
-   * than top-down. */
+  /** The graph is a valid tree shape but has more than {@link MAX_TREE_DEPTH}
+   * levels. */
   | 'tree-too-deep';
 
 /** A flowchart classified as eligible for one of the three SmartArt layouts. */
@@ -85,12 +82,10 @@ export type SmartArtClassification = SmartArtEligible | SmartArtIneligible;
 
 /**
  * The deepest tree the SmartArt generators support (depth 1 is the root itself). Two levels
- * go through `tree.ts` in any direction; deeper ones through `tree-deep.ts`, top-down only.
+ * go through `tree.ts`; deeper ones through `tree-deep.ts`. There is no width limit: a very
+ * wide tree gets small boxes, as it would in native shapes, and Word can enlarge it.
  */
-export const MAX_TREE_DEPTH = 5;
-
-/** The most leaves a multi-level tree may have; wider ones fall back to native shapes. */
-export const MAX_TREE_LEAVES = 8;
+export const MAX_TREE_DEPTH = 10;
 
 function eligible(layout: SmartArtLayout): SmartArtEligible {
   return { eligible: true, layout };
@@ -172,13 +167,6 @@ export function classifyTopology(flowchart: Flowchart): SmartArtClassification {
     const depth = treeDepth(roots[0]!, flowchart.edges);
     if (depth > MAX_TREE_DEPTH) {
       return ineligible('tree-too-deep', [roots[0]!]);
-    }
-    if (depth > 2) {
-      // Multi-level trees: only the top-down layout exists, and the leaf count bounds box size.
-      const leaves = nodeIds.filter((id) => (outDegree.get(id) ?? 0) === 0).length;
-      if (flowchart.direction !== 'TD' || leaves > MAX_TREE_LEAVES) {
-        return ineligible('tree-too-deep', [roots[0]!]);
-      }
     }
     return eligible('tree');
   }
