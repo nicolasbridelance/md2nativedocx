@@ -536,6 +536,26 @@ New SmartArt mappings, all with SmartArt on:
 **Result (maintainer, real Word, 2026-10-06): "très bien tout ça, ça marche".** Grouped time line (journey, timeline
 sections), kanban grouped list, and the gitGraph/state/class mappings are validated, `no-drawing` included.
 
+## Round 20 — 2026-10-06: each node keeps its Mermaid shape in SmartArt (v18)
+
+A flowchart node drawn as a diamond `{}`, circle `(())`, cylinder `[()]`, hexagon `{{}}`, parallelogram `[//]`,
+subroutine `[[]]` or flag `>]` now keeps that shape in its SmartArt box, in all four generators. Written exactly as
+Word writes right-click > Change Shape (an `a:prstGeom` on the box's presentation point, read from
+`handmade_samples/processus_shape.docx`). Plain boxes `[]`, `()`, `([])` keep the layout's shape.
+
+`smartart-v18-node-shapes-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`.
+
+- [ ] All three open with no repair prompt.
+- [ ] Chain: diamond "Valide ?", cylinder "Base", circle "Fin"; tree: hexagon root, parallelogram, subroutine, flag;
+      cycle: circle, diamond, cylinder, plain box.
+- [ ] **`no-drawing`**: Word itself draws the same shapes (the override survives Word's own layout).
+- [ ] Click a shaped box > SmartArt Format > Change Shape shows its shape; Reset Shape brings back the default box.
+- [ ] Add a step in the Text Pane: the new box gets the default shape, the others keep theirs.
+- Verified here: Open XML validator, 0 errors under `/word/diagrams` and in `document.xml`; LibreOffice renders the
+  cached drawing with the shapes.
+- Known: the font is shared by every box of a diagram, sized for the smaller text area of a diamond or circle, so a
+  chain with a diamond has slightly smaller text overall. Mirrored variants (`[\Text\]`) keep the unmirrored shape.
+
 ## Recording the result
 
 Once done, either:

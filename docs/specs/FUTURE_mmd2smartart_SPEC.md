@@ -247,6 +247,12 @@ correspondant ; les autres restent sur la forme par défaut du layout (général
 Coût d'implémentation marginal — c'est un attribut de plus par point, pas une nouvelle partie ni
 une nouvelle relation.
 
+**Correction (2026-10-06, échantillon Word réel `handmade_samples/processus_shape.docx`)** : Word n'écrit pas
+l'override sur le `dgm:pt` de **contenu** mais sur le point de **présentation** de la boîte (`type="pres"`,
+`presName` de la boîte), sans autre marqueur. C'est pourquoi l'essai de 2026-09-03 (sur le point de contenu,
+sous LibreOffice seul) n'avait rien donné. Implémenté pour toutes les formes non rectangulaires
+(`smartart/node-shape.ts`), pas seulement les décisions.
+
 ### 5.2 Labels d'arête (« Oui / Non ») — convention adoptée
 
 SmartArt n'a pas de zone de texte native sur une ligne de liaison. Deux solutions manuelles
