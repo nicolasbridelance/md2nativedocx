@@ -16,14 +16,15 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   4-20): processes, cycles, trees up to 10 levels in four directions, compact org charts, seven looks,
   per-node shapes, mindmap, treeView, timeline, journey, kanban, simple gitGraph/state/class diagrams;
   `pie`, `xychart` and `radar` as charts with Edit Data.
-- **Defaults differ by entry point.** The extension turns SmartArt and Word charts on. The core and CLI
-  keep them opt-in (`MD2NATIVEDOCX_ENABLE_SMARTART=1`, `MD2NATIVEDOCX_NATIVE_CHARTS=1`).
+- **Same defaults everywhere.** SmartArt (with its pre-rendered drawing, `colorful` look) and Word charts
+  are on in the extension, the CLI and the Pandoc filter; `MD2NATIVEDOCX_ENABLE_SMARTART=0` /
+  `MD2NATIVEDOCX_NATIVE_CHARTS=0` turn them off at the CLI.
 - **Versions.** Only the extension is released (0.6.0). `core`, `cli`, `pptx`, `pandoc-filter` are
   0.1.0 and not on npm yet (waiting on a token, see `TODO.md` §1).
 
 ## Health (2026-10-06)
 
-- Tests: core 749, cli 127, vscode-extension 73, pptx 25, pandoc-filter 15, all green.
+- Tests: core 749, cli 126, vscode-extension 73, pptx 25, pandoc-filter 15, all green.
   Typecheck and lint clean.
 - `test:visual` (LibreOffice render + pixel diff) green; `test:oxml-validate` reports 0 schema errors
   in anything this project emits (the remaining errors in a full document come from Pandoc's own
@@ -46,6 +47,17 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   `docs/coverage.md`; specs given dated status banners; stale claims fixed in the READMEs, `AGENTS.md`
   and the flowchart compliance table; SmartArt showcase image regenerated (it also revealed a word
   broken inside diamond-shaped SmartArt boxes, fixed in the cached drawing).
+- Lean repo before v1: the on-hold Word add-in moved to branch `word-addin-scaffold` (575 dev packages
+  fewer, and the source of a critical `shell-quote` advisory that had turned CI red); spike build
+  scripts and outputs, superseded verification files, duplicate images and per-type `.pptx` removed
+  (restore commands in `docs/adr/spikes/README.md` and the CHECKLIST header); PNGs palette-reduced.
+- Code before v1: same defaults in every entry point (SmartArt with its cached drawing, `colorful`
+  look, Word charts); legacy variables `MD2NATIVEDOCX_DISABLE_SMARTART` and
+  `MD2NATIVEDOCX_CHART_WORKBOOK` removed; the extension's "pre-rendered drawing" setting removed
+  (`MD2NATIVEDOCX_SMARTART_DRAWING=0` stays for the no-drawing Word checks); the core barrel reduced
+  from 227 to about 90 exports (per-type AST types are internal now).
+- **Not yet published:** the extension changes above (setting removed, new Marketplace description)
+  reach users only with the next Marketplace release.
 
 ## What's next
 

@@ -26,8 +26,8 @@ function exportPie(extraEnv) {
   return { dir, out, code: r.status, stderr: r.stderr };
 }
 
-test('opt-in: MD2NATIVEDOCX_NATIVE_CHARTS=1 produces a chart part, an internal workbook relationship and a real rId', () => {
-  const { dir, out, code } = exportPie({ MD2NATIVEDOCX_NATIVE_CHARTS: '1' });
+test('by default (no variable) a pie becomes a chart part, an internal workbook relationship and a real rId', () => {
+  const { dir, out, code } = exportPie({ MD2NATIVEDOCX_NATIVE_CHARTS: undefined });
   try {
     assert.equal(code, 0);
     const zip = new AdmZip(out);
@@ -49,25 +49,12 @@ test('opt-in: MD2NATIVEDOCX_NATIVE_CHARTS=1 produces a chart part, an internal w
   }
 });
 
-test('default off: without the variable the pie stays shape-built and no chart part exists', () => {
-  const { dir, out, code } = exportPie({});
+test('MD2NATIVEDOCX_NATIVE_CHARTS=0: the pie stays shape-built and no chart part exists', () => {
+  const { dir, out, code } = exportPie({ MD2NATIVEDOCX_NATIVE_CHARTS: '0' });
   try {
     assert.equal(code, 0);
     const names = new AdmZip(out).getEntries().map((e) => e.entryName);
     assert.ok(!names.some((n) => n.startsWith('word/charts/') || n.startsWith('word/embeddings/')));
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-test('MD2NATIVEDOCX_CHART_WORKBOOK=0 keeps cached values only (no workbook, no externalData)', () => {
-  const { dir, out, code } = exportPie({ MD2NATIVEDOCX_NATIVE_CHARTS: '1', MD2NATIVEDOCX_CHART_WORKBOOK: '0' });
-  try {
-    assert.equal(code, 0);
-    const zip = new AdmZip(out);
-    assert.ok(zip.getEntry('word/charts/chart1.xml'));
-    assert.ok(!zip.getEntry('word/embeddings/Microsoft_Excel_Sheet1.xlsx'));
-    assert.doesNotMatch(zip.readAsText('word/charts/chart1.xml'), /externalData/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

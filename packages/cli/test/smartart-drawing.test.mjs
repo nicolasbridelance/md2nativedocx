@@ -44,8 +44,8 @@ test('with SmartArt + drawing on: a fifth part, its internal relationship, conte
   }
 });
 
-test('with SmartArt on but the drawing off (the default): the four classic parts only, no dataModelExt', () => {
-  const { dir, out, code } = exportCycle({ MD2NATIVEDOCX_ENABLE_SMARTART: '1' });
+test('with SmartArt on but the drawing turned off: the four classic parts only, no dataModelExt', () => {
+  const { dir, out, code } = exportCycle({ MD2NATIVEDOCX_ENABLE_SMARTART: '1', MD2NATIVEDOCX_SMARTART_DRAWING: '0' });
   try {
     assert.equal(code, 0);
     const zip = new AdmZip(out);

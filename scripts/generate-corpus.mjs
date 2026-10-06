@@ -61,7 +61,11 @@ function convert(name, markdown) {
   const docxPath = join(outputDir, `${name}.docx`);
   writeFileSync(mdPath, markdown);
   try {
-    execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: ['ignore', 'ignore', 'pipe'] });
+    // The corpus documents the shape output: SmartArt and Word charts (on by default) are turned off.
+    execFileSync('node', [cli, mdPath, '-o', docxPath], {
+      stdio: ['ignore', 'ignore', 'pipe'],
+      env: { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_NATIVE_CHARTS: '0' },
+    });
     return { ok: true, docx: docxPath };
   } catch (err) {
     return { ok: false, error: err.stderr?.toString() ?? String(err) };

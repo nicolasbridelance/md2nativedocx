@@ -15,7 +15,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 fx = os.path.join(root, 'test-corpus/visual/fixtures')
 cli = os.path.join(root, 'packages/cli/bin/md2nativedocx.mjs')
-env = {**os.environ, 'FONTCONFIG_FILE': os.path.join(root, 'test-corpus/visual/fontconfig/fonts.conf')}
+env = {**os.environ, 'FONTCONFIG_FILE': os.path.join(root, 'test-corpus/visual/fontconfig/fonts.conf'),
+       'MD2NATIVEDOCX_ENABLE_SMARTART': '0', 'MD2NATIVEDOCX_NATIVE_CHARTS': '0'}  # this gallery shows the shape output
 MM, CHROME = os.environ.get('MERMAID_DIR'), os.environ.get('CHROME')
 # (label, fixture) — one per Mermaid type, in a pleasing order
 TYPES = [('flowchart','colors'),('sequence','sequence'),('class','class-diagram'),('state','state-diagram'),
@@ -70,7 +71,7 @@ for label, name in TYPES:
     mmd = open(os.path.join(fx, name + '.mmd')).read()
     md = os.path.join(work, name + '.md'); open(md, 'w').write('```mermaid\n' + mmd + '\n```\n')
     docx = os.path.join(work, name + '.docx')
-    subprocess.run(['node', cli, md, '-o', docx], check=True, capture_output=True)
+    subprocess.run(['node', cli, md, '-o', docx], check=True, capture_output=True, env=env)
     subprocess.run(['soffice', '--headless', '--convert-to', 'png', '--outdir', work, docx],
                    check=True, capture_output=True, env=env)
     ours = crop(Image.open(os.path.join(work, name + '.png')).convert('RGB'))

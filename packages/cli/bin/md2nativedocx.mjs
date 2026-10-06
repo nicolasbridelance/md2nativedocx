@@ -308,19 +308,11 @@ async function main() {
   // standalone `npx md2nativedocx` usage, which is unaffected.
   const pandocBin = process.env.MD2NATIVEDOCX_PANDOC_BIN || 'pandoc';
 
-  // SmartArt defaults to OFF (flipped 2026-09-03): a real-Word test of
-  // `cycle.ts`'s output on the simplest possible input (a 3-node cycle)
-  // failed to open at all ("erreur lors de l'ouverture du fichier") —
-  // `chain`/`tree`/`cycle` had only ever been verified under headless
-  // LibreOffice, which is known (TODO.md's `mc:Ignorable` incident) not to
-  // imply Word can open the file. See `docs/markdown-mermaid-compliance-table.md`
-  // §2 point 5. MD2NATIVEDOCX_ENABLE_SMARTART is the opt-in for the VS Code
-  // extension's `md2nativedocx.smartArt.enabled` setting (also now
-  // default-off) or standalone experimentation.
-  // MD2NATIVEDOCX_DISABLE_SMARTART is kept working (now redundant with the
-  // default, but explicit and harmless) for anything still setting it.
-  const smartArtEnabled =
-    process.env.MD2NATIVEDOCX_DISABLE_SMARTART !== '1' && process.env.MD2NATIVEDOCX_ENABLE_SMARTART === '1';
+  // SmartArt and native Word charts are on by default, as in the VS Code extension (every mapping has been
+  // confirmed in real Word, test-corpus/word-verification/CHECKLIST.md). MD2NATIVEDOCX_ENABLE_SMARTART=0 and
+  // MD2NATIVEDOCX_NATIVE_CHARTS=0 turn them off; a diagram SmartArt or a chart cannot express falls back to
+  // shapes either way.
+  const smartArtEnabled = process.env.MD2NATIVEDOCX_ENABLE_SMARTART !== '0';
 
   // A scratch directory the core bridge (spawned by the Lua filter, once per
   // ```mermaid block) uses to hand SmartArt-eligible diagram parts back to
@@ -331,11 +323,11 @@ async function main() {
   // keeps this code path identical whether or not any block turns out
   // eligible.
   const smartArtDir = smartArtEnabled ? mktempSmartArtDir() : null;
-  // Native Word charts (ADR 0011) are opt-in. MD2NATIVEDOCX_NATIVE_CHARTS is `1` (pie, xychart and radar)
-  // or a comma-separated list of those types (e.g. `pie`, the ones confirmed in real Word); the core bridge
-  // reads the same variable and keeps every other type as shapes.
+  // Native Word charts (ADR 0011): MD2NATIVEDOCX_NATIVE_CHARTS unset or `1` charts pie, xychart and radar, a
+  // comma-separated list only those types, `0` none; the core bridge reads the same variable and keeps every
+  // other type as shapes.
   const nativeCharts = (process.env.MD2NATIVEDOCX_NATIVE_CHARTS ?? '').trim();
-  const chartDir = nativeCharts !== '' && nativeCharts !== '0' ? mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-')) : null;
+  const chartDir = nativeCharts !== '0' ? mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-')) : null;
   const pandocEnv = { ...process.env };
   if (smartArtDir) pandocEnv.MD2NATIVEDOCX_SMARTART_DIR = smartArtDir;
   if (chartDir) pandocEnv.MD2NATIVEDOCX_CHART_DIR = chartDir;

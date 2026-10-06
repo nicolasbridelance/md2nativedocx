@@ -9,7 +9,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 fx = os.path.join(root, 'test-corpus/visual/fixtures')
 cli = os.path.join(root, 'packages/cli/bin/md2nativedocx.mjs')
-env = {**os.environ, 'FONTCONFIG_FILE': os.path.join(root, 'test-corpus/visual/fontconfig/fonts.conf')}
+env = {**os.environ, 'FONTCONFIG_FILE': os.path.join(root, 'test-corpus/visual/fontconfig/fonts.conf'),
+       'MD2NATIVEDOCX_ENABLE_SMARTART': '0', 'MD2NATIVEDOCX_NATIVE_CHARTS': '0'}  # this gallery shows the shape output
 SCENES = [('sankey', 'sankey', 0), ('mindmap', 'mindmap', 0), ('venn', 'venn', 0), ('timeline', 'timeline', 0), ('treemap', 'treemap', 0)]
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(root, 'docs/showcase/wow.gif')
 W, H = 800, 450
@@ -24,7 +25,7 @@ def render(name):
     mmd = open(os.path.join(fx, name + '.mmd')).read()
     md = os.path.join(work, name + '.md'); open(md, 'w').write('```mermaid\n' + mmd + '\n```\n')
     docx = os.path.join(work, name + '.docx')
-    subprocess.run(['node', cli, md, '-o', docx], check=True, capture_output=True)
+    subprocess.run(['node', cli, md, '-o', docx], check=True, capture_output=True, env=env)
     subprocess.run(['soffice', '--headless', '--convert-to', 'png', '--outdir', work, docx], check=True, capture_output=True, env=env)
     im = Image.open(os.path.join(work, name + '.png')).convert('RGB')
     b = ImageChops.difference(im, Image.new('RGB', im.size, (255, 255, 255))).getbbox()

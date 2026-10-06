@@ -135,7 +135,8 @@ test('corpus: every source diagram regenerates a conformant .docx (structural ch
     for (const file of files) {
       const diagram = extractDiagram(join(sourceDir, file));
       const name = basename(file, '.mmd').replace(/\.md$/, '');
-      const docx = convertTo(toMarkdown(file, diagram), dir, name);
+      // Structural checks of the shape output: SmartArt and charts (on by default) are turned off.
+      const docx = convertTo(toMarkdown(file, diagram), dir, name, { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_NATIVE_CHARTS: '0' });
       assertConformantDocx(docx, name);
     }
   } finally {
@@ -294,16 +295,20 @@ test('simple: markdown with a mermaid A --> B dispatches to SmartArt when MD2NAT
   }
 });
 
-test('simple: markdown with a mermaid A --> B does NOT dispatch to SmartArt by default', () => {
-  // Same chain-eligible fixture as the opt-in test above, run with no
-  // MD2NATIVEDOCX_ENABLE_SMARTART -- confirms the 2026-09-03 default flip
-  // itself, not just the opt-in path.
+test('simple: markdown with a mermaid A --> B dispatches to SmartArt by default, and =0 keeps shapes', () => {
+  // Same chain-eligible fixture as the test above, run with no variable (SmartArt is on by default since
+  // 2026-10-06, as in the VS Code extension) and with MD2NATIVEDOCX_ENABLE_SMARTART=0.
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
   try {
-    const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-default');
-    const xml = readDocumentXml(docx);
-    assert.ok(!xml.includes('<dgm:relIds'), 'SmartArt must not be used unless explicitly enabled');
-    assert.ok(xml.includes('<wpc:wpc '), 'expected the OOXML canvas fallback by default');
+    const env = { ...process.env };
+    delete env.MD2NATIVEDOCX_ENABLE_SMARTART;
+    const byDefault = readDocumentXml(convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-default', env));
+    assert.ok(byDefault.includes('<dgm:relIds'), 'SmartArt is on by default');
+    const off = readDocumentXml(
+      convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-off', { ...env, MD2NATIVEDOCX_ENABLE_SMARTART: '0' })
+    );
+    assert.ok(!off.includes('<dgm:relIds'), 'SmartArt must not be used when turned off');
+    assert.ok(off.includes('<wpc:wpc '), 'expected the OOXML canvas when SmartArt is off');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

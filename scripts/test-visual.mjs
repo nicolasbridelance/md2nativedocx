@@ -34,6 +34,7 @@ import { decodePng, diffImages } from './lib/png.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..');
 const cli = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
+const SHAPES_ONLY_ENV = { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_NATIVE_CHARTS: '0' };
 const fixturesDir = join(repoRoot, 'test-corpus', 'visual', 'fixtures');
 const baselineDir = join(repoRoot, 'test-corpus', 'visual', 'baseline');
 const pptxBaselineDir = join(repoRoot, 'test-corpus', 'visual', 'baseline-pptx');
@@ -76,7 +77,8 @@ function renderFixture(sofficeBin, mmdPath, workDir, format = 'docx') {
   writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${source}\`\`\`\n`);
 
   const docxPath = join(workDir, `${name}.${format}`);
-  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: 'pipe' });
+  // The baselines are the shape translators' output: SmartArt and Word charts (on by default) are turned off.
+  execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: 'pipe', env: SHAPES_ONLY_ENV });
 
   execFileSync(sofficeBin, ['--headless', '--convert-to', 'png', '--outdir', workDir, docxPath], {
     stdio: 'pipe',

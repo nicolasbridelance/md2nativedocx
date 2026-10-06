@@ -11,9 +11,8 @@
 > **Statut au 2026-10-06.** Les colonnes SmartArt reflètent l'état confirmé dans un vrai Word
 > (`test-corpus/word-verification/CHECKLIST.md`, Rounds 6 à 20) : chaîne, cycle et arbre jusqu'à 10
 > niveaux dans les 4 directions, forme Mermaid de chaque nœud conservée, retours à la ligne et
-> gras/italique conservés, couleurs `classDef` appliquées. SmartArt est activé par défaut dans
-> l'extension VS Code (`md2nativedocx.smartArt.enabled`), en opt-in au CLI
-> (`MD2NATIVEDOCX_ENABLE_SMARTART=1`). Les mentions datées « corrigé 2026-09-0x » dans les cellules
+> gras/italique conservés, couleurs `classDef` appliquées. SmartArt est activé par défaut partout
+> (extension : `md2nativedocx.smartArt.enabled` ; CLI : `MD2NATIVEDOCX_ENABLE_SMARTART=0` le désactive). Les mentions datées « corrigé 2026-09-0x » dans les cellules
 > retracent l'historique ; le journal détaillé des mises à jour qui précédait ce statut est dans
 > l'historique git de ce fichier.
 

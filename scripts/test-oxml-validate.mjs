@@ -108,10 +108,11 @@ function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false, sma
   const mdPath = join(workDir, `${name}.md`);
   writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${mermaid}\`\`\`\n`);
   const docxPath = join(workDir, `${name}.docx`);
+  // SmartArt, charts and the cached drawing are on by default: each fixture states what it wants.
   const env = { ...process.env };
-  if (smartArt) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
-  if (nativeCharts) env.MD2NATIVEDOCX_NATIVE_CHARTS = '1';
-  if (smartArtDrawing) env.MD2NATIVEDOCX_SMARTART_DRAWING = '1';
+  env.MD2NATIVEDOCX_ENABLE_SMARTART = smartArt ? '1' : '0';
+  env.MD2NATIVEDOCX_NATIVE_CHARTS = nativeCharts ? '1' : '0';
+  env.MD2NATIVEDOCX_SMARTART_DRAWING = smartArtDrawing ? '1' : '0';
   if (smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = smartArtStyle;
   execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: 'pipe', env });
   return docxPath;

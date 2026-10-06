@@ -182,10 +182,12 @@ function translateOptionsFromEnv() {
 function trySmartArt(generate, smartArtDir) {
   if (!smartArtDir) return null;
   try {
-    // The pre-rendered dsp:drawing (fifth part) is opt-in until a real Word confirms it.
+    // The pre-rendered dsp:drawing (fifth part) is on by default: Word and LibreOffice then show the same
+    // geometry. MD2NATIVEDOCX_SMARTART_DRAWING=0 leaves it out so Word lays the diagram out itself (used by
+    // the "no-drawing" real-Word checks).
     const requestedStyle = process.env.MD2NATIVEDOCX_SMARTART_STYLE;
-    const style = SMARTART_STYLES.includes(requestedStyle) ? requestedStyle : 'simple';
-    const generated = generate({ drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING === '1', style });
+    const style = SMARTART_STYLES.includes(requestedStyle) ? requestedStyle : 'colorful';
+    const generated = generate({ drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING !== '0', style });
     if (!generated) return null;
 
     const id = randomUUID();
@@ -220,15 +222,16 @@ function smartArtTitleXml(title) {
     : '';
 }
 
-/** `MD2NATIVEDOCX_NATIVE_CHARTS`: `1` enables every chart type, a comma-separated list only those types. */
+/** `MD2NATIVEDOCX_NATIVE_CHARTS`: unset or `1` enables every chart type, `0` none, a comma-separated list only those types. */
 function nativeChartTypeEnabled(type) {
   const value = (process.env.MD2NATIVEDOCX_NATIVE_CHARTS ?? '').trim();
-  if (value === '1') return true;
+  if (value === '' || value === '1') return true;
+  if (value === '0') return false;
   return value.split(',').map((t) => t.trim()).includes(type);
 }
 
 /**
- * Opt-in native Word chart (ADR 0011) for `pie`, `xychart` and `radar`. Same hand-off as SmartArt: the
+ * Native Word chart (ADR 0011) for `pie`, `xychart` and `radar`. Same hand-off as SmartArt: the
  * chart part and the workbook data are written to `<MD2NATIVEDOCX_CHART_DIR>/<random id>/` and the
  * returned `<w:p>` carries a `CHART_PLACEHOLDER:<id>` relationship id that the CLI's post-processing
  * replaces. Never throws: any failure (including a diagram Word cannot chart, e.g. a horizontal xychart
@@ -241,8 +244,7 @@ function tryNativeChart(type, translate, chartDir, options) {
   if (!chartDir || !nativeChartTypeEnabled(type)) return null;
   try {
     const id = randomUUID();
-    const embedWorkbook = process.env.MD2NATIVEDOCX_CHART_WORKBOOK !== '0';
-    const chart = translate(id, { ...options, embedWorkbook });
+    const chart = translate(id, { ...options, embedWorkbook: true });
     const dir = join(chartDir, id);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'chart.xml'), chart.chartXml, 'utf8');

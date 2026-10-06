@@ -34,9 +34,18 @@ Options:
   -h, --help            Show this help
 ```
 
-Every ` ```mermaid ` code block in the Markdown becomes a native, editable OOXML drawing — every
-node and edge is an individually selectable Word shape, not an embedded image. Everything else
-(headings, tables, lists, LaTeX math, ...) is handled by Pandoc as usual.
+Every ` ```mermaid ` code block in the Markdown becomes native, editable Word objects, never an embedded
+image: a SmartArt graphic when the diagram fits one (processes, cycles, org charts, mindmaps, timelines,
+kanban boards…), a Word chart with editable data for `pie`, `xychart` and `radar`, and individually
+selectable shapes otherwise. Everything else (headings, tables, lists, LaTeX math, ...) is handled by
+Pandoc as usual. Per-type detail:
+[`docs/coverage.md`](https://github.com/nicolasbridelance/md2nativedocx/blob/main/docs/coverage.md).
+
+| Variable | Effect |
+|---|---|
+| `MD2NATIVEDOCX_ENABLE_SMARTART=0` | No SmartArt: every diagram as shapes |
+| `MD2NATIVEDOCX_NATIVE_CHARTS=0` (or `pie,xychart`) | No Word charts (or only those types) |
+| `MD2NATIVEDOCX_SMARTART_STYLE` | SmartArt look: `simple`, `subtle`, `moderate`, `intense-accent`, `colorful` (default), `colorful-moderate`, `intense` |
 
 ## Configuration
 

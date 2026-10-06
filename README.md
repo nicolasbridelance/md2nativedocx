@@ -55,9 +55,8 @@ click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc f
 > **Deploying this in a company?** License, dependencies, IT risk analysis, real cost, and a jargon-free
 > guide for non-technical readers are in [`docs/compliance/`](docs/compliance/README.md).
 
-SmartArt and Word charts are on by default in the VS Code extension; on the CLI, turn them on with
-`MD2NATIVEDOCX_ENABLE_SMARTART=1` and `MD2NATIVEDOCX_NATIVE_CHARTS=1`. What each diagram type becomes, and
-when: [`docs/coverage.md`](docs/coverage.md).
+SmartArt and Word charts are on by default (in the CLI, `MD2NATIVEDOCX_ENABLE_SMARTART=0` and
+`MD2NATIVEDOCX_NATIVE_CHARTS=0` turn them off). What each diagram type becomes, and when: [`docs/coverage.md`](docs/coverage.md).
 
 Named comparison against competing VS Code extensions (installs, rendering method verified from
 their own docs): see `docs/specs/cahier_des_charges.md` §12.1 (French), or directly the
@@ -169,7 +168,7 @@ npm run lint         # ESLint + eslint-plugin-security
 npm run test         # unit + golden tests
 npm run test:fuzz    # property-based tests on the untrusted-input boundary
 npm run test:visual  # headless LibreOffice render + pixel-diff (CI)
-npm run test:oxml-validate  # schema validation via Microsoft's Open XML SDK (.NET, opt-in)
+npm run test:oxml-validate  # schema validation via Microsoft's Open XML SDK (needs the .NET SDK)
 ```
 
 ## Documentation

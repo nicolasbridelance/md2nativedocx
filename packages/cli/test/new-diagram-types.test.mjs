@@ -47,7 +47,8 @@ function exportFixture(name, mermaidSource) {
   const md = join(dir, 'doc.md');
   const docx = join(dir, 'doc.docx');
   writeFileSync(md, `# T\n\n\`\`\`mermaid\n${mermaidSource}\`\`\`\n`);
-  const result = runCli([md, '-o', docx]);
+  // These tests check the shape translators, so SmartArt and charts (on by default) are turned off.
+  const result = runCli([md, '-o', docx], { env: { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_NATIVE_CHARTS: '0' } });
   return { dir, md, docx, ...result };
 }
 

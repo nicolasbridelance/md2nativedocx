@@ -18,8 +18,9 @@ export, which of the three you will get (CodeLens line, hover, status-bar tally)
 
 | Switch | VS Code extension | CLI / Pandoc filter |
 |---|---|---|
-| SmartArt | `md2nativedocx.smartArt.enabled`, **on** by default | `MD2NATIVEDOCX_ENABLE_SMARTART=1` (off by default) |
-| Word charts | `md2nativedocx.nativeCharts.enabled`, **on** by default | `MD2NATIVEDOCX_NATIVE_CHARTS=1` or a list such as `pie,xychart` (off by default) |
+| SmartArt | `md2nativedocx.smartArt.enabled`, **on** by default | **on** by default; `MD2NATIVEDOCX_ENABLE_SMARTART=0` turns it off |
+| Word charts | `md2nativedocx.nativeCharts.enabled`, **on** by default | **on** by default; `MD2NATIVEDOCX_NATIVE_CHARTS=0` turns them off, a list such as `pie,xychart` limits them |
+| SmartArt look | `md2nativedocx.smartArt.style`, `colorful` by default | `MD2NATIVEDOCX_SMARTART_STYLE`, `colorful` by default |
 
 With a switch off, the diagram is drawn as shapes. The PowerPoint export (`.pptx`) always uses shapes:
 SmartArt and charts are `.docx`-only.
