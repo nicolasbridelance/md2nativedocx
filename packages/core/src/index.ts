@@ -1,14 +1,15 @@
 /**
  * md2nativedocx-core — public API.
  *
- * A pure TypeScript engine: Mermaid flowchart text -> intermediate AST ->
- * layout coordinates -> OOXML/DrawingML XML string. It has zero knowledge of
+ * A pure TypeScript engine: Mermaid text (29 diagram types) -> AST -> layout
+ * -> OOXML/DrawingML, SmartArt parts or a Word chart. It has zero knowledge of
  * Pandoc, VS Code, or Office.js, so it is importable from Node (CLI/Pandoc
- * filter) and bundleable for the browser (future Office.js add-in).
+ * filter) and bundleable for the browser.
  *
- * This is the one part of the codebase other packages and future contributors
- * depend on without reading the implementation, so every export is documented
- * here.
+ * Only what the integrations use is exported, plus the option types needed to
+ * call it and the typed parse error. The per-type AST types stay internal
+ * (2026-10-06): a smaller surface is fewer SemVer commitments once 1.0 ships.
+ * Adding an export is an API decision (AGENTS.md, "Escalate to a human").
  */
 
 // Parser: Mermaid text -> AST
@@ -21,10 +22,9 @@ export type { ParseResult } from './parser/index.js';
 // diagram (gitGraph, mindmap, sequenceDiagram, ...) gets a clean rejection
 // instead of a silently-wrong flowchart-shaped parse.
 export { detectDiagramType } from './parser/diagram-type.js';
-export type { DiagramType, DiagramTypeInfo } from './parser/diagram-type.js';
 
 // Layout: AST -> pixel coordinates (Dagre, ADR 0001)
-export { layout, boundingBox, NODE_WIDTH, NODE_HEIGHT } from './layout/layout.js';
+export { layout } from './layout/layout.js';
 export type { LayoutOptions } from './layout/layout.js';
 
 // Translator: AST + layout -> OOXML/DrawingML XML string
@@ -48,18 +48,14 @@ export { escapeXml } from './translator/xml-escape.js';
 // diagrams/quadrant/translator.ts's module doc comment for why this renders
 // as plain OOXML shapes rather than a SmartArt dgm:layoutDef.
 export { parseQuadrantChart } from './diagrams/quadrant/parser.js';
-export type { QuadrantParseResult } from './diagrams/quadrant/parser.js';
 export { translateQuadrantToOoxml } from './diagrams/quadrant/translator.js';
-export type { QuadrantChart, QuadrantAxis, QuadrantLabels, QuadrantPoint } from './diagrams/quadrant/types.js';
 
 // Venn diagram module (docs/smartart-full-catalog-cross-mermaid.md archetype
 // #11 "Venn"). Same independent-module convention and "plain OOXML shapes,
 // not SmartArt dgm:" strategy as the quadrant chart above — see
 // diagrams/venn/translator.ts's module doc comment.
 export { parseVennChart } from './diagrams/venn/parser.js';
-export type { VennParseResult } from './diagrams/venn/parser.js';
 export { translateVennToOoxml } from './diagrams/venn/translator.js';
-export type { VennChart, VennSet, VennUnion } from './diagrams/venn/types.js';
 
 // Mindmap diagram module (docs/smartart-full-catalog-cross-mermaid.md
 // archetype #5 "Radial") — fixes the exact silent-misparse bug that
@@ -67,9 +63,7 @@ export type { VennChart, VennSet, VennUnion } from './diagrams/venn/types.js';
 // coincidentally valid as flowchart circle syntax). Same independent-module,
 // plain-OOXML-shapes convention as quadrant/venn above.
 export { parseMindmap } from './diagrams/mindmap/parser.js';
-export type { MindmapParseResult } from './diagrams/mindmap/parser.js';
 export { translateMindmapToOoxml } from './diagrams/mindmap/translator.js';
-export type { MindmapChart, MindmapNode, MindmapShape } from './diagrams/mindmap/types.js';
 
 // Class diagram module (Family B, docs/specs/FUTURE_full_mermaid_coverage_SPEC.md
 // §3 — reuses Dagre for layout, unlike quadrant/venn/mindmap above, but keeps
@@ -78,78 +72,50 @@ export type { MindmapChart, MindmapNode, MindmapShape } from './diagrams/mindmap
 // diagrams/class-diagram/translator.ts's module doc comment for the v1
 // relationship-marker fidelity trade-offs.
 export { parseClassDiagram } from './diagrams/class-diagram/parser.js';
-export type { ClassDiagramParseResult } from './diagrams/class-diagram/parser.js';
 export { translateClassDiagramToOoxml } from './diagrams/class-diagram/translator.js';
-export type { ClassDiagram, ClassBox, ClassMember, ClassRelationship, ClassRelationType } from './diagrams/class-diagram/types.js';
 
 // State diagram module (Family B). Second consumer of
 // translator/graph-shapes.ts (extracted from class-diagram/translator.ts —
 // see that module's shared-helpers note).
 export { parseStateDiagram } from './diagrams/state-diagram/parser.js';
-export type { StateDiagramParseResult } from './diagrams/state-diagram/parser.js';
 export { translateStateDiagramToOoxml } from './diagrams/state-diagram/translator.js';
-export type { StateDiagram, StateNode, StateNodeKind, StateTransition } from './diagrams/state-diagram/types.js';
 
 // ER diagram module (Family B).
 export { parseErDiagram } from './diagrams/er-diagram/parser.js';
-export type { ErDiagramParseResult } from './diagrams/er-diagram/parser.js';
 export { translateErDiagramToOoxml } from './diagrams/er-diagram/translator.js';
-export type { ErDiagram, ErEntity, ErAttribute, ErRelationship, ErCardinality } from './diagrams/er-diagram/types.js';
 
 // Requirement diagram module (Family B).
 export { parseRequirementDiagram } from './diagrams/requirement-diagram/parser.js';
-export type { RequirementDiagramParseResult } from './diagrams/requirement-diagram/parser.js';
 export { translateRequirementDiagramToOoxml } from './diagrams/requirement-diagram/translator.js';
-export type {
-  RequirementDiagram,
-  Requirement,
-  RequirementElement,
-  RequirementRelationship,
-  RequirementRelationType,
-} from './diagrams/requirement-diagram/types.js';
+export type { RequirementDiagram, Requirement, RequirementElement, RequirementRelationship, RequirementRelationType } from './diagrams/requirement-diagram/types.js';
 
 // Architecture diagram module (Family B).
 export { parseArchitectureDiagram } from './diagrams/architecture-diagram/parser.js';
-export type { ArchitectureDiagramParseResult } from './diagrams/architecture-diagram/parser.js';
 export { translateArchitectureDiagramToOoxml } from './diagrams/architecture-diagram/translator.js';
-export type {
-  ArchitectureDiagram,
-  ArchitectureNode,
-  ArchitectureNodeKind,
-  ArchitectureEdge,
-  ArchitectureSide,
-} from './diagrams/architecture-diagram/types.js';
+export type { ArchitectureDiagram, ArchitectureNode, ArchitectureNodeKind, ArchitectureEdge, ArchitectureSide } from './diagrams/architecture-diagram/types.js';
 
 // Gantt module (Family D, option (b): calendar shapes, no `c:chart` — see
 // docs/adr/spikes/spike-gantt-parser/spike.md).
 export { parseGanttChart } from './diagrams/gantt/parser.js';
-export type { GanttParseResult } from './diagrams/gantt/parser.js';
 export { translateGanttToOoxml } from './diagrams/gantt/translator.js';
-export type { GanttChart, GanttTask, GanttTag } from './diagrams/gantt/types.js';
 
 // C4 diagram module (Family B — C4Context/C4Container/C4Component/
 // C4Dynamic/C4Deployment all collapse onto one AST, see
 // diagrams/c4/types.ts's doc comment).
 export { parseC4Diagram } from './diagrams/c4/parser.js';
-export type { C4ParseResult } from './diagrams/c4/parser.js';
 export { translateC4DiagramToOoxml } from './diagrams/c4/translator.js';
-export type { C4Diagram, C4Element, C4Relationship, C4Category, C4Variant } from './diagrams/c4/types.js';
 
 // gitGraph module (re-classified Family F — fixed branch lanes + a fixed
 // commit-sequence axis, no Dagre — see diagrams/git-graph/types.ts's doc
 // comment).
 export { parseGitGraphDiagram } from './diagrams/git-graph/parser.js';
-export type { GitGraphParseResult } from './diagrams/git-graph/parser.js';
 export { translateGitGraphToOoxml } from './diagrams/git-graph/translator.js';
-export type { GitGraphDiagram, GitBranch, GitCommit, GitCommitType, GitOrientation } from './diagrams/git-graph/types.js';
 
 // cynefin-beta module (Family D — fixed 5-domain layout + calculated
 // shapes, NOT a quadrantChart reuse despite both being "2x2"-shaped, see
 // diagrams/cynefin/types.js's doc comment).
 export { parseCynefinDiagram } from './diagrams/cynefin/parser.js';
-export type { CynefinParseResult } from './diagrams/cynefin/parser.js';
 export { translateCynefinToOoxml } from './diagrams/cynefin/translator.js';
-export type { CynefinDiagram, CynefinDomain, CynefinTransition } from './diagrams/cynefin/types.js';
 
 // What a diagram will become in Word (SmartArt, chart, shapes), without generating it — for editor UIs.
 export { planRendering } from './rendering-plan.js';
@@ -157,92 +123,44 @@ export type { RenderingPlan, RenderingSettings } from './rendering-plan.js';
 
 // SmartArt topology classifier (docs/specs/FUTURE_mmd2smartart_SPEC.md §4, ADR 0004).
 // Complements the OOXML translator above; never required by it.
-export { classifyTopology, MAX_TREE_DEPTH } from './smartart/classify.js';
-export type {
-  SmartArtLayout,
-  SmartArtClassification,
-  SmartArtEligible,
-  SmartArtIneligible,
-  SmartArtIneligibleReason,
-} from './smartart/classify.js';
+export { classifyTopology } from './smartart/classify.js';
+export type { SmartArtLayout, SmartArtClassification, SmartArtEligible, SmartArtIneligible, SmartArtIneligibleReason } from './smartart/classify.js';
 
 // SmartArt generator for the `chain` topology (docs/specs/FUTURE_mmd2smartart_SPEC.md
 // §7 step 4, ADR 0004 "Round 5"). Original layout/colors/style — no
 // Microsoft content. Caller is responsible for calling classifyTopology()
 // first and only invoking this on a 'chain' result.
-export {
-  generateChain,
-  CHAIN_LAYOUT_XML,
-  CHAIN_LAYOUT_XML_TD,
-  CHAIN_LAYOUT_URN,
-  CHAIN_LAYOUT_TD_URN,
-  CHAIN_COLORS_XML,
-  CHAIN_STYLE_XML,
-} from './smartart/chain.js';
-export type { SmartArtChainOutput } from './smartart/chain.js';
+export { generateChain, CHAIN_LAYOUT_XML, CHAIN_LAYOUT_XML_TD, CHAIN_LAYOUT_URN, CHAIN_LAYOUT_TD_URN, CHAIN_COLORS_XML, CHAIN_STYLE_XML } from './smartart/chain.js';
 
 // SmartArt generator for the `tree` topology (same recipe as `chain` above;
 // depth-2 trees only, see MAX_TREE_DEPTH and tree.ts's module doc comment).
-export {
-  generateTree,
-  TREE_LAYOUT_XML,
-  TREE_LAYOUT_XML_LR,
-  TREE_LAYOUT_URN,
-  TREE_LAYOUT_LR_URN,
-  TREE_COLORS_XML,
-  TREE_STYLE_XML,
-} from './smartart/tree.js';
-export type { SmartArtTreeOutput } from './smartart/tree.js';
+export { generateTree, TREE_LAYOUT_XML, TREE_LAYOUT_XML_LR, TREE_LAYOUT_URN, TREE_LAYOUT_LR_URN, TREE_COLORS_XML, TREE_STYLE_XML } from './smartart/tree.js';
 
 // SmartArt generator for the `cycle` topology (same self-authored recipe as
 // `chain`/`tree` above).
-export {
-  generateCycle,
-  CYCLE_LAYOUT_XML,
-  CYCLE_LAYOUT_URN,
-  CYCLE_COLORS_XML,
-  CYCLE_STYLE_XML,
-} from './smartart/cycle.js';
-export type { SmartArtCycleOutput } from './smartart/cycle.js';
+export { generateCycle, CYCLE_LAYOUT_XML, CYCLE_LAYOUT_URN, CYCLE_COLORS_XML, CYCLE_STYLE_XML } from './smartart/cycle.js';
 
 // SmartArt dispatch: classify + run the matching generator in one call
 // (spec §7 step 5). Pure — no filesystem/ZIP knowledge, see dispatch.ts.
 export { generateSmartArt } from './smartart/dispatch.js';
-export type { SmartArtGenerated, SmartArtGeneratedLayout } from './smartart/dispatch.js';
+
 // SmartArt for diagram types that are already trees (mindmap, treeView-beta), through the tree generators.
-export {
-  generateMindmapSmartArt,
-  generateTreeViewSmartArt,
-  mindmapToFlowchart,
-  treeViewToFlowchart,
-} from './smartart/from-tree.js';
+export { generateMindmapSmartArt, generateTreeViewSmartArt, mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
 // SmartArt for a section-less `timeline`: a process of periods, through the chain generator.
-export {
-  generateJourneySmartArt,
-  generateTimelineSmartArt,
-  journeyFitsSmartArt,
-  timelineFitsSmartArt,
-} from './smartart/from-timeline.js';
+export { generateJourneySmartArt, generateTimelineSmartArt, journeyFitsSmartArt, timelineFitsSmartArt } from './smartart/from-timeline.js';
 // SmartArt for a `kanban` board: a grouped list (columns, then cards).
-export { generateKanbanSmartArt, kanbanFitsSmartArt } from './smartart/kanban.js';
+export { generateKanbanSmartArt } from './smartart/kanban.js';
 // SmartArt for the simple cases of gitGraph (main branch only), stateDiagram (chain/loop), classDiagram (inheritance tree).
-export {
-  classDiagramSmartArtLayout,
-  generateClassDiagramSmartArt,
-  generateGitGraphSmartArt,
-  generateStateDiagramSmartArt,
-  gitGraphSmartArtLayout,
-  stateDiagramSmartArtLayout,
-} from './smartart/from-graph.js';
+export { classDiagramSmartArtLayout, generateClassDiagramSmartArt, generateGitGraphSmartArt, generateStateDiagramSmartArt, gitGraphSmartArtLayout, stateDiagramSmartArtLayout } from './smartart/from-graph.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
-export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
-export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';
+export { SMARTART_STYLES } from './smartart/styles.js';
+export type { SmartArtStyle } from './smartart/styles.js';
 
 // Build the <w:p> fragment that embeds a SmartArt diagram inline, given 4
 // relationship ids (real or placeholder — see embed.ts's doc comment for why
 // callers may need to pass placeholders here).
 export { buildSmartArtDrawingXml } from './smartart/embed.js';
-export type { SmartArtRelIds, SmartArtEmbedOptions } from './smartart/embed.js';
+export type { SmartArtEmbedOptions } from './smartart/embed.js';
 
 // Build the fallback-note <w:p> placed under a diagram that was attempted
 // for SmartArt but rejected by classifyTopology() (spec §10.3). Caller-only
@@ -250,26 +168,16 @@ export type { SmartArtRelIds, SmartArtEmbedOptions } from './smartart/embed.js';
 export { buildSmartArtFallbackNoteXml } from './smartart/embed.js';
 
 // Shared types
-export type {
-  Flowchart,
-  FlowNode,
-  FlowEdge,
-  Subgraph,
-  NodeShape,
-  EdgeType,
-  Layout,
-  LayoutBox,
-} from './types.js';
+export type { Flowchart, FlowNode, FlowEdge, Subgraph, NodeShape, EdgeType, Layout, LayoutBox } from './types.js';
 
 // pie module (Family D — calculated `pie`-preset slices on a wpc:wpc canvas;
 // see diagrams/pie/translator.ts's module doc comment).
 export { parsePieChart } from './diagrams/pie/parser.js';
-export type { PieParseResult } from './diagrams/pie/parser.js';
 export { translatePieToOoxml } from './diagrams/pie/translator.js';
-export type { PieChart, PieSlice } from './diagrams/pie/types.js';
+
 // Opt-in native Word chart for `pie` (ADR 0011): chart part + workbook data, caller embeds them.
-export { translatePieToChart, CHART_PLACEHOLDER_PREFIX } from './diagrams/pie/chart.js';
-export type { NativeChart, ChartWorkbook, PieChartOptions } from './diagrams/pie/chart.js';
+export { translatePieToChart } from './diagrams/pie/chart.js';
+export type { NativeChart, PieChartOptions } from './diagrams/pie/chart.js';
 export { translateXyChartToChart } from './diagrams/xychart/chart.js';
 export type { XyChartOptions } from './diagrams/xychart/chart.js';
 export { translateRadarToChart } from './diagrams/radar/chart.js';
@@ -279,89 +187,61 @@ export type { NativeChartOptions } from './translator/native-chart.js';
 // timeline module (Family D — columns of calculated boxes on a wpc:wpc canvas;
 // see diagrams/timeline/translator.ts's module doc comment).
 export { parseTimeline } from './diagrams/timeline/parser.js';
-export type { TimelineParseResult } from './diagrams/timeline/parser.js';
 export { translateTimelineToOoxml } from './diagrams/timeline/translator.js';
-export type { TimelineChart, TimelinePeriod } from './diagrams/timeline/types.js';
 
 // kanban module (Family D — columns of calculated card boxes on a wpc:wpc
 // canvas, sharing translator/boxes.ts with timeline).
 export { parseKanban } from './diagrams/kanban/parser.js';
-export type { KanbanParseResult } from './diagrams/kanban/parser.js';
 export { translateKanbanToOoxml } from './diagrams/kanban/translator.js';
-export type { KanbanBoard, KanbanColumn, KanbanCard, KanbanPriority } from './diagrams/kanban/types.js';
 
 // packet module (Family D — bit-field rows of calculated boxes on a wpc:wpc canvas).
 export { parsePacketDiagram } from './diagrams/packet/parser.js';
-export type { PacketParseResult } from './diagrams/packet/parser.js';
 export { translatePacketToOoxml } from './diagrams/packet/translator.js';
-export type { PacketDiagram, PacketField } from './diagrams/packet/types.js';
 
 // treemap module (Family D — squarified nested rectangles on a wpc:wpc canvas).
 export { parseTreemap } from './diagrams/treemap/parser.js';
-export type { TreemapParseResult } from './diagrams/treemap/parser.js';
 export { translateTreemapToOoxml } from './diagrams/treemap/translator.js';
-export type { TreemapDiagram, TreemapNode, TreemapStyle } from './diagrams/treemap/types.js';
 
 // journey module (Family D — task columns, score row and actor lanes on a wpc:wpc canvas).
 export { parseJourney } from './diagrams/journey/parser.js';
-export type { JourneyParseResult } from './diagrams/journey/parser.js';
 export { translateJourneyToOoxml } from './diagrams/journey/translator.js';
-export type { JourneyChart, JourneyTask } from './diagrams/journey/types.js';
 
 // tree-view module (Family D — indented rows with connector bars on a wpc:wpc canvas).
 export { parseTreeView } from './diagrams/tree-view/parser.js';
-export type { TreeViewParseResult } from './diagrams/tree-view/parser.js';
 export { translateTreeViewToOoxml } from './diagrams/tree-view/translator.js';
-export type { TreeViewDiagram, TreeViewNode } from './diagrams/tree-view/types.js';
 
 // radar module (Family D — graticule, spokes and translucent curve polygons on a wpc:wpc canvas).
 export { parseRadar } from './diagrams/radar/parser.js';
-export type { RadarParseResult } from './diagrams/radar/parser.js';
 export { translateRadarToOoxml } from './diagrams/radar/translator.js';
-export type { RadarAxis, RadarChart, RadarCurve, RadarGraticule } from './diagrams/radar/types.js';
 
 // ishikawa module (Family D — spine, diagonal category bones and cause rows on a wpc:wpc canvas).
 export { parseIshikawa } from './diagrams/ishikawa/parser.js';
-export type { IshikawaParseResult } from './diagrams/ishikawa/parser.js';
 export { translateIshikawaToOoxml } from './diagrams/ishikawa/translator.js';
-export type { IshikawaCategory, IshikawaCause, IshikawaDiagram } from './diagrams/ishikawa/types.js';
 
 // xychart module (Family D — gridlines, bars and polylines on a wpc:wpc canvas).
 export { parseXyChart } from './diagrams/xychart/parser.js';
-export type { XyChartParseResult } from './diagrams/xychart/parser.js';
 export { translateXyChartToOoxml } from './diagrams/xychart/translator.js';
-export type { XyAxisX, XyAxisY, XyChart, XySeries } from './diagrams/xychart/types.js';
 
 // block module (Family D — column grid of blocks, nested groups and straight links on a wpc:wpc canvas).
 export { parseBlock } from './diagrams/block/parser.js';
-export type { BlockParseResult } from './diagrams/block/parser.js';
 export { translateBlockToOoxml } from './diagrams/block/translator.js';
-export type { BlockCell, BlockDiagram, BlockLink, BlockShape, BlockStyle } from './diagrams/block/types.js';
 
 // sankey module (Family D — layered nodes joined by proportional ribbons on a wpc:wpc canvas).
 export { parseSankey } from './diagrams/sankey/parser.js';
-export type { SankeyParseResult } from './diagrams/sankey/parser.js';
 export { translateSankeyToOoxml } from './diagrams/sankey/translator.js';
-export type { SankeyDiagram, SankeyLink } from './diagrams/sankey/types.js';
 
 // wardley module (Family D — components on visibility/evolution axes with links, pipelines and evolve arrows on a wpc:wpc canvas).
 export { parseWardley } from './diagrams/wardley/parser.js';
-export type { WardleyParseResult } from './diagrams/wardley/parser.js';
 export { translateWardleyToOoxml } from './diagrams/wardley/translator.js';
-export type { WardleyAnnotation, WardleyFlow, WardleyLink, WardleyMap, WardleyNode, WardleyNodeKind, WardleyPipeline, WardleyPositioned, WardleyStage, WardleyStrategy } from './diagrams/wardley/types.js';
 
 // event-modeling module (Family D — time-frame columns across UI / command-read model / event swimlanes on a wpc:wpc canvas).
 export { parseEventModeling } from './diagrams/event-modeling/parser.js';
-export type { EventModelingParseResult } from './diagrams/event-modeling/parser.js';
 export { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
-export type { EventModelingDiagram, EventModelingFrame, EventModelingKind, EventModelingNote, EventModelingScenario, EventModelingStatement } from './diagrams/event-modeling/types.js';
 
 // sequence module (Family E — lifelines, messages, activations, notes and block frames on a wpc:wpc canvas).
 export { parseSequence } from './diagrams/sequence/parser.js';
-export type { SequenceParseResult } from './diagrams/sequence/parser.js';
 export { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
-export type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from './diagrams/sequence/types.js';
 
 // zenuml module (parser only — it produces the sequence AST, rendered by translateSequenceToOoxml).
 export { parseZenuml } from './diagrams/zenuml/parser.js';
-export type { ZenumlParseResult } from './diagrams/zenuml/parser.js';
+
