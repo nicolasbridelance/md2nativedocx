@@ -73,7 +73,6 @@ export interface ConfigState {
   /** Diagrams section (2026-10 UX review, lot C). */
   smartArtEnabled: boolean;
   smartArtStyle: string;
-  smartArtDrawing: boolean;
   nativeChartsEnabled: boolean;
   pptxShowSource: boolean;
   /** The effective `md2nativedocx.referenceDocument` value, `''` if unset.
@@ -252,7 +251,6 @@ const GROUP_KEYS = {
   diagrams: [
     'smartArt.enabled',
     'smartArt.style',
-    'smartArt.preRenderedDrawing',
     'nativeCharts.enabled',
     'pptx.showSource',
   ],
@@ -498,7 +496,6 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
   const diagramsGroup = [
     diagramRow(t('SmartArt for processes, hierarchies and cycles'), 'smartArt.enabled', checkbox('smartArt.enabled', state.smartArtEnabled, false)),
     diagramRow(t('SmartArt look'), 'smartArt.style', select('smartArt.style', state.smartArtStyle, SMARTART_STYLE_NAMES, !state.smartArtEnabled)),
-    diagramRow(t('Pre-rendered SmartArt drawing'), 'smartArt.preRenderedDrawing', checkbox('smartArt.preRenderedDrawing', state.smartArtDrawing, !state.smartArtEnabled)),
     diagramRow(t('Native Word charts'), 'nativeCharts.enabled', checkbox('nativeCharts.enabled', state.nativeChartsEnabled, false)),
     diagramRow(t('PowerPoint: Mermaid source beside each diagram'), 'pptx.showSource', checkbox('pptx.showSource', state.pptxShowSource, false)),
   ].join('\n');

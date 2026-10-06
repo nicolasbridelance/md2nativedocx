@@ -28,7 +28,6 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     outputDirectory: '',
     smartArtEnabled: true,
     smartArtStyle: 'colorful',
-    smartArtDrawing: true,
     nativeChartsEnabled: true,
     pptxShowSource: false,
     scope: 'user',
@@ -200,7 +199,6 @@ test('Diagrams section reflects the SmartArt / chart / PowerPoint settings; depe
   assert.match(on, /data-key="pptx\.showSource" checked/);
   const off = buildConfigPanelHtml(baseState({ smartArtEnabled: false, nativeChartsEnabled: false }), describe, 'n');
   assert.match(off, /<select data-key="smartArt\.style" disabled>/);
-  assert.match(off, /data-key="smartArt\.preRenderedDrawing" checked disabled/);
   assert.match(off, /data-key="nativeCharts\.enabled"\/>/, 'charts off');
 });
 

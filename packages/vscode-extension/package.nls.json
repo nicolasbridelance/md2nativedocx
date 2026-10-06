@@ -16,7 +16,6 @@
   "configuration.smartArt.style.intense-accent": "One accent colour, with the theme's gradient fill, a drop shadow and a heavier white outline.",
   "configuration.smartArt.style.colorful-moderate": "A different accent colour per shape, soft gradient, light shadow and white outline.",
   "configuration.smartArt.style.intense": "Colourful, with the theme's gradient fill, a drop shadow and a heavier white outline.",
-  "configuration.smartArt.preRenderedDrawing.markdownDescription": "Embed the pre-rendered drawing Word itself always stores with a SmartArt, so Word and LibreOffice display the same shapes until the diagram is edited. Turn it off to let each application lay the diagram out on its own.",
   "configuration.nativeCharts.enabled.markdownDescription": "On by default: a Mermaid `pie`, `xychart` or `radar` becomes a native Word chart with an embedded workbook (Chart Design → Edit Data changes the values) instead of editable shapes. The chart keeps Word's own look rather than Mermaid's. A few diagrams stay shapes anyway (for example a horizontal `xychart` with a line series, with a warning).",
   "configuration.layout.pageSize.markdownDescription": "Page format for the generated document. Ignored (with a note in the export log) when `#md2nativedocx.referenceDocument#` points at a custom template — its own page setup is used instead.",
   "configuration.layout.orientation.markdownDescription": "Default page orientation. Ignored when `#md2nativedocx.referenceDocument#` is set, same as page format above.",

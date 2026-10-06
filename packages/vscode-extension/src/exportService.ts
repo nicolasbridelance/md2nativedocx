@@ -144,20 +144,15 @@ export interface RunCliOptions {
    * `md2nativedocx.referenceDocument` setting) — a company/corporate
    * template instead of the bundled default. */
   referenceDoc?: string;
-  /** Mirrors the `md2nativedocx.smartArt.enabled` setting. `true` opts an
-   * eligible diagram into native SmartArt instead of the OOXML canvas
-   * fallback every diagram otherwise gets. Omitted/`false` changes nothing
-   * (the CLI's default, as of the 2026-09-03 flip — see
-   * `md2nativedocx.mjs`'s doc comment on `smartArtEnabled`). */
+  /** Mirrors the `md2nativedocx.smartArt.enabled` setting: `false` keeps every diagram as shapes. Omitted
+   * leaves the CLI's default (on). */
   smartArtEnabled?: boolean;
   /** Chart types to make native Word charts with an embedded workbook (ADR 0011), from
-   * `md2nativedocx.nativeCharts.enabled` — e.g. `['pie', 'xychart', 'radar']`. Omitted/empty keeps every
-   * chart as shapes. */
+   * `md2nativedocx.nativeCharts.enabled` — e.g. `['pie', 'xychart', 'radar']`. Empty keeps every chart as
+   * shapes; omitted leaves the CLI's default (all three). */
   nativeChartTypes?: readonly string[];
   /** Mirrors `md2nativedocx.smartArt.style` (only used when SmartArt is enabled). */
   smartArtStyle?: SmartArtStyleName;
-  /** Mirrors `md2nativedocx.smartArt.preRenderedDrawing`: embed the cached `dsp:drawing`. */
-  smartArtDrawing?: boolean;
   /** See {@link LayoutOptions}. */
   layout?: LayoutOptions;
   /** Mirrors `md2nativedocx.toc.enabled`. Unlike `layout`, this works even
@@ -222,10 +217,10 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
   env.ELECTRON_RUN_AS_NODE = '1';
   if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
-  if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
-  if (options.nativeChartTypes && options.nativeChartTypes.length > 0) env.MD2NATIVEDOCX_NATIVE_CHARTS = options.nativeChartTypes.join(',');
+  // SmartArt and charts are on by default in the CLI too, so a setting turned off is passed as an explicit `0`.
+  if (options.smartArtEnabled !== undefined) env.MD2NATIVEDOCX_ENABLE_SMARTART = options.smartArtEnabled ? '1' : '0';
+  if (options.nativeChartTypes !== undefined) env.MD2NATIVEDOCX_NATIVE_CHARTS = options.nativeChartTypes.length > 0 ? options.nativeChartTypes.join(',') : '0';
   if (options.smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = options.smartArtStyle;
-  if (options.smartArtDrawing === true) env.MD2NATIVEDOCX_SMARTART_DRAWING = '1';
   const layout = options.layout;
   if (layout) {
     if (layout.pageSize) env.MD2NATIVEDOCX_PAGE_SIZE = layout.pageSize;

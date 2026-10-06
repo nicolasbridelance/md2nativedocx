@@ -242,12 +242,6 @@
             "markdownDescription": "%configuration.smartArt.style.markdownDescription%",
             "order": 1
           },
-          "md2nativedocx.smartArt.preRenderedDrawing": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "%configuration.smartArt.preRenderedDrawing.markdownDescription%",
-            "order": 2
-          },
           "md2nativedocx.nativeCharts.enabled": {
             "type": "boolean",
             "default": true,

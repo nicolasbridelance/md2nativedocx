@@ -15,7 +15,6 @@
   "configuration.smartArt.style.intense-accent": "Une seule couleur d'accent, avec le dégradé du thème, une ombre portée et un contour blanc plus épais.",
   "configuration.smartArt.style.colorful-moderate": "Une couleur d'accent différente par forme, dégradé doux, ombre légère et contour blanc.",
   "configuration.smartArt.style.intense": "Coloré, avec le dégradé du thème, une ombre portée et un contour blanc plus épais.",
-  "configuration.smartArt.preRenderedDrawing.markdownDescription": "Intègre le dessin pré-calculé que Word enregistre toujours avec un SmartArt : Word et LibreOffice affichent les mêmes formes tant que le diagramme n'est pas modifié. Désactivé, chaque application calcule sa propre mise en page.",
   "configuration.nativeCharts.enabled.markdownDescription": "Activé par défaut : un `pie`, `xychart` ou `radar` Mermaid devient un graphique Word natif avec un classeur embarqué (Création de graphique → Modifier les données change les valeurs) au lieu de formes modifiables. Le graphique garde l'apparence de Word, pas celle de Mermaid. Quelques diagrammes restent en formes (par exemple un `xychart` horizontal avec une série `line`, avec un avertissement).",
   "walkthrough.title": "md2nativedocx — Markdown vers Word, diagrammes modifiables",
   "walkthrough.description": "Exportez du Markdown vers Word (et PowerPoint). Vos diagrammes Mermaid restent modifiables : SmartArt, graphiques Word et formes, pas des images.",

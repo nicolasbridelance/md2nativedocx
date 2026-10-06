@@ -97,11 +97,6 @@ function smartArtStyleSetting(): SmartArtStyleName {
   return (SMARTART_STYLE_NAMES as readonly string[]).includes(value) ? (value as SmartArtStyleName) : 'colorful';
 }
 
-/** `md2nativedocx.smartArt.preRenderedDrawing` — embed the cached `dsp:drawing` (default on). */
-function smartArtDrawingSetting(): boolean {
-  return vscode.workspace.getConfiguration('md2nativedocx').get<boolean>('smartArt.preRenderedDrawing', true);
-}
-
 
 /** `md2nativedocx.smartArt.enabled` — `true` by default since the 2026-10 UX review (D1: every SmartArt
  * layout confirmed in real Word). Before that it was `false` (flipped 2026-09-03:
@@ -239,7 +234,6 @@ async function exportOptions(progress: vscode.Progress<{ message?: string }>, fo
     smartArtEnabled: smartArtEnabledSetting(),
     nativeChartTypes: nativeChartTypesSetting(),
     smartArtStyle: smartArtStyleSetting(),
-    smartArtDrawing: smartArtDrawingSetting(),
     layout,
     toc: tocEnabledSetting(),
     tocDepth: tocDepthSetting(),

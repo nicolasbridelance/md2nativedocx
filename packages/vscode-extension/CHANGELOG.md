@@ -5,6 +5,15 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+### Changed
+- The Marketplace description and README now lead with the complete Markdown-to-Word conversion
+  (headings, tables, footnotes, math, table of contents), diagrams being what sets it apart.
+- Smaller README images (shared with the repository's `docs/showcase/`).
+
+### Removed
+- Setting `md2nativedocx.smartArt.preRenderedDrawing`: the pre-rendered SmartArt drawing is always
+  embedded (it is what makes Word and other viewers show the same layout).
+
 ## [0.6.0] — 2026-10-06
 
 ### Changed
