@@ -1,5 +1,9 @@
 # Catalogue SmartArt complet, retourné : archétype → Mermaid → implémentation OOXML
 
+> **Statut au 2026-10-06 :** ce document de planification a été largement réalisé (colonne « Statut
+> moteur »). Ce que devient réellement chaque type Mermaid : `docs/coverage.md`. Les pistes restantes
+> sont dans `TODO.md` §3.
+
 > Document de planification, zéro implémentation. Complète `docs/smartart-layout-catalog.md`
 > (qui jugeait chaque layout **uniquement** pour un flowchart Mermaid, et qui à ce titre a écarté
 > en bloc Matrix/Pyramid/Picture/la majorité de Relationship) en le rejugeant contre **les 28

@@ -1,7 +1,7 @@
 # MVP acceptance report (spec §9)
 
 Evidence for the two MVP acceptance items in `docs/specs/cahier_des_charges.md` §9 /
-`TODO.md`. Written 2026-09-03. Supersedes "checked by eye during visual-baseline review" as the
+`docs/history/TODO_ARCHIVE.md`. Written 2026-09-03. Supersedes "checked by eye during visual-baseline review" as the
 basis for these claims.
 
 ## 1. Flowchart ≤15 nodes: 0 crossings requiring manual rearrangement, >90% of tested cases

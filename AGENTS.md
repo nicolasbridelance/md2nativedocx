@@ -40,7 +40,7 @@ Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or s
 
 ---
 
-## Repo structure (target layout — scaffold it in Phase 0 if it doesn't exist yet)
+## Repo structure
 
 ```
 md2nativedocx/
@@ -65,6 +65,8 @@ md2nativedocx/
 │   │   │   ├── parser/          # Mermaid text -> intermediate AST
 │   │   │   ├── layout/          # AST -> coordinates (Dagre default, Graphviz optional)
 │   │   │   ├── translator/      # coordinates -> OOXML/DrawingML XML string
+│   │   │   ├── diagrams/        # one module per non-flowchart Mermaid type (parser + translator)
+│   │   │   ├── smartart/        # SmartArt classifier and self-authored layout generators
 │   │   │   └── index.ts
 │   │   └── test/
 │   │       ├── unit/
@@ -72,12 +74,16 @@ md2nativedocx/
 │   │       └── fuzz/            # property-based tests on the untrusted-input boundary
 │   ├── pandoc-filter/            # Lua filter, thin wrapper calling core (spec §5.4.a)
 │   ├── cli/                      # `npx md2nativedocx` (spec §8)
-│   └── vscode-extension/         # spec §5.4.b
+│   ├── pptx/                     # .pptx decks from the same core output (ADR 0010)
+│   ├── vscode-extension/         # spec §5.4.b
+│   └── word-addin/               # Office.js ribbon add-in, on hold (ADR 0008)
 └── docs/
     ├── specs/                     # product specs: cahier_des_charges.md (what/why), UX_SPEC.md,
     │                              # cahier_des_charges_google_slides.md, FUTURE_*_SPEC.md
     ├── adr/                       # architecture decision records
-    └── compliance/                # licensing, IT risk analysis, non-technical guide
+    ├── compliance/                # licensing, IT risk analysis, non-technical guide
+    ├── manual/                    # user manual (French)
+    └── history/                   # closed work: TODO archive, incident reports
 ```
 
 `packages/core` has zero knowledge of Pandoc, VS Code, or Office.js — it's a pure function from
@@ -101,11 +107,9 @@ pinned in `.github/workflows/ci.yml` — drift between "works in my Codespace" a
 wastes everyone's time.
 
 The `.NET` SDK (for `scripts/oxml-validator/`, see "Diagnosing 'Word won't open the file'" below)
-is **not yet** part of this list — `test:oxml-validate` degrades gracefully without it, and adding
-it to `.devcontainer/`/`ci.yml` is tracked as a separate, human-reviewed change (see the Codespaces
-security note right below: this file's own rule is that the agent never bundles a
-`.devcontainer/`/`ci.yml` change into an unrelated diff). If it's present on `PATH` already
-(e.g. a Codespace prebuilt after that change lands), the test picks it up automatically.
+is part of this list since PR #7 (2026-09-06): pinned in `.devcontainer/setup.sh` and in `ci.yml`
+(`actions/setup-dotnet`), same version in both. `test:oxml-validate` still degrades gracefully
+when it is missing from `PATH`.
 
 **Security: `.devcontainer/` and `.vscode/` are executable, not just configuration.** Codespaces
 automatically runs whatever a repository's `devcontainer.json` (`postCreateCommand`, lifecycle
@@ -129,8 +133,7 @@ Concretely:
 
 ## Build, test, lint — expected commands
 
-None of this exists yet, so treat this list as the contract to set up during Phase 0/1, not as
-already-working commands to assume:
+All of these exist; `TESTING.md` says which ones CI runs and when:
 
 | Command | Purpose |
 |---|---|
@@ -275,8 +278,9 @@ a concrete sense of how expensive guessing is compared to validating.
 `scripts/oxml-validator/` requires the `.NET` SDK; skips gracefully (not a failure) when
 unavailable, same convention as `test:visual` without LibreOffice. Errors under `/word/diagrams/*`
 are this project's own SmartArt/diagram output and must be zero; errors elsewhere are known
-pre-existing noise inherited from `packages/cli/assets/reference.docx` (tracked in `TODO.md`, not
-something a diagram-focused fix needs to also resolve).
+pre-existing noise inherited from `packages/cli/assets/reference.docx` (investigated 2026-09-06: the
+same errors are in Pandoc's own `reference.docx`; see `docs/history/TODO_ARCHIVE.md`), not
+something a diagram-focused fix needs to also resolve.
 
 ---
 

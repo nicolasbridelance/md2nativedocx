@@ -1,7 +1,7 @@
 # Test strategy — `md2nativedocx`
 
 > This file exists because the test directory grew by successive additions rather than by
-> design, and that ended up being confusing — see `TODO.md` (2026-08-07) for the history of
+> design, and that ended up being confusing — see `docs/history/TODO_ARCHIVE.md` (2026-08-07) for the history of
 > that finding and the cleanup that followed. This document gives the missing overview: the
 > project's seven test chapters, what each one guarantees, where it lives, and how to add a case.
 
@@ -33,7 +33,7 @@ Each chapter answers a question none of the others can answer alone:
   or not render at all in Word/LibreOffice. Several defects in this category (namespaces not
   declared on the root, invisible arrows, overlapping subgraph title, an edge crossing through a
   node, rendering completely absent past a given width/height ratio) were found ONLY by this
-  chapter — see `TODO.md` for the detailed history of each.
+  chapter — see `docs/history/TODO_ARCHIVE.md` for the detailed history of each.
 - Chapter 5 exists because chapters 1-4 all stop at "well-formed XML" or "renders correctly under
   LibreOffice" — neither implies **schema-valid**, and Word enforces its schema strictly where
   LibreOffice does not enforce it at all. This gap cost 7 rounds of manually-compared,
@@ -93,7 +93,7 @@ SmartArt `layoutDef`'s own `forEach`/`presOf` queries — it only ever displays 
 presentation mirror `packages/core/src/smartart/{chain,tree,cycle}.ts` hand-authored into the data
 model (ADR 0004 "Round 5"). Real Word *does* resolve those queries live. A bug in how a `presOf`
 query is written (e.g. an `axis` that matches more nodes than intended) is therefore **completely
-invisible to this chapter** — found the hard way (TODO.md, "Incident SmartArt", 2026-09-05):
+invisible to this chapter** — found the hard way (`docs/history/TODO_ARCHIVE.md`, "Incident SmartArt", 2026-09-05):
 `tree.ts`'s root box rendered fine here while showing an extra bulleted list of every child's text
 in real Word. Only chapter 7 (real Word) can catch this class of defect; chapters 1-5 (including
 this one and schema validation) structurally cannot.
@@ -115,7 +115,7 @@ any of them.
 
 Errors are split into two buckets: those under `/word/diagrams/*` (our own SmartArt translator's
 output) must be zero and fail the test; everything else is known pre-existing schema noise
-inherited from `packages/cli/assets/reference.docx` (tracked separately in `TODO.md`, not this
+inherited from `packages/cli/assets/reference.docx` (Pandoc's own, see `docs/history/TODO_ARCHIVE.md`; not this
 chapter's job to fix) — printed for visibility, never failed on.
 
 **Adding a case**: add an entry to `SMARTART_FIXTURES` (or `PLAIN_FIXTURE_NAMES`, reusing a

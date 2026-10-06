@@ -163,7 +163,7 @@ faiblesse n°1 identifiée en §5.1 de la spec ("le titre du sous-graphe devient
 plus, pas un cadre autour du groupe") : son langage visuel *est* littéralement "un anneau dessiné
 autour d'un groupe", bien plus proche de ce qu'est réellement un `subgraph` Mermaid (un conteneur,
 pas un nœud de hiérarchie). Aucun échantillon Word extrait à ce jour — prochaine étape concrète si
-cette piste est retenue : demander un échantillon (`docs/smartart-samples-wishlist.md`) et
+cette piste est retenue : demander un échantillon (`docs/history/smartart-samples-wishlist.md`) et
 l'analyser avec la même méthode que `hierarchy1`/`hierarchy2` (Round 1-4 de `spike.md`). Question
 ouverte à vérifier en priorité sur l'échantillon : est-ce que chaque anneau ne porte qu'un seul
 élément de texte (auquel cas ça ne couvre que "un `subgraph` = un seul nœud", pas un groupe de

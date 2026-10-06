@@ -1,5 +1,10 @@
 # docs/specs/UX_SPEC.md
 
+> **Statut au 2026-10-06 :** pour l'extension VS Code, la Partie 1 ci-dessous décrit l'état de
+> septembre 2026. Le comportement actuel (CodeLens, survol, sous-menu Word/PowerPoint, réglages en
+> sections, SmartArt et graphiques activés par défaut) est décrit par `docs/specs/UX_REVIEW_2026-10.md`
+> §3, qui prime en cas de divergence.
+
 Comportement à l'écran des composants utilisateur de `md2nativedocx` : l'extension VS Code
 (Partie 1) et l'add-in Word (Partie 2). Troisième pilier de la documentation du projet, à lire
 avec les deux autres :

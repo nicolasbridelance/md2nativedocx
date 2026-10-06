@@ -1,7 +1,9 @@
 # Revue UX de l'extension VS Code — octobre 2026
 
-Statut : **décisions D1–D9 validées telles que recommandées par le mainteneur (2026-10-06)** ; lots A, B et C livrés (2026-10-06), lot D ensuite. Une fois livrée,
-la cible (section 3) remplacera la Partie 1 de `UX_SPEC.md`, qui décrit l'état de septembre.
+Statut : **réalisée.** Décisions D1–D9 validées telles que recommandées par le mainteneur (2026-10-06) ;
+lots A à D livrés et publiés dans la version 0.6.0 de l'extension (2026-10-06). La section 3 décrit
+désormais le comportement réel de l'extension et prime sur la Partie 1 de `UX_SPEC.md` là où elles
+diffèrent.
 
 Pourquoi maintenant : l'extension a été pensée pour « un document Markdown → un `.docx` ». Depuis,
 le projet a gagné le `.pptx`, les SmartArt (validés dans Word, mais désactivés par défaut), les

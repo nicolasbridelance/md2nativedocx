@@ -1,5 +1,9 @@
 # Liste de courses — échantillons SmartArt réels à extraire de Word
 
+> **Archivé le 2026-10-06 : toutes les pistes de cette liste sont closes** (voir `docs/coverage.md`,
+> « What was ruled out »). La méthode d'extraction ci-dessous reste valable si un nouvel échantillon
+> Word est un jour nécessaire.
+
 > Objectif : débloquer les pistes de `docs/smartart-layout-catalog.md` qui ne peuvent pas être
 > devinées sans un vrai fichier produit par Word. Même méthode que celle déjà utilisée pour
 > `hierarchy1`/`hierarchy2` (`docs/adr/0004-smartart-feasibility-spike.md`,

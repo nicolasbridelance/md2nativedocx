@@ -12,8 +12,9 @@ document to can edit in Word, without Markdown, Mermaid or you:
 
 - **Fix a diagram like any Word drawing:** retype a label, drag a box; the arrows stay attached.
 - **Match the company look:** recolour any shape; flowcharts and SmartArt follow the theme colours, and SmartArt restyles from Word's SmartArt Design tab.
-- **Update a chart's figures:** pie, bar/line and radar charts can be native Word charts with *Edit Data* (opt-in).
-- **Grow an org chart or a process:** tree, chain and cycle flowcharts can become SmartArt (opt-in); add a step in one click.
+- **Update a chart's figures:** pie, bar/line and radar charts become native Word charts with *Edit Data*.
+- **Grow an org chart or a process:** processes, cycles, org charts, mindmaps, timelines and kanban boards become
+  SmartArt; add a step in one click.
 - **Send it with confidence:** every export is checked against Word's own file-format rules.
 
 All 29 Mermaid diagram types are supported. (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*

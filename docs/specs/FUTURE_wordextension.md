@@ -1,5 +1,9 @@
 # Cahier des Charges Fonctionnel & Technique
 
+> **Statut au 2026-10-06 : en pause.** L'add-in Word est scaffoldé (`packages/word-addin/`) mais
+> bloqué sur trois spikes qui demandent un vrai Word desktop (`docs/adr/0008-word-addin-ribbon-platform-spike.md`,
+> `TODO.md` §1). Le convertisseur Word → Markdown décrit ici n'existe pas.
+
 ## Module : Word-to-Markdown / SmartArt-to-Mermaid ("Chemin Retour")
 
 ### 1. Contexte & Objectifs

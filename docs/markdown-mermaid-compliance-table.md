@@ -1,80 +1,21 @@
 # Tableau de compliance — Markdown + Mermaid flowchart → Word natif
 
-> **Scope explicite** : ce document ne couvre que le type de diagramme **flowchart**
-> (`graph`/`flowchart`) — pas les 28 autres types que Mermaid supporte (tous livrés depuis 2026-10-02, 29/29 avec flowchart ; ce tableau de fidélité ne les couvre pas) (sequenceDiagram,
-> classDiagram, pie, gantt, mindmap, etc.). Ce n'est pas un oubli : le titre du document l'a
-> toujours dit, et `cahier_des_charges.md` §11 classe explicitement le reste en roadmap V2+.
-> Pour la feuille de route de ces 28 types (taxonomie par famille de rendu, prérequis
-> architectural, priorisation proposée), voir `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md`.
+> **Scope** : le type **flowchart** (`graph`/`flowchart`) seulement. Ce que deviennent les 28 autres
+> types (SmartArt, graphique Word ou formes) : `docs/coverage.md`.
 >
-> Document en deux parties, pas une spec normative. **§4** couvre la fidélité Markdown/GFM autour
-> du diagramme (titres, gras/italique, tableaux, listes, etc.) — traitement volontairement court
-> car cette fidélité est la même quelle que soit la stratégie choisie pour le diagramme lui-même,
-> déjà couverte par sa propre suite de tests. **§5, le cœur du document**, évalue la syntaxe
-> Mermaid flowchart elle-même sur les **3 stratégies de sortie** possibles pour un diagramme donné
-> (SmartArt natif, hybride SmartArt+OOXML, OOXML pur) — c'est cette partie, pas SmartArt en tant
-> que tel, qui donne son sujet au document : SmartArt n'est qu'une des trois colonnes évaluées à
-> chaque ligne.
+> Le document évalue chaque construction de la syntaxe flowchart sur **3 stratégies de sortie** :
+> SmartArt seul, hybride (SmartArt quand le classifieur l'accepte, formes sinon — c'est le
+> comportement réel du produit) et OOXML seul (formes). §4 couvre brièvement le Markdown autour du
+> diagramme.
 >
-> Statut (mis à jour 2026-09-03, après la version initiale de ce document) : `chain.ts`, `tree.ts`
-> **et `cycle.ts`** sont désormais tous les trois livrés et validés par rendu LibreOffice réel — la
-> direction (`TD`/`LR`), les couleurs par nœud (`classDef`) et les libellés d'arête sont également
-> pris en compte depuis cette mise à jour (voir §2.3/§2.4, corrigés). Objectif explicite (demandé
-> par le mainteneur, cf. `TODO.md` "Phase 6/7") : permettre à quiconque reprend ce chantier de
-> décider, en connaissance de cause, s'il faut changer de stratégie de représentation, pousser vers
-> 100 % de couverture SmartArt avec de nouvelles techniques, ou garder l'approche hybride actuelle.
-> Toute case du tableau ci-dessous doit se lire avec son "comment" et ses limites, jamais comme
-> un simple ✅/❌ — voir les avertissements de portée en §2 avant de tirer une conclusion d'une ligne
-> isolée.
->
-> **[Mise à jour 2026-09-04]** Quatre des limites 🔧 listées ci-dessous ont été levées cette
-> session, sans qu'aucune ne se soit révélée être un obstacle technique de fond (voir §2 point 1) :
-> directions `BT`/`RL` (parser, `layout.ts`/Dagre — au passage, un bug latent adjacent corrigé :
-> `rankdir` recevait la chaîne littérale `'TD'`, une valeur que Dagre ne reconnaît pas, et retombait
-> silencieusement sur son propre défaut `'TB'` — **et** `chain.ts`/`tree.ts`, deux nouveaux gabarits
-> `linDir` chacun, vérifiés par rendu LibreOffice réel exactement comme les corrections `TD`/`LR` du
-> 2026-09-03), forme asymétrique `id>Texte]` (nouveau preset `homePlate`), modificateurs de longueur
-> `---->`/`====>`/`-...->` (le scanner d'opérateurs reconnaît maintenant une longueur variable), et
-> `class`/`:::` référencé avant son `classDef` (résolution en deux passes, même mécanisme que
-> `pendingStyles`). Détail dans les lignes concernées (§5.1, §5.2, §5.3, §5.4) et dans le message de
-> commit. Séparément, une inexactitude préexistante corrigée en passant : §5.7 ("Cycle fermé")
-> décrivait `smartArt.enabled` comme actif par défaut — c'est désormais **`false` par défaut** (CLI
-> et extension), précisément à cause du bug documenté sur cette même ligne ; SmartArt reste
-> disponible en opt-in (`MD2NATIVEDOCX_ENABLE_SMARTART=1` / réglage de l'extension) pour qui veut
-> expérimenter ou reprendre ce chantier.
->
-> **[Mise à jour 2026-09-04, plus tard le même jour]** Les deux limites 🔧 "Retours à la ligne" et
-> "Markdown Strings" (§5.3) sont levées **côté OOXML seul** (rich-text runs) : `parser.ts`'s
-> `parseLabel()` produit désormais, en plus du texte aplati déjà utilisé par `chain.ts`/`tree.ts`,
-> une structure `labelRuns` (`types.ts`'s `LabelToken[]`) que `ooxml-translator.ts` rend en runs
-> `w:r`/`w:br` réels — un vrai retour à la ligne (`<br/>`) et de vrais runs `w:b`/`w:i` (Markdown
-> string) au lieu d'un aplatissement en texte plein. `layout.ts`'s `nodeDimensions()` réserve
-> désormais la hauteur pour chaque ligne forcée. Cette structure n'existait pas avant : ce n'était
-> donc pas une limite de parseur commune aux 3 colonnes (🔧), mais une limite du traducteur OOXML
-> spécifiquement — `chain.ts`/`tree.ts` (colonnes SmartArt/Hybride) restent inchangés, toujours sur
-> le texte aplati. Rendu réel LibreOffice vérifié.
->
-> **[Mise à jour 2026-09-04, encore plus tard le même jour]** La ligne "Direction de sous-graphe"
-> (§5.1) n'est plus une limite de **parseur** (🔧, silencieusement ignorée) mais une limite
-> documentée du **traducteur OOXML/Dagre** : `parser.ts` reconnaît maintenant
-> `direction <TD|TB|LR|BT|RL>` à l'intérieur d'un `subgraph` (`Subgraph.direction`, `types.ts`) et
-> avertit explicitement plutôt que de tomber dans le générique `"Unsupported line ignored"` — mais
-> Dagre met en page tout un graphe sous un seul `rankdir` global, sans notion de direction par
-> cluster, donc la direction demandée n'est toujours pas appliquée à la géométrie (le sous-graphe
-> s'affiche dans la direction du flowchart parent). Un vrai support demanderait une passe de layout
-> récursive indépendante par sous-graphe — chantier d'architecture distinct, pas fait ici. Voir
-> `types.ts`'s `Subgraph.direction` pour le détail technique complet.
->
-> **[Mise à jour 2026-09-04, encore plus tard le même jour]** La ligne "Auto-boucle" (§5.7) passe de
-> "non audité, pas de verdict" à ✅ Full côté OOXML : un vrai bug de rendu a été trouvé (ligne droite
-> traversant le nœud, pas une boucle) et corrigé, en deux temps — `connectorGeometry()`
-> (`ooxml-translator.ts`) utilise désormais la vraie boucle déjà calculée par Dagre au lieu de la
-> dégénérescence de `chooseSides()` pour deux boîtes identiques, puis la forme est déclarée
-> `wps:cNvSpPr` plutôt que `wps:cNvCnPr` une fois découvert que LibreOffice réécrit purement et
-> simplement le tracé d'un connecteur qui se référence lui-même. `computeBoundingBox()`/
-> `boundsOrigin()` incluent désormais aussi les tracés d'arête (une auto-boucle déborde par
-> construction de la boîte de son propre nœud). Confirmé corriger un vrai bug déjà présent dans
-> `large2.mmd` (corpus officiel Mermaid), pas seulement un cas synthétique.
+> **Statut au 2026-10-06.** Les colonnes SmartArt reflètent l'état confirmé dans un vrai Word
+> (`test-corpus/word-verification/CHECKLIST.md`, Rounds 6 à 20) : chaîne, cycle et arbre jusqu'à 10
+> niveaux dans les 4 directions, forme Mermaid de chaque nœud conservée, retours à la ligne et
+> gras/italique conservés, couleurs `classDef` appliquées. SmartArt est activé par défaut dans
+> l'extension VS Code (`md2nativedocx.smartArt.enabled`), en opt-in au CLI
+> (`MD2NATIVEDOCX_ENABLE_SMARTART=1`). Les mentions datées « corrigé 2026-09-0x » dans les cellules
+> retracent l'historique ; le journal détaillé des mises à jour qui précédait ce statut est dans
+> l'historique git de ce fichier.
 
 ## 1. Sources consultées
 
@@ -109,7 +50,7 @@ limite de SmartArt ou d'OOXML — c'est très généralement l'un des points ci-
    éligible (parties écrites dans un dossier temporaire, relIds provisoires remplacés par de vrais
    `rId` après coup par `postprocess.mjs`), sinon le traducteur `wpg:wgp` existant inchangé. Testé
    de bout en bout (export CLI réel, rendu LibreOffice), pas seulement en isolation. Détail complet
-   dans `TODO.md` (item "Dispatch classifieur → générateur câblé").
+   dans `docs/history/TODO_ARCHIVE.md` (item "Dispatch classifieur → générateur câblé").
 3. **[Corrigé le 2026-09-03, étendu le 2026-09-04] SmartArt respecte désormais `flowchart.direction`
    sur ses 4 valeurs.** `chain.ts` choisit entre `CHAIN_LAYOUT_XML` (`LR`, implicite `fromL`),
    `CHAIN_LAYOUT_XML_TD` (`TD`, `linDir="fromT"`), `CHAIN_LAYOUT_XML_BT` (`BT`, `linDir="fromB"`,
@@ -129,8 +70,10 @@ limite de SmartArt ou d'OOXML — c'est très généralement l'un des points ci-
    point de **contenu** du nœud — testé et confirmé cette session : un override identique sur un point
    de **présentation** (ce qu'avait testé ADR 0004 "Round 5") n'a aucun effet sous LibreOffice, mais
    sur le point de contenu, si. Un override de **forme** (`a:prstGeom`) au même endroit reste, lui,
-   sans effet (confirmé par le même test) — la forme du nœud (§5.2 de la table ci-dessous) demeure
-   donc hors de portée.
+   sans effet (confirmé par le même test). **[Levé le 2026-10-06]** La forme du nœud passe en
+   fait par le point de **présentation** de la boîte (structure lue dans un échantillon Word, *Changer
+   la forme*) : losange, cercle, cylindre, hexagone… sont conservés, confirmé en vrai Word (Round 20).
+   Seuls rectangle, coins arrondis et stade gardent la forme du layout.
 
 5. **[Ajouté 2026-09-03, incident cycle ci-dessous] "✅ Full" pour une ligne SmartArt/Hybride ne
    veut dire, sauf mention contraire explicite, que "rendu correctement sous LibreOffice headless"
@@ -141,6 +84,14 @@ limite de SmartArt ou d'OOXML — c'est très généralement l'un des points ci-
    nœuds généré par le pipeline de production lui-même) échoue directement à l'ouverture — voir la
    ligne "Cycle fermé" ci-dessous. Ne pas lire une case "✅ Full" de ce tableau comme une garantie
    de conformité OOXML/Word tant qu'elle ne cite pas explicitement un test en Word réel.
+   **[2026-10-06]** Depuis, chaîne, cycle, arbres (1 à 10 niveaux, 4 directions) et formes par nœud
+   ont tous été ouverts dans un vrai Word (CHECKLIST Rounds 6-20) ; la mise en garde reste valable
+   pour toute nouvelle ligne.
+6. **[2026-10-06] Connecteurs.** Plusieurs cellules plus bas disent que `chain.ts`/`tree.ts` « ne
+   dessinent aucun connecteur ». Ce n'est plus vrai : chaîne et cycle ont des flèches de transition
+   SmartArt, les arbres des traits parent→enfant (Rounds 9-12). Reste vrai : le **style** de l'arête
+   Mermaid (pointillé, épais, cercle/croix, `linkStyle`) n'est pas reproduit, et un libellé d'arête
+   devient un préfixe du texte du nœud destination.
 
 ## 3. Légende
 
@@ -194,7 +145,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 
 | Fonctionnalité | Syntaxe | SmartArt seul | Hybride | OOXML seul |
 |---|---|---|---|---|
-| Rectangle | `id[Texte]` | 🟡 Partial — le nœud est représenté, mais SmartArt affiche systématiquement `roundRect`, jamais un rectangle droit (aucune des 11 formes parsées — voir les lignes ci-dessous — n'est propagée dans `chain.ts`/`tree.ts` aujourd'hui — le champ `NodeShape` du nœud n'est simplement pas lu par ces générateurs) | 🟡 Partial si classifié SmartArt (même perte) ; ✅ Full si fallback OOXML | ✅ Full — `PRST_BY_SHAPE` mappe `rect` → `<a:prstGeom prst="rect">` exactement |
+| Rectangle | `id[Texte]` | 🟡 Partial — le nœud est représenté, mais SmartArt garde la forme du layout (`roundRect`) pour un rectangle droit ; les autres formes sont conservées depuis le 2026-10-06 (lignes ci-dessous) | 🟡 Partial si classifié SmartArt (même perte) ; ✅ Full si fallback OOXML | ✅ Full — `PRST_BY_SHAPE` mappe `rect` → `<a:prstGeom prst="rect">` exactement |
 | Coins arrondis | `id(Texte)` | ✅ Full *par accident* — SmartArt affiche `roundRect` pour tout nœud, donc un nœud `roundRect` d'origine "tombe juste", mais ce n'est pas une transmission fidèle de l'info : n'importe quelle forme d'origine donnerait le même rendu (voir ligne Rectangle) | ✅ Full *par accident*, même remarque | ✅ Full |
 | Stade (pilule) | `id([Texte])` | 🟡 Partial — même dégradation que Rectangle (toujours `roundRect`) | 🟡 Partial / ✅ Full selon fallback | ✅ Full |
 | Cylindre (BDD) | `id[(Texte)]` | ✅ Full (corrigé 2026-10-06) — même mécanisme que le losange : forme Word équivalente (`PRST_BY_SHAPE`) en override sur le point de présentation + dessin pré-rendu ; variantes miroir sans miroir | 🟡 Partial / ✅ Full | ✅ Full |
@@ -259,7 +210,7 @@ Mermaid, pas une fonctionnalité Markdown générale.
 | ID explicite (`subgraph id [Titre]`) | — | ❌ None (même disqualification) | ✅ Full (fallback) | ✅ Full |
 | Arêtes vers/depuis un sous-graphe | `one --> two` (sous-graphes) | ❌ None (même disqualification) | ✅ Full (fallback) — **note** : le parseur V1 actuel supprime explicitement toute arête référençant un id de sous-graphe comme extrémité (`edgesWithoutSubgraphs`, `parser.ts` ligne 214-220) ; c'est donc une limite de parseur qui s'ajoute, indépendante de la stratégie | 🔧 même limite de parseur — l'arête inter-sous-graphes est de toute façon supprimée avant translation, peu importe la stratégie |
 | Imbrication de sous-graphes | `subgraph A\n subgraph B...end\nend` | ❌ None (disqualification) | ✅ Full (fallback, testé) | ✅ Full |
-| `subgraph` = "hiérarchie SmartArt libellée" (piste, §5 de la spec) | — | ⏳ **Non implémenté** — idée documentée (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §5, et le layout `Labeled Hierarchy` identifié dans `docs/smartart-layout-catalog.md`) : le titre du sous-graphe deviendrait un nœud parent supplémentaire dans `dgm:dataModel`, à un seul niveau, uniquement si le sous-graphe est lui-même `tree`/`chain` avec un point d'entrée unique. Aucun code écrit à ce jour. | ⏳ même statut — si implémenté un jour, changerait cette ligne et la précédente pour les sous-graphes remplissant ces conditions | ✅ Full (comportement actuel, inchangé par cette piste) |
+| `subgraph` = "hiérarchie SmartArt libellée" (piste, §5 de la spec) | — | ❌ **Écarté avec preuve** — `Labeled Hierarchy` étiquette par niveau de profondeur, pas par branche ; `Nested Target` et « boîte de titre + SmartArt intégré » écartés aussi (`docs/coverage.md`, « What was ruled out ») | ✅ Full (fallback) | ✅ Full |
 | Direction de sous-graphe + limitation d'héritage | `direction TB` dans un `subgraph` lié à l'extérieur | ❌ None (disqualification) | 🟡 Partial si fallback (sous réserve de la limite signalée en §5.1 : direction par sous-graphe parsée mais pas appliquée au layout — limite de Dagre, pas du parseur, depuis 2026-09-04) | 🟡 limite du traducteur OOXML/Dagre, voir §5.1 |
 | Sous-graphe repliable (`view: collapsed`, v11.17+) | `id@{ view: collapsed }` | 🔧 ❌ None — `parseAtShapeSyntax()` (§5.2, corrigé 2026-09-04) ne s'applique qu'à une déclaration de **nœud** (`shape:`/`label:`), pas à un `subgraph` ; sa propriété `view:` n'a de toute façon aucune contrepartie côté parseur de sous-graphe ; **et** sans objet pour une sortie statique — "replié/déplié" est un état d'interaction, pas un état représentable dans un `.docx` figé | 🔧 idem — sans objet dans un document statique | 🔧 idem — sans objet |
 
@@ -276,7 +227,7 @@ utilement les sections précédentes qui listent des *constructions syntaxiques*
 | Arbre, profondeur ≤ 2 (racine + une rangée d'enfants directs), 4 directions | — | ✅ Full — `tree.ts` livré, testé, **rendu réel vérifié** (racine + rangée d'enfants stylée, cette session) ; mêmes pertes de forme/couleur/libellé qu'en chaîne | ✅ Full | ✅ Full |
 | Arbre, profondeur 3 à 10 (petits-enfants et plus), 4 directions, sans limite de largeur | `MAX_TREE_DEPTH = 10` | ✅ Full (`tree-deep.ts`) : disposition `hierRoot`/`hierChild` récursive, place répartie selon la forme réelle de chaque sous-arbre, trait parent→enfant à chaque niveau. **confirmé dans Word réel dans les 4 directions** (2026-10-06, CHECKLIST Rounds 14-15 ; `TD` agrandi jusqu'à 10 niveaux / 23 feuilles). Un arbre descendant trop large passe en disposition compacte (feuilles en colonne sous leur parent, règle de l'organigramme Word ; `tree-deep1-compact`, confirmé dans Word réel, CHECKLIST Round 16) | ✅ Full | ✅ Full |
 | Arbre de plus de 10 niveaux | `tree-too-deep` | ❌ None — disqualifié explicitement | ✅ Full (fallback automatique) | ✅ Full |
-| Cycle fermé (in-degré = out-degré = 1 partout) | — | ❌ **CASSÉ en Word réel, confirmé 2026-09-03** — un simple cycle à 3 nœuds (`A-->B-->C-->A`) produit un `.docx` que Word refuse d'ouvrir ("erreur lors de l'ouverture du fichier", proposition du convertisseur de récupération de texte — le même échec dur que l'incident `wpc:graphicFrame` documenté dans `docs/adr/spikes/spike-smartart/spike.md`). La mention "✅ Full" précédente de cette ligne reposait **uniquement** sur un rendu LibreOffice réussi au premier essai — jamais testé en Word réel avant cette date, malgré l'avertissement explicite ailleurs dans ce même repo (`TODO.md`, l'incident `mc:Ignorable`) que "propre sous LibreOffice" n'implique pas "propre sous Word". Cause racine non encore identifiée (`packages/core/src/smartart/cycle.ts`, `CYCLE_LAYOUT_XML` — XML bien formé, structure calquée sur `chain.ts` qui lui a un échantillon Word réel positif au moins pour un cas isolé). Prochaine étape : générer un vrai SmartArt "Basic Cycle" depuis le menu Insertion de Word (pas notre outil) et diffé contre notre sortie, méthode qui a déjà résolu l'incident `mc:Ignorable` et celui du `wpc:graphicFrame` imbriqué. | ❌ **Cassé — même générateur, même échec**, mais **[corrigé le 2026-09-04] `smartArt.enabled` vaut désormais `false` par défaut** (CLI et extension), précisément à cause de cet incident : SmartArt n'est plus produit à moins d'un opt-in explicite (`MD2NATIVEDOCX_ENABLE_SMARTART=1` / réglage de l'extension), donc un flowchart en boucle fermée ne produit plus de fichier corrompu par défaut — le bug de `cycle.ts` lui-même reste néanmoins non résolu pour qui active l'opt-in. | ✅ Full — Dagre gère un cycle comme n'importe quel graphe dirigé, aucune disqualification |
+| Cycle fermé (in-degré = out-degré = 1 partout) | — | ✅ Full — `cycle.ts`, **confirmé dans Word réel** (2026-10-05, CHECKLIST Rounds 6-11) : boîtes réparties en cercle, flèche de transition entre chaque paire, y compris la flèche de fermeture (`hideLastTrans=0`). Historique : un cycle à 3 nœuds a d'abord produit un fichier que Word refusait (2026-09-03, cause : `modelId` non conforme à `ST_ModelId`, ADR 0006), puis des formes vides (corrigé en restructurant le layout, Round 6). | ✅ Full (même générateur) | ✅ Full — Dagre gère un cycle comme n'importe quel graphe dirigé |
 | Fusion après branchement (décision → Oui/Non → merge) | `merge-after-branch` | ❌ None — disqualifié explicitement ; c'est, selon la spec elle-même, **le pattern le plus fréquent dans un flowchart réel** (§6, §10.1) — la limitation la plus citée de tout ce chantier | ✅ Full (fallback automatique — c'est précisément la raison d'être du dispatch hybride) | ✅ Full |
 | Topologie irrégulière (multi-racines, etc.) | `irregular-topology` | ❌ None | ✅ Full (fallback) | ✅ Full |
 | Diagramme déconnecté (composantes multiples) | `disconnected` | ❌ None | ✅ Full (fallback) | ✅ Full |
@@ -291,41 +242,17 @@ utilement les sections précédentes qui listent des *constructions syntaxiques*
 
 ---
 
-## 6. Synthèse — lecture d'ensemble
+## 6. Synthèse — lecture d'ensemble (2026-10-06)
 
-Pas de recommandation tranchée ici (ce n'est pas l'objet de ce document) mais quelques constats
-factuels utiles pour la décision à venir :
-
-- **Le parseur V1 reste la plus grande source de non-couverture restante, mais son périmètre a
-  nettement rétréci le 2026-09-04** — 4 lignes 🔧 supplémentaires levées ce jour-là (`BT`/`RL`,
-  forme asymétrique, modificateurs de longueur, ordre `class`/`classDef`), aucune ne s'étant révélée
-  être un obstacle technique de fond une fois examinée : ce sont les précédents correctifs du
-  2026-09-03/04 (`{{ }}`, `[[ ]]`, `@{shape}`, libellés médians, `linkStyle`...) qui avaient déjà
-  entamé cette même liste. Élargir le parseur profite toujours aux **3** stratégies simultanément —
-  ce qui reste, désormais surtout : icônes/images `@{icon:...}` (nécessiterait une vraie nouvelle
-  capacité d'embarquement de glyphe, pas juste un correctif de parsing).
-- **Les 3 topologies du classifieur (chain, tree profondeur ≤ 2, cycle) ont désormais leur
-  générateur, tous vérifiés par rendu LibreOffice réel** (pas seulement par test XML). Là où
-  SmartArt s'applique, il ne perd plus, après les correctifs du 2026-09-03, qu'une seule chose que
-  l'OOXML seul conserve : la forme exacte du nœud (toujours `roundRect` — confirmé non
-  contournable, un override `a:prstGeom` par nœud n'a aucun effet sous LibreOffice, cf. §2.4). La
-  direction, la couleur par nœud, et le texte des libellés d'arête (sous forme de préfixe fusionné
-  au nœud, pas un vrai connecteur étiqueté) sont désormais fidèles. Reste aussi non dessiné : tout
-  **style de trait** (pointillé/épais) — SmartArt ne dessine simplement aucun connecteur visible
-  entre les boîtes, quel que soit le style Mermaid d'origine ; seule la position relative porte
-  l'information de liaison. En échange de ces pertes résiduelles, SmartArt offre l'éditabilité
-  native dans Word (réordonner, changer de disposition au clic) qui est tout l'argument de vente.
-- **Ce qui reste hors de portée de SmartArt n'est plus une question de générateur manquant, mais de
-  topologie structurellement incompatible** : profondeur d'arbre > 2 (nécessiterait un partage de
-  hauteur adaptatif, pas juste plus de niveaux copiés-collés), `subgraph` (disqualifié
-  systématiquement — la piste `Labeled Hierarchy` du catalogue reste à spiker avec un vrai
-  échantillon Word), et surtout la fusion après branchement ci-dessous.
-- **La fusion après branchement — le pattern le plus fréquent en pratique — désactive SmartArt
-  presque toujours.** Un flowchart réel avec une décision (`if/else`) suivie d'une convergence
-  retombe systématiquement sur le fallback OOXML avec l'approche hybride actuelle. C'est
-  précisément pourquoi l'approche **hybride** (plutôt que SmartArt-only) a été choisie dès le
-  départ (spec §1 : "complément… pas un remplacement").
-- **L'hybride, tel que conçu, n'ajoute jamais de risque de régression** : chaque ligne "❌ None" en
-  colonne SmartArt-only redevient "✅ Full" en colonne Hybride via le fallback automatique — câblé
-  et testé de bout en bout depuis le 2026-09-03 (§2.2), plus une simple description de
-  comportement prévu.
+- **Là où SmartArt s'applique, il est fidèle** : direction, forme de chaque nœud (sauf rectangle
+  droit), couleur `classDef`, retours à la ligne, gras/italique, flèches ou traits entre boîtes, le
+  tout confirmé dans un vrai Word. Pertes résiduelles : le style d'une arête (pointillé, épais,
+  têtes spéciales, `linkStyle`) et le libellé d'arête, rendu en préfixe du nœud destination. En
+  échange : l'édition native (volet de texte, changement de disposition, styles SmartArt).
+- **Ce qui reste hors de portée est structurel, pas un générateur manquant.** La fusion après
+  branchement (`if/else` qui reconverge, le motif le plus fréquent) et les `subgraph` ont été
+  examinés contre de vrais fichiers Word et écartés avec preuve (`docs/coverage.md`).
+- **L'hybride n'ajoute aucun risque** : chaque ligne « ❌ None » en colonne SmartArt seul redevient
+  « ✅ Full » en colonne hybride par repli automatique sur les formes.
+- **Le parseur** reste la principale source de non-couverture (icônes `@{icon:…}`, ID d'arête,
+  sous-graphe repliable), et l'élargir profite aux 3 stratégies à la fois.

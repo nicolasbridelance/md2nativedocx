@@ -18,10 +18,9 @@ so the people who own the document after you can change it in Word, without Mark
 - **Fix a diagram in Word, like any drawing:** click a box, retype its label, drag it; the arrows stay attached.
 - **Make it match the company look:** recolour any shape as in Word; flowcharts and SmartArt follow the
   document theme's colours, and SmartArt restyles from Word's own SmartArt Design tab.
-- **Update a chart's numbers:** pie, bar/line and radar charts can be real Word charts with *Edit Data*
-  (opt-in).
-- **Grow an org chart or a process:** tree, chain and cycle flowcharts can become SmartArt (opt-in), so adding
-  a step or a branch is one click in Word.
+- **Update a chart's numbers:** pie, bar/line and radar charts become real Word charts with *Edit Data*.
+- **Grow an org chart or a process:** processes, cycles, org charts, mindmaps, timelines and kanban boards
+  become SmartArt, so adding a step or a branch is one click in Word.
 - **Send it with confidence:** every file is checked against Word's own file-format rules before you get it.
 
 All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
@@ -40,7 +39,7 @@ click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc f
 | Change a label, move or delete a box | ❌ Re-export from the source | ✅ Directly, every node and edge is a shape |
 | Arrows follow when a box moves | ❌ | ✅ Connectors are attached to the shapes |
 | Recolour to the corporate theme | ❌ | ✅ Any shape; flowcharts/SmartArt follow the theme |
-| Change a chart's figures | ❌ | ✅ *Edit Data* on native charts (opt-in) |
+| Change a chart's figures | ❌ | ✅ *Edit Data* on native charts |
 | Text stays sharp and searchable | ~ Depends on resolution | ✅ Real text, real vector shapes |
 | Layout faithful to the Mermaid preview | ✅ | ✅ Same layout engine (Dagre) |
 | File opens in real Word without a repair prompt | Not checked | ✅ Checked on every export with Microsoft's Open XML SDK |
@@ -51,6 +50,10 @@ click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc f
 
 > **Deploying this in a company?** License, dependencies, IT risk analysis, real cost, and a jargon-free
 > guide for non-technical readers are in [`docs/compliance/`](docs/compliance/README.md).
+
+SmartArt and Word charts are on by default in the VS Code extension; on the CLI, turn them on with
+`MD2NATIVEDOCX_ENABLE_SMARTART=1` and `MD2NATIVEDOCX_NATIVE_CHARTS=1`. What each diagram type becomes, and
+when: [`docs/coverage.md`](docs/coverage.md).
 
 Named comparison against competing VS Code extensions (installs, rendering method verified from
 their own docs): see `docs/specs/cahier_des_charges.md` §12.1 (French), or directly the
@@ -74,7 +77,7 @@ diagram. See `docs/specs/cahier_des_charges.md` (French) for the full detail.
 
 ## Supported diagram types
 
-**All 29 Mermaid types export as native shapes:** flowchart, sequenceDiagram, classDiagram,
+**All 29 Mermaid types export as native Word objects** (SmartArt, Word charts or editable shapes): flowchart, sequenceDiagram, classDiagram,
 stateDiagram, erDiagram, gantt, pie, mindmap, timeline, journey, gitGraph, quadrantChart, requirementDiagram,
 C4, sankey, xychart, block, packet, kanban, architecture, radar, treemap, venn, ishikawa, wardley, cynefin,
 treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-document note, never a silently wrong guess.
@@ -86,11 +89,12 @@ treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-docume
 Word shapes, rendered here with LibreOffice). Regenerate with `scripts/build-showcase.py` (see its header; Mermaid is not a
 repo dependency).*
 
-**Flowchart** (`graph`/`flowchart`) is the most complete, most complete target — see
-`docs/markdown-mermaid-compliance-table.md` for its full syntax coverage. A chain/tree/cycle-shaped
-flowchart exports as a native, editable Word **SmartArt** graphic instead of plain shapes when
-possible (toggle: `md2nativedocx.smartArt.enabled`); everything else still gets individually
-selectable/editable OOXML shapes with dynamic connectors.
+**Flowchart** (`graph`/`flowchart`) is the most complete target — see
+`docs/markdown-mermaid-compliance-table.md` for its full syntax coverage. A chain, cycle or tree-shaped
+flowchart exports as a native, editable Word **SmartArt** graphic, each node keeping its Mermaid shape; so do
+mindmaps, timelines, user journeys, kanban boards and simple state, class and git diagrams (toggle:
+`md2nativedocx.smartArt.enabled`). Everything else gets individually selectable, editable Word shapes with
+attached connectors.
 
 ![Mermaid diagrams exported as native Word SmartArt: a process keeping its node shapes, a cycle, an org chart, a mindmap, a timeline, a kanban board, and one process in four looks](docs/showcase/smartart.png)
 
@@ -98,7 +102,7 @@ selectable/editable OOXML shapes with dynamic connectors.
 the SmartArt Design tab. Rendered here with LibreOffice; same result in Word. Regenerate with
 `scripts/build-smartart-showcase.py`.*
 
-Details per type: `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md`.
+What each type becomes, under which conditions, and what was ruled out: [`docs/coverage.md`](docs/coverage.md).
 
 ## Word compatibility, verified — not assumed
 
@@ -115,8 +119,8 @@ validator was used) and `docs/adr/0007-openxml-validator-adoption.md` for how it
 
 ## Installation
 
-Prerequisites: **Node.js ≥ 18**, **Pandoc** (installed separately), and a **Lua** interpreter for
-the filter.
+Prerequisites: **Node.js ≥ 18** and **Pandoc ≥ 3.1.3** on `PATH` (Pandoc runs the Lua filter itself). The VS
+Code extension downloads Pandoc for you; the CLI does not.
 
 ```bash
 npm install
@@ -131,7 +135,7 @@ npx md2nativedocx report.md -o report.docx
 
 Every ```` ```mermaid ```` block in the document is converted into a native Word drawing
 (individually selectable/editable vector shapes, dynamic connectors, native text — or a SmartArt
-graphic for an eligible flowchart) — see "Supported diagram types" above.
+graphic or a Word chart when enabled) — see "Supported diagram types" above.
 
 Want slides instead? `npx md2nativedocx deck.md -o deck.pptx` writes one 16:9 slide per Mermaid block, again
 with editable shapes (see [`packages/pptx`](packages/pptx/README.md)).
@@ -166,10 +170,13 @@ npm run test:oxml-validate  # schema validation via Microsoft's Open XML SDK (.N
 
 ## Documentation
 
-- `HANDOVER.md` — latest session handover note: what shipped, what's verified, what's next.
+- `HANDOVER.md` — current state of the project: what shipped, what's verified, what's next.
+- `TODO.md` (French) — the open backlog, nothing else.
+- `docs/coverage.md` — what each Mermaid type becomes in Word, and why.
+- `docs/manual/` (French) — the user manual, one page per diagram type.
 - `docs/specs/cahier_des_charges.md` (French) — the **what** and **why** (spec, phases, scope).
 - `AGENTS.md` — the **how** (conventions, non-negotiable security rules).
-- `docs/adr/` — architecture decisions (layout engine, Pandoc integration).
+- `docs/adr/` — architecture decisions (layout engine, Pandoc integration, SmartArt, charts, pptx…).
 - `TESTING.md` — the eight testing chapters, what each one guarantees, where it lives.
 - `docs/compliance/` — license, dependencies, IT risk analysis, non-technical guide.
 - `CONTRIBUTING.md` — how to contribute.

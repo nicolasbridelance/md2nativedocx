@@ -1,5 +1,11 @@
 # FUTURE — `mmd2smartart` (spec de première intention)
 
+> **Statut au 2026-10-06 : réalisée et dépassée.** SmartArt est activé par défaut dans l'extension
+> VS Code et confirmé dans un vrai Word pour les flowcharts (chaîne, cycle, arbres jusqu'à 10 niveaux,
+> formes par nœud) et pour `mindmap`, `treeView-beta`, `timeline`, `journey`, `kanban`, `gitGraph`,
+> `stateDiagram` et `classDiagram` simples. État par type : `docs/coverage.md`. Les statuts plus bas
+> sont historiques.
+
 > Statut (mis à jour 2026-09-03) : spec de cadrage, **partiellement implémentée**. Le classifieur
 > (`classify.ts`) et les 3 générateurs `chain`/`tree`/`cycle` (`chain.ts`/`tree.ts`/`cycle.ts`) sont
 > livrés, testés, **et validés par rendu LibreOffice réel** (pas seulement par test XML — cette
