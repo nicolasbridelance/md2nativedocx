@@ -1015,6 +1015,12 @@ et l'add-in Word (canal de distribution entièrement nouveau).
       les boîtes SmartArt (`smartart/text.ts`, `7d79e39`). Un premier essai en simple chaîne de boîtes (v15) a été
       rejeté par le mainteneur (« ressemble à du flowchart classique »). v16 validé en vrai Word (CHECKLIST
       Round 18, `posOdd` honoré en `no-drawing`). Suite possible : `journey` sur la même frise.
+- [ ] **SmartArt pour journey, timeline à sections, kanban, gitGraph, stateDiagram, classDiagram (2026-10-06, en
+      attente de vrai Word)** — frise groupée (`timeline-grouped.ts`, `391025b`), liste groupée kanban (`kanban.ts`,
+      `c97c324`), cas simples gitGraph/state/class via les générateurs validés (`from-graph.ts`, `e93e353`). À
+      vérifier : CHECKLIST Round 19 (v17), surtout les deux nouveaux layouts en `no-drawing`. Option ouverte
+      (décision produit) : `venn-beta` sans texte d'intersection en SmartArt « Venn simple » ; `quadrantChart`
+      reste en formes (les points `[x, y]` n'ont pas d'équivalent SmartArt).
 - [ ] **SmartArt « pixel perfect » : pas de conclusion à ce jour (2026-10-05)** — `smartArt.enabled`
       reste à `false` par défaut. ADR 0006 : corruption corrigée (ids `modelId`) mais « en attente de
       confirmation Word réelle finale » ; `smartart-cycle-recheck.docx` rend encore des formes vides

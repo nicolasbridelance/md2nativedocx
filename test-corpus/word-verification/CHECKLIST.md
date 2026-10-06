@@ -500,6 +500,39 @@ bold paragraph above the diagram. A timeline with sections, or too crowded for w
 **Result (maintainer, real Word, 2026-10-06): "ça marche très bien".** The timeline as a SmartArt time line
 (alternating boxes via `posOdd`, `no-drawing` included) and line breaks/bold/italic in SmartArt boxes are validated.
 
+## Round 19 — 2026-10-06: journey, timeline sections, kanban, gitGraph, state machine, class inheritance (v17)
+
+New SmartArt mappings, all with SmartArt on:
+- `journey` and `timeline` **with sections** → grouped time line (`smartart/timeline-grouped.ts`, layout
+  `timeline1-grouped-<steps per section>`): one arrow-ended bar per section with its name, the steps as neutral
+  grey cards alternately above and below (journey card: task in bold, score as stars, actors). Two levels in the
+  Text Pane (sections, then steps). Each section is as wide as its steps (one `forEach` per section + a catch-all
+  for sections added in Word).
+- `kanban` → grouped list (`smartart/kanban.ts`, layout `kanban1-<cards>x<lines>`): coloured column headers, cards
+  stacked under them (title in bold, then ticket · assignee · priority). Two levels in the Text Pane.
+- `gitGraph` with only the main branch → process; `stateDiagram` forming a chain or a loop (start/end markers set
+  aside) → process or cycle; `classDiagram` with only inheritance forming a tree → hierarchy with the members in
+  each box. These reuse the generators already validated in Word.
+
+`smartart-v17-more-types-colorful.docx`, `-intense.docx`, `-colorful-no-drawing.docx`.
+
+- [ ] All three open with no repair prompt.
+- [ ] Sections 1-6 are SmartArt (click: SmartArt Design tab appears); sections 7 and 8 are plain shapes.
+- [ ] **`no-drawing`, sections 1-2 (new grouped layout)**: does Word draw one bar per section, and the cards
+      alternating above/below inside each section? Is the "Réalisation" bar wider than "Conception" (3 periods
+      vs 2)?
+- [ ] **`no-drawing`, section 3 (new kanban layout)**: are the cards stacked from the **top** of each column
+      under its header (not centred vertically, not stretched to fill the column)?
+- [ ] Text Pane, section 1: add a task under "Go home" (Enter, then Tab to indent it): a new card appears in
+      that section. Add a new section (a non-indented line): a new bar appears at the end.
+- [ ] Text Pane, section 3: move a card to another column by indenting it under that column's title.
+- [ ] Stars (★★★☆☆) display correctly in the journey cards.
+- Verified here: Open XML validator, 0 errors under `/word/diagrams` and in `document.xml`; LibreOffice renders the
+  cached drawing (6 SmartArt, sections 7-8 as shapes).
+- Known: in the grouped time line, step positions restart at each section, so two neighbouring cards across a
+  section boundary can land on the same side (they touch, never overlap). A timeline whose events make cards of
+  4+ lines (Mermaid's "Industrial Revolution" example) stays shapes.
+
 ## Recording the result
 
 Once done, either:
