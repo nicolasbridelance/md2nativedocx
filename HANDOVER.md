@@ -1,134 +1,86 @@
-# Handover — 2026-10-06 (VS Code extension 0.6.0 published; SmartArt + Word charts on by default)
+# Handover — 2026-10-06
 
-One entry point for picking this project back up. Check `git log`/`TODO.md` for anything newer
-than this date. Previous handover (2026-09-06, Word add-in scaffold) is folded into "Still open".
-The 2026-10-05 sections below are kept as written; this first section supersedes them where they
-disagree (notably: native charts and SmartArt are no longer opt-in in the extension).
+One entry point for picking this project back up. It describes the state of the project as of this
+date; `git log` has anything newer. Earlier handovers live in this file's git history.
 
-## Update 2026-10-06 — what changed since the 2026-10-05 handover
+## Where the project stands
 
-- **VS Code extension 0.6.0 published to the Marketplace** (`0758e65`, tag `vscode-v0.6.0` — first
-  version tag in this repo; earlier releases were never tagged). Only the extension is versioned
-  for release; `core`/`cli`/`pptx`/`pandoc-filter` stay at 0.1.0, hence the `vscode-` prefix.
-  Full contents: `packages/vscode-extension/CHANGELOG.md` § 0.6.0.
-- **SmartArt, all confirmed in real Word by the maintainer:** tree connectors (v9), look profiles
-  as a table (v10), trees deeper than two levels in all four directions (v11-v12), compact
-  org-chart layout for wide top-down trees (v13), `mindmap` and single-root `treeView-beta` as
-  SmartArt hierarchies (v14). See `test-corpus/word-verification/CHECKLIST.md`.
-- **New extension defaults:** SmartArt on, native Word charts on (`pie`, `xychart`, `radar`). An
-  explicitly set user value is kept. The core/CLI defaults are unchanged (still opt-in via env vars).
-- **Extension UX review** (`6ce17ce`, lots A-D): PowerPoint export from the extension, one
-  document-level CodeLens line + "Export this diagram…", `md2nativedocx` right-click submenu,
-  per-diagram "what this becomes in Word" line + hover + status-bar tally (core `planRendering`),
-  settings in sections, side panel translated (setting descriptions in `package.nls.*` still
-  partly untranslated), re-shot demo GIFs.
-- **CI:** three new high/critical advisories (`compression`, `proxy-addr`, `source-map-js`, all
-  dev-only under `packages/word-addin` → `webpack-dev-server`/`source-map-loader`) turned the audit
-  gate red; fixed by a lockfile-only bump to their patched versions (no new exception).
+- **The product works end to end.** Markdown with Mermaid becomes a `.docx` where every diagram is
+  editable in Word, from the VS Code extension (0.6.0 on the Marketplace, tag `vscode-v0.6.0`), the
+  CLI, or the Pandoc filter. The same source can also become a `.pptx` deck (`packages/pptx`), which
+  opens in PowerPoint and imports into Google Slides.
+- **All 29 Mermaid types are covered.** What each one becomes (SmartArt, Word chart or shapes), under
+  which conditions, and what was ruled out with evidence: [`docs/coverage.md`](docs/coverage.md).
+- **SmartArt and Word charts are verified in real Word** by the maintainer, round by round
+  ([`test-corpus/word-verification/CHECKLIST.md`](test-corpus/word-verification/CHECKLIST.md), rounds
+  4-20): processes, cycles, trees up to 10 levels in four directions, compact org charts, seven looks,
+  per-node shapes, mindmap, treeView, timeline, journey, kanban, simple gitGraph/state/class diagrams;
+  `pie`, `xychart` and `radar` as charts with Edit Data.
+- **Defaults differ by entry point.** The extension turns SmartArt and Word charts on. The core and CLI
+  keep them opt-in (`MD2NATIVEDOCX_ENABLE_SMARTART=1`, `MD2NATIVEDOCX_NATIVE_CHARTS=1`).
+- **Versions.** Only the extension is released (0.6.0). `core`, `cli`, `pptx`, `pandoc-filter` are
+  0.1.0 and not on npm yet (waiting on a token, see `TODO.md` §1).
 
-**Next, for the maintainer:** install 0.6.0 from the Marketplace on the corporate Windows machine
-and export a mixed document (the new defaults change existing users' output on auto-update).
-**Next, for the agent:** manual generator into `scripts/` + document SmartArt/charts (now
-defaults) in the manual; editor-tab right-click export; `.qmd`; the known visual gaps below.
+## Health (2026-10-06)
 
-## State of the project
+- Tests: core 749, cli 127, vscode-extension 73, pptx 25, pandoc-filter 15, word-addin 4, all green.
+  Typecheck and lint clean.
+- `test:visual` (LibreOffice render + pixel diff) green; `test:oxml-validate` reports 0 schema errors
+  in anything this project emits (the remaining errors in a full document come from Pandoc's own
+  `reference.docx`, identical in a bare `pandoc` export).
+- CI green on Linux, macOS and Windows. `npm audit --omit=dev` is clean; the whole tree passes
+  `scripts/audit-gate.mjs` with one dated exception (`braces`, no patched version, **expires
+  2026-12-31**).
 
-- **Coverage:** 29/29 Mermaid types render as native, editable Word shapes (`packages/core`), plus
-  `.pptx` decks (`packages/pptx`: `md2nativedocx deck.md -o deck.pptx [--show-source]`).
-- **Green locally:** typecheck, lint, 642 core tests, 25 pptx tests, 117 cli tests, `test:visual`
-  68/68. `test:oxml-validate`: 0 schema errors in anything this project emits (the ~470 errors in a
-  whole manual are Pandoc's own list/table/math quirks, present in a bare `pandoc` output too).
-- **CI:** green on Linux/macOS/Windows; the `npm audit` job was red from a new advisory with no
-  patched version and is now handled by a dated-exception gate (see "Still open").
+## What changed in the last sessions (2026-10-05 → 06)
 
-## What happened this session
+- SmartArt campaign, every step confirmed in real Word: tree connectors, look profiles, multi-level
+  trees, compact org chart, mindmap/treeView, rich text in boxes, timeline and journey time lines,
+  kanban grouped list, simple gitGraph/state/class, per-node Mermaid shapes.
+- Native Word charts with embedded workbook (ADR 0011) for `pie`, `xychart`, `radar`.
+- Extension 0.6.0: PowerPoint export, per-diagram "what this becomes" line and hover, settings in
+  sections, translated side panel, re-shot demos (`docs/specs/UX_REVIEW_2026-10.md`).
+- `.pptx` hardened against real PowerPoint (two repair-prompt causes the validator could not see).
+- French user manual, 38 pages (`docs/manual/`).
+- Clean-up (this handover): `TODO.md` reduced to the open backlog, old content archived; new
+  `docs/coverage.md`; specs given dated status banners; stale claims fixed in the READMEs, `AGENTS.md`
+  and the flowchart compliance table; SmartArt showcase image regenerated (it also revealed a word
+  broken inside diamond-shaped SmartArt boxes, fixed in the cached drawing).
 
-1. **Real-Word / real-PowerPoint verification round** (maintainer): `.docx` of sequence, zenuml,
-   eventmodeling and the colour/settings mega file open fine. A real schema bug surfaced via the
-   validator and was fixed: `w:b`/`w:i` must precede `w:color`/`w:sz` in label runs (`6d1f8a7`).
-2. **`.pptx` hardening — first-ever real PowerPoint opens.** Two causes of the "PowerPoint found a
-   problem, repair?" prompt, both invisible to the Open XML SDK validator:
-   - package lacked parts PowerPoint always writes (`presProps`, `viewProps`, `tableStyles`, master
-     `txStyles`, presentation→theme rel) — `161dcd1`;
-   - routed (polyline) edges were `p:cxnSp` carrying `a:custGeom`; PowerPoint wants preset geometry
-     on connectors, so they are now `p:sp` — `afa3943`. Found by bisecting the 62-slide deck with
-     the maintainer (quarters → quarter-of-a-quarter → common feature). **Lesson:** schema-valid ≠
-     PowerPoint-valid; bisect with real opens instead of guessing.
-   - New opt-in `--show-source` puts each diagram's Mermaid source in a panel beside it (`25b67ed`).
-3. **`packages/core` API change (maintainer-approved):** every translator now takes optional
-   `CanvasOptions` (`maxDrawingCx/Cy`), exported from the barrel. Before, only flowcharts honoured
-   page size/margins/landscape; the other 28 types used a hard-coded 6.5 in cap. The pandoc bridge
-   passes the env-derived cap; the CLI now lets an explicit `MD2NATIVEDOCX_MAX_DRAWING_CX/CY` win.
-4. **User manual** — `docs/manual/manuel-utilisateur.{md,docx}` (French, 38 pages A4): cover, TOC,
-   intro, settings table, standard-Markdown checks, then one page per type (description, fiche
-   table, syntax, supported, limits, source | render side by side). The TOC is a real Word field
-   pre-filled with page numbers measured from a LibreOffice render and marked dirty. All text comes
-   from the parser headers/warnings, not memory.
-   - **The generator script is not in the repo** (it lived in a session scratchpad). Treat the `.md`
-     as the source to edit by hand, or rebuild a generator (it templated the per-type table from
-     `test-corpus/visual/fixtures/*.mmd` + hand-written syntax/limits, then a two-pass TOC).
-5. **Verification fixtures** in `test-corpus/word-verification/`: per-type `.docx` **and** `.pptx`
-   (with source panels), `all-types-mega-color.{md,docx}`, `all-types-deck.pptx`,
-   `markdown-features.md`, `assets/`.
-6. **Public-facing:** replaced the retired shields.io VS Marketplace badge (`26ae866`); a reply to
-   mermaid-js/mermaid#8060 (native chart vs native shapes) was posted by the maintainer.
+## What's next
 
-## Still open — roadmap (updated 2026-10-05, later in the day)
+Everything open is in [`TODO.md`](TODO.md), in four sections:
 
-*Confirmed by the maintainer this session:* the manual opens fine in real Word (cover, TOC, equation
-matrix); `all-types-deck.pptx` opens in PowerPoint and imports into Google Slides; the Windows
-no-admin Pandoc incident is **resolved** (its field report is archived in
-`docs/history/missing_pandoc_bugfix.md`).
-
-*On hold:* Word add-in (Phase 4) — the 3 spikes need a real Word desktop; waiting on the maintainer.
-
-*Owned by the agent (maintainer: "dans ta banette") — both now implemented, **awaiting real Word**:*
-1. **Native `c:chart` + embedded workbook** (`pie`, `xychart`, `radar`; ADR 0011). `pie` is **confirmed in
-   real Word** (Edit Data works). `xychart`/`radar` are schema-valid and render in LibreOffice; check them
-   with `native-chart-xychart-radar.docx` (CHECKLIST Round 5). Opt-in: `MD2NATIVEDOCX_NATIVE_CHARTS=1` /
-   VS Code setting `md2nativedocx.nativeCharts.enabled`. Degradations are documented in the ADR (a
-   horizontal xychart with a line series stays shapes, with a warning). Remaining: decide the default.
-2. **SmartArt "pixel perfect" + look** — **confirmed in real Word by the maintainer (2026-10-05): v3, v4 and all
-   v5 files open with no warning, the diagrams are visible and "très joli".** What shipped:
-   - `cycle` restructured to chain's two-level shape (the empty-frame cause was suspected, not proven; it now
-     displays).
-   - **Pre-rendered `dsp:drawing`** (`MD2NATIVEDOCX_SMARTART_DRAWING=1`, VS Code
-     `smartArt.preRenderedDrawing`, default on): Word and LibreOffice show the same cached geometry.
-   - **Look profiles** `simple` | `colorful` | `intense` (`MD2NATIVEDOCX_SMARTART_STYLE`, VS Code
-     `smartArt.style`, default `colorful`): accents per shape, theme gradient + shadow; still real,
-     restylable SmartArt. Not yet answered by the maintainer: the Word-computed look of
-     `smartart-v5-intense-no-drawing.docx` (does Word honour our `styleDef` references?) and which profile
-     should be the core default (core still defaults to `simple`; the VS Code extension defaults to `colorful`).
-3. Put the manual generator into `scripts/` (currently outside the repo); document native charts and the
-   SmartArt switches in the manual.
-
-*Done on the CI front:* `npm audit` is green again, without weakening the production gate —
-`braces` (GHSA-vfj7-8cjw-p6xm) has no patched version at all, so updates can't fix it. `ci.yml` now
-runs `npm audit --omit=dev --audit-level=high` (strict, 0 findings) and `scripts/audit-gate.mjs`
-(whole tree; fails on any high/critical advisory without a dated, justified entry in
-`audit-exceptions.json`). The single exception **expires 2026-12-31 — re-review it then**.
-
-*Other doable work (no maintainer needed):* vendor `@md2nativedocx/pptx` into the VS Code extension and
-add pptx tests to the Windows/macOS CI jobs (`ci.yml` change → human review); `.qmd` support; editor-tab
-right-click "Export to Word"; l10n of the config panel; known visual gaps (sequence block frame vs
-self-message, two unattached connectors on the bipartite stress graph).
-
-*Governance, whenever the first external PR approaches:* choose DCO (`Signed-off-by` via
-`git commit -s`, lightweight) vs a CLA (heavier, preserves relicensing) vs nothing — see AGENTS.md
-"Licensing". Not urgent while the project is single-maintainer.
+1. **Maintainer:** install 0.6.0 on the corporate Windows machine and export a mixed document (the new
+   defaults change existing users' output); decide on Venn as SmartArt; npm token; review a one-line
+   `ci.yml` change; DCO/CLA before the first external PR. Word add-in on hold.
+2. **Agent, no maintainer needed:** the manual generator into `scripts/` and SmartArt/charts in the
+   manual; untranslated setting descriptions; two known visual defects; the `braces` exception date.
+3. **Backlog, analysed:** five SmartArt/chart tracks (Venn, small Gantt, requirement/C4 trees, treemap
+   as a Word chart, SmartArt and charts in `.pptx`), each with gain, cost and a recommendation.
+4. **Ideas not committed to.**
 
 ## Conventions worth remembering
 
 - Commit each finished unit and **push** it (a stale CI badge once came from unpushed commits).
-- Validate with `scripts/oxml-validator` *before* hand-diffing XML — but it is not enough for
-  PowerPoint; real opens are the only proof there.
-- Real renders (LibreOffice) find what unit tests can't; look at the image, don't trust the XML.
-- Never ship proprietary artifacts found during research without asking (licensing caution).
-- Anything touching `packages/core` public API, a dependency, `.devcontainer/`, or a security rule
-  is escalated to the maintainer first (AGENTS.md).
+- "Word won't open the file": run `scripts/oxml-validator` before comparing XML by hand. It is not
+  enough for PowerPoint, which is stricter: bisect with real opens there.
+- Render with LibreOffice and look at the image; unit tests on XML miss blank or broken renders.
+- A new SmartArt mapping is done only once the maintainer has opened a `smartart-vNN-*` file in real
+  Word (add a CHECKLIST round). A diagram type must keep its visual identity in SmartArt, not just its
+  data.
+- Word-made samples (`handmade_samples/`, gitignored) are read for structure only, never committed.
+- Escalate before touching `packages/core`'s public API, adding a dependency, `.devcontainer/`,
+  `.vscode/`, `ci.yml` or a security rule (`AGENTS.md`).
 
 ## Where to look
 
-`TODO.md` (full punch list; "Session 2026-10-05" block), `docs/adr/0003|0006|0008|0010`,
-`docs/manual/`, `docs/specs/`, `test-corpus/word-verification/CHECKLIST.md`,
-`docs/history/TODO_ARCHIVE.md`.
+| Need | File |
+|---|---|
+| Open work | `TODO.md` |
+| What each Mermaid type becomes | `docs/coverage.md` |
+| Rules, conventions, escalation | `AGENTS.md`, `TESTING.md` |
+| Product intent (French) | `docs/specs/cahier_des_charges.md` |
+| Decisions | `docs/adr/` (0006 SmartArt corruption, 0010 pptx, 0011 charts) |
+| Real-Word verification log | `test-corpus/word-verification/CHECKLIST.md` |
+| Closed work, incidents, old TODO | `docs/history/` |
