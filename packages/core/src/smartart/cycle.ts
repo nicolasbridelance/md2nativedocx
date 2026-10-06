@@ -25,6 +25,7 @@ import { validateHexColor } from '../translator/xml-escape.js';
 import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
 import { CYCLE_FRAME, DRAWING_EXT_LST_XML, buildDiagramDrawingXml, cycleBoxWidth, cycleShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { nodeGeom, presSpPrXml } from './node-shape.js';
 import { boxText, pointTextXml } from './text.js';
 
 /** The four OOXML diagram parts a `cycle` SmartArt diagram needs. */
@@ -290,7 +291,7 @@ function buildCycleDataXml(
     nodeIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/>${presSpPrXml(nodeGeom(nodes[i] as FlowNode))}</dgm:pt>`
       )
       .join('') +
     sibTransIds
@@ -349,6 +350,7 @@ function buildCycleDataXml(
         return {
           id: pMainIds.get(nodeIds[i] as string) as string,
           text: boxText(node, label),
+          ...(nodeGeom(node) ? { geom: nodeGeom(node) } : {}),
           ...(fill ? { fill } : {}),
         };
       }),

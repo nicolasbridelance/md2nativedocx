@@ -208,7 +208,7 @@ const MIN_SAFE_ASPECT_RATIO = 1.0;
  * family is Word/PowerPoint's own built-in flowchart shape gallery, so most
  * of these are exact matches rather than approximations.
  */
-const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
+export const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   rect: 'rect',
   roundRect: 'roundRect',
   stadium: 'roundRect', // stadium approximated by roundRect with max adj

@@ -76,6 +76,8 @@ export interface DrawingShape {
   tintPercent?: number;
   /** `RRGGBB` outline (a neutral card); otherwise the profile's white outline. */
   line?: string;
+  /** A node box drawn with another preset (`diamond`…, the Mermaid node's shape) — styled as a node all the same. */
+  geom?: string;
 }
 
 const EMU_PER_PT = 12700;
@@ -162,7 +164,7 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
     ? `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="0" b="0"/><a:pathLst><a:path>${(shape.path ?? [])
         .map(([px, py], i) => `<a:${i === 0 ? 'moveTo' : 'lnTo'}><a:pt x="${Math.round(px)}" y="${Math.round(py)}"/></a:${i === 0 ? 'moveTo' : 'lnTo'}>`)
         .join('')}</a:path></a:pathLst></a:custGeom>`
-    : `<a:prstGeom prst="${shape.prst}"><a:avLst/></a:prstGeom>`;
+    : `<a:prstGeom prst="${shape.geom ?? shape.prst}"><a:avLst/></a:prstGeom>`;
   const rot = shape.rotation ? ` rot="${Math.round(shape.rotation * 60000)}"` : '';
   return (
     `<dsp:sp modelId="${escapeXml(shape.modelId)}"><dsp:nvSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvSpPr/></dsp:nvSpPr>` +
@@ -213,8 +215,23 @@ interface Labelled {
   id: string;
   text: LabelToken[];
   fill?: string;
+  /** Preset of the Mermaid node's shape, when it is not a plain box (see `node-shape.ts`). */
+  geom?: string;
   /** Presentation point id of the connector line leading into this node (tree children only). */
   connId?: string;
+}
+
+/** Share of a box's width and height a non-rectangular shape (diamond, circle…) leaves to its text. */
+const SHAPED_TEXT_SHARE = 0.65;
+
+/** {@link fitFontSize} for node boxes, the shaped ones (`geom`) having less room for their text. */
+function fitNodeFont(nodes: Array<{ text: LabelToken[]; geom?: string }>, cx: number, cy: number, minPt = 10): number {
+  const plain = nodes.filter((n) => !n.geom).map((n) => n.text);
+  const shaped = nodes.filter((n) => n.geom).map((n) => n.text);
+  return Math.min(
+    plain.length > 0 ? fitFontSize(plain, cx, cy, minPt) : 2400,
+    shaped.length > 0 ? fitFontSize(shaped, cx * SHAPED_TEXT_SHARE, cy * SHAPED_TEXT_SHARE, minPt) : 2400
+  );
 }
 
 /** Box width/height and gap (EMU) of an `n`-box chain in the default frame, box height `aspect` of its width. */
@@ -246,7 +263,7 @@ export function chainShapes(
   const total = n * (horizontal ? bw : bh) + (n - 1) * gap;
   const start = ((horizontal ? FW : FH) - total) / 2;
   const reverse = direction === 'RL' || direction === 'BT';
-  const font = fitFontSize(nodes.map((nd) => nd.text), bw, bh);
+  const font = fitNodeFont(nodes, bw, bh);
   const shapes: DrawingShape[] = [];
   const along = (k: number) => start + k * ((horizontal ? bw : bh) + gap);
   const arrowPrst: DrawingShape['prst'] = { LR: 'rightArrow', RL: 'leftArrow', TD: 'downArrow', BT: 'upArrow' }[direction] as DrawingShape['prst'];
@@ -261,6 +278,7 @@ export function chainShapes(
       cy: Math.round(bh),
       prst: 'roundRect',
       text: node.text,
+      ...(node.geom ? { geom: node.geom } : {}),
       fontSize: font,
       accent: accentOf(style, 'node1', i),
       ...(node.fill ? { fill: node.fill } : {}),
@@ -309,7 +327,7 @@ export function treeShapes(
   const areaStart = horizontalFlow ? (direction === 'LR' ? 0.45 * FW : 0) : direction === 'TD' ? 0.45 * FH : 0;
   const areaSize = horizontalFlow ? 0.55 * FW : 0.55 * FH;
   const shapes: DrawingShape[] = [];
-  const rootFont = fitFontSize([root.text], rootRect.cx, rootRect.cy);
+  const rootFont = fitNodeFont([root], rootRect.cx, rootRect.cy);
   shapes.push({
     modelId: root.id,
     x: Math.round(rootRect.x),
@@ -318,13 +336,14 @@ export function treeShapes(
     cy: Math.round(rootRect.cy),
     prst: 'roundRect',
     text: root.text,
+    ...(root.geom ? { geom: root.geom } : {}),
     fontSize: rootFont,
     accent: accentOf(style, 'node1', 0),
     ...(root.fill ? { fill: root.fill } : {}),
   });
   const boxW = horizontalFlow ? areaSize : cell;
   const boxH = horizontalFlow ? cell : areaSize;
-  const font = fitFontSize(children.map((c) => c.text), boxW, boxH);
+  const font = fitNodeFont(children, boxW, boxH);
   children.forEach((child, i) => {
     const pos = i * (cell + gap);
     shapes.push({
@@ -335,6 +354,7 @@ export function treeShapes(
       cy: Math.round(boxH),
       prst: 'roundRect',
       text: child.text,
+      ...(child.geom ? { geom: child.geom } : {}),
       fontSize: font,
       accent: accentOf(style, 'node2', i),
       ...(child.fill ? { fill: child.fill } : {}),
@@ -482,13 +502,13 @@ export function deepTreeShapes(
     return horizontal ? { x: flow, y: c, cx: fs, cy: cs } : { x: c, y: flow, cx: cs, cy: fs };
   };
 
-  const labels: LabelToken[][] = [];
+  const all: DeepTreeNode[] = [];
   const collect = (n: DeepTreeNode): void => {
-    labels.push(n.text);
+    all.push(n);
     n.children.forEach(collect);
   };
   collect(root);
-  const font = fitFontSize(labels, boxW, boxH, DEEP_MIN_FONT_PT);
+  const font = fitNodeFont(all, boxW, boxH, DEEP_MIN_FONT_PT);
 
   // Pass 1: centre of every node along the cross axis, in box units from the start of the tree.
   const centreOf = new Map<DeepTreeNode, number>();
@@ -521,6 +541,7 @@ export function deepTreeShapes(
       cy: Math.round(r.cy),
       prst: 'roundRect',
       text: n.text,
+      ...(n.geom ? { geom: n.geom } : {}),
       fontSize: font,
       accent: accentOf(style, level === 0 ? 'node1' : 'node2', level === 0 ? 0 : nonRootCount++),
       ...(n.fill ? { fill: n.fill } : {}),
@@ -565,6 +586,7 @@ export function deepTreeShapes(
           cy: Math.round(lr.cy),
           prst: 'roundRect',
           text: leaf.text,
+          ...(leaf.geom ? { geom: leaf.geom } : {}),
           fontSize: font,
           accent: accentOf(style, 'node2', nonRootCount++),
           ...(leaf.fill ? { fill: leaf.fill } : {}),
@@ -606,7 +628,7 @@ export function cycleShapes(nodes: Labelled[], transIds: string[], style: SmartA
   const w = cycleBoxWidth(n, frame);
   const h = 0.6 * w;
   const radius = (frame.cy - h) / 2;
-  const font = fitFontSize(nodes.map((nd) => nd.text), w, h);
+  const font = fitNodeFont(nodes, w, h);
   const point = (angle: number, r: number) => ({ x: frame.cx / 2 + r * Math.sin(angle), y: frame.cy / 2 - r * Math.cos(angle) });
   const shapes: DrawingShape[] = [];
   nodes.forEach((node, i) => {
@@ -619,6 +641,7 @@ export function cycleShapes(nodes: Labelled[], transIds: string[], style: SmartA
       cy: Math.round(h),
       prst: 'roundRect',
       text: node.text,
+      ...(node.geom ? { geom: node.geom } : {}),
       fontSize: font,
       accent: accentOf(style, 'node1', i),
       ...(node.fill ? { fill: node.fill } : {}),

@@ -24,6 +24,7 @@ import { validateHexColor } from '../translator/xml-escape.js';
 import { CONN_STYLE_DEF, buildColorsXml, buildStyleXml, connColorsDef, type SmartArtStyle } from './styles.js';
 import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, treeShapes } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { nodeGeom, presSpPrXml } from './node-shape.js';
 import { boxText, pointTextXml } from './text.js';
 
 /** The four OOXML diagram parts a `tree` SmartArt diagram needs. */
@@ -469,14 +470,14 @@ function buildTreeDataXml(
   const presPts =
     `<dgm:pt modelId="${pRootId}" type="pres"><dgm:prSet presAssocID="${docId}" presName="root" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
     `<dgm:pt modelId="${pLevel1Id}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-    `<dgm:pt modelId="${pLevel1MainId}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Main" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="1"/><dgm:spPr/></dgm:pt>` +
+    `<dgm:pt modelId="${pLevel1MainId}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Main" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="1"/>${presSpPrXml(nodeGeom(root))}</dgm:pt>` +
     `<dgm:pt modelId="${pLevel1ChildrenId}" type="pres"><dgm:prSet presAssocID="${rootId}" presName="level1Children" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
     childIds
       .map(
         (id, i) =>
           `<dgm:pt modelId="${pConnIds.get(id)}" type="pres"><dgm:prSet presAssocID="${parTransIds[i + 1]}" presName="level2Conn" presStyleLbl="parChTrans1D2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/><dgm:spPr/></dgm:pt>` +
           `<dgm:pt modelId="${pLevel2CompositeIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2composite" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-          `<dgm:pt modelId="${pLevel2MainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2Main" presStyleLbl="node2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pLevel2MainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="level2Main" presStyleLbl="node2" presStyleIdx="${i}" presStyleCnt="${childIds.length}"/>${presSpPrXml(nodeGeom(children[i] as FlowNode))}</dgm:pt>`
       )
       .join('');
 
@@ -537,7 +538,7 @@ function buildTreeDataXml(
   const drawingXml = buildDiagramDrawingXml(
     treeShapes(
       flowchart.direction,
-      { id: pLevel1MainId, text: boxText(root), ...(rootFill ? { fill: rootFill } : {}) },
+      { id: pLevel1MainId, text: boxText(root), ...(rootFill ? { fill: rootFill } : {}), ...(nodeGeom(root) ? { geom: nodeGeom(root) } : {}) },
       children.map((node, i) => {
         const label = incomingLabel.get(node.id);
         const fill = validateHexColor(node.fill, '');
@@ -545,6 +546,7 @@ function buildTreeDataXml(
           id: pLevel2MainIds.get(childIds[i] as string) as string,
           connId: pConnIds.get(childIds[i] as string) as string,
           text: boxText(node, label),
+          ...(nodeGeom(node) ? { geom: nodeGeom(node) } : {}),
           ...(fill ? { fill } : {}),
         };
       }),

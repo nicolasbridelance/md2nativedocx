@@ -25,6 +25,7 @@ import { buildColorsXml, buildStyleXml } from './styles.js';
 import { TREE_COLORS_XML, TREE_STYLE_XML, type SmartArtTreeOutput } from './tree.js';
 import { DEEP_COLUMN_INDENT, DRAWING_EXT_LST_XML, buildDiagramDrawingXml, deepTreeIsCompact, deepTreeShapes, type DeepTreeNode } from './drawing.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
+import { nodeGeom, presSpPrXml } from './node-shape.js';
 import { boxText, pointTextXml } from './text.js';
 import type { SmartArtStyle } from './styles.js';
 
@@ -238,6 +239,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     const model: DeepModelNode = {
       id: '', // box presentation point, assigned in the second pass
       text: boxText(n, label),
+      ...(nodeGeom(n) ? { geom: nodeGeom(n) } : {}),
       ...(n.fill ? { fill: n.fill } : {}),
       pt,
       pRoot: '',
@@ -301,7 +303,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
         return (
           conn +
           `<dgm:pt modelId="${n.pRoot}" type="pres"><dgm:prSet presAssocID="${n.pt}" presName="${isRoot ? 'level1Root' : 'levelNRoot'}" presStyleCnt="0"/><dgm:spPr/></dgm:pt>` +
-          `<dgm:pt modelId="${n.id}" type="pres"><dgm:prSet presAssocID="${n.pt}" presName="${isRoot ? 'level1Main' : 'level2Main'}" presStyleLbl="${isRoot ? 'node1' : 'node2'}" presStyleIdx="${idx}" presStyleCnt="${isRoot ? 1 : nonRootCount}"/><dgm:spPr/></dgm:pt>` +
+          `<dgm:pt modelId="${n.id}" type="pres"><dgm:prSet presAssocID="${n.pt}" presName="${isRoot ? 'level1Main' : 'level2Main'}" presStyleLbl="${isRoot ? 'node1' : 'node2'}" presStyleIdx="${idx}" presStyleCnt="${isRoot ? 1 : nonRootCount}"/>${presSpPrXml(n.geom)}</dgm:pt>` +
           `<dgm:pt modelId="${n.pChildren}" type="pres"><dgm:prSet presAssocID="${n.pt}" presName="${isRoot ? 'level1Children' : 'levelNChildren'}" presStyleCnt="0"/><dgm:spPr/></dgm:pt>`
         );
       })
