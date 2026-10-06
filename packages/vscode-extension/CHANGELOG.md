@@ -5,6 +5,8 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-06
+
 ### Changed
 - **PowerPoint from the extension.** "Export to PowerPoint" (one slide per diagram) sits next to "Export to
   Word" everywhere. New setting `md2nativedocx.pptx.showSource` puts each diagram's Mermaid source beside it.
