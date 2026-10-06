@@ -1,6 +1,6 @@
 # @md2nativedocx/pptx
 
-Markdown with Mermaid diagrams → `.pptx`, **one 16:9 slide per ```` ```mermaid ```` block**, with native,
+The `.pptx` side of `md2nativedocx` (Markdown → Word/PowerPoint, with Mermaid diagrams as native shapes): Markdown with Mermaid diagrams → `.pptx`, **one 16:9 slide per ```` ```mermaid ```` block**, with native,
 individually editable PowerPoint/Google Slides shapes (no pictures).
 
 ```bash

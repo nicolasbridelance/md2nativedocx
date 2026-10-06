@@ -1,7 +1,8 @@
 # @md2nativedocx/cli
 
-Convert Markdown containing **Mermaid** diagrams into a `.docx` with native, editable OOXML vector
-shapes — not flattened PNGs. Standalone CLI counterpart to the
+Convert **Markdown to Word (`.docx`)** — a complete document conversion (text, tables, footnotes, math) that
+also turns every embedded **Mermaid** diagram into native, editable OOXML vector shapes, not flattened PNGs.
+(`md` = Markdown, the input; the *native* part is the Mermaid diagrams inside it.) Standalone CLI counterpart to the
 [md2nativedocx VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx),
 useful for CI pipelines, scripts, Git hooks, or any editor other than VS Code.
 

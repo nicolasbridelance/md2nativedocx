@@ -1,7 +1,7 @@
 {
   "name": "md2nativedocx",
   "version": "0.1.0",
-  "description": "Convert Markdown with Mermaid diagrams into a complete .docx with native, editable OOXML vector shapes — not flattened PNGs.",
+  "description": "Markdown to Word (.docx) — a complete document conversion that also turns embedded Mermaid diagrams into native, editable OOXML vector shapes, not flattened PNGs.",
   "license": "CC0-1.0",
   "private": true,
   "type": "module",

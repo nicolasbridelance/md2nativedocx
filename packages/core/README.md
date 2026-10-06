@@ -1,6 +1,6 @@
 # @md2nativedocx/core
 
-Pure TypeScript engine: Mermaid diagram text → intermediate AST → layout coordinates →
+The Mermaid engine of `md2nativedocx` (**Markdown → Word `.docx`, with Mermaid diagrams as native OOXML shapes**). Pure TypeScript: Mermaid diagram text → intermediate AST → layout coordinates →
 OOXML/DrawingML XML string. No Pandoc, VS Code, or Office.js knowledge — a dependency of
 [`@md2nativedocx/pandoc-filter`](https://www.npmjs.com/package/@md2nativedocx/pandoc-filter), not
 meant to be installed directly by most users.

@@ -1,7 +1,7 @@
 {
   "name": "@md2nativedocx/pandoc-filter",
   "version": "0.1.0",
-  "description": "Lua filter for Pandoc: converts ```mermaid code blocks into native OOXML via the md2nativedocx core engine.",
+  "description": "Pandoc Lua filter for md2nativedocx (Markdown to Word): converts ```mermaid code blocks in a Markdown-to-docx conversion into native, editable OOXML shapes.",
   "license": "CC0-1.0",
   "repository": {
     "type": "git",

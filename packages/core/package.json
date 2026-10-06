@@ -1,7 +1,7 @@
 {
   "name": "@md2nativedocx/core",
   "version": "0.1.0",
-  "description": "Pure TypeScript engine: Mermaid text (all 29 diagram types) -> AST -> layout -> native, editable OOXML/DrawingML shapes for Word. No Pandoc, VS Code, or Office.js knowledge.",
+  "description": "Mermaid engine of md2nativedocx (Markdown to Word, with native Mermaid diagrams). Pure TypeScript: Mermaid text (all 29 diagram types) -> AST -> layout -> native, editable OOXML/DrawingML shapes for Word. No Pandoc, VS Code, or Office.js knowledge.",
   "license": "CC0-1.0",
   "repository": {
     "type": "git",

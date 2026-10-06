@@ -5,7 +5,15 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+### Changed
+- Listing and READMEs now say what the name means: `md2nativedocx` converts **Markdown** to a complete Word
+  `.docx` (the `md` is the input format, not Mermaid), **and** the Mermaid diagrams inside it become native
+  OOXML shapes. Title: "md2nativedocx — Markdown to Word (.docx), with native Mermaid"; the "mermaid to
+  word / docx" search keywords stay.
+
 ### Added
+- SmartArt trees with grandchildren (up to 5 levels, 8 leaves, top-down) are now real SmartArt instead of
+  falling back to native shapes; each subtree gets room in proportion to its leaves.
 - New settings `md2nativedocx.smartArt.style` (`simple` | `colorful` — default | `intense`) and
   `md2nativedocx.smartArt.preRenderedDrawing` (default on) for SmartArt diagrams: a different theme
   accent per shape, optionally the theme's gradient + drop shadow, and the cached drawing Word itself
