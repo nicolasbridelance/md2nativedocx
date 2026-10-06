@@ -430,15 +430,18 @@ Used only top-down, and only when the ordinary layout's boxes would be narrower 
 an irregular org chart (columns of 1-5 leaves, one branch one level deeper, a lone leaf), and a small tree that
 must keep the row layout.
 
-- [ ] All three open with no repair prompt.
-- [ ] `no-drawing`: Word lays out the columns itself — leaves under their parent, indented, lines entering
+- [x] All three open with no repair prompt.
+- [x] `no-drawing`: Word lays out the columns itself — leaves under their parent, indented, lines entering
       from the left; the deeper branch (Technique) keeps a row of two columns.
-- [ ] Add a leaf to a column in Word: it joins the column. Add a child to a leaf in a column: that branch
+- [x] Add a leaf to a column in Word: it joins the column. Add a child to a leaf in a column: that branch
       switches back to a row (Word's own rule).
-- [ ] Section 3 looks exactly like v11/v12.
+- [x] Section 3 looks exactly like v11/v12.
 - Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing.
 - Known: in the irregular example, boxes are ~1.5 cm and long words ("Comptabilité", "Partenariats") still
   break at 8 pt; the font is shared by every box, sized for the longest label.
+
+**Result (maintainer, real Word, 2026-10-06): v13 validated, everything works.** The compact org-chart layout
+is confirmed, `no-drawing` included.
 
 ## Recording the result
 
