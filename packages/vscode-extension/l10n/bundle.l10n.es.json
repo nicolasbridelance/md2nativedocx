@@ -134,6 +134,7 @@
   "Workspace": "Área de trabajo",
   "e.g. {0}": "p. ej. {0}",
   "Native Word charts": "Gráficos nativos de Word",
-  "Not kept as SmartArt: sections (a timeline with sections stays as Word shapes); the title becomes a bold paragraph above.": "No se conserva en SmartArt: las secciones (una cronología con secciones queda en formas de Word); el título pasa a ser un párrafo en negrita encima.",
-  "SmartArt — timeline": "SmartArt — cronología"
+  "SmartArt — timeline": "SmartArt — cronología",
+  "Not kept as SmartArt: the title, which becomes a bold paragraph above.": "No se conserva en SmartArt: el título, que pasa a ser un párrafo en negrita encima.",
+  "In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.": "En SmartArt, cada puntuación se muestra con estrellas (★★★★☆); el título pasa a ser un párrafo en negrita encima."
 }

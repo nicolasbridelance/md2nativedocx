@@ -31,11 +31,11 @@ const STYLE_URN = 'urn:md2nativedocx/smartart-quickstyle/timeline1';
 const LABELS: StyleLabel[] = ['node1', 'sibTrans'];
 
 /** Diagram width (EMU): the same 6-inch frame as the other generators. */
-const FRAME_CX = 5486400;
+export const FRAME_CX = 5486400;
 /** Fractions of the diagram height: axis thickness, dot diameter, box height (above: from the top; below: to the bottom). */
 const AXIS_H = 0.08;
 const DOT = 0.12;
-const BOX_H = 0.4;
+export const BOX_H = 0.4;
 const EMU_PER_PT = 12700;
 
 /** The four-plus-one parts of a timeline SmartArt, and the frame to embed it in. */
@@ -72,7 +72,7 @@ export function periodText(label: string, events: string[]): LabelToken[] {
 }
 
 /** Diagram height (EMU) for boxes of `lines` lines at about 14 pt: between 1.25 and 3.5 inches. */
-function frameHeight(lines: number): number {
+export function frameHeight(lines: number): number {
   const boxPt = lines * 14 * 1.25 + 16;
   return Math.round(Math.min(3.5 * 914400, Math.max(1.25 * 914400, ((boxPt / BOX_H) * EMU_PER_PT))));
 }

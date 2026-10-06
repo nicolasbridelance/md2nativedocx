@@ -109,7 +109,8 @@ export function planHover(plan: RenderingPlan): vscode.MarkdownString {
       md.appendMarkdown(vscode.l10n.t("In Word: a SmartArt graphic. Add a step or a branch, retype, restyle or recolour it from Word's SmartArt Design tab.") + '\n\n');
       if (plan.type === 'mindmap') md.appendMarkdown(vscode.l10n.t('Not kept as SmartArt: the radial layout and the node shapes (turn SmartArt off to keep them).') + '\n\n');
       if (plan.type === 'treeView') md.appendMarkdown(vscode.l10n.t('Not kept as SmartArt: bold folders and italic descriptions (they become plain text).') + '\n\n');
-      if (plan.type === 'timeline') md.appendMarkdown(vscode.l10n.t('Not kept as SmartArt: sections (a timeline with sections stays as Word shapes); the title becomes a bold paragraph above.') + '\n\n');
+      if (plan.type === 'timeline') md.appendMarkdown(vscode.l10n.t('Not kept as SmartArt: the title, which becomes a bold paragraph above.') + '\n\n');
+      if (plan.type === 'journey') md.appendMarkdown(vscode.l10n.t('In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.') + '\n\n');
       break;
     case 'chart':
       md.appendMarkdown(vscode.l10n.t('In Word: a native chart. Chart Design → Edit Data changes the figures.') + '\n\n');

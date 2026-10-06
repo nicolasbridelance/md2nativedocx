@@ -217,7 +217,12 @@ export {
   treeViewToFlowchart,
 } from './smartart/from-tree.js';
 // SmartArt for a section-less `timeline`: a process of periods, through the chain generator.
-export { generateTimelineSmartArt, timelineFitsSmartArt } from './smartart/from-timeline.js';
+export {
+  generateJourneySmartArt,
+  generateTimelineSmartArt,
+  journeyFitsSmartArt,
+  timelineFitsSmartArt,
+} from './smartart/from-timeline.js';
 export type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 export { SMARTART_STYLES, STYLE_PROFILES } from './smartart/styles.js';
 export type { SmartArtStyle, StyleProfile } from './smartart/styles.js';

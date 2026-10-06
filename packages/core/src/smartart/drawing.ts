@@ -59,7 +59,7 @@ export interface DrawingShape {
   cx: number;
   cy: number;
   /** Preset geometry: `roundRect` for nodes (`ellipse` for timeline dots), an arrow for chain transitions. */
-  prst: 'roundRect' | 'ellipse' | 'rightArrow' | 'leftArrow' | 'downArrow' | 'upArrow' | 'connector';
+  prst: 'roundRect' | 'ellipse' | 'homePlate' | 'rightArrow' | 'leftArrow' | 'downArrow' | 'upArrow' | 'connector';
   /** `connector` only: the elbow line's corner points, in EMU relative to the shape's own top-left. */
   path?: Array<[number, number]>;
   /** Node text (absent for arrows). */
@@ -74,6 +74,8 @@ export interface DrawingShape {
   accent?: string;
   /** Tint of that accent for transitions (60 = lighter), in percent. */
   tintPercent?: number;
+  /** `RRGGBB` outline (a neutral card); otherwise the profile's white outline. */
+  line?: string;
 }
 
 const EMU_PER_PT = 12700;
@@ -116,7 +118,7 @@ function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
   const fill = validateHexColor(shape.fill, '');
   if (fill) return `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
   const accent = shape.accent ?? 'accent1';
-  if (shape.tintPercent === undefined && (shape.prst === 'roundRect' || shape.prst === 'ellipse')) {
+  if (shape.tintPercent === undefined && shape.line === undefined && (shape.prst === 'roundRect' || shape.prst === 'ellipse' || shape.prst === 'homePlate')) {
     const { fillIdx } = profileOf(style);
     if (fillIdx === 3) return intenseGradient(accent);
     if (fillIdx === 2) return moderateGradient(accent);
@@ -127,7 +129,7 @@ function fillXml(shape: DrawingShape, style: SmartArtStyle): string {
 
 function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
   const isConn = shape.prst === 'connector';
-  const isArrow = shape.prst !== 'roundRect' && shape.prst !== 'ellipse';
+  const isArrow = shape.prst !== 'roundRect' && shape.prst !== 'ellipse' && shape.prst !== 'homePlate';
   const fill = validateHexColor(shape.fill, '');
   const profile = profileOf(style);
   const lineWidth = profile.lineW;
@@ -135,8 +137,10 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
     ? `<a:ln w="19050" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="${shape.accent ?? 'accent1'}"><a:shade val="60000"/></a:schemeClr></a:solidFill><a:prstDash val="solid"/></a:ln>`
     : isArrow
     ? '<a:ln><a:noFill/></a:ln>'
+    : validateHexColor(shape.line, '')
+    ? `<a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:srgbClr val="${validateHexColor(shape.line, '')}"/></a:solidFill><a:prstDash val="solid"/></a:ln>`
     : `<a:ln w="${lineWidth}" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
-  const effects = isArrow ? '<a:effectLst/>' : profile.effectIdx === 2 ? SHADOW : profile.effectIdx === 1 ? LIGHT_SHADOW : '<a:effectLst/>';
+  const effects = isArrow || shape.line !== undefined ? '<a:effectLst/>' : profile.effectIdx === 2 ? SHADOW : profile.effectIdx === 1 ? LIGHT_SHADOW : '<a:effectLst/>';
   const colour = textColor(fill || undefined);
   const lnIdx = isConn ? 2 : isArrow ? 0 : profile.lnIdx;
   const fillIdx = isConn ? 0 : isArrow ? 1 : profile.fillIdx;

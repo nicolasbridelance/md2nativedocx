@@ -134,6 +134,7 @@
   "Workspace": "工作区",
   "e.g. {0}": "例如 {0}",
   "Native Word charts": "原生 Word 图表",
-  "Not kept as SmartArt: sections (a timeline with sections stays as Word shapes); the title becomes a bold paragraph above.": "SmartArt 中不保留：分区（带分区的时间线保持为 Word 形状）；标题变为上方的加粗段落。",
-  "SmartArt — timeline": "SmartArt — 时间线"
+  "SmartArt — timeline": "SmartArt — 时间线",
+  "Not kept as SmartArt: the title, which becomes a bold paragraph above.": "SmartArt 中不保留：标题，它变为上方的加粗段落。",
+  "In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.": "在 SmartArt 中，每个评分显示为星级（★★★★☆）；标题变为上方的加粗段落。"
 }

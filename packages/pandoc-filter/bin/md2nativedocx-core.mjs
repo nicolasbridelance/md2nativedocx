@@ -86,6 +86,7 @@ import {
   parseMindmap,
   generateMindmapSmartArt,
   generateTimelineSmartArt,
+  generateJourneySmartArt,
   escapeXml,
   generateTreeViewSmartArt,
   translateMindmapToOoxml,
@@ -203,6 +204,16 @@ function trySmartArt(generate, smartArtDir) {
     process.stderr.write(`md2nativedocx: SmartArt path failed, falling back to shapes: ${message}\n`);
     return null;
   }
+}
+
+/**
+ * The diagram title as a bold centred paragraph, for a SmartArt that has no place for it (timeline, journey);
+ * empty when there is no title. XML-escaped: the title is untrusted text.
+ */
+function smartArtTitleXml(title) {
+  return title
+    ? `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">${escapeXml(title)}</w:t></w:r></w:p>`
+    : '';
 }
 
 /** `MD2NATIVEDOCX_NATIVE_CHARTS`: `1` enables every chart type, a comma-separated list only those types. */
@@ -372,10 +383,7 @@ try {
     // With SmartArt on, a section-less timeline becomes a SmartArt process (one box per period, events
     // under it); its title, not part of the SmartArt, goes in a bold centred paragraph above.
     const smartArtXml = trySmartArt((options) => generateTimelineSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    const titleXml = smartArtXml && ast.title
-      ? `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">${escapeXml(ast.title)}</w:t></w:r></w:p>`
-      : '';
-    process.stdout.write(smartArtXml ? titleXml + smartArtXml : translateTimelineToOoxml(ast, translateOptionsFromEnv()));
+    process.stdout.write(smartArtXml ? smartArtTitleXml(ast.title) + smartArtXml : translateTimelineToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'kanban') {
     // Sixteenth non-flowchart diagram type shipped, fifth of Family D.
     const { ast, warnings } = parseKanban(input);
@@ -403,7 +411,10 @@ try {
     for (const warning of warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
-    process.stdout.write(translateJourneyToOoxml(ast, translateOptionsFromEnv()));
+    // With SmartArt on, a journey becomes a SmartArt time line grouped by section (task, stars, actors per
+    // card); its title goes in a bold centred paragraph above, as for a timeline.
+    const smartArtXml = trySmartArt((options) => generateJourneySmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
+    process.stdout.write(smartArtXml ? smartArtTitleXml(ast.title) + smartArtXml : translateJourneyToOoxml(ast, translateOptionsFromEnv()));
   } else if (diagramType.type === 'treeView') {
     // Twentieth non-flowchart diagram type shipped, ninth of Family D.
     const { ast, warnings } = parseTreeView(input);

@@ -55,7 +55,7 @@ export function profileOf(style: SmartArtStyle): StyleProfile {
 }
 
 /** Style labels this project's layouts use. */
-export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans' | 'parChTrans1D2';
+export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans' | 'parChTrans1D2' | 'card';
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
@@ -102,6 +102,21 @@ export const CONN_STYLE_DEF =
   '<a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"/>' +
   '</dgm:style></dgm:styleLbl>';
 
+/** `card` colours: a neutral light-grey card with a soft grey outline and dark text, in every profile. */
+export const CARD_COLORS_DEF =
+  '<dgm:styleLbl name="card">' +
+  '<dgm:fillClrLst meth="repeat"><a:schemeClr val="lt1"><a:lumMod val="95000"/></a:schemeClr></dgm:fillClrLst>' +
+  '<dgm:linClrLst meth="repeat"><a:schemeClr val="tx1"><a:lumMod val="25000"/><a:lumOff val="75000"/></a:schemeClr></dgm:linClrLst>' +
+  '<dgm:effectClrLst/><dgm:txLinClrLst/>' +
+  '<dgm:txFillClrLst meth="repeat"><a:schemeClr val="tx1"/></dgm:txFillClrLst><dgm:txEffectClrLst/></dgm:styleLbl>';
+
+/** `card` quick style: the theme's thin line, plain fill, no effect. */
+export const CARD_STYLE_DEF =
+  '<dgm:styleLbl name="card"><dgm:style>' +
+  '<a:lnRef idx="1"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="1"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>' +
+  '<a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>' +
+  '</dgm:style></dgm:styleLbl>';
+
 /**
  * `dgm:colorsDef` for the non-default profiles. `uniqueId` must equal the `csTypeId` the data model
  * references. (`simple` keeps each generator's own original constant.)
@@ -110,6 +125,7 @@ export function buildColorsXml(style: SmartArtStyle, uniqueId: string, labels: S
   const defs = labels
     .map((label) => {
       if (label === 'parChTrans1D2') return connColorsDef(style);
+      if (label === 'card') return CARD_COLORS_DEF;
       const isTrans = label === 'sibTrans';
       const accents = accentList(style, label);
       const fill = accents.map((a) => clr(a, isTrans ? 60 : undefined)).join('');
@@ -144,6 +160,7 @@ export function buildStyleXml(style: SmartArtStyle, uniqueId: string, labels: St
   const defs = labels
     .map((label) => {
       if (label === 'parChTrans1D2') return CONN_STYLE_DEF;
+      if (label === 'card') return CARD_STYLE_DEF;
       const isTrans = label === 'sibTrans';
       const ln = isTrans ? 0 : lnIdx;
       const fill = isTrans ? 1 : fillIdx;

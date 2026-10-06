@@ -24,7 +24,8 @@ import { parseMindmap } from './diagrams/mindmap/parser.js';
 import { parseTreeView } from './diagrams/tree-view/parser.js';
 import { parseTimeline } from './diagrams/timeline/parser.js';
 import { mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
-import { timelineFitsSmartArt } from './smartart/from-timeline.js';
+import { journeyFitsSmartArt, timelineFitsSmartArt } from './smartart/from-timeline.js';
+import { parseJourney } from './diagrams/journey/parser.js';
 import type { SmartArtGeneratedLayout } from './smartart/dispatch.js';
 import type { Flowchart } from './types.js';
 
@@ -86,8 +87,9 @@ export function planRendering(source: string, settings: RenderingSettings): Rend
         ? { type, label, rendering: 'smartart', smartArt: shape }
         : { type, label, rendering: 'shapes', smartArtWouldApply: true };
     }
-    if (type === 'timeline') {
-      if (!timelineFitsSmartArt(parseTimeline(source).ast)) return { type, label, rendering: 'shapes' };
+    if (type === 'timeline' || type === 'journey') {
+      const fits = type === 'timeline' ? timelineFitsSmartArt(parseTimeline(source).ast) : journeyFitsSmartArt(parseJourney(source).ast);
+      if (!fits) return { type, label, rendering: 'shapes' };
       return settings.smartArt
         ? { type, label, rendering: 'smartart', smartArt: { layout: 'timeline' } }
         : { type, label, rendering: 'shapes', smartArtWouldApply: true };

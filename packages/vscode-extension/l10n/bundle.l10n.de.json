@@ -134,6 +134,7 @@
   "Workspace": "Arbeitsbereich",
   "e.g. {0}": "z. B. {0}",
   "Native Word charts": "Native Word-Diagramme",
-  "Not kept as SmartArt: sections (a timeline with sections stays as Word shapes); the title becomes a bold paragraph above.": "Nicht als SmartArt erhalten: Abschnitte (eine Zeitachse mit Abschnitten bleibt als Word-Formen); der Titel wird zu einem fetten Absatz darüber.",
-  "SmartArt — timeline": "SmartArt — Zeitachse"
+  "SmartArt — timeline": "SmartArt — Zeitachse",
+  "Not kept as SmartArt: the title, which becomes a bold paragraph above.": "Nicht als SmartArt erhalten: der Titel, der zu einem fetten Absatz darüber wird.",
+  "In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.": "Im SmartArt wird jede Bewertung als Sterne dargestellt (★★★★☆); der Titel wird zu einem fetten Absatz darüber."
 }
