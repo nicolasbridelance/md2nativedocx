@@ -115,6 +115,14 @@ export's own `.log` file.
 *Same Mermaid source, two outputs: **left = rendered by Mermaid.js**, **right = md2nativedocx** (native, editable Word shapes,
 rendered here with LibreOffice).*
 
+## SmartArt for processes, cycles, org charts and mindmaps
+
+<img src="docs/smartart.png" width="900" alt="Mermaid flowcharts and a mindmap exported as native Word SmartArt: a process, a cycle, an org chart, a mindmap hierarchy, and one process in four looks"/>
+
+*A chain, cycle or tree-shaped flowchart (and a mindmap) becomes a real
+SmartArt graphic: add a step or a branch from Word's Text Pane, switch layout or restyle from the SmartArt Design tab.
+`md2nativedocx.smartArt.style` picks the starting look; `md2nativedocx.smartArt.enabled` turns it off.*
+
 ## Frequently asked
 
 **How do I convert a Mermaid diagram to an editable Word diagram?** Open the `.md` (or `.mmd`) file, click
@@ -141,8 +149,8 @@ tables/formatting export either way — and on a raw `.mmd` Mermaid file too.
 No configuration required before first use. Optional settings: `md2nativedocx.outputDirectory`
 chooses where `.docx` files are written (default: the same folder as the source);
 `md2nativedocx.referenceDocument` points at a company Word template to match its fonts/colors/
-styles; `md2nativedocx.smartArt.enabled` (default: off, experimental) turns an eligible diagram
-into a native SmartArt graphic instead of the default OOXML canvas shapes;
+styles; `md2nativedocx.smartArt.enabled` (default: on) turns an eligible diagram into a native
+SmartArt graphic instead of OOXML canvas shapes;
 `md2nativedocx.wordCompatibilityCheck.enabled` (default: on) validates every export against Word's
 own schema and reports the result in its `.log` file.
 
