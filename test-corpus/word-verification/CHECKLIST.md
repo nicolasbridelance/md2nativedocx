@@ -1,5 +1,10 @@
 # Word verification checklist — MVP closure (spec §9)
 
+> **Files kept (2026-10-06):** one `.docx`/`.pptx` per diagram type, the `all-types-*` files, the flowchart
+> probes and the latest SmartArt round (v18). The files of the earlier rounds below (SmartArt v3-v17,
+> cycle/tree rechecks, pie variants, emoji review) were removed once confirmed; their results stay recorded
+> here. To reopen one: `git checkout 21a49a8 -- test-corpus/word-verification/<file>`.
+
 Purpose: this is the one piece of MVP-acceptance evidence that cannot be produced from Linux/CI —
 it requires opening these files in **real Microsoft Word** (any recent desktop version) on Windows
 or macOS. Everything else (crossing-detector report, golden/unit/fuzz/visual-diff tests) is already
