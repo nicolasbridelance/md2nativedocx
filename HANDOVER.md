@@ -23,7 +23,7 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 
 ## Health (2026-10-06)
 
-- Tests: core 749, cli 127, vscode-extension 73, pptx 25, pandoc-filter 15, word-addin 4, all green.
+- Tests: core 749, cli 127, vscode-extension 73, pptx 25, pandoc-filter 15, all green.
   Typecheck and lint clean.
 - `test:visual` (LibreOffice render + pixel diff) green; `test:oxml-validate` reports 0 schema errors
   in anything this project emits (the remaining errors in a full document come from Pandoc's own
@@ -53,7 +53,7 @@ Everything open is in [`TODO.md`](TODO.md), in four sections:
 
 1. **Maintainer:** install 0.6.0 on the corporate Windows machine and export a mixed document (the new
    defaults change existing users' output); decide on Venn as SmartArt; npm token; review a one-line
-   `ci.yml` change; DCO/CLA before the first external PR. Word add-in on hold.
+   `ci.yml` change; DCO/CLA before the first external PR. Word add-in on hold, on branch `word-addin-scaffold`.
 2. **Agent, no maintainer needed:** the manual generator into `scripts/` and SmartArt/charts in the
    manual; untranslated setting descriptions; two known visual defects; the `braces` exception date.
 3. **Backlog, analysed:** five SmartArt/chart tracks (Venn, small Gantt, requirement/C4 trees, treemap

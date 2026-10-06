@@ -30,10 +30,10 @@
       à revue humaine (AGENTS.md).
 - [ ] **Avant la première PR externe** : choisir DCO (`git commit -s`), CLA ou rien (AGENTS.md,
       « Licensing »).
-- ⏸ **Add-in Word (Phase 4), en pause** : les 3 spikes demandent un vrai Word desktop (presse-papiers
-  depuis une *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire et outillage
-  retiré pour l'audit npm : `docs/adr/0008-word-addin-ribbon-platform-spike.md` et la section Phase 4
-  de l'archive.
+- ⏸ **Add-in Word (Phase 4), en pause, hors de `main`** : le scaffold vit sur la branche
+  `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
+  *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :
+  `docs/adr/0008-word-addin-ribbon-platform-spike.md` et la section Phase 4 de l'archive.
 
 ## 2. Faisable par l'agent
 

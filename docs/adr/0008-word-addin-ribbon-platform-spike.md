@@ -1,5 +1,9 @@
 # ADR 0008 — Add-in Word : ruban dédié plutôt que menu contextuel natif, plan de spikes
 
+> **2026-10-06 :** le scaffold `packages/word-addin/` a été retiré de `main` pour alléger le dépôt avant la v1
+> (575 paquets npm de développement en moins). Il est conservé tel quel sur la branche
+> `word-addin-scaffold` ; pour reprendre les spikes, repartir de cette branche.
+
 - **Statut :** Recherche plateforme faite et décision de pivot prise (2026-09-06). **Scaffold codé
   le même jour** (`packages/word-addin/` — 5 boutons de production en stub + un bouton `[Dev]
   Vérifier les spikes` qui exécute réellement les spikes 1 et 2 et affiche le résultat dans un

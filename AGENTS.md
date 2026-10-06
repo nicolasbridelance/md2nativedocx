@@ -75,8 +75,7 @@ md2nativedocx/
 │   ├── pandoc-filter/            # Lua filter, thin wrapper calling core (spec §5.4.a)
 │   ├── cli/                      # `npx md2nativedocx` (spec §8)
 │   ├── pptx/                     # .pptx decks from the same core output (ADR 0010)
-│   ├── vscode-extension/         # spec §5.4.b
-│   └── word-addin/               # Office.js ribbon add-in, on hold (ADR 0008)
+│   └── vscode-extension/         # spec §5.4.b (the Word add-in, on hold, lives on branch word-addin-scaffold)
 └── docs/
     ├── specs/                     # product specs: cahier_des_charges.md (what/why), UX_SPEC.md,
     │                              # cahier_des_charges_google_slides.md, FUTURE_*_SPEC.md
