@@ -16,9 +16,10 @@
  */
 
 import type { Flowchart } from '../types.js';
-import { classifyTopology, type SmartArtLayout } from './classify.js';
+import { classifyTopology, flowchartTreeDepth, type SmartArtLayout } from './classify.js';
 import { generateChain } from './chain.js';
 import { generateTree } from './tree.js';
+import { generateDeepTree } from './tree-deep.js';
 import { generateCycle } from './cycle.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
@@ -40,8 +41,8 @@ export interface SmartArtGenerated {
  * Classify `flowchart` and run its matching generator.
  *
  * Returns `null` for anything {@link classifyTopology} doesn't accept —
- * subgraphs, merge-after-branch, disconnected graphs, a tree deeper than
- * `tree.ts` supports, etc. A `null` result is the expected, common case for
+ * subgraphs, merge-after-branch, disconnected graphs, a tree larger than
+ * the tree generators support, etc. A `null` result is the expected, common case for
  * a real-world flowchart (spec §6: merge-after-branch is probably the most
  * frequent shape) and callers should silently fall back to the existing
  * `wpg:wgp` translator, not treat it as an error.
@@ -54,7 +55,11 @@ export function generateSmartArt(flowchart: Flowchart, options: SmartArtGenerate
     case 'chain':
       return { layout: 'chain', ...generateChain(flowchart, options) };
     case 'tree':
-      return { layout: 'tree', ...generateTree(flowchart, options) };
+      // Two levels keep the original generator; deeper trees need the size-aware multi-level one.
+      return {
+        layout: 'tree',
+        ...(flowchartTreeDepth(flowchart) > 2 ? generateDeepTree(flowchart, options) : generateTree(flowchart, options)),
+      };
     case 'cycle':
       return { layout: 'cycle', ...generateCycle(flowchart, options) };
   }

@@ -356,6 +356,119 @@ export function treeShapes(
   return shapes;
 }
 
+/** A node of a multi-level tree, as {@link deepTreeShapes} lays it out (top-down). */
+export interface DeepTreeNode extends Labelled {
+  children: DeepTreeNode[];
+}
+
+/** Horizontal gap between neighbouring subtrees, in box widths. */
+const DEEP_SIBLING_GAP = 0.3;
+/** Vertical gap between levels, in box heights (the `layoutDef`'s `sp` constraint). */
+const DEEP_LEVEL_GAP = 0.4;
+/** Tallest frame (EMU) a multi-level tree may ask for (5 in). */
+const DEEP_MAX_FRAME_CY = 4572000;
+
+/** Number of levels (the root counts as 1) and of leaves of a tree. */
+export function deepTreeSize(root: { children: unknown[] }): { depth: number; leaves: number } {
+  const walk = (n: { children: unknown[] }): { depth: number; leaves: number } => {
+    if (n.children.length === 0) return { depth: 1, leaves: 1 };
+    const subs = n.children.map((c) => walk(c as { children: unknown[] }));
+    return { depth: 1 + Math.max(...subs.map((s) => s.depth)), leaves: subs.reduce((sum, s) => sum + s.leaves, 0) };
+  };
+  return walk(root);
+}
+
+/**
+ * Multi-level tree geometry (root on top). Space is shared by the **real shape of each subtree**: a leaf takes
+ * one box width, a parent's subtree takes the sum of its children's subtrees (plus a gap between siblings),
+ * and the parent is centred over its first and last child — so a branch with grandchildren is wide and a
+ * lone leaf next to it stays narrow, instead of every node getting a fixed share. Each parent→child link is
+ * an elbow bending halfway down the gap between the two levels. The frame is sized to the result.
+ */
+export function deepTreeShapes(
+  root: DeepTreeNode,
+  style: SmartArtStyle = 'simple',
+): { shapes: DrawingShape[]; frame: { cx: number; cy: number } } {
+  const FW = DRAWING_FRAME.cx;
+  const { depth } = deepTreeSize(root);
+  const span = (n: DeepTreeNode): number =>
+    n.children.length === 0 ? 1 : Math.max(1, n.children.reduce((s, c) => s + span(c), 0) + DEEP_SIBLING_GAP * (n.children.length - 1));
+  const totalSpan = span(root);
+  const boxW = Math.min(FW / totalSpan, 0.28 * FW);
+  const levels = depth + DEEP_LEVEL_GAP * (depth - 1);
+  const boxH = Math.min(0.7 * boxW, 822960, DEEP_MAX_FRAME_CY / levels);
+  const frame = { cx: FW, cy: Math.round(boxH * levels) };
+  const originX = (FW - totalSpan * boxW) / 2;
+
+  const labels: string[] = [];
+  const collect = (n: DeepTreeNode): void => {
+    labels.push(n.text);
+    n.children.forEach(collect);
+  };
+  collect(root);
+  const font = fitFontSize(labels, boxW, boxH);
+
+  // Pass 1: horizontal centre of every node, in box-width units from the left edge of the tree.
+  const centreOf = new Map<DeepTreeNode, number>();
+  const centre = (n: DeepTreeNode, left: number): void => {
+    if (n.children.length === 0) {
+      centreOf.set(n, left + 0.5);
+      return;
+    }
+    let childLeft = left;
+    for (const child of n.children) {
+      centre(child, childLeft);
+      childLeft += span(child) + DEEP_SIBLING_GAP;
+    }
+    centreOf.set(n, (centreOf.get(n.children[0]!)! + centreOf.get(n.children[n.children.length - 1]!)!) / 2);
+  };
+  centre(root, 0);
+
+  // Pass 2: shapes in depth-first order (the order the data model numbers the boxes, for `presStyleIdx`).
+  const shapes: DrawingShape[] = [];
+  let nonRootCount = 0;
+  const emit = (n: DeepTreeNode, level: number, parent: { midX: number; bottom: number } | undefined): void => {
+    const x = originX + (centreOf.get(n)! - 0.5) * boxW;
+    const y = level * boxH * (1 + DEEP_LEVEL_GAP);
+    shapes.push({
+      modelId: n.id,
+      x: Math.round(x),
+      y: Math.round(y),
+      cx: Math.round(boxW),
+      cy: Math.round(boxH),
+      prst: 'roundRect',
+      text: n.text,
+      fontSize: font,
+      accent: accentOf(style, level === 0 ? 'node1' : 'node2', level === 0 ? 0 : nonRootCount++),
+      ...(n.fill ? { fill: n.fill } : {}),
+    });
+    const midX = x + boxW / 2;
+    if (parent && n.connId !== undefined) {
+      // Elbow from the middle of the parent's bottom side to the middle of this box's top side.
+      const gap = y - parent.bottom;
+      const left = Math.min(parent.midX, midX);
+      shapes.push({
+        modelId: n.connId,
+        x: Math.round(left),
+        y: Math.round(parent.bottom),
+        cx: Math.round(Math.abs(midX - parent.midX)),
+        cy: Math.round(gap),
+        prst: 'connector',
+        path: [
+          [parent.midX - left, 0],
+          [parent.midX - left, gap / 2],
+          [midX - left, gap / 2],
+          [midX - left, gap],
+        ],
+        accent: accentOf(style, 'parChTrans1D2', 0),
+      });
+    }
+    for (const child of n.children) emit(child, level + 1, { midX, bottom: y + boxH });
+  };
+  emit(root, 0, undefined);
+  return { shapes, frame };
+}
+
 /**
  * Cycle geometry: boxes evenly spaced clockwise from the top, a transition arrow between each pair (the last
  * one closing the loop). Sizes come from {@link cycleBoxWidth}, the same rule the `layoutDef` states.

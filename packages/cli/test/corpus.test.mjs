@@ -145,7 +145,11 @@ test('corpus: every source diagram regenerates a conformant .docx (structural ch
 
 test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   + 'footnote, link, bold/italic) survives alongside two mermaid diagrams', () => {
-  const source = readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8');
+  // Both of the fixture's diagrams are SmartArt-eligible since multi-level trees shipped (the second is a
+  // 4-level tree), so one merge-after-branch diagram is appended here to keep a native-shapes fallback in the mix.
+  const source =
+    readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8') +
+    '\n```mermaid\ngraph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n```\n';
   // SmartArt explicitly enabled (off by default since 2026-09-03, see
   // md2nativedocx.mjs's doc comment on smartArtEnabled): this test wants the
   // mixed-dispatch scenario below, not the plain-fallback default. Written to
@@ -198,14 +202,10 @@ test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
     // corpus loop's assertConformantDocx already checks this per-file, but
     // re-asserted here since this file specifically exercises two diagrams
     // interleaved with text, the scenario most likely to produce id reuse).
-    // Only *one* wpc:wpc canvas, not two: the first diagram (Collecteur ->
-    // File d'attente -> Worker -> Base de données, a plain 4-node chain) is
-    // SmartArt-eligible and dispatches to a `dgm:relIds` diagram instead
-    // (see md2nativedocx-core.mjs's SmartArt dispatch); the second (same
-    // chain plus a branch to a dead-letter queue) is not -- classifyTopology
-    // rejects it as `tree-too-deep` -- and still renders via the wpc:wpc path.
-    assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the tree-too-deep diagram)');
-    assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 1, 'expected exactly one SmartArt diagram (the plain chain)');
+    // The fixture's two diagrams (a 4-node chain and a 4-level tree) dispatch to `dgm:relIds` SmartArt; the
+    // appended merge diagram is rejected by classifyTopology (`merge-after-branch`) and renders via wpc:wpc.
+    assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the merge diagram)');
+    assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 2, 'expected two SmartArt diagrams (the chain and the tree)');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

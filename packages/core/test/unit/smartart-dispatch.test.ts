@@ -40,7 +40,15 @@ test('returns null for a flowchart containing a subgraph', () => {
   assert.equal(generateSmartArt(ast), null);
 });
 
-test('returns null for a tree deeper than tree.ts supports', () => {
+test('dispatches a top-down tree with grandchildren to the multi-level generator', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B\n  A --> D\n  B --> C');
+  const result = generateSmartArt(ast);
+  assert.equal(result?.layout, 'tree');
+  assert.ok(result?.layoutXml.includes('tree-deep1'));
+  assert.ok(result?.frame, 'multi-level trees size their own frame');
+});
+
+test('returns null for a grandchild tree in a direction the multi-level layout does not cover', () => {
+  const { ast } = parseMermaid('graph LR\n  A --> B\n  A --> D\n  B --> C');
   assert.equal(generateSmartArt(ast), null);
 });

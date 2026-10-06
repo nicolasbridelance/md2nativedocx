@@ -361,6 +361,28 @@ a 4-step cycle and a 3-child tree, with cached drawing.
 
 **Result (maintainer, real Word, 2026-10-05): all confirmed on the v10 files. The four new profiles are validated.**
 
+## Round 14 — 2026-10-06: trees deeper than two levels (v11)
+
+Until now any tree with grandchildren fell back to native shapes. `tree-deep.ts` now writes a recursive layout
+(`hierRoot` / `hierChild`, the algorithms Word's own hierarchies use): each subtree takes the room of its leaves,
+the parent is centred over its children, and every level has its elbow connectors. Top-down (`TD`) only, up to 5
+levels and 8 leaves; other directions still fall back to native shapes. Nested-level structure read from
+`handmade_samples/labeled-hierarchy-basique.docx` (structure only, nothing copied).
+
+`smartart-v11-deep-trees-colorful.docx`, `-intense.docx` (cached drawing) and `-colorful-no-drawing.docx` (layout
+definition only). Five SmartArt trees (3 levels uneven, 4 levels, edge labels + one forced colour, 5 levels, 8
+leaves) and a sixth `LR` tree that must stay native shapes.
+
+- [ ] All three open with no repair prompt.
+- [ ] Each diagram shows boxes at every level with a line from each parent to each child, parents centred over
+      their children, nothing overlapping.
+- [ ] Do "with drawing" and "no drawing" look alike? (`no-drawing` is Word laying the diagram out from our
+      `layoutDef` alone: this is the real test of the `hierRoot`/`hierChild` recursion.)
+- [ ] Edit a text, add a child to a leaf, add a grandchild in Word: lines follow, nothing breaks.
+- [ ] Section 6 (`LR`) is ordinary native shapes, not SmartArt.
+- Verified here: Open XML validator, 0 errors under `/word/diagrams`; LibreOffice renders the cached drawing.
+- Known: with 8 leaves the boxes are ~0.5 in wide and long words (e.g. "Organisation") wrap mid-word at 10 pt.
+
 ## Recording the result
 
 Once done, either:

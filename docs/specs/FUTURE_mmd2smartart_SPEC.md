@@ -141,6 +141,9 @@ initiale de cette section, écrite avant tout test dans un vrai Word/LibreOffice
    (contrairement à `hierarchy1`, qui est dynamique). Généraliser à une profondeur adaptative reste
    un chantier séparé, non fait. Voir le commentaire de doc de `MAX_TREE_DEPTH` dans `classify.ts`
    et de `TREE_LAYOUT_XML` dans `tree.ts`.
+   **Mise à jour (2026-10-06)** : le chantier « profondeur adaptative » est fait pour la direction `TD` —
+   `tree-deep.ts` utilise `hierRoot`/`hierChild` (comme `hierarchy1`) avec récursion `forEach ref=`, plafond
+   `MAX_TREE_DEPTH = 5` et `MAX_TREE_LEAVES = 8` ; `tree.ts` reste le générateur 2 niveaux (4 directions).
 4. **Bug critique trouvé et corrigé le même jour sur `chain.ts` (déjà "livré")** : le rendu réel
    (LibreOffice headless) de la sortie de `generateChain()` — jamais vérifié jusqu'ici, seule la
    structure XML était testée — était **entièrement blanc**. Cause : il manquait le connecteur
@@ -165,7 +168,7 @@ classifyTopology(flowchart: Flowchart): 'chain' | 'tree' | 'cycle' | 'unsupporte
 | Topologie détectée | Condition | Layout SmartArt (`layoutDef` URN) | Avantage | Limitation |
 |---|---|---|---|---|
 | **Chaîne** | Tout nœud a in-degré ≤1 ET out-degré ≤1 (chemin simple) | auto-écrit, `urn:md2nativedocx/smartart-layout/chain1` — **livré** (`chain.ts`) | Réordonnancement au glisser-déposer, style en 1 clic | Casse dès qu'un nœud a 2 sorties |
-| **Arbre** | Chaque nœud a au plus 1 parent, pas de fusion, pas de cycle, profondeur ≤ 2 (`MAX_TREE_DEPTH`) | auto-écrit, `urn:md2nativedocx/smartart-layout/tree1` — **livré** (`tree.ts`), rendu validé | Ajout/suppression de branches natif dans Word ; **forme par nœud préservable** (§5.1) | Une fusion casse tout ; pas de texte natif sur les connecteurs (§5.2) ; profondeur limitée à 2 (racine + enfants directs), voir §3.1 point 3 |
+| **Arbre** | Chaque nœud a au plus 1 parent, pas de fusion, pas de cycle, profondeur ≤ 5 (`MAX_TREE_DEPTH`), au-delà de 2 niveaux : `TD` seulement, ≤ 8 feuilles | auto-écrit, `urn:md2nativedocx/smartart-layout/tree1` — **livré** (`tree.ts`), rendu validé | Ajout/suppression de branches natif dans Word ; **forme par nœud préservable** (§5.1) | Une fusion casse tout ; pas de texte natif sur les connecteurs (§5.2) ; profondeur limitée à 2 (racine + enfants directs), voir §3.1 point 3 |
 | **Cycle** | in-degré = out-degré = 1 pour chaque nœud, boucle fermée | auto-écrit, `urn:md2nativedocx/smartart-layout/cycle1` — **livré** (`cycle.ts`), rendu validé | Rendu circulaire propre — Dagre ne le fait pas nativement | Direction LR/TD de Mermaid perd son sens (pas d'orientation naturelle pour un cercle, une seule variante de layout) |
 | *(tout le reste)* | fusion après branche, cross-links, cycles partiels, multi-parents | — | — | fallback pipeline `wpg:wgp`/`custGeom` existant, couverture 100 % comme aujourd'hui |
 

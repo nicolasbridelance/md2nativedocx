@@ -10,18 +10,11 @@
  * existing pipeline; this module only ever adds an alternative rendering
  * path for a deliberately narrow subset.
  *
- * `mermaid2docx#docs/adr/0004-smartart-feasibility-spike.md` records the
- * empirical work behind the one constraint this module enforces that isn't
- * in the spec's original text: a `tree` classification is capped at depth 2
- * (root + one row of direct children). This is **not** a format limit —
- * Word's own built-in `hierarchy1` algorithm has no presentation template
- * beyond depth 4, and a fully self-authored `layoutDef` has no ceiling at
- * all (Round 5) — it's specific to `tree.ts`'s current generator, whose
- * fixed layoutDef reserves a static height split (35% node / 55% children
- * row) at one nesting level; naively repeating that split at further levels
- * would misallocate space for any node without grandchildren, since the
- * split isn't computed from the real subtree shape. Raise this once
- * `tree.ts` supports a size-aware deeper layout.
+ * Trees come in two generators: `tree.ts` (root + one row of children, any of
+ * the four directions) and `tree-deep.ts` (any depth up to
+ * {@link MAX_TREE_DEPTH}, top-down only, at most {@link MAX_TREE_LEAVES}
+ * leaves so boxes stay readable in the fixed page width). The depth ceiling is
+ * not a format limit — it keeps the cached drawing legible.
  */
 
 import type { Flowchart } from '../types.js';
@@ -61,10 +54,10 @@ export type SmartArtIneligibleReason =
    * distinct from `merge-after-branch` because the actionable advice differs
    * (no single pair of nodes to point at). */
   | 'irregular-topology'
-  /** The graph is a valid tree shape but deeper than `tree.ts`'s generator
-   * currently supports (ADR 0004, "Round 5" + this session's geometry fix).
-   * Depth 1 is the root; a value of 3 here means there's a grandchild level
-   * the generator's fixed layoutDef has no room for. */
+  /** The graph is a valid tree shape but larger than the tree generators
+   * support: more than {@link MAX_TREE_DEPTH} levels, more than
+   * {@link MAX_TREE_LEAVES} leaves, or a grandchild level in a direction other
+   * than top-down. */
   | 'tree-too-deep';
 
 /** A flowchart classified as eligible for one of the three SmartArt layouts. */
@@ -91,14 +84,13 @@ export interface SmartArtIneligible {
 export type SmartArtClassification = SmartArtEligible | SmartArtIneligible;
 
 /**
- * The deepest tree `tree.ts`'s generator currently supports: a root plus one
- * row of direct children. Depth 1 is the root itself. This is a property of
- * that generator's fixed-height-split `layoutDef`, not of the OOXML diagram
- * format or of Word's own `hierarchy1` (which supports depth 4, and a fully
- * self-authored algorithm has no format-level ceiling at all — see ADR 0004
- * "Round 5"). Raise this once `tree.ts` supports a size-aware deeper layout.
+ * The deepest tree the SmartArt generators support (depth 1 is the root itself). Two levels
+ * go through `tree.ts` in any direction; deeper ones through `tree-deep.ts`, top-down only.
  */
-export const MAX_TREE_DEPTH = 2;
+export const MAX_TREE_DEPTH = 5;
+
+/** The most leaves a multi-level tree may have; wider ones fall back to native shapes. */
+export const MAX_TREE_LEAVES = 8;
 
 function eligible(layout: SmartArtLayout): SmartArtEligible {
   return { eligible: true, layout };
@@ -181,6 +173,13 @@ export function classifyTopology(flowchart: Flowchart): SmartArtClassification {
     if (depth > MAX_TREE_DEPTH) {
       return ineligible('tree-too-deep', [roots[0]!]);
     }
+    if (depth > 2) {
+      // Multi-level trees: only the top-down layout exists, and the leaf count bounds box size.
+      const leaves = nodeIds.filter((id) => (outDegree.get(id) ?? 0) === 0).length;
+      if (flowchart.direction !== 'TD' || leaves > MAX_TREE_LEAVES) {
+        return ineligible('tree-too-deep', [roots[0]!]);
+      }
+    }
     return eligible('tree');
   }
 
@@ -228,6 +227,16 @@ function isConnected(
     }
   }
   return visited.size === nodeIds.length;
+}
+
+/**
+ * Depth of the single-rooted tree `flowchart` describes (root alone = 1), or 0 when it has no unique root.
+ * Used by the dispatcher to pick between the two-level and multi-level generators.
+ */
+export function flowchartTreeDepth(flowchart: Flowchart): number {
+  const targets = new Set(flowchart.edges.map((e) => e.to));
+  const roots = flowchart.nodes.filter((n) => !targets.has(n.id));
+  return roots.length === 1 ? treeDepth(roots[0]!.id, flowchart.edges) : 0;
 }
 
 /** Depth of a tree rooted at `rootId` (root itself counts as depth 1). */
