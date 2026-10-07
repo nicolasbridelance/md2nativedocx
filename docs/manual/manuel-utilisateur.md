@@ -55,7 +55,9 @@ md2nativedocx transforme un document Markdown contenant des diagrammes Mermaid e
 - **Rien d'externe** : le fichier produit est autonome, sans aucune référence distante.
 - **Pas d'échec silencieux** : une construction non gérée produit un avertissement (affiché et noté dans le journal d'export), jamais un diagramme faux sans prévenir.
 - **Éditable, à sens unique** : les formes se modifient dans Word, mais ce qui est modifié dans Word n'est pas reporté dans le Markdown, qui reste la source de vérité.
-- **Plafonds** : les entrées très grandes sont plafonnées (voir les limites de chaque type).
+- **Plafonds** : les entrées très grandes sont plafonnées (voir les limites de chaque type). Un diagramme mis en page automatiquement (flowchart, classes, états, entité-relation, C4, architecture, exigences) est refusé au-delà de 500 nœuds, conteneurs de sous-graphes compris, ou de 800 arêtes ; une source Mermaid est refusée au-delà de 1 000 000 de caractères.
+- **Un diagramme trop grand ne bloque pas le document** : il est remplacé par une note grise qui dit pourquoi, le reste du document (ou, pour une présentation, les autres diapositives) est converti normalement, et l'avertissement figure dans le journal d'export.
+- **Utilisation par un assistant** : le paquet `@md2nativedocx/mcp` expose la conversion à un assistant compatible MCP (outils `render_diagram` et `convert_document`). Chaque appel a un délai maximal, après quoi le travail est interrompu ; le fichier produit reste dans un dossier racine choisi par l'administrateur et ne remplace jamais un fichier existant.
 
 ## Comment lire ce manuel
 

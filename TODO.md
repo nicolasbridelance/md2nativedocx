@@ -27,6 +27,8 @@
       produit par un script resté hors dépôt. Aujourd'hui le `.md` est la source à éditer à la main.
       Le manuel ne dit encore rien des SmartArt ni des graphiques Word, qui sont pourtant devenus les
       défauts de l'extension : à ajouter en même temps (s'appuyer sur `docs/coverage.md`).
+      Le `.md` dit depuis le 2026-10-07 les plafonds, la note grise et le serveur MCP (Principes) ; le
+      `.docx` n'a pas été régénéré (script hors dépôt, sommaire écrit à la main).
 - [ ] **Descriptions de réglages partiellement traduites** (`packages/vscode-extension/package.nls.*.json`) ;
       le panneau, lui, suit la langue de VS Code depuis la 0.6.0.
 - [ ] **Deux défauts visuels connus** :
@@ -48,14 +50,15 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       tolérants ; voir si un appelant de `renderDiagram()` a besoin de plus avant d'inventer une taxonomie.
       Côté CLI c'est fait le 2026-10-07 : `ConversionError` (`stage`), codes de sortie 0 / 1 / 2
       documentés dans `packages/cli/README.md`.
-- [ ] **Limites de ressources : reste la taille du paquet produit.** Fait le 2026-10-07 : plafonds de
+- [ ] **Limites de ressources : reste le délai du CLI et du pont.** Fait le 2026-10-07 : plafonds de
       graphe pour tout ce qui passe par Dagre (500 nœuds conteneurs de `subgraph` compris, 800 arêtes,
       surchargeables par `maxNodes` / `maxEdges`), plafond de source (`maxSourceLength`, 1 000 000
       caractères), `DiagramTooLargeError` typée, une note visible à la place du diagramme trop gros dans le
       pont du filtre et dans `pptx` (le document se convertit). Le **délai** est dans `packages/mcp` : chaque
       appel tourne dans un processus enfant tué avec ses descendants à l'échéance (30 s / 120 s). Les plafonds
       bornent le pire cas sans le rendre bon marché (~35 s mesurés pour 400 nœuds / 800 arêtes), d'où le
-      délai ; le CLI et le pont n'ont toujours pas le leur.
+      délai ; le CLI et le pont n'ont toujours pas le leur. Taille du paquet : `packages/mcp` refuse d'écrire
+      un `.docx` de plus de 100 Mo ; `convert()` n'a pas de plafond (l'ajouter = option d'API, escalade).
 - [ ] **MCP : Pandoc lit et télécharge les images du Markdown** (chemins relatifs à la racine, URL
       `http(s)`) : fuite de fichier ou SSRF possible si le serveur reçoit du Markdown non fiable.
       Documenté dans `packages/mcp/README.md`. Une vraie réponse demande une option de `convert()` (donc

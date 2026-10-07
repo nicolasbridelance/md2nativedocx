@@ -5,6 +5,9 @@
 
 import { writeFile } from 'node:fs/promises';
 
+/** Largest .docx the server will write; a bigger package is refused, not truncated. */
+const MAX_DOCUMENT_BYTES = 100 * 1024 * 1024;
+
 const TOOLS = {
   async render_diagram({ source, options }) {
     const { renderDiagram } = await import('@md2nativedocx/core');
@@ -22,6 +25,9 @@ const TOOLS = {
   async convert_document({ markdown, outputPath, cwd, options }) {
     const { convert } = await import('@md2nativedocx/cli');
     const result = await convert(markdown, { ...options, cwd });
+    if (result.document.length > MAX_DOCUMENT_BYTES) {
+      throw new Error(`the document is ${result.document.length} bytes, over the ${MAX_DOCUMENT_BYTES} byte limit`);
+    }
     // 'wx': never overwrite a file the caller did not create; the parent already validated the path.
     await writeFile(outputPath, result.document, { flag: 'wx' });
     return { outputPath, bytes: result.document.length, warnings: result.warnings };
