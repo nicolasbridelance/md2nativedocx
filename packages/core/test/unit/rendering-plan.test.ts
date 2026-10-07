@@ -88,7 +88,7 @@ test('the plan predicts what renderDiagram does, on every visual and Word-verifi
       else if (entry.name.endsWith('.mmd')) sources.push([path, readFileSync(path, 'utf8')]);
       else if (entry.name.endsWith('.md')) {
         let i = 0;
-        for (const m of readFileSync(path, 'utf8').matchAll(/```mermaid\n([\s\S]*?)```/g)) sources.push([`${path}#${i++}`, m[1] ?? '']);
+        for (const m of readFileSync(path, 'utf8').matchAll(/```mermaid\r?\n([\s\S]*?)```/g)) sources.push([`${path}#${i++}`, m[1] ?? '']);
       }
     }
   };
