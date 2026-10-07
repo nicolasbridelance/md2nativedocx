@@ -3462,3 +3462,7 @@ que de partir tête baissée :
 ## 2026-10-07 — incidents Windows de septembre clos
 
 La 0.7.0 installée depuis la Marketplace sur le poste Windows d'entreprise a été validée par le mainteneur : `spawnSync unzip ENOENT` et le crash Pandoc/Lua `os.tmpname` sont clos.
+
+## 2026-10-07 — première publication npm
+
+`@md2nativedocx/core`, `pandoc-filter`, `pptx` et `cli` publiés en 0.1.0 (ordre des dépendances ; `pptx` est requis par `cli`). Vérifié depuis le registre : `npx @md2nativedocx/cli@0.1.0` produit un `.docx` valide dans un répertoire vierge. Le registre a mis environ 5 minutes à répondre 200 après le publish.

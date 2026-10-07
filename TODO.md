@@ -13,14 +13,6 @@
 
 ## 1. En attente du mainteneur
 
-- [ ] **Publication npm** des paquets `core` → `pandoc-filter` → `cli` : prête, en attente du feu vert pour publier.
-      **Même priorité que le chantier V2** : sans `npx md2nativedocx`, un pilote qui ne passe pas par
-      VS Code ne peut rien essayer, et le SDK comme le MCP n'ont aucun utilisateur possible.
-      **Débloqué le 2026-10-07** : jeton dans `.env` (`NPM_TOKEN`, `npm whoami` → `nicolasbridelance`),
-      organisation `@md2nativedocx` existante. **Décision du mainteneur : publier après `convert()`**
-      (§2bis), pour que la première 0.x ait déjà la forme de son API. API de `renderDiagram()` validée
-      telle quelle (synchrone, noms d'options actuels). `scripts/verify-npm-packages.mjs` vérifie les
-      paquets en salle blanche avant publication.
 - ⏸ **Add-in Word (Phase 4), en pause, hors de `main`** : le scaffold vit sur la branche
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
   *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :
