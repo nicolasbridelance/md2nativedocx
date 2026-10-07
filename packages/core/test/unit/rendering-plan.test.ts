@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { planRendering } from '../../src/rendering-plan.js';
+import { renderDiagram } from '../../src/render-diagram.js';
 
 const ON = { smartArt: true, nativeCharts: true };
 const OFF = { smartArt: false, nativeCharts: false };
@@ -68,5 +72,47 @@ test('other types are shapes; never throws, even on empty or garbled input', () 
     const plan = planRendering(src, ON);
     assert.ok(['shapes', 'smartart', 'chart', 'invalid'].includes(plan.rendering), src);
     if (plan.rendering === 'invalid') assert.equal(typeof plan.error, 'string');
+  }
+});
+
+// The plan and the export share one table (`RENDERERS`); this holds them to it on every real diagram the
+// repo has, under each kind of setting. A chart the translator then refuses (horizontal xychart with a line
+// series) is the one documented exception: announced as a chart, exported as shapes with a warning.
+test('the plan predicts what renderDiagram does, on every corpus and sample diagram', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..');
+  const sources: Array<[string, string]> = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith('.mmd')) sources.push([path, readFileSync(path, 'utf8')]);
+      else if (entry.name.endsWith('.md')) {
+        let i = 0;
+        for (const m of readFileSync(path, 'utf8').matchAll(/```mermaid\n([\s\S]*?)```/g)) sources.push([`${path}#${i++}`, m[1] ?? '']);
+      }
+    }
+  };
+  // `test-corpus/corpus` is left out: large flowcharts for performance work, seconds of Dagre each, and no
+  // type the visual and Word-verification fixtures do not already cover.
+  walk(join(root, 'test-corpus', 'visual'));
+  walk(join(root, 'test-corpus', 'word-verification'));
+  walk(join(root, 'handmade_samples'));
+  assert.ok(sources.length > 100, `only ${sources.length} sources found`);
+
+  let n = 0;
+  const newPartId = (): string => `p${n++}`;
+  // With everything off, both sides are trivially shapes; a per-type chart list only matters to chart types.
+  const pieOnly = { smartArt: true, nativeCharts: ['pie'] as const };
+  const runs = [
+    ...sources.map((s) => [ON, s] as const),
+    ...sources.filter(([, src]) => /^\s*(xychart|radar)/m.test(src)).map((s) => [pieOnly, s] as const),
+  ];
+  for (const [settings, [name, source]] of runs) {
+    const plan = planRendering(source, settings);
+    assert.notEqual(plan.rendering, 'invalid', name);
+    const result = renderDiagram(source, { ...settings, newPartId });
+    const chartRefused =
+      plan.rendering === 'chart' && result.kind === 'shapes' && result.metadata.warnings.some((w) => w.startsWith('native chart not used'));
+    if (!chartRefused) assert.equal(result.kind, plan.rendering, `${name} ${JSON.stringify(settings)}`);
   }
 });

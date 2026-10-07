@@ -4,7 +4,9 @@
  * rendering-plan.ts) into dist/analysis.cjs, a CommonJS module the extension can `require()` synchronously
  * for its CodeLens, hover and status bar (docs/specs/UX_REVIEW_2026-10.md, lot B). The core is an ES module
  * and the extension is CommonJS, hence this small esbuild step rather than a plain import. Parsing and
- * classification only: no layout, no XML, no subprocess.
+ * classification only at run time: no layout, no XML, no subprocess. The bundle still carries the
+ * translators (~780 KB, ~40 ms to load once, on first use): `planRendering` reads the same per-type table
+ * as `renderDiagram`, so that the CodeLens cannot announce something the export does not do.
  */
 
 import { build } from 'esbuild';

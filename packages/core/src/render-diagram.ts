@@ -20,16 +20,29 @@ import { translateToOoxml } from './translator/ooxml-translator.js';
 import type { CanvasOptions } from './translator/canvas.js';
 import { escapeXml } from './translator/xml-escape.js';
 import type { ChartWorkbook, NativeChart, NativeChartOptions } from './translator/native-chart.js';
-import { classifyTopology } from './smartart/classify.js';
-import { generateSmartArt, type SmartArtGenerated } from './smartart/dispatch.js';
+import { MAX_TREE_DEPTH, classifyTopology, flowchartTreeDepth, type SmartArtIneligible } from './smartart/classify.js';
+import { generateSmartArt, type SmartArtGenerated, type SmartArtGeneratedLayout } from './smartart/dispatch.js';
 import { DRAWING_REL_TOKEN } from './smartart/drawing.js';
 import { buildSmartArtDrawingXml, buildSmartArtFallbackNoteXml } from './smartart/embed.js';
 import type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 import { SMARTART_STYLES, type SmartArtStyle } from './smartart/styles.js';
-import { generateMindmapSmartArt, generateTreeViewSmartArt } from './smartart/from-tree.js';
-import { generateJourneySmartArt, generateTimelineSmartArt } from './smartart/from-timeline.js';
-import { generateKanbanSmartArt } from './smartart/kanban.js';
-import { generateClassDiagramSmartArt, generateGitGraphSmartArt, generateStateDiagramSmartArt } from './smartart/from-graph.js';
+import { generateMindmapSmartArt, generateTreeViewSmartArt, mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
+import {
+  generateJourneySmartArt,
+  generateTimelineSmartArt,
+  journeyFitsSmartArt,
+  timelineFitsSmartArt,
+} from './smartart/from-timeline.js';
+import { generateKanbanSmartArt, kanbanFitsSmartArt } from './smartart/kanban.js';
+import {
+  classDiagramSmartArtLayout,
+  classDiagramToFlowchart,
+  generateClassDiagramSmartArt,
+  generateGitGraphSmartArt,
+  generateStateDiagramSmartArt,
+  gitGraphSmartArtLayout,
+  stateDiagramSmartArtLayout,
+} from './smartart/from-graph.js';
 import { parseQuadrantChart } from './diagrams/quadrant/parser.js';
 import { translateQuadrantToOoxml } from './diagrams/quadrant/translator.js';
 import { parseVennChart } from './diagrams/venn/parser.js';
@@ -88,6 +101,7 @@ import { translateEventModelingToOoxml } from './diagrams/event-modeling/transla
 import { parseSequence } from './diagrams/sequence/parser.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
+import type { Flowchart } from './types.js';
 
 /** Diagram types that can become a native Word chart (ADR 0011). */
 export type NativeChartType = 'pie' | 'xychart' | 'radar';
@@ -207,6 +221,32 @@ interface RenderContext {
 
 type TypeRenderer = (source: string, ctx: RenderContext) => Rendered;
 
+/** A SmartArt graphic a diagram can become: its family, and for a tree its number of levels. */
+export interface SmartArtShape {
+  layout: SmartArtGeneratedLayout;
+  depth?: number;
+}
+
+/**
+ * What a diagram can become, whatever the settings: decided by parsing and classification only, no
+ * layout and no XML. `planRendering` applies the settings to it. Internal to `core`.
+ */
+export type Capability =
+  | { kind: 'shapes'; smartArtRejected?: SmartArtIneligible }
+  | { kind: 'smartart'; smartArt: SmartArtShape }
+  | { kind: 'chart'; chart: NativeChartType };
+
+/**
+ * Both sides of one type: `render` produces it, `plan` predicts it cheaply for an editor (CodeLens,
+ * hover). They are built by the same helpers below so that the prediction cannot drift from the export.
+ */
+interface TypeHandler {
+  render: TypeRenderer;
+  plan: (source: string) => Capability;
+}
+
+const SHAPES: Capability = { kind: 'shapes' };
+
 /** What every SmartArt generator returns (the dispatching one also says which layout it chose). */
 type GeneratedSmartArt = Omit<SmartArtGenerated, 'layout'>;
 
@@ -218,29 +258,40 @@ function parsed<T>(ctx: RenderContext, result: { ast: T; warnings: string[] }): 
   return result.ast;
 }
 
-/** A type with only a shape translator. */
+/** A type with only a shape translator. The plan still parses, so a source that throws shows as invalid. */
 function shapesOnly<T>(
   parse: (source: string) => { ast: T; warnings: string[] },
   translate: (ast: T, options: CanvasOptions) => string,
-): TypeRenderer {
-  return (source, ctx) => shapes(translate(parsed(ctx, parse(source)), ctx.canvas));
+): TypeHandler {
+  return {
+    render: (source, ctx) => shapes(translate(parsed(ctx, parse(source)), ctx.canvas)),
+    plan: (source) => (parse(source), SHAPES),
+  };
 }
 
 /**
- * A type that becomes SmartArt when it can, shapes otherwise. `titleOf`, for a SmartArt with no place
- * for the diagram title, puts that title in a paragraph above it.
+ * A type that becomes SmartArt when it can, shapes otherwise. `fits` is the cheap test the plan uses:
+ * the SmartArt `generate` would produce, or `undefined` when it would decline. `titleOf`, for a SmartArt
+ * with no place for the diagram title, puts that title in a paragraph above it.
  */
 function smartArtOrShapes<T>(
   parse: (source: string) => { ast: T; warnings: string[] },
+  fits: (ast: T) => SmartArtShape | undefined,
   generate: (ast: T, options: SmartArtGenerateOptions) => GeneratedSmartArt | null,
   translate: (ast: T, options: CanvasOptions) => string,
   titleOf?: (ast: T) => string | undefined,
-): TypeRenderer {
-  return (source, ctx) => {
-    const ast = parsed(ctx, parse(source));
-    const smartArt = ctx.smartArt((options) => generate(ast, options));
-    if (!smartArt) return shapes(translate(ast, ctx.canvas));
-    return titleOf ? { ...smartArt, fragment: smartArtTitleXml(titleOf(ast)) + smartArt.fragment } : smartArt;
+): TypeHandler {
+  return {
+    render: (source, ctx) => {
+      const ast = parsed(ctx, parse(source));
+      const smartArt = ctx.smartArt((options) => generate(ast, options));
+      if (!smartArt) return shapes(translate(ast, ctx.canvas));
+      return titleOf ? { ...smartArt, fragment: smartArtTitleXml(titleOf(ast)) + smartArt.fragment } : smartArt;
+    },
+    plan: (source) => {
+      const smartArt = fits(parse(source).ast);
+      return smartArt ? { kind: 'smartart', smartArt } : SHAPES;
+    },
   };
 }
 
@@ -250,12 +301,27 @@ function chartOrShapes<T>(
   parse: (source: string) => { ast: T; warnings: string[] },
   toChart: (ast: T, id: string, options: NativeChartOptions) => NativeChart,
   translate: (ast: T, options: CanvasOptions) => string,
-): TypeRenderer {
-  return (source, ctx) => {
-    const ast = parsed(ctx, parse(source));
-    return ctx.chart(type, (id, options) => toChart(ast, id, options)) ?? shapes(translate(ast, ctx.canvas));
+): TypeHandler {
+  return {
+    render: (source, ctx) => {
+      const ast = parsed(ctx, parse(source));
+      return ctx.chart(type, (id, options) => toChart(ast, id, options)) ?? shapes(translate(ast, ctx.canvas));
+    },
+    // Not translated: a chart the translator then refuses (a horizontal xychart with a line series)
+    // is still announced as a chart.
+    plan: (source) => (parse(source), { kind: 'chart', chart: type }),
   };
 }
+
+/** SmartArt hierarchy of a tree-shaped diagram (`mindmap`, `treeView`), or `undefined` if it cannot be one. */
+function treeShape(flowchart: Flowchart | null): SmartArtShape | undefined {
+  if (!flowchart || flowchart.nodes.length < 2) return undefined;
+  const depth = flowchartTreeDepth(flowchart);
+  return depth >= 2 && depth <= MAX_TREE_DEPTH ? { layout: 'tree', depth } : undefined;
+}
+
+/** `layout`, as a shape, when the type's classifier returned one. */
+const shapeOf = (layout: SmartArtGeneratedLayout | null): SmartArtShape | undefined => (layout ? { layout } : undefined);
 
 /**
  * The diagram title as a bold centred paragraph, for a SmartArt that has no place for it (timeline,
@@ -284,37 +350,76 @@ const renderFlowchart: TypeRenderer = (source, ctx) => {
   return shapes(fragment);
 };
 
-/** One renderer per detected type. A `Record` so that a new `DiagramType` cannot be forgotten here. */
-const RENDERERS: Record<DiagramType, TypeRenderer> = {
-  flowchart: renderFlowchart,
-  unknown: renderFlowchart,
+const planFlowchart = (source: string): Capability => {
+  const { ast } = parseMermaid(source);
+  const classification = classifyTopology(ast);
+  if (!classification.eligible) return { kind: 'shapes', smartArtRejected: classification };
+  const { layout: family } = classification;
+  return { kind: 'smartart', smartArt: family === 'tree' ? { layout: family, depth: flowchartTreeDepth(ast) } : { layout: family } };
+};
+
+const flowchart: TypeHandler = { render: renderFlowchart, plan: planFlowchart };
+
+/**
+ * One handler per detected type, the single place where a type's rendering is decided, for the export
+ * and for the editor's prediction alike. A `Record` so that a new `DiagramType` cannot be forgotten here.
+ */
+const RENDERERS: Record<DiagramType, TypeHandler> = {
+  flowchart,
+  unknown: flowchart,
   quadrant: shapesOnly(parseQuadrantChart, translateQuadrantToOoxml),
   venn: shapesOnly(parseVennChart, translateVennToOoxml),
   // A mindmap becomes a left-to-right SmartArt hierarchy; the radial shape-built one otherwise.
-  mindmap: smartArtOrShapes(parseMindmap, generateMindmapSmartArt, translateMindmapToOoxml),
+  mindmap: smartArtOrShapes(parseMindmap, (ast) => treeShape(mindmapToFlowchart(ast)), generateMindmapSmartArt, translateMindmapToOoxml),
   // An inheritance-only class tree becomes a SmartArt hierarchy (members in each box).
-  class: smartArtOrShapes(parseClassDiagram, generateClassDiagramSmartArt, translateClassDiagramToOoxml),
+  class: smartArtOrShapes(
+    parseClassDiagram,
+    (ast) => {
+      const tree = classDiagramToFlowchart(ast);
+      return tree && classDiagramSmartArtLayout(ast) ? { layout: 'tree', depth: flowchartTreeDepth(tree) } : undefined;
+    },
+    generateClassDiagramSmartArt,
+    translateClassDiagramToOoxml,
+  ),
   // A state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
-  state: smartArtOrShapes(parseStateDiagram, generateStateDiagramSmartArt, translateStateDiagramToOoxml),
+  state: smartArtOrShapes(parseStateDiagram, (ast) => shapeOf(stateDiagramSmartArtLayout(ast)), generateStateDiagramSmartArt, translateStateDiagramToOoxml),
   er: shapesOnly(parseErDiagram, translateErDiagramToOoxml),
   requirement: shapesOnly(parseRequirementDiagram, translateRequirementDiagramToOoxml),
   architecture: shapesOnly(parseArchitectureDiagram, translateArchitectureDiagramToOoxml),
   gantt: shapesOnly(parseGanttChart, translateGanttToOoxml),
   c4: shapesOnly(parseC4Diagram, translateC4DiagramToOoxml),
   // A main-branch-only history becomes a SmartArt process, one box per commit.
-  gitGraph: smartArtOrShapes(parseGitGraphDiagram, generateGitGraphSmartArt, translateGitGraphToOoxml, (ast) => ast.title),
+  gitGraph: smartArtOrShapes(
+    parseGitGraphDiagram,
+    (ast) => shapeOf(gitGraphSmartArtLayout(ast)),
+    generateGitGraphSmartArt,
+    translateGitGraphToOoxml,
+    (ast) => ast.title,
+  ),
   cynefin: shapesOnly(parseCynefinDiagram, translateCynefinToOoxml),
   pie: chartOrShapes('pie', parsePieChart, translatePieToChart, translatePieToOoxml),
   // A section-less timeline becomes a SmartArt process, one box per period, events under it.
-  timeline: smartArtOrShapes(parseTimeline, generateTimelineSmartArt, translateTimelineToOoxml, (ast) => ast.title),
+  timeline: smartArtOrShapes(
+    parseTimeline,
+    (ast) => shapeOf(timelineFitsSmartArt(ast) ? 'timeline' : null),
+    generateTimelineSmartArt,
+    translateTimelineToOoxml,
+    (ast) => ast.title,
+  ),
   // A board becomes a SmartArt grouped list (columns, then cards) when its text fits.
-  kanban: smartArtOrShapes(parseKanban, generateKanbanSmartArt, translateKanbanToOoxml),
+  kanban: smartArtOrShapes(parseKanban, (ast) => shapeOf(kanbanFitsSmartArt(ast) ? 'list' : null), generateKanbanSmartArt, translateKanbanToOoxml),
   packet: shapesOnly(parsePacketDiagram, translatePacketToOoxml),
   treemap: shapesOnly(parseTreemap, translateTreemapToOoxml),
   // A journey becomes a SmartArt time line grouped by section (task, stars, actors per card).
-  journey: smartArtOrShapes(parseJourney, generateJourneySmartArt, translateJourneyToOoxml, (ast) => ast.title),
+  journey: smartArtOrShapes(
+    parseJourney,
+    (ast) => shapeOf(journeyFitsSmartArt(ast) ? 'timeline' : null),
+    generateJourneySmartArt,
+    translateJourneyToOoxml,
+    (ast) => ast.title,
+  ),
   // A single-root file tree becomes a top-down SmartArt hierarchy.
-  treeView: smartArtOrShapes(parseTreeView, generateTreeViewSmartArt, translateTreeViewToOoxml),
+  treeView: smartArtOrShapes(parseTreeView, (ast) => treeShape(treeViewToFlowchart(ast)), generateTreeViewSmartArt, translateTreeViewToOoxml),
   radar: chartOrShapes('radar', parseRadar, translateRadarToChart, translateRadarToOoxml),
   ishikawa: shapesOnly(parseIshikawa, translateIshikawaToOoxml),
   xychart: chartOrShapes('xychart', parseXyChart, translateXyChartToChart, translateXyChartToOoxml),
@@ -327,8 +432,17 @@ const RENDERERS: Record<DiagramType, TypeRenderer> = {
   zenuml: shapesOnly(parseZenuml, translateSequenceToOoxml),
 };
 
-function chartTypeEnabled(setting: RenderOptions['nativeCharts'], type: NativeChartType): boolean {
+/** Whether a `nativeCharts` setting (here or in `RenderingSettings`) turns charts on for `type`. */
+export function chartTypeEnabled(setting: boolean | readonly string[] | undefined, type: NativeChartType): boolean {
   return setting === true || (Array.isArray(setting) && setting.includes(type));
+}
+
+/**
+ * What `source`, already detected as `type`, can become (see {@link Capability}). Throws what the
+ * type's parser throws. Internal to `core`: `planRendering` is the public face.
+ */
+export function planDiagram(type: DiagramType, source: string): Capability {
+  return RENDERERS[type].plan(source);
 }
 
 /** Part ids end up in XML attribute values and package paths: keep them to a safe alphabet. */
@@ -416,6 +530,6 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
     },
   };
 
-  const rendered = RENDERERS[type](source, ctx);
+  const rendered = RENDERERS[type].render(source, ctx);
   return { ...rendered, metadata: { diagramType: type, label, warnings } };
 }

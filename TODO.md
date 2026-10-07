@@ -75,10 +75,6 @@ Ordre de la spec 04 §2, ramené au code (détail section par section : `docs/sp
 annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne changent pas d'un octet
 (golden tests et `test:visual` en garde-fou).
 
-- [ ] **Une seule table de décision** pour `planRendering` (CodeLens/survol VS Code) et
-      `renderDiagram` (fait le 2026-10-07 : `packages/core/src/render-diagram.ts`, table `RENDERERS`
-      indexée par type). `planRendering` refait encore la même décision à part, dans
-      `rendering-plan.ts` : la dériver de `RENDERERS` pour qu'elles ne puissent plus diverger.
 - [ ] **`EngineOptions` typé** à partir des ~38 variables `MD2NATIVEDOCX_*` ; les variables restent
       lues aux bords (CLI, pont Lua) pour la compatibilité.
 - [ ] **`convert()`**, entrée bibliothèque de `packages/cli` (décidé le 2026-10-07 : champ `exports`

@@ -2,43 +2,17 @@
  * What a Mermaid diagram will become in Word, without generating it — for editors that tell the user before
  * they export (the VS Code extension's CodeLens and hover, docs/specs/UX_REVIEW_2026-10.md §3.2-3.3).
  *
- * Mirrors the dispatch in `packages/pandoc-filter/bin/md2nativedocx-core.mjs`: a flowchart goes to SmartArt
- * when SmartArt is on and {@link classifyTopology} accepts it; `mindmap` / single-root `treeView-beta` go to
- * a SmartArt hierarchy when SmartArt is on; `pie` / `xychart` / `radar` become native Word charts when those
- * are on; everything else becomes editable Word shapes. It also says what the *other* setting would change
+ * The per-type decision is not made here: it comes from the same table as {@link renderDiagram}
+ * (`RENDERERS` in `render-diagram.ts`), whose entries each carry a cheap `plan` next to their `render`.
+ * This module only applies the settings to it, and says what the *other* setting would change
  * (`smartArtWouldApply`, `chartWouldApply`), so an editor can offer to turn it on.
  *
  * Pure and cheap (parsing and classification only, no layout, no XML), safe to call on every keystroke.
  */
 
 import { detectDiagramType, type DiagramType } from './parser/diagram-type.js';
-import { parseMermaid } from './parser/index.js';
-import {
-  MAX_TREE_DEPTH,
-  classifyTopology,
-  flowchartTreeDepth,
-  type SmartArtIneligible,
-  type SmartArtLayout,
-} from './smartart/classify.js';
-import { parseMindmap } from './diagrams/mindmap/parser.js';
-import { parseTreeView } from './diagrams/tree-view/parser.js';
-import { parseTimeline } from './diagrams/timeline/parser.js';
-import { mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
-import { journeyFitsSmartArt, timelineFitsSmartArt } from './smartart/from-timeline.js';
-import { parseJourney } from './diagrams/journey/parser.js';
-import { parseKanban } from './diagrams/kanban/parser.js';
-import { kanbanFitsSmartArt } from './smartart/kanban.js';
-import {
-  classDiagramSmartArtLayout,
-  classDiagramToFlowchart,
-  gitGraphSmartArtLayout,
-  stateDiagramSmartArtLayout,
-} from './smartart/from-graph.js';
-import { parseGitGraphDiagram } from './diagrams/git-graph/parser.js';
-import { parseStateDiagram } from './diagrams/state-diagram/parser.js';
-import { parseClassDiagram } from './diagrams/class-diagram/parser.js';
-import type { SmartArtGeneratedLayout } from './smartart/dispatch.js';
-import type { Flowchart } from './types.js';
+import { chartTypeEnabled, planDiagram, type Capability, type SmartArtShape } from './render-diagram.js';
+import type { SmartArtIneligible } from './smartart/classify.js';
 
 /** Which settings the export will run with. */
 export interface RenderingSettings {
@@ -59,7 +33,7 @@ export interface RenderingPlan {
    * `invalid`: the source does not parse (the export will report it). */
   rendering: 'smartart' | 'chart' | 'shapes' | 'invalid';
   /** `rendering === 'smartart'`: which SmartArt family, and for a tree its number of levels. */
-  smartArt?: { layout: SmartArtGeneratedLayout; depth?: number };
+  smartArt?: SmartArtShape;
   /** SmartArt is on but this flowchart cannot be one: the structured reason (merge, subgraph…). */
   smartArtRejected?: SmartArtIneligible;
   /** SmartArt is off, and turning it on would make this diagram a SmartArt graphic. */
@@ -70,80 +44,31 @@ export interface RenderingPlan {
   error?: string;
 }
 
-const CHART_TYPES: ReadonlySet<DiagramType> = new Set(['pie', 'xychart', 'radar']);
-
-/** SmartArt shape of a tree-shaped diagram (`mindmap`, `treeView`), or `undefined` if it cannot be one. */
-function treeSmartArt(flowchart: Flowchart | null): { layout: SmartArtLayout; depth: number } | undefined {
-  if (!flowchart || flowchart.nodes.length < 2) return undefined;
-  const depth = flowchartTreeDepth(flowchart);
-  return depth >= 2 && depth <= MAX_TREE_DEPTH ? { layout: 'tree', depth } : undefined;
-}
-
 /**
  * Plan the rendering of one Mermaid diagram (the text inside a ```mermaid block, or a `.mmd` file) under
  * `settings`. Never throws: a source that does not parse yields `rendering: 'invalid'`.
  */
 export function planRendering(source: string, settings: RenderingSettings): RenderingPlan {
   const { type, label } = detectDiagramType(source);
+  let capability: Capability;
   try {
-    if (CHART_TYPES.has(type)) {
-      const on = settings.nativeCharts === true || (Array.isArray(settings.nativeCharts) && settings.nativeCharts.includes(type));
-      return on ? { type, label, rendering: 'chart' } : { type, label, rendering: 'shapes', chartWouldApply: true };
-    }
-    if (type === 'mindmap' || type === 'treeView') {
-      const shape =
-        type === 'mindmap' ? treeSmartArt(mindmapToFlowchart(parseMindmap(source).ast)) : treeSmartArt(treeViewToFlowchart(parseTreeView(source).ast));
-      if (!shape) return { type, label, rendering: 'shapes' };
-      return settings.smartArt
-        ? { type, label, rendering: 'smartart', smartArt: shape }
-        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
-    }
-    if (type === 'gitGraph' || type === 'state' || type === 'class') {
-      let smartArt: { layout: SmartArtLayout; depth?: number } | undefined;
-      if (type === 'gitGraph') {
-        const layout = gitGraphSmartArtLayout(parseGitGraphDiagram(source).ast);
-        if (layout) smartArt = { layout };
-      } else if (type === 'state') {
-        const layout = stateDiagramSmartArtLayout(parseStateDiagram(source).ast);
-        if (layout) smartArt = { layout };
-      } else {
-        const classes = parseClassDiagram(source).ast;
-        const tree = classDiagramToFlowchart(classes);
-        if (tree && classDiagramSmartArtLayout(classes)) smartArt = { layout: 'tree', depth: flowchartTreeDepth(tree) };
-      }
-      if (!smartArt) return { type, label, rendering: 'shapes' };
-      return settings.smartArt
-        ? { type, label, rendering: 'smartart', smartArt }
-        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
-    }
-    if (type === 'kanban') {
-      if (!kanbanFitsSmartArt(parseKanban(source).ast)) return { type, label, rendering: 'shapes' };
-      return settings.smartArt
-        ? { type, label, rendering: 'smartart', smartArt: { layout: 'list' } }
-        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
-    }
-    if (type === 'timeline' || type === 'journey') {
-      const fits = type === 'timeline' ? timelineFitsSmartArt(parseTimeline(source).ast) : journeyFitsSmartArt(parseJourney(source).ast);
-      if (!fits) return { type, label, rendering: 'shapes' };
-      return settings.smartArt
-        ? { type, label, rendering: 'smartart', smartArt: { layout: 'timeline' } }
-        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
-    }
-    if (type !== 'flowchart' && type !== 'unknown') return { type, label, rendering: 'shapes' };
-
-    const { ast } = parseMermaid(source);
-    const classification = classifyTopology(ast);
-    if (!classification.eligible) {
-      return settings.smartArt
-        ? { type, label, rendering: 'shapes', smartArtRejected: classification }
-        : { type, label, rendering: 'shapes' };
-    }
-    const smartArt =
-      classification.layout === 'tree' ? { layout: classification.layout, depth: flowchartTreeDepth(ast) } : { layout: classification.layout };
-    return settings.smartArt
-      ? { type, label, rendering: 'smartart', smartArt }
-      : { type, label, rendering: 'shapes', smartArtWouldApply: true };
+    capability = planDiagram(type, source);
   } catch (err) {
     return { type, label, rendering: 'invalid', error: err instanceof Error ? err.message : String(err) };
+  }
+  switch (capability.kind) {
+    case 'chart':
+      return chartTypeEnabled(settings.nativeCharts, capability.chart)
+        ? { type, label, rendering: 'chart' }
+        : { type, label, rendering: 'shapes', chartWouldApply: true };
+    case 'smartart':
+      return settings.smartArt
+        ? { type, label, rendering: 'smartart', smartArt: capability.smartArt }
+        : { type, label, rendering: 'shapes', smartArtWouldApply: true };
+    case 'shapes':
+      // The rejection reason only matters to someone who turned SmartArt on.
+      return settings.smartArt && capability.smartArtRejected
+        ? { type, label, rendering: 'shapes', smartArtRejected: capability.smartArtRejected }
+        : { type, label, rendering: 'shapes' };
   }
 }
