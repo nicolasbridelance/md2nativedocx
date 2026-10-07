@@ -6,7 +6,7 @@
  * subprocess, no temporary file (ADR 0012, spec 01 §6).
  */
 
-import { renderDiagram } from '@md2nativedocx/core';
+import { DiagramTooLargeError, buildDiagramTooLargeNoteXml, renderDiagram } from '@md2nativedocx/core';
 import { type DiagramArea, buildPptx, diagramAreaFor } from './build-pptx.js';
 import { PptxConversionError } from './errors.js';
 import { extractMermaidBlocks } from './markdown-blocks.js';
@@ -56,6 +56,10 @@ export const coreBridgeProvider: FragmentProvider = (mermaidText, area) => {
     // Same wording as the bridge's stderr lines, which this list used to be read from.
     return Promise.resolve({ fragmentXml: result.fragment, warnings: result.metadata.warnings.map((w) => `warning: ${w}`) });
   } catch (err) {
+    // Same fallback as the Pandoc bridge: a too-large block becomes a note on its slide, the deck still builds.
+    if (err instanceof DiagramTooLargeError) {
+      return Promise.resolve({ fragmentXml: buildDiagramTooLargeNoteXml(err), warnings: [`warning: ${err.message}`] });
+    }
     const detail = err instanceof Error ? err.message : String(err);
     return Promise.reject(new PptxConversionError(`diagram rendering failed: ${detail}`));
   }

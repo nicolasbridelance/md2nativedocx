@@ -45,3 +45,13 @@ test('showSource reserves a panel beside the diagram, shows the escaped source, 
   assert.match(slide, /flowchart LR/);
   assert.match(slide, /a &amp; &lt;b&gt;/);
 });
+
+test('a block over the size limits becomes a note on its slide instead of failing the export', async () => {
+  const edges = Array.from({ length: 900 }, (_, i) => `  n${i} --> n${i + 1}`).join('\n');
+  const md = ['```mermaid', 'flowchart TD', edges, '```', '', '```mermaid', 'flowchart TD', '  A --> B', '```'].join('\n');
+  const result = await exportPptx(md);
+  assert.equal(result.slideCount, 2);
+  assert.ok(result.warnings.some((w) => w.startsWith('slide 1: warning:')));
+  const slide1 = new AdmZip(result.buffer).readAsText('ppt/slides/slide1.xml');
+  assert.match(slide1, /This diagram was not converted/);
+});

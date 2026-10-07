@@ -56,8 +56,8 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       cas sans le rendre bon marché : un maillage aléatoire dense à la limite prend encore ~35 s
       (mesuré : 400 nœuds / 800 arêtes), alors qu'un rapport creux de 413 nœuds prend 0,7 s. Un hôte
       serveur/MCP doit lancer la conversion sous son propre délai (processus enfant ou worker tué à
-      l'échéance). Reste aussi la taille du paquet produit, et `pptx` qui échoue encore tout l'export sur un
-      bloc trop gros au lieu de mettre une note.
+      l'échéance). `pptx` met maintenant une note sur la diapositive d'un bloc trop gros au lieu de
+      faire échouer l'export (2026-10-07). Reste la taille du paquet produit.
 - [ ] **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
       dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
 - [ ] **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de
