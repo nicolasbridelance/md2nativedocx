@@ -60,8 +60,14 @@ Introduce one public, typed entry point that encapsulates diagram detection, ren
 Conceptual API:
 
 ```ts
-const result = await renderDiagram(source, options);
+const result = renderDiagram(source, options);
 ```
+
+> **Decided 2026-10-07 (maintainer):** `renderDiagram()` is **synchronous**: no step of it does I/O.
+> Options as shipped in `packages/core/src/render-diagram.ts`: `smartArt`, `nativeCharts`,
+> `smartArtStyle`, `smartArtDrawing`, `newPartId`, plus the canvas limits. A move to `async` later
+> (a WASM Graphviz layout, for instance) would be a breaking change, acceptable before 1.0.
+> `convert()` (§6) stays `async`: it runs Pandoc.
 
 A caller must not need to know:
 

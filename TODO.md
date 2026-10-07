@@ -23,13 +23,12 @@
       §3, piste A.
 - [ ] **Publication npm** des paquets `core` → `pandoc-filter` → `cli` : bloquée sur un jeton.
       **Même priorité que le chantier V2** : sans `npx md2nativedocx`, un pilote qui ne passe pas par
-      VS Code ne peut rien essayer, et le SDK comme le MCP n'ont aucun utilisateur possible. Publier
-      **après** l'entrée bibliothèque de `cli` (`convert()`, §2bis) ou en acceptant de la casser en
-      0.x : après publication, tout renommage de paquet devient une rupture. Créer un
-      compte ou une organisation npm (scope `@md2nativedocx`, gratuit en public), générer un jeton
-      *Automation*, l'ajouter à `.env` (`NPM_TOKEN=…`). La publication peut ensuite se faire depuis une
-      session (`npm whoami` d'abord). `scripts/verify-npm-packages.mjs` vérifie déjà les paquets en
-      salle blanche.
+      VS Code ne peut rien essayer, et le SDK comme le MCP n'ont aucun utilisateur possible.
+      **Débloqué le 2026-10-07** : jeton dans `.env` (`NPM_TOKEN`, `npm whoami` → `nicolasbridelance`),
+      organisation `@md2nativedocx` existante. **Décision du mainteneur : publier après `convert()`**
+      (§2bis), pour que la première 0.x ait déjà la forme de son API. API de `renderDiagram()` validée
+      telle quelle (synchrone, noms d'options actuels). `scripts/verify-npm-packages.mjs` vérifie les
+      paquets en salle blanche avant publication.
 - [ ] **Changement `ci.yml` à relire** : les jobs Windows et macOS listent leurs workspaces à la main
       et ne lancent pas les tests `packages/pptx`. Une ligne à ajouter, mais `ci.yml` est un fichier
       à revue humaine (AGENTS.md). Même occasion : un contrôle DCO sur les PR (DCO adopté le
