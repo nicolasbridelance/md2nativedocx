@@ -16,6 +16,16 @@ Cette décision réduit le périmètre réel de développement d'environ 50 %, �
 
 **Ça ne réduit en rien l'ambition du produit livré.** Vu de l'utilisateur, `md2nativedocx` convertit un `.md` complet en `.docx` complet, en une seule commande — Pandoc est un détail d'implémentation invisible, pas une limite de scope produit. Le nom du projet reflète cette ambition ; le moteur de diagrammes en est le moat technique (§5.3), pas le périmètre fonctionnel annoncé (§1).
 
+**Évolution proposée (2026-10-07) — V2 « moteur », V3 « édition humaine ».** La V1 est livrée (29 types
+Mermaid, SmartArt, graphiques Word, extension 0.7.0). Quatre documents proposent la suite :
+`docs/specs/01-v2-engine-spec.md` (rendre le moteur appelable par d'autres outils : `renderDiagram()`,
+`convert()`, options et erreurs typées, SDK, MCP), `docs/adr/0012-evolution-by-extraction.md` (règle :
+extraire ce qui existe avant d'abstraire, aucun traducteur réécrit), `docs/specs/03-v3-human-editing-roundtrip-spec.md`
+(boucle Mermaid → Word → retouche humaine → diff sémantique → LLM → Mermaid révisé) et
+`docs/specs/04-roadmap-and-open-decisions.md` (séquence et décisions ouvertes). Phases reportées au §11.
+Thèse de travail : le goulot n'est plus la capacité technique mais son **emballage** derrière des
+interfaces que d'autres peuvent appeler sans connaître ses entrailles.
+
 ---
 
 ## 1. Vision et positionnement
@@ -38,7 +48,7 @@ Cette décision réduit le périmètre réel de développement d'environ 50 %, �
 | Thèmes / styles corporate | Idem | `reference.docx` de Pandoc |
 | Diagrammes de séquence, Gantt, classes, ER, C4 | Complexité disproportionnée pour la V1 | Roadmap V2+ (voir §11) |
 | Couleurs et styles Mermaid (`classDef`, `style`) | Cohérence visuelle > fidélité pixel en V1 | Mapping simplifié vers le thème Word (voir §6.3) |
-| Édition WYSIWYG des diagrammes hors de Word | Hors périmètre — l'édition se fait dans Word une fois inséré | — |
+| Édition WYSIWYG des diagrammes hors de Word | Hors périmètre en V1 et V2 — l'édition se fait dans Word une fois inséré. **La V3 (exploratoire, §11) rouvre la question**, sous condition : d'abord le spike Word → diff sémantique, et diagrams.net essayé comme éditeur avant d'en construire un | — |
 | Manipulation bas niveau de l'archive .docx (ZIP) | Déjà géré de façon robuste par le writer Pandoc | Pandoc |
 | HTML brut inline/bloc dans le Markdown (`<img>`, `<br/>`, `<div>`, etc.) | Le writer docx de Pandoc n'a pas d'équivalent OOXML pour du HTML arbitraire — limitation héritée du délégué, pas un choix de scope. Silencieusement supprimé (pas d'erreur) — voir `test-corpus/corpus/README.md` § Limites connues | Pandoc (comportement actuel : suppression silencieuse) |
 
@@ -50,7 +60,7 @@ Le principe directeur : **chaque ligne de code écrite doit concerner la traduct
 
 ### 2.2 Piste future — lecture inverse (docx2mermaid)
 
-Direction symétrique : relire un `.docx` édité à la main dans Word pour en extraire du Mermaid stable, permettant une boucle IA-génère → humain-édite-dans-Word → IA-continue. Contrairement à l'ODF (§2.1), le statut n'est pas « l'équipe cœur ne le fera pas » — juste « pas avant que la V1 soit stable ». Spec complète : `docs/specs/FUTURE_docx2mermaid_SPEC.md`. Seule action déjà actionnée dans la V1 actuelle : les formes et connecteurs portent leur ID Mermaid d'origine dans `cNvPr/name` (§5.3 de ce document), pour que cette relecture soit possible sans réécrire le traducteur plus tard.
+Direction symétrique : relire un `.docx` édité à la main dans Word pour en extraire du Mermaid stable, permettant une boucle IA-génère → humain-édite-dans-Word → IA-continue. Contrairement à l'ODF (§2.1), le statut n'est pas « l'équipe cœur ne le fera pas » — juste « pas avant que la V1 soit stable ». Spec d'origine : `docs/specs/FUTURE_docx2mermaid_SPEC.md` ; **reprise et élargie depuis le 2026-10-07 par la V3** (`docs/specs/03-v3-human-editing-roundtrip-spec.md` : diff sémantique, LLM pour la réécriture du Mermaid, autres surfaces d'édition). Seule action déjà faite dans la V1 : les nœuds de flowchart portent leur id Mermaid dans `cNvPr/descr`, les arêtes leur couple `"<from>--<to>"` dans `cNvPr/name`. Les 28 autres types n'en portent pas, et `descr` étant le texte de remplacement lu par les lecteurs d'écran, l'emplacement est à revoir (`04-roadmap-and-open-decisions.md` §5.2).
 
 ---
 
@@ -301,6 +311,14 @@ Hors scope (non reconnu par le parseur) : modificateurs de longueur (`---->`) �
 | **Phase 3 — Couleurs + sous-graphes** | Mapping `classDef` (§6.3), `subgraph` → groupes imbriqués | — |
 | **Phase 4 — Add-in Word** | Taskpane Office.js, `insertOoxml` | Publication AppSource (sideload d'abord) |
 | **Phase 5+ — Autres types de diagrammes** | 28 types Mermaid restants, **tous livrés au 2026-10-02** (sequenceDiagram, classDiagram, pie, gantt, mindmap, etc.) — taxonomie par famille de rendu, prérequis architectural et priorisation proposée dans `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` (2026-09-04) | Piloté par les retours communauté post-launch |
+| **V2 — Moteur** (proposé 2026-10-07, pas commencé) | Extraire ce qui existe, sans réécrire de traducteur (ADR 0012) : `renderDiagram()` dans `core` (aujourd'hui un `if/else` sur 29 types dans le pont JS du filtre Pandoc), puis `convert()` hors de `core` (Pandoc + post-traitement), options et erreurs typées, CLI réduit à un adaptateur, codes de sortie documentés, limites de ressources, Pandoc testé comme contrat, corpus Word vérifié systématisé. Puis adaptateurs minces : SDK Node, MCP, Quarto. Détail : `docs/specs/01-v2-engine-spec.md` (annexe A : état du code par section) | Spec 01 §18 (11 critères) ; PlantUML, draw.io, Visio et WYSIWYG explicitement exclus |
+| **V2 — Sondes** (après le moteur) | Un PlantUML étroit (type flowchart) et un import draw.io étroit, pour découvrir ce qu'un second langage source ou un modèle de présentation explicite exige du moteur. Aucune abstraction créée avant ces preuves | Un compte rendu d'architecture ; « pas d'abstraction commune utile » est un résultat valide |
+| **V3 — Édition humaine et aller-retour** (vision) | V3.0 spike : flowcharts/SmartArt générés, retouchés dans un vrai Word, ce qui survit (ids, connecteurs, points SmartArt). V3.1 modèle d'opérations, V3.2 réconciliation par LLM, V3.3 éditeur minimal (diagrams.net d'abord), V3.4 hôte VS Code. Détail : `docs/specs/03-v3-human-editing-roundtrip-spec.md` | La boucle Mermaid → Word → retouche → diff → LLM → Mermaid révisé fonctionne de façon fiable sur un domaine étroit |
+
+Séquence et décisions ouvertes (emplacement de `convert()`, stockage des ids, modèle Pandoc, Quarto,
+déterminisme, licence, offre payante) : `docs/specs/04-roadmap-and-open-decisions.md`. La phase 4
+(add-in Word) reste en pause sur la branche `word-addin-scaffold` ; la V3 en fait un hôte possible
+parmi d'autres, pas un prérequis.
 
 ---
 
@@ -359,12 +377,24 @@ gratuit existe déjà côté éditeur.
 - r/programming, r/vscode, Hacker News (angle : "the one thing Pandoc still can't do") — mais uniquement une fois Phase 2 livrée avec une démo fonctionnelle, pas avant.
 - Communauté Mermaid elle-même (issues/discussions du repo officiel) : audience déjà acquise au problème.
 
+### 12.4 Validation utilisateurs et marché (ajout 2026-10-07)
+
+Proposé par `docs/specs/04-roadmap-and-open-decisions.md` §2 (priorité 7), en parallèle du chantier V2 :
+une dizaine de conversations « problème », viser cinq organisations pilotes, répondre là où l'export
+Word éditable est déjà demandé (ex. mermaid-js/mermaid#8060, à l'origine de l'ADR 0011), mesurer le
+temps gagné et les retouches manuelles restantes. Questions à trancher par ces échanges avant toute
+architecture de prix (spec 04 §7) : qui paie (individu, équipe, OEM, entreprise), et pour quoi
+(conversion, automatisation, intégration, support). Le positionnement reste celui du §1 : **PowerPoint
+seul n'est pas le moat** (marché déjà actif) ; la connaissance empirique de ce que le vrai Word accepte
+et conserve, l'est (spec 04 §4).
+
 ---
 
 ## 13. Licence et gouvernance
 
 - **Licence retenue : CC0** (domaine public). Choix motivé avant tout par la cohérence avec la demande d'autorisation d'activité accessoire adressée à l'employeur, qui mentionne explicitement une publication en CC0 — ce qui est promis par écrit prime sur l'optimisation marketing.
 - **Arbitrage à connaître :** MIT reste la norme quasi universelle pour les extensions VS Code et les packages npm, et inclut une clause explicite de limitation de responsabilité que CC0 n'a pas. Si ce point devenait bloquant après le lancement (adoption entreprise notamment), un passage à une double licence CC0/MIT reste possible — mais uniquement tant qu'aucune contribution externe n'a été acceptée sous CC0 seul (au-delà, il faut l'accord de chaque contributeur, ou un CLA mis en place dès le premier jour pour se garder cette option).
+- **Question rouverte le 2026-10-07** par `docs/specs/04-roadmap-and-open-decisions.md` (§2 priorité 4, §5.6) : CC0, Apache-2.0 (octroi de brevets, habitudes des services achats OEM) ou autre. La contrainte ci-dessus tient toujours : un changement peut exiger une nouvelle démarche auprès de l'employeur, et doit précéder la première contribution externe acceptée. Décision du mainteneur, avec avis juridique si l'enjeu commercial le justifie.
 - Contribution : `CONTRIBUTING.md` dès la Phase 1, avec le mapping §6 comme point d'entrée naturel pour les premières contributions externes (ajout de formes/types de liens).
 
 ---

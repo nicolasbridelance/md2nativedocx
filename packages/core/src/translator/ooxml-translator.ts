@@ -765,11 +765,11 @@ function renderSubgraph(
  *
  * `mermaidId` is stored in `cNvPr/descr` (not `name`): `name` stays the human
  * label, which is what Word shows in its Selection Pane (a friendlier UX than
- * a raw Mermaid id like "A" or "decision1"), while `descr` — a standard OOXML
- * accessibility field, invisible in Word — carries the original id so a
- * future docx2mermaid reader can recover it (`docs/specs/FUTURE_docx2mermaid_SPEC.md`
- * §4). Cheap to add now, while the translator is still actively worked on;
- * expensive to retrofit once the output format and golden tests are frozen.
+ * a raw Mermaid id like "A" or "decision1"), while `descr` carries the original
+ * id so a future docx2mermaid reader can recover it (`docs/specs/FUTURE_docx2mermaid_SPEC.md`
+ * §4). Caveat: `descr` is the shape's Alt Text in Word, which screen readers
+ * announce, so this is not an invisible field; where the id should live is an
+ * open V2 decision (`docs/specs/04-roadmap-and-open-decisions.md` §5.2).
  */
 function renderNode(
   id: number,

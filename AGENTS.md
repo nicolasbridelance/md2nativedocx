@@ -78,7 +78,8 @@ md2nativedocx/
 │   └── vscode-extension/         # spec §5.4.b (the Word add-in, on hold, lives on branch word-addin-scaffold)
 └── docs/
     ├── specs/                     # product specs: cahier_des_charges.md (what/why), UX_SPEC.md,
-    │                              # cahier_des_charges_google_slides.md, FUTURE_*_SPEC.md
+    │                              # cahier_des_charges_google_slides.md, FUTURE_*_SPEC.md,
+    │                              # 01-v2-engine, 03-v3-roundtrip, 04-roadmap (post-V1 direction)
     ├── adr/                       # architecture decision records
     ├── compliance/                # licensing, IT risk analysis, non-technical guide
     ├── manual/                    # user manual (French)
@@ -89,6 +90,13 @@ md2nativedocx/
 Mermaid text to an XML string, importable from Node and bundleable for the browser (needed for the
 future Office.js add-in, spec §5.4.c). Keep it that way; it's what makes the "one core, several
 integration points" architecture in the spec actually hold.
+
+How this architecture evolves after V1 is proposed in `docs/adr/0012-evolution-by-extraction.md`
+(status: *proposed*, not yet binding): extract existing capabilities behind public contracts
+(`renderDiagram()` in `core`, `convert()` **outside** `core` since it runs Pandoc), abstract only once
+two real implementations prove the abstraction, never rewrite a working translator for cleanliness
+alone, keep every adapter (CLI, MCP, VS Code) thin. Read `docs/specs/01-v2-engine-spec.md` appendix A
+before starting any of that work.
 
 ---
 

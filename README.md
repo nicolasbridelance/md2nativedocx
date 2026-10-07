@@ -178,6 +178,8 @@ npm run test:oxml-validate  # schema validation via Microsoft's Open XML SDK (ne
 - `docs/coverage.md` — what each Mermaid type becomes in Word, and why.
 - `docs/manual/` (French) — the user manual, one page per diagram type.
 - `docs/specs/cahier_des_charges.md` (French) — the **what** and **why** (spec, phases, scope).
+- `docs/specs/01-v2-engine-spec.md`, `03-v3-human-editing-roundtrip-spec.md`, `04-roadmap-and-open-decisions.md`
+  — proposed direction after the current release: a callable engine (SDK, MCP), then a Word round trip.
 - `AGENTS.md` — the **how** (conventions, non-negotiable security rules).
 - `docs/adr/` — architecture decisions (layout engine, Pandoc integration, SmartArt, charts, pptx…).
 - `TESTING.md` — the eight testing chapters, what each one guarantees, where it lives.

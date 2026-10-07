@@ -1,5 +1,10 @@
 # SPEC — `docx2mermaid` (nom provisoire) : lecture inverse, formes Word → Mermaid stable
 
+> **Statut au 2026-10-07 : reprise par la V3.** `docs/specs/03-v3-human-editing-roundtrip-spec.md`
+> garde la boucle et l'exigence d'ids stables décrites ici, et y ajoute le diff sémantique comme
+> interface avec un LLM (qui réécrit le Mermaid au lieu d'un compilateur inverse écrit à la main).
+> Ce document reste la référence pour l'analyse des ids (§3) et les non-objectifs (§1).
+
 **Statut : piste documentée, hors roadmap de l'équipe cœur pour l'instant.** Contrairement à
 l'extension ODF (`docs/specs/cahier_des_charges.md` §2.1, qui est explicitement "l'équipe cœur ne le fera pas,
 contribution externe bienvenue"), le statut ici est différent et volontairement laissé ouvert : ce

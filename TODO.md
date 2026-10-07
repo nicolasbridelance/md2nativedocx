@@ -1,12 +1,13 @@
 # TODO — `md2nativedocx`
 
-> Backlog des items **réellement ouverts** au 2026-10-06, chacun vérifié contre le code et l'historique.
+> Backlog des items **réellement ouverts** au 2026-10-07, chacun vérifié contre le code et l'historique.
 > Rien de terminé ici : un item fini sort du fichier (son détail va dans le message de commit, ou dans
 > `docs/history/TODO_ARCHIVE.md` s'il mérite un récit). L'ancien `TODO.md` complet (1 500 lignes, tous
 > les chantiers fermés) est recopié en fin de `docs/history/TODO_ARCHIVE.md`.
 >
 > État du produit : `HANDOVER.md`. Ce que devient chaque type Mermaid : `docs/coverage.md`. Règles et
-> escalades : `AGENTS.md`.
+> escalades : `AGENTS.md`. Suite du produit (V2 moteur, V3 aller-retour) : `docs/specs/01-…`, `03-…`,
+> `04-…` et `docs/adr/0012-evolution-by-extraction.md` ; phases au §11 du cahier des charges.
 
 ---
 
@@ -29,7 +30,25 @@
       et ne lancent pas les tests `packages/pptx`. Une ligne à ajouter, mais `ci.yml` est un fichier
       à revue humaine (AGENTS.md).
 - [ ] **Avant la première PR externe** : choisir DCO (`git commit -s`), CLA ou rien (AGENTS.md,
-      « Licensing »).
+      « Licensing »). À trancher **avec** la question de licence ci-dessous : les deux se décident
+      avant la première contribution acceptée.
+- [ ] **Accepter (ou amender) l'ADR 0012 « Evolution by extraction »** et la direction V2/V3. Tant
+      qu'il est « Proposé », l'agent ne démarre pas le chantier §2bis.
+- [ ] **Licence : rester en CC0 ou passer à Apache-2.0 / autre ?** Rouverte par la spec 04 (§2 priorité
+      4, §5.6) pour l'usage OEM/entreprise. Contrainte : la demande d'autorisation d'activité
+      accessoire à l'employeur mentionne CC0 par écrit (cahier §13) ; toute offre payante (spec 04 §6-7)
+      est à vérifier contre cette autorisation. Avis juridique si l'enjeu le justifie.
+- [ ] **Emplacement de `convert()`** : entrée bibliothèque dans `packages/cli` (recommandé pour
+      commencer) ou nouveau paquet `@md2nativedocx/engine`. Ne peut pas aller dans `core` (`AGENTS.md`).
+      Spec 04 §5.1.
+- [ ] **Règle 7 d'`AGENTS.md` (ZIP)** : déjà assouplie deux fois (renumérotation des ids, injection
+      SmartArt/graphiques). `convert()` en ferait une responsabilité publique et permanente ; reformuler
+      la règle est une décision de sécurité (spec 01, annexe A).
+- [ ] **Démo vidéo dans un vrai Word** (spec 04, priorité 1) : source Markdown/Mermaid → `.docx` →
+      sélection d'un nœud → changement de libellé → déplacement → le connecteur suit. Le GIF actuel du
+      README montre l'export, pas la manipulation. Éviter `crossing-stress-bipartite` (défaut connu, §2).
+- [ ] **Validation marché** (cahier §12.4) : une dizaine de conversations « problème », viser cinq
+      pilotes, mesurer le temps gagné. En parallèle du code, pas après.
 - ⏸ **Add-in Word (Phase 4), en pause, hors de `main`** : le scaffold vit sur la branche
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
   *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :
@@ -51,6 +70,45 @@
         de connexion mal choisi dans un graphe très dense.
 - [ ] **Exception d'audit `braces` (GHSA-vfj7-8cjw-p6xm) : expire le 2026-12-31.** Vérifier alors si
       une version corrigée existe ; sinon prolonger avec motif dans `audit-exceptions.json`.
+
+## 2bis. Chantier V2 — moteur (dès que l'ADR 0012 est accepté)
+
+Ordre de la spec 04 §2, ramené au code (détail section par section : `docs/specs/01-v2-engine-spec.md`,
+annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne changent pas d'un octet
+(golden tests et `test:visual` en garde-fou).
+
+- [ ] **`renderDiagram()` dans `core`.** Porter en TypeScript le `if/else` sur 29 types de
+      `packages/pandoc-filter/bin/md2nativedocx-core.mjs`, avec les parties SmartArt/graphique
+      **rendues comme données** (`RenderResult.parts`) au lieu d'écrites sur disque, et les
+      avertissements dans `metadata.warnings` au lieu de stderr. Le pont `.mjs` devient un adaptateur
+      qui lit l'environnement et écrit les fichiers. Ajout à l'API publique de `core` : escalade.
+- [ ] **Une seule table de décision** pour `planRendering` (CodeLens/survol VS Code) et
+      `renderDiagram`, qui divergent aujourd'hui en silence.
+- [ ] **`EngineOptions` typé** à partir des ~38 variables `MD2NATIVEDOCX_*` ; les variables restent
+      lues aux bords (CLI, pont Lua) pour la compatibilité.
+- [ ] **`convert()`** (après la décision d'emplacement, §1) : Pandoc + `postprocess.mjs` +
+      `chartParts.mjs` + `referenceDocBuilder.mjs` derrière une fonction qui rend un `Buffer` ; le CLI
+      l'appelle. `packages/pptx` cesse alors de lancer le pont par `execFile` et appelle
+      `renderDiagram()` directement.
+- [ ] **Erreurs typées et codes de sortie documentés** (0 / 1 / 2 existent dans le CLI, nulle part
+      décrits).
+- [ ] **Limites de ressources** avant tout usage serveur/MCP : taille du source, nombre de nœuds,
+      délai autour de Dagre, taille du paquet produit. Aujourd'hui seuls `treeView` (2 000) et `sankey`
+      (200) plafonnent.
+- [ ] **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
+      dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
+- [ ] **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de
+      Word par round, et une table d'index fixture → comportement attendu → validateur → date.
+- [ ] **Pandoc comme contrat** : plage supportée testée en CI (`ci.yml`, revue humaine) ; post-traitement
+      XML au lieu de regex là où ça renforce vraiment, en réutilisant `fast-xml-parser` déjà présent
+      dans `packages/pptx` (nouvelle dépendance pour `cli` : escalade).
+- [ ] **Identité des objets** (spec 01 §5, spec 04 §5.2) : l'id Mermaid des nœuds de flowchart est dans
+      `cNvPr/@descr`, qui est le **texte de remplacement lu par les lecteurs d'écran** (bruit
+      d'accessibilité). Choisir un autre emplacement, vérifié dans un vrai Word, avant le spike V3.0.
+- Puis, adaptateurs minces sur l'API publique : documentation SDK Node, serveur MCP
+  (`render_diagram`, `convert_document`), Quarto (vérifier d'abord : le filtre lance `node`, absent de
+  Quarto, et l'injection SmartArt/graphiques vit dans le CLI, pas dans le filtre). Puis les deux sondes
+  PlantUML et draw.io (cahier §11).
 
 ## 3. Backlog — pistes SmartArt et graphiques (analysées, pas commencées)
 
@@ -99,8 +157,10 @@ LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans 
   presse-papiers système, et vérifier ce que Word en fait (formes natives ou image).
 - **« Paste Word as MD »** et les boutons « Copier en MD » de l'add-in : demandent un convertisseur
   HTML/OOXML → Markdown qui n'existe pas. Le construire une seule fois pour les deux.
-- **Serveur MCP** : fine couche autour du CLI (un assistant génère du Mermaid, l'outil rend le
-  `.docx`/`.pptx`). Plus simple une fois le CLI publié sur npm.
+- **Spike V3.0 — aller-retour Word** (`docs/specs/03-v3-human-editing-roundtrip-spec.md`) : générer
+  quelques flowcharts et SmartArt, les retoucher dans un vrai Word, relever ce qui survit (ids,
+  connecteurs, points SmartArt). Pas avant que V2 ait fixé l'identité des objets ; lire un `.docx`
+  extérieur fait entrer la ZIP bomb dans le tableau de sécurité d'`AGENTS.md` (escalade).
 - **Provisioning Pandoc dans le CLI** : seule l'extension télécharge Pandoc ; le CLI exige Pandoc ≥ 3.1.3
   sur le `PATH`. À partager si le public CI/scripts le demande.
 - **Contribuer à Pandoc en amont** : Pandoc est en Haskell, une PR ne serait pas un portage. Remonter
@@ -110,7 +170,8 @@ LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans 
 - **Contrôle de compatibilité Word au CLI en dev** (`wordCompatibilityCheck` n'existe que dans
   l'extension empaquetée) : coût d'un `dotnet build` par export, jamais tranché.
 - **Aperçu dans VS Code (Phase 2.5 de `docs/specs/UX_SPEC.md`)** : jamais commencé ; lecture seule
-  stricte si un jour.
+  stricte si un jour. La V3 (§3.4 de la spec 03) envisage un éditeur visuel dans VS Code : si l'aperçu
+  se fait, le construire comme composant réutilisable plutôt que spécifique à VS Code.
 - **Environnement** : LibreOffice et Xvfb ne sont pas épinglés en version (`.devcontainer/` : revue
   humaine). Pas urgent : la dérive observée venait des polices, réglée par
   `test-corpus/visual/fontconfig/fonts.conf`.

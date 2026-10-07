@@ -59,15 +59,40 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 - **Extension 0.7.0 published** (tag `vscode-v0.7.0`): the SmartArt additions above, the new
   Marketplace description, the drawing setting removed, a smaller `.vsix`.
 
+## Direction after V1 (proposed 2026-10-07)
+
+Four documents propose what comes after the current product, and are now wired into the roadmap
+(`docs/specs/cahier_des_charges.md` §11) and `TODO.md`:
+
+- **V2, the engine** ([`docs/specs/01-v2-engine-spec.md`](docs/specs/01-v2-engine-spec.md)): make the
+  existing capability callable by other tools without knowing its internals: `renderDiagram()` in
+  `core`, `convert()` outside it, typed options and errors, a thin CLI, then SDK, MCP and Quarto
+  adapters. Its appendix A maps every section to today's code: the dispatch `renderDiagram()` would
+  formalise already exists as an `if/else` over 29 types in `packages/pandoc-filter/bin/md2nativedocx-core.mjs`.
+- **The rule for getting there** ([ADR 0012](docs/adr/0012-evolution-by-extraction.md), *proposed*):
+  extract what exists before abstracting; no translator rewritten for cleanliness alone.
+- **V3, human editing and round trip** ([`docs/specs/03-v3-human-editing-roundtrip-spec.md`](docs/specs/03-v3-human-editing-roundtrip-spec.md)):
+  Mermaid → Word → human edit → semantic diff → LLM → revised Mermaid. Takes over
+  `FUTURE_docx2mermaid_SPEC.md`. Vision only; starts with a spike in real Word.
+- **Sequence and open decisions** ([`docs/specs/04-roadmap-and-open-decisions.md`](docs/specs/04-roadmap-and-open-decisions.md)),
+  annotated with what the project already constrains: `convert()` cannot live in `core`; CC0 was
+  promised in writing to the maintainer's employer, which weighs on any licence change or paid offer;
+  node ids currently sit in the shape's Alt Text (`descr`), which screen readers read.
+
+Nothing of V2 is started: the ADR and four decisions are waiting on the maintainer (`TODO.md` §1).
+
 ## What's next
 
-Everything open is in [`TODO.md`](TODO.md), in four sections:
+Everything open is in [`TODO.md`](TODO.md), in five sections:
 
 1. **Maintainer:** install 0.7.0 on the corporate Windows machine and export a mixed document (the new
    defaults change existing users' output); decide on Venn as SmartArt; npm token; review a one-line
    `ci.yml` change; DCO/CLA before the first external PR. Word add-in on hold, on branch `word-addin-scaffold`.
+   Since 2026-10-07 also: accept ADR 0012, licence (CC0 or not), where `convert()` lives, rule 7
+   wording, a real-Word demo video, user/market validation.
 2. **Agent, no maintainer needed:** the manual generator into `scripts/` and SmartArt/charts in the
    manual; untranslated setting descriptions; two known visual defects; the `braces` exception date.
+2bis. **V2 engine work**, ordered and mapped to files, to start once ADR 0012 is accepted.
 3. **Backlog, analysed:** five SmartArt/chart tracks (Venn, small Gantt, requirement/C4 trees, treemap
    as a Word chart, SmartArt and charts in `.pptx`), each with gain, cost and a recommendation.
 4. **Ideas not committed to.**
@@ -93,6 +118,7 @@ Everything open is in [`TODO.md`](TODO.md), in four sections:
 | What each Mermaid type becomes | `docs/coverage.md` |
 | Rules, conventions, escalation | `AGENTS.md`, `TESTING.md` |
 | Product intent (French) | `docs/specs/cahier_des_charges.md` |
-| Decisions | `docs/adr/` (0006 SmartArt corruption, 0010 pptx, 0011 charts) |
+| What comes after V1 | `docs/specs/01-v2-engine-spec.md`, `03-v3-…`, `04-roadmap-…`, ADR 0012 |
+| Decisions | `docs/adr/` (0006 SmartArt corruption, 0010 pptx, 0011 charts, 0012 evolution by extraction) |
 | Real-Word verification log | `test-corpus/word-verification/CHECKLIST.md` |
 | Closed work, incidents, old TODO | `docs/history/` |
