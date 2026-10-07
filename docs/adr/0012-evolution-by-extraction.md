@@ -1,7 +1,7 @@
 # ADR 0012 — Evolution by Extraction
 
-- **Statut :** **Proposé** (2026-10-07), en attente d'acceptation par le mainteneur. Tant qu'il n'est
-  pas accepté, il guide les propositions mais ne s'impose pas comme une règle d'`AGENTS.md`.
+- **Statut :** **Accepté** (2026-10-07), avec deux précisions (règles 4 et 7, ci-dessous) et la
+  décision sur l'emplacement de `convert()` (section « Decisions taken at acceptance »).
 - **Décideur :** Nicolas Bridelance (mainteneur).
 - **Specs liées :** `docs/specs/01-v2-engine-spec.md` (V2), `docs/specs/03-v3-human-editing-roundtrip-spec.md`
   (V3), `docs/specs/04-roadmap-and-open-decisions.md` (roadmap). Arrivé sous le nom
@@ -82,6 +82,12 @@ No new integration may depend directly on:
 
 New interfaces call supported high-level engine contracts.
 
+*Clarification at acceptance (2026-10-07):* running the published CLI as a subprocess, with its
+documented arguments and exit codes, **is** a public boundary. The VS Code extension does exactly
+this today and complies with this rule; what is forbidden is importing CLI or filter modules that
+are not exported as a library entry point, or driving them through undocumented environment
+variables.
+
 ### Rule 5 — Keep adapters thin
 
 CLI, MCP, SDK wrappers, Quarto integration, VS Code UI and future frontends should translate their own inputs/options into engine calls.
@@ -100,6 +106,12 @@ Generated native Office objects should retain enough identity/provenance to supp
 
 This does not commit the project to implementing round-trip in V2.
 
+*Clarification at acceptance (2026-10-07):* this rule applies only to diagram types that have a
+real source id (flowchart node ids today; others when their syntax has one), and only once a storage
+location has been chosen and verified in a real Word (spec 04 §5.2). The current location,
+`cNvPr/@descr`, is the shape's alt text read by screen readers: it must **not** be extended to other
+types in the meantime.
+
 ### Rule 8 — Do not destroy future round-trip information unnecessarily
 
 If information about source identity, relation identity or rendering provenance already exists at render time, avoid discarding it solely because V1 does not consume it.
@@ -113,6 +125,17 @@ Mermaid remains a first-class supported source and the current product's stronge
 V2 should be deliverable incrementally.
 
 Each extraction step must leave the repository in a working, testable state.
+
+## Decisions taken at acceptance (2026-10-07)
+
+- **`convert()` lives in `packages/cli`**, as a library entry point (an `exports` field and type
+  declarations) next to the existing `bin`. No new package for now. A separate
+  `@md2nativedocx/engine` package is extracted only when a second consumer (MCP server, Quarto)
+  needs `convert()` without the command-line interface (rule 2). The decision is taken before the
+  first npm publication on purpose: until then, naming and placing packages breaks nobody.
+- **`AGENTS.md` rule 7** is reworded from a ban into an enumerated allowlist of package operations
+  (Pandoc stays the author of the `.docx`), so that `convert()` owning post-processing stays
+  checkable.
 
 ## Consequences
 

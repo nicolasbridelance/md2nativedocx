@@ -35,8 +35,24 @@ Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or s
    valid reason to skip it here.
 6. **Don't add a dependency without a one-line justification in the PR.** Default to zero new
    dependencies. This project's credibility rests partly on being small and auditable.
-7. **Don't touch `.docx` ZIP internals directly.** That's Pandoc's job by architectural decision
-   (spec §0, §5.4.a) — reimplementing it is exactly the scope creep rule 1 warns about.
+7. **Pandoc authors the `.docx` package; post-processing is limited to an enumerated allowlist.**
+   (Reworded 2026-10-07 with the maintainer's sign-off; it replaces "don't touch `.docx` ZIP
+   internals", which had already been relaxed twice by signed-off exceptions.) Never reimplement
+   `.docx` writing or packaging: that is Pandoc's job (spec §0, §5.4.a) and doing it ourselves is
+   the scope creep rule 1 warns about. On an archive Pandoc produced, or on the `reference.docx`
+   template handed to Pandoc, code may only:
+   - rewrite `word/document.xml` (namespace declarations on the root, drawing-id renumbering,
+     chart/SmartArt placeholder wiring, the template's `w:sectPr`);
+   - patch `word/settings.xml`, and in the reference template `word/styles.xml`,
+     `word/theme/theme1.xml` and `word/footer1.xml`;
+   - add new parts under `word/diagrams/`, `word/charts/` and `word/embeddings/`, together with the
+     matching entries in their `.rels` files and in `[Content_Types].xml`.
+
+   No relationship may ever be `External` (rule 3). Any operation on the package outside this list
+   is an escalation, not an agent decision. **Reading a `.docx` that came from outside this
+   pipeline** (the V3 round-trip) stays forbidden until a separate decision adds decompressed-size
+   and ratio caps (zip bomb row of the Security table). The `.pptx` package is assembled by
+   `packages/pptx` itself under ADR 0010; the same "no `External`" rule applies there.
 
 ---
 
@@ -91,9 +107,10 @@ Mermaid text to an XML string, importable from Node and bundleable for the brows
 future Office.js add-in, spec §5.4.c). Keep it that way; it's what makes the "one core, several
 integration points" architecture in the spec actually hold.
 
-How this architecture evolves after V1 is proposed in `docs/adr/0012-evolution-by-extraction.md`
-(status: *proposed*, not yet binding): extract existing capabilities behind public contracts
-(`renderDiagram()` in `core`, `convert()` **outside** `core` since it runs Pandoc), abstract only once
+How this architecture evolves after V1 is set by `docs/adr/0012-evolution-by-extraction.md`
+(status: *accepted* 2026-10-07, binding): extract existing capabilities behind public contracts
+(`renderDiagram()` in `core`, `convert()` **outside** `core` since it runs Pandoc — as a library entry point of `packages/cli`,
+decided 2026-10-07, before the first npm publication), abstract only once
 two real implementations prove the abstraction, never rewrite a working translator for cleanliness
 alone, keep every adapter (CLI, MCP, VS Code) thin. Read `docs/specs/01-v2-engine-spec.md` appendix A
 before starting any of that work.
@@ -318,11 +335,12 @@ something a diagram-focused fix needs to also resolve.
     platform-specific packages and a build pipeline that doesn't exist yet, at odds with this
     project being "small and auditable" — see rule 6 above); GPL notices for the downloaded binary
     live in `packages/vscode-extension/THIRD_PARTY_NOTICES.md`.
-- **CLA/DCO:** not required to start. If the project later wants to preserve the option to relicense
-  (spec §13 flags this explicitly), the low-friction path is requiring DCO sign-off
-  (`Signed-off-by:` trailer via `git commit -s`) on PRs rather than a full CLA, which tends to
-  discourage casual contributors. This is a decision for the maintainer before the first external
-  PR is merged — the agent should not assume either way and should flag it if it comes up.
+- **DCO: adopted (maintainer decision, 2026-10-07).** Every commit in an external PR carries a
+  `Signed-off-by:` trailer (`git commit -s`), certifying the
+  [Developer Certificate of Origin](https://developercertificate.org/). No CLA. The license stays
+  CC0 for now; reconsidering it (e.g. Apache-2.0 for its patent grant, which CC0 explicitly
+  withholds in its §4a) is deferred until a real integrator asks, and then involves the employer
+  and a lawyer (spec §13). The agent does not reopen this on its own.
 
 ---
 

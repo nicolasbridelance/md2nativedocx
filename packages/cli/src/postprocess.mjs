@@ -18,10 +18,10 @@
  *     renumbered here — the one place that sees the whole document.
  *
  * Security (AGENTS.md):
- *   * Rule #7 ("don't touch .docx ZIP internals") is deliberately relaxed here:
- *     this replaces exactly one entry (`word/document.xml`) in the archive
- *     Pandoc produced — it is not a reimplementation of ZIP/docx packaging. It
- *     is required for the output to be Word-conformant.
+ *   * Rule #7 (Pandoc authors the package; post-processing limited to an
+ *     allowlist): this replaces exactly one entry (`word/document.xml`) in the
+ *     archive Pandoc produced — it is not a reimplementation of ZIP/docx
+ *     packaging. It is required for the output to be Word-conformant.
  *   * No external relationship is added (rule #3) and no user-controlled text is
  *     interpolated: the edits are namespace declarations on the root tag and
  *     rewrites of numeric `id` attributes.
@@ -32,10 +32,10 @@
  *
  * A third function, {@link injectSmartArtParts}, goes further than the two
  * corrections above — it adds brand-new ZIP entries (`word/diagrams/*.xml`),
- * not just same-path replacements. Flagged and signed off on separately
+ * not just same-path replacements. Signed off separately
  * (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §8, confirmed with the maintainer
- * 2026-09-03) since it's a materially bigger relaxation of rule #7 than the
- * two corrections above. See its own doc comment for why it exists and what
+ * 2026-09-03), and listed in rule #7's allowlist since its 2026-10-07
+ * rewording. See its own doc comment for why it exists and what
  * it does; it is a no-op whenever a document has no SmartArt diagram in it.
  */
 

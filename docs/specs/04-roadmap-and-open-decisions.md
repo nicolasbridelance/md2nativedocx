@@ -166,6 +166,9 @@ Decision criterion: keep `core` conceptually coherent rather than forcing all or
 > dont `cli` dépendrait (frontière plus nette pour un intégrateur OEM, un paquet npm de plus à
 > publier). Recommandation : commencer dans `cli`, extraire en paquet si un deuxième consommateur
 > (MCP, Quarto) le justifie, conformément à la règle 2 de l'ADR 0012.
+>
+> **Décidé le 2026-10-07** (mainteneur) : entrée bibliothèque dans `packages/cli`, avant la première
+> publication npm. Voir ADR 0012, « Decisions taken at acceptance ».
 
 ### 5.2 Stable identity storage
 
@@ -237,6 +240,10 @@ Evaluate CC0, Apache-2.0 or other models in light of:
 > de la revue juridique. Deuxième contrainte de calendrier : tant qu'aucune contribution externe n'est
 > acceptée, le mainteneur peut relicencier seul ; après, il faut l'accord des contributeurs, ou un
 > DCO/CLA posé avant (`TODO.md` §1, `AGENTS.md` « Licensing »). Décision du mainteneur uniquement.
+>
+> **Décidé le 2026-10-07** (mainteneur) : rester en CC0, adopter le DCO dès maintenant, rouvrir la
+> licence seulement sur demande d'un intégrateur réel. Correction de la deuxième contrainte : voir
+> cahier §13.
 
 ### 5.7 Third target threshold
 

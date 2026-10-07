@@ -2,8 +2,8 @@
  * Native-chart hand-off (ADR 0011): completes the `c:chart` wiring for every diagram the core bridge
  * dispatched to a native Word chart, and builds the embedded `.xlsx` workbook behind it.
  *
- * Same discipline as `postprocess.mjs`'s `injectSmartArtParts` (the precedent for this exception to
- * AGENTS.md rule 7): it only **adds** parts, relationships and content types, never rewrites a part
+ * Same discipline as `postprocess.mjs`'s `injectSmartArtParts`, and within AGENTS.md rule 7's
+ * allowlist (new parts under `word/charts/` and `word/embeddings/`): it only **adds** parts, relationships and content types, never rewrites a part
  * Pandoc wrote beyond swapping its own placeholder, and is a no-op when the document has no native
  * chart. Every relationship it adds is internal (no `TargetMode`, rule 3). The workbook is a small zip
  * written with `adm-zip`, already a dependency of this package, so no new dependency (rule 6).

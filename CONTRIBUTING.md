@@ -24,6 +24,11 @@ Before anything else:
 - Branch names: `feat/<short-desc>`, `fix/<short-desc>`, `security/<short-desc>`,
   `docs/<short-desc>`.
 - Commit messages follow Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `security:`).
+- **Sign off every commit** (`git commit -s`). The `Signed-off-by: Your Name <you@example.com>`
+  trailer certifies the [Developer Certificate of Origin](https://developercertificate.org/): you
+  wrote the change, or have the right to submit it, under this project's license (CC0 1.0). There
+  is no CLA. Forgot? `git commit --amend -s` for the last commit, or
+  `git rebase --signoff main` for a whole branch.
 
 ## Pull request checklist
 

@@ -59,7 +59,7 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 - **Extension 0.7.0 published** (tag `vscode-v0.7.0`): the SmartArt additions above, the new
   Marketplace description, the drawing setting removed, a smaller `.vsix`.
 
-## Direction after V1 (proposed 2026-10-07)
+## Direction after V1 (decided 2026-10-07)
 
 Four documents propose what comes after the current product, and are now wired into the roadmap
 (`docs/specs/cahier_des_charges.md` §11) and `TODO.md`:
@@ -69,7 +69,7 @@ Four documents propose what comes after the current product, and are now wired i
   `core`, `convert()` outside it, typed options and errors, a thin CLI, then SDK, MCP and Quarto
   adapters. Its appendix A maps every section to today's code: the dispatch `renderDiagram()` would
   formalise already exists as an `if/else` over 29 types in `packages/pandoc-filter/bin/md2nativedocx-core.mjs`.
-- **The rule for getting there** ([ADR 0012](docs/adr/0012-evolution-by-extraction.md), *proposed*):
+- **The rule for getting there** ([ADR 0012](docs/adr/0012-evolution-by-extraction.md), *accepted* 2026-10-07):
   extract what exists before abstracting; no translator rewritten for cleanliness alone.
 - **V3, human editing and round trip** ([`docs/specs/03-v3-human-editing-roundtrip-spec.md`](docs/specs/03-v3-human-editing-roundtrip-spec.md)):
   Mermaid → Word → human edit → semantic diff → LLM → revised Mermaid. Takes over
@@ -79,7 +79,11 @@ Four documents propose what comes after the current product, and are now wired i
   promised in writing to the maintainer's employer, which weighs on any licence change or paid offer;
   node ids currently sit in the shape's Alt Text (`descr`), which screen readers read.
 
-Nothing of V2 is started: the ADR and four decisions are waiting on the maintainer (`TODO.md` §1).
+Decided by the maintainer on 2026-10-07: ADR 0012 accepted with two clarifications (running the CLI
+as a subprocess is a public boundary; identity storage only for types with a real source id, and not
+extended in `descr`); `convert()` becomes a library entry point of `packages/cli`; `AGENTS.md` rule 7
+reworded into an allowlist of package operations; licence stays CC0, DCO adopted now (cahier §13,
+`CONTRIBUTING.md`). V2 work (`TODO.md` §2bis) starts with `renderDiagram()`.
 
 ## What's next
 
@@ -87,12 +91,11 @@ Everything open is in [`TODO.md`](TODO.md), in five sections:
 
 1. **Maintainer:** install 0.7.0 on the corporate Windows machine and export a mixed document (the new
    defaults change existing users' output); decide on Venn as SmartArt; npm token; review a one-line
-   `ci.yml` change; DCO/CLA before the first external PR. Word add-in on hold, on branch `word-addin-scaffold`.
-   Since 2026-10-07 also: accept ADR 0012, licence (CC0 or not), where `convert()` lives, rule 7
-   wording, a real-Word demo video, user/market validation.
+   `ci.yml` change (plus a DCO check). Word add-in on hold, on branch `word-addin-scaffold`.
+   Since 2026-10-07 also: a real-Word demo video, light user validation (tied to the npm token).
 2. **Agent, no maintainer needed:** the manual generator into `scripts/` and SmartArt/charts in the
    manual; untranslated setting descriptions; two known visual defects; the `braces` exception date.
-2bis. **V2 engine work**, ordered and mapped to files, to start once ADR 0012 is accepted.
+2bis. **V2 engine work**, ordered and mapped to files; ADR 0012 accepted, under way.
 3. **Backlog, analysed:** five SmartArt/chart tracks (Venn, small Gantt, requirement/C4 trees, treemap
    as a Word chart, SmartArt and charts in `.pptx`), each with gain, cost and a recommendation.
 4. **Ideas not committed to.**

@@ -18,6 +18,7 @@
 
 ## Checklist
 
+- [ ] Every commit is signed off (`git commit -s`, Developer Certificate of Origin — see `CONTRIBUTING.md`)
 - [ ] CI is green (lint, typecheck, unit + golden tests, `npm audit`, secret scan)
 - [ ] New/changed behavior has a test that would have failed before this change
 - [ ] Public API changes have updated TSDoc comments
