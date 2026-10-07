@@ -74,10 +74,6 @@ Ordre de la spec 04 §2, ramené au code (détail section par section : `docs/sp
 annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne changent pas d'un octet
 (golden tests et `test:visual` en garde-fou).
 
-- [ ] **`packages/pptx` appelle `renderDiagram()` directement** au lieu de lancer le pont par
-      `execFile` (reste de l'étape `convert()`, faite le 2026-10-07 : `packages/cli/src/convert.mjs`,
-      options typées dans `convert.d.mts`, variables `MD2NATIVEDOCX_*` lues seulement par
-      `envOptions.mjs` pour le CLI).
 - [ ] **Erreurs typées et codes de sortie documentés** (0 / 1 / 2 existent dans le CLI, nulle part
       décrits). `ConversionError` (`stage` : `setup`, `pandoc`, `postprocess`) existe depuis `convert()`.
 - [ ] **Limites de ressources** avant tout usage serveur/MCP : taille du source, nombre de nœuds,

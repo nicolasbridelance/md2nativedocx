@@ -1,23 +1,15 @@
 /**
  * Markdown -> `.pptx` orchestration: one slide per ```mermaid block.
  *
- * Each block is run through the same core bridge the Pandoc filter uses
- * (`@md2nativedocx/pandoc-filter`'s `md2nativedocx-core.mjs`), so every diagram type core supports
- * is supported here with no per-type code. The bridge is invoked with `execFile` and an argument
- * array, never a shell string (AGENTS.md rule #4); diagram text travels through a temp file.
+ * Each block goes through core's `renderDiagram()`, the same entry point the Pandoc filter's bridge
+ * calls, so every diagram type core supports is supported here with no per-type code. In process: no
+ * subprocess, no temporary file (ADR 0012, spec 01 §6).
  */
 
-import { execFile } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
+import { renderDiagram } from '@md2nativedocx/core';
 import { type DiagramArea, buildPptx, diagramAreaFor } from './build-pptx.js';
 import { PptxConversionError } from './errors.js';
 import { extractMermaidBlocks } from './markdown-blocks.js';
-
-const execFileAsync = promisify(execFile);
 
 /** Turns Mermaid text into a core `<w:p>` fragment (and any warnings). Injectable for tests. */
 export type FragmentProvider = (
@@ -47,31 +39,25 @@ export interface ExportPptxResult {
   warnings: string[];
 }
 
-/** Default provider: runs the core bridge in a child process, sizing the drawing to the slide area. */
-export const coreBridgeProvider: FragmentProvider = async (mermaidText, area) => {
-  const bridgePath = fileURLToPath(import.meta.resolve('@md2nativedocx/pandoc-filter/bin/md2nativedocx-core.mjs'));
-  const dir = await mkdtemp(join(tmpdir(), 'md2nativedocx-pptx-'));
+/**
+ * Default provider: core's `renderDiagram()`, shapes only (SmartArt and chart parts exist only in a
+ * `.docx` package), with the drawing sized to the slide area. The name predates the in-process call,
+ * when this ran the core bridge as a child process.
+ */
+export const coreBridgeProvider: FragmentProvider = (mermaidText, area) => {
   try {
-    const file = join(dir, 'diagram.mmd');
-    await writeFile(file, mermaidText, 'utf8');
-    const env = { ...process.env };
-    delete env['MD2NATIVEDOCX_SMARTART_DIR']; // SmartArt parts exist only in .docx
-    env['MD2NATIVEDOCX_MAX_DRAWING_CX'] = String(area.cx);
-    env['MD2NATIVEDOCX_MAX_DRAWING_CY'] = String(area.cy);
-    const { stdout, stderr } = await execFileAsync(process.execPath, [bridgePath, file], {
-      env,
-      maxBuffer: 64 * 1024 * 1024,
+    const result = renderDiagram(mermaidText, {
+      smartArt: false,
+      nativeCharts: false,
+      // Whole EMU, as the bridge's environment variables carried them.
+      ...(Math.trunc(area.cx) > 0 ? { maxDrawingCx: Math.trunc(area.cx) } : {}),
+      ...(Math.trunc(area.cy) > 0 ? { maxDrawingCy: Math.trunc(area.cy) } : {}),
     });
-    const warnings = stderr
-      .split('\n')
-      .filter((l) => l.startsWith('md2nativedocx: '))
-      .map((l) => l.slice('md2nativedocx: '.length));
-    return { fragmentXml: stdout, warnings };
+    // Same wording as the bridge's stderr lines, which this list used to be read from.
+    return Promise.resolve({ fragmentXml: result.fragment, warnings: result.metadata.warnings.map((w) => `warning: ${w}`) });
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    throw new PptxConversionError(`core bridge failed: ${detail}`);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+    return Promise.reject(new PptxConversionError(`diagram rendering failed: ${detail}`));
   }
 };
 
