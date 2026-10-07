@@ -18,6 +18,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { StateDiagram, StateNode } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -137,7 +138,7 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
   for (const t of chart.transitions) {
     if (g.hasNode(t.from) && g.hasNode(t.to)) g.setEdge(t.from, t.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;

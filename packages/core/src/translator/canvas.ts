@@ -12,6 +12,7 @@
  * narrow-tall safety margin below.
  */
 
+import type { GraphLimits } from '../layout/graph-limits.js';
 import { escapeXml } from './xml-escape.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -82,7 +83,7 @@ const MAX_DRAWING_CY = 8229600;
  * Same meaning as `TranslateOptions.maxDrawingCx`/`maxDrawingCy` for flowcharts;
  * absent fields fall back to the Pandoc-default-page constants above.
  */
-export interface CanvasOptions {
+export interface CanvasOptions extends GraphLimits {
   /** Maximum drawing width in EMU. */
   maxDrawingCx?: number;
   /** Maximum drawing height in EMU. */

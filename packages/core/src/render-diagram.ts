@@ -18,6 +18,7 @@ import { parseMermaid } from './parser/index.js';
 import { layout } from './layout/layout.js';
 import { translateToOoxml } from './translator/ooxml-translator.js';
 import type { CanvasOptions } from './translator/canvas.js';
+import { DiagramTooLargeError } from './layout/graph-limits.js';
 import { escapeXml } from './translator/xml-escape.js';
 import type { ChartWorkbook, NativeChart, NativeChartOptions } from './translator/native-chart.js';
 import { MAX_TREE_DEPTH, classifyTopology, flowchartTreeDepth, type SmartArtIneligible } from './smartart/classify.js';
@@ -132,7 +133,16 @@ export interface RenderOptions extends CanvasOptions {
    * `[A-Za-z0-9_-]{1,64}`; pass a counter for reproducible output.
    */
   newPartId?: () => string;
+  /**
+   * Longest accepted Mermaid source, in characters (default {@link DEFAULT_MAX_SOURCE_LENGTH}). Longer
+   * input throws {@link DiagramTooLargeError} before anything is parsed. The graph caps `maxNodes` and
+   * `maxEdges` (inherited, defaults 500 and 800) apply to every type laid out with Dagre.
+   */
+  maxSourceLength?: number;
 }
+
+/** Default for {@link RenderOptions.maxSourceLength}. */
+export const DEFAULT_MAX_SOURCE_LENGTH = 1_000_000;
 
 /**
  * The parts of one SmartArt graphic, as XML strings. The fragment references them through placeholder
@@ -338,7 +348,7 @@ const renderFlowchart: TypeRenderer = (source, ctx) => {
   const ast = parsed(ctx, parseMermaid(source));
   const smartArt = ctx.smartArt((options) => generateSmartArt(ast, options));
   if (smartArt) return smartArt;
-  const result = layout(ast);
+  const result = layout(ast, ctx.canvas);
   ctx.warnings.push(...result.warnings);
   let fragment = translateToOoxml(ast, result, ctx.canvas);
   // Say why only when SmartArt was attempted and rejected for a structural reason (spec §10.3); never
@@ -467,10 +477,13 @@ function errorMessage(err: unknown): string {
  *
  * The parsers are lenient: syntax they do not understand becomes a warning, not an error.
  *
+ * @throws {DiagramTooLargeError} when the source or the graph exceeds the limits in {@link RenderOptions}.
  * @throws RangeError when {@link RenderOptions.newPartId} returns an id outside `[A-Za-z0-9_-]{1,64}`.
  * An unexpected internal error in a parser or translator propagates as is.
  */
 export function renderDiagram(source: string, options: RenderOptions = {}): RenderResult {
+  const maxSource = options.maxSourceLength ?? DEFAULT_MAX_SOURCE_LENGTH;
+  if (source.length > maxSource) throw new DiagramTooLargeError('source', source.length, maxSource);
   const { type, label } = detectDiagramType(source);
   const warnings: string[] = [];
   const generateId = options.newPartId ?? (() => globalThis.crypto.randomUUID());
@@ -482,6 +495,8 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
   const canvas: CanvasOptions = {};
   if (options.maxDrawingCx !== undefined) canvas.maxDrawingCx = options.maxDrawingCx;
   if (options.maxDrawingCy !== undefined) canvas.maxDrawingCy = options.maxDrawingCy;
+  if (options.maxNodes !== undefined) canvas.maxNodes = options.maxNodes;
+  if (options.maxEdges !== undefined) canvas.maxEdges = options.maxEdges;
 
   const ctx: RenderContext = {
     options,

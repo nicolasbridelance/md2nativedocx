@@ -20,6 +20,20 @@ export function buildUnsupportedDiagramTypeNoteXml(info: DiagramTypeInfo): strin
   const message = escapeXml(
     `${info.label} diagrams are not yet supported by md2nativedocx — this diagram was not converted.`,
   );
+  return buildNoteParagraph(message);
+}
+
+/**
+ * The note shown in place of a diagram that exceeded the size limits (`DiagramTooLargeError`), so the
+ * document still converts and the reader sees why the diagram is missing. Escaped: the message embeds
+ * only numbers and fixed words, but it is built the same way as every other note.
+ */
+export function buildDiagramTooLargeNoteXml(error: Pick<Error, 'message'>): string {
+  const message = escapeXml(`This diagram was not converted: ${error.message}.`);
+  return buildNoteParagraph(message);
+}
+
+function buildNoteParagraph(escapedMessage: string): string {
   return [
     '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
     '  <w:pPr>',
@@ -31,7 +45,7 @@ export function buildUnsupportedDiagramTypeNoteXml(info: DiagramTypeInfo): strin
     '      <w:color w:val="808080"/>',
     '      <w:sz w:val="18"/>',
     '    </w:rPr>',
-    `    <w:t xml:space="preserve">${message}</w:t>`,
+    `    <w:t xml:space="preserve">${escapedMessage}</w:t>`,
     '  </w:r>',
     '</w:p>',
   ].join('\n');

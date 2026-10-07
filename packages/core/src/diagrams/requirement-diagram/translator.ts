@@ -17,6 +17,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { Requirement, RequirementDiagram, RequirementElement } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -135,7 +136,7 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, op
   for (const rel of chart.relationships) {
     if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;

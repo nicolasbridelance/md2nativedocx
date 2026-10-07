@@ -19,6 +19,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { ErAttribute, ErCardinality, ErDiagram, ErEntity } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -136,7 +137,7 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
   for (const rel of chart.relationships) {
     if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;

@@ -49,7 +49,7 @@
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { renderDiagram } from '@md2nativedocx/core';
+import { renderDiagram, buildDiagramTooLargeNoteXml, DiagramTooLargeError } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
 const input = inputPath ? readFileSync(inputPath, 'utf8') : readFileSync(0, 'utf8');
@@ -111,6 +111,12 @@ try {
   for (const part of result.parts) writePart(part);
   process.stdout.write(result.fragment);
 } catch (err) {
+  if (err instanceof DiagramTooLargeError) {
+    // Deliberate fallback: an oversized diagram becomes a visible note, the rest of the document converts.
+    process.stderr.write(`md2nativedocx: warning: ${err.message}\n`);
+    process.stdout.write(buildDiagramTooLargeNoteXml(err));
+    process.exit(0);
+  }
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`md2nativedocx: ${message}\n`);
   process.exit(1);

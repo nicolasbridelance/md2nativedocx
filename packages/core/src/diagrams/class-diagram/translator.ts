@@ -41,6 +41,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -192,7 +193,7 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   for (const rel of chart.relationships) {
     if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;

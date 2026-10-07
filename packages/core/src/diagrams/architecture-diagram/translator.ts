@@ -34,6 +34,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { ArchitectureDiagram, ArchitectureNode } from './types.js';
 import { escapeXml } from '../../translator/xml-escape.js';
 import { estimateTextWidth } from '../../layout/layout.js';
@@ -147,7 +148,7 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, 
   for (const edge of chart.edges) {
     if (g.hasNode(edge.from) && g.hasNode(edge.to)) g.setEdge(edge.from, edge.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;

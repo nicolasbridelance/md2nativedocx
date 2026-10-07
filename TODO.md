@@ -48,15 +48,16 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       tolérants ; voir si un appelant de `renderDiagram()` a besoin de plus avant d'inventer une taxonomie.
       Côté CLI c'est fait le 2026-10-07 : `ConversionError` (`stage`), codes de sortie 0 / 1 / 2
       documentés dans `packages/cli/README.md`.
-- [ ] **Limites de ressources** avant tout usage serveur/MCP : taille du source, nombre de nœuds,
-      délai autour de Dagre, taille du paquet produit. Aujourd'hui seuls `treeView` (2 000) et `sankey`
-      (200) plafonnent.
-      **Mesuré le 2026-10-07** (`renderDiagram`, Linux, sans option) : un flowchart « maillage » (2 arêtes
-      par nœud) coûte 1,6 s à 100 nœuds, 5 s à 200, 21 s à 300, 99 s à 500 (≈ n^2,5 à n^3 : Dagre ou le
-      routage), donc plusieurs minutes à 1 000, sans plafond ; une chaîne de 1 000 nœuds : 2 s. `erDiagram` à
-      3 000 relations chaînées lève un `RangeError` (pile) non typé ; un `subgraph` imbriqué 2 000 fois
-      lève l'`Error` brute de Dagre. Source de 1 Mo dans un libellé : 0,2 s, sans problème. Corriger
-      change l'API publique de `core` (option de plafond ou erreur typée) : escalade au mainteneur.
+- [ ] **Limites de ressources : reste le délai.** Fait le 2026-10-07 : plafonds de graphe pour tout
+      ce qui passe par Dagre (500 nœuds conteneurs de `subgraph` compris, 800 arêtes, surchargeables par
+      `maxNodes` / `maxEdges`), plafond de source (`maxSourceLength`, 1 000 000 caractères),
+      `DiagramTooLargeError` typée, et dans le pont du filtre une note visible à la place du diagramme
+      trop gros (le document se convertit). Pas encore fait : un **délai** réel. Les plafonds bornent le pire
+      cas sans le rendre bon marché : un maillage aléatoire dense à la limite prend encore ~35 s
+      (mesuré : 400 nœuds / 800 arêtes), alors qu'un rapport creux de 413 nœuds prend 0,7 s. Un hôte
+      serveur/MCP doit lancer la conversion sous son propre délai (processus enfant ou worker tué à
+      l'échéance). Reste aussi la taille du paquet produit, et `pptx` qui échoue encore tout l'export sur un
+      bloc trop gros au lieu de mettre une note.
 - [ ] **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
       dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
 - [ ] **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de

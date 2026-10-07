@@ -62,6 +62,13 @@ in the main repository for the full list.
 | `1` | No document: input file not found, Pandoc missing or failed, post-processing failed. |
 | `2` | Bad command line: unknown option, missing input or `-o`, a path outside the working directory. |
 
+## Very large diagrams
+
+A diagram with more than 500 nodes (subgraph boxes included) or 800 edges is not laid out: the document
+still converts, the diagram is replaced by a grey note saying why, and a warning goes to stderr and the
+`.log`. This keeps one pathological block from running for minutes. In `@md2nativedocx/core`, `renderDiagram()`
+throws a `DiagramTooLargeError` instead, and takes `maxNodes`, `maxEdges` and `maxSourceLength` to change the limits.
+
 ## From Node: `convert()`
 
 The same conversion as a function, for a Node application, a build script or a server, without spawning

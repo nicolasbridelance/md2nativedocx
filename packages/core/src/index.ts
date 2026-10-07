@@ -34,7 +34,7 @@ export { translateToOoxml } from './translator/ooxml-translator.js';
 // implemented (see detectDiagramType above). Mirrors
 // buildSmartArtFallbackNoteXml's "visible note, never a silent blank canvas"
 // rule for this different guard-rail.
-export { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
+export { buildUnsupportedDiagramTypeNoteXml, buildDiagramTooLargeNoteXml } from './translator/unsupported-diagram-note.js';
 export type { TranslateOptions } from './translator/ooxml-translator.js';
 export type { CanvasOptions } from './translator/canvas.js';
 
@@ -120,7 +120,9 @@ export { translateCynefinToOoxml } from './diagrams/cynefin/translator.js';
 // One diagram in, one Word fragment out, whatever its type: detection, parser, SmartArt / native chart /
 // shapes choice, parts returned as data (ADR 0012, docs/specs/01-v2-engine-spec.md §4). The supported
 // entry point for integrations; the per-type exports below stay for existing callers.
-export { renderDiagram } from './render-diagram.js';
+export { renderDiagram, DEFAULT_MAX_SOURCE_LENGTH } from './render-diagram.js';
+export { DiagramTooLargeError, DEFAULT_MAX_NODES, DEFAULT_MAX_EDGES } from './layout/graph-limits.js';
+export type { DiagramLimit } from './layout/graph-limits.js';
 export type { RenderOptions, RenderResult, RenderMetadata, RenderedPart, SmartArtPart, ChartPart, NativeChartType } from './render-diagram.js';
 export type { ChartWorkbook } from './translator/native-chart.js';
 

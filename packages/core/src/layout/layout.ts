@@ -12,6 +12,7 @@
  */
 
 import dagre from 'dagre';
+import { assertWithinLimits, type GraphLimits } from './graph-limits.js';
 import type {
   Flowchart,
   Layout,
@@ -47,7 +48,7 @@ const LEVEL_GAP = 80;
  */
 export const SUBGRAPH_TITLE_HEIGHT = 24;
 
-export interface LayoutOptions {
+export interface LayoutOptions extends GraphLimits {
   nodeWidth?: number;
   nodeHeight?: number;
   /** Layout engine. `dagre` is the default; `graphviz` is reserved for future use. */
@@ -370,6 +371,7 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   // ~1000 lines of raw ```mermaid text (spec §10 "surface warnings" — this
   // degradation is reported as a warning, not hidden).
   let g = buildGraph(true);
+  assertWithinLimits(g, options);
   try {
     dagre.layout(g);
   } catch (err) {
