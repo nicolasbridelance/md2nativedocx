@@ -75,13 +75,10 @@ Ordre de la spec 04 §2, ramené au code (détail section par section : `docs/sp
 annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne changent pas d'un octet
 (golden tests et `test:visual` en garde-fou).
 
-- [ ] **`renderDiagram()` dans `core`.** Porter en TypeScript le `if/else` sur 29 types de
-      `packages/pandoc-filter/bin/md2nativedocx-core.mjs`, avec les parties SmartArt/graphique
-      **rendues comme données** (`RenderResult.parts`) au lieu d'écrites sur disque, et les
-      avertissements dans `metadata.warnings` au lieu de stderr. Le pont `.mjs` devient un adaptateur
-      qui lit l'environnement et écrit les fichiers. Ajout à l'API publique de `core` : escalade.
 - [ ] **Une seule table de décision** pour `planRendering` (CodeLens/survol VS Code) et
-      `renderDiagram`, qui divergent aujourd'hui en silence.
+      `renderDiagram` (fait le 2026-10-07 : `packages/core/src/render-diagram.ts`, table `RENDERERS`
+      indexée par type). `planRendering` refait encore la même décision à part, dans
+      `rendering-plan.ts` : la dériver de `RENDERERS` pour qu'elles ne puissent plus diverger.
 - [ ] **`EngineOptions` typé** à partir des ~38 variables `MD2NATIVEDOCX_*` ; les variables restent
       lues aux bords (CLI, pont Lua) pour la compatibilité.
 - [ ] **`convert()`**, entrée bibliothèque de `packages/cli` (décidé le 2026-10-07 : champ `exports`

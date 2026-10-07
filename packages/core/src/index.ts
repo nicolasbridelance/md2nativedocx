@@ -117,6 +117,13 @@ export { translateGitGraphToOoxml } from './diagrams/git-graph/translator.js';
 export { parseCynefinDiagram } from './diagrams/cynefin/parser.js';
 export { translateCynefinToOoxml } from './diagrams/cynefin/translator.js';
 
+// One diagram in, one Word fragment out, whatever its type: detection, parser, SmartArt / native chart /
+// shapes choice, parts returned as data (ADR 0012, docs/specs/01-v2-engine-spec.md §4). The supported
+// entry point for integrations; the per-type exports below stay for existing callers.
+export { renderDiagram } from './render-diagram.js';
+export type { RenderOptions, RenderResult, RenderMetadata, RenderedPart, SmartArtPart, ChartPart, NativeChartType } from './render-diagram.js';
+export type { ChartWorkbook } from './translator/native-chart.js';
+
 // What a diagram will become in Word (SmartArt, chart, shapes), without generating it — for editor UIs.
 export { planRendering } from './rendering-plan.js';
 export type { RenderingPlan, RenderingSettings } from './rendering-plan.js';

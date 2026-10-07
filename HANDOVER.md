@@ -83,7 +83,10 @@ Decided by the maintainer on 2026-10-07: ADR 0012 accepted with two clarificatio
 as a subprocess is a public boundary; identity storage only for types with a real source id, and not
 extended in `descr`); `convert()` becomes a library entry point of `packages/cli`; `AGENTS.md` rule 7
 reworded into an allowlist of package operations; licence stays CC0, DCO adopted now (cahier §13,
-`CONTRIBUTING.md`). V2 work (`TODO.md` §2bis) starts with `renderDiagram()`.
+`CONTRIBUTING.md`). V2 work (`TODO.md` §2bis) has started: `renderDiagram(source, options)` is in `core`
+(`packages/core/src/render-diagram.ts`), returns the fragment, SmartArt/chart parts as data and warnings,
+with SmartArt and charts off unless asked. The pandoc-filter bridge is now a ~100-line adapter (env →
+options, parts → files); its output was checked byte-identical on 255 corpus sources × 5 configurations.
 
 ## What's next
 

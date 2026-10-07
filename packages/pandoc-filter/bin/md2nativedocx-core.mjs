@@ -2,7 +2,7 @@
 /**
  * Thin CLI bridge between the Pandoc Lua filter and the core engine.
  *
- * Reads Mermaid flowchart text from a file path given as argv[1] (or stdin if
+ * Reads Mermaid text (any of the 29 types) from a file path given as argv[1] (or stdin if
  * no argument), writes an OOXML/DrawingML `<w:p>` fragment to stdout. This
  * keeps the Lua filter free of any shell-string interpolation of diagram
  * text (AGENTS.md rule #4): the filter invokes this binary with a fixed
@@ -11,543 +11,105 @@
  *
  * Usage: md2nativedocx-core.mjs <diagram.mmd> > diagram.xml
  *
- * ## Diagram-type guard-rail (docs/specs/FUTURE_full_mermaid_coverage_SPEC.md
- * §4 "Phase 0", item 1)
+ * ## Adapter only (ADR 0012)
  *
- * Before any of the below, `detectDiagramType()` checks the first
- * significant line of the input. If it's a *recognized* non-flowchart
- * Mermaid diagram type (`gitGraph`, `mindmap`, `sequenceDiagram`, ...), the
- * flowchart pipeline is never invoked — such text can coincidentally look
- * enough like flowchart syntax to "parse" into a silently-wrong diagram
- * rather than failing cleanly. Instead, a visible gray-italic note
- * (`buildUnsupportedDiagramTypeNoteXml`) is emitted and a warning written to
- * stderr. Unrecognized headers (including a missing one entirely) fall
- * through to the flowchart pipeline unchanged, matching `parseMermaid()`'s
- * existing behavior of accepting arbitrary text without a required header.
+ * Every rendering decision (diagram type, parser, SmartArt / native chart /
+ * shapes, fallbacks) lives in `renderDiagram()` in `@md2nativedocx/core`.
+ * This script only translates the environment into `RenderOptions` and the
+ * `RenderResult` back into files and stderr lines:
  *
- * ## SmartArt dispatch (spec §7 step 5)
+ *  - `MD2NATIVEDOCX_SMARTART_DIR` set turns SmartArt on; each SmartArt part
+ *    set is written to `<dir>/<id>/` (`data.xml`, `layout.xml`, `colors.xml`,
+ *    `quickStyle.xml`, `drawing.xml`). `MD2NATIVEDOCX_SMARTART_STYLE` picks
+ *    the look, `MD2NATIVEDOCX_SMARTART_DRAWING=0` leaves the drawing out.
+ *  - `MD2NATIVEDOCX_CHART_DIR` set turns native charts on, filtered by
+ *    `MD2NATIVEDOCX_NATIVE_CHARTS` (unset or `1`: all, `0`: none, or a
+ *    comma-separated list); each chart is written to `<dir>/<id>/`
+ *    (`chart.xml`, `data.json`, `meta.json`).
+ *  - `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY` (EMU) set the usable page size
+ *    (export_customization_SPEC.md §2.4); absent or unparseable keeps the
+ *    Letter-portrait default.
  *
- * When `MD2NATIVEDOCX_SMARTART_DIR` is set, this script first tries
- * `classifyTopology()`/`generateSmartArt()` on the parsed diagram. If it's
- * eligible for `chain`/`tree`/`cycle`, the 4 generated diagram parts are
- * written to `<MD2NATIVEDOCX_SMARTART_DIR>/<random id>/` and a `<w:p>`
- * fragment referencing that id via **placeholder** relationship ids
- * (`SMARTART_PLACEHOLDER:<id>:dm` etc. — never real Word `rId`s) is emitted
- * instead of the usual `wpg:wgp` shapes. `packages/cli/src/postprocess.mjs`'s
- * `injectSmartArtParts` (run by the CLI after Pandoc, once the whole `.docx`
- * exists) finds those placeholders and completes the wiring — this script
- * cannot do that part itself, Pandoc's Lua filter API has no mechanism to
- * add new `.docx` package parts or relationships (spec §2).
- *
- * If `MD2NATIVEDOCX_SMARTART_DIR` is unset, or the diagram isn't
- * SmartArt-eligible, or anything in the SmartArt path throws unexpectedly,
- * this silently falls back to the existing `wpg:wgp` translator — the same
- * output as before this dispatch existed. This is deliberate, not just
- * defensive: every flowchart the classifier rejects (subgraphs,
- * merge-after-branch, a tree deeper than `tree.ts` supports, etc.) is
- * expected to still render correctly, and the env-var gate means every
- * caller that doesn't opt in (including this package's own existing tests)
- * is completely unaffected. When it does fall back this way with
- * `MD2NATIVEDOCX_SMARTART_DIR` set, a small gray-italic note is appended
- * under the diagram explaining why (spec §10.3), via
- * `buildSmartArtFallbackNoteXml()`.
+ * `packages/cli/src/postprocess.mjs` (`injectSmartArtParts`) and
+ * `chartParts.mjs` pick those directories up after Pandoc and replace the
+ * `SMARTART_PLACEHOLDER:<id>:…` / `CHART_PLACEHOLDER:<id>` relationship ids:
+ * Pandoc's Lua filter API cannot add package parts itself (spec §2).
  *
  * ## Warnings (spec §10, "surface warnings")
  *
- * Non-fatal parser warnings (`ParseResult.warnings`), non-fatal layout
- * warnings (`LayoutResult.warnings`, e.g. Dagre's cluster+order bug forcing
- * a subgraph-boxes-omitted retry), and the SmartArt fallback message below
- * are all written to stderr, prefixed
- * `md2nativedocx: `. Pandoc's own child-process stderr is inherited by
- * `packages/cli/bin/md2nativedocx.mjs`'s `execFile` call, which counts
- * `md2nativedocx: `-prefixed lines and surfaces them (CLI stdout summary +
- * a `.log` file next to the output; the VS Code extension turns the count
- * into a toast).
+ * `RenderResult.metadata.warnings` are written to stderr as
+ * `md2nativedocx: warning: <text>`. Pandoc's child-process stderr is
+ * inherited by `packages/cli/bin/md2nativedocx.mjs`'s `execFile` call, which
+ * counts `md2nativedocx: `-prefixed lines and surfaces them (CLI stdout
+ * summary + a `.log` file next to the output; the VS Code extension turns
+ * the count into a toast). A source that does not parse prints
+ * `md2nativedocx: <message>` and exits 1.
  */
 
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import {
-  detectDiagramType,
-  buildUnsupportedDiagramTypeNoteXml,
-  parseMermaid,
-  layout,
-  translateToOoxml,
-  generateSmartArt,
-  SMARTART_STYLES,
-  buildSmartArtDrawingXml,
-  classifyTopology,
-  buildSmartArtFallbackNoteXml,
-  parseQuadrantChart,
-  translateQuadrantToOoxml,
-  parseVennChart,
-  translateVennToOoxml,
-  parseMindmap,
-  generateMindmapSmartArt,
-  generateTimelineSmartArt,
-  generateJourneySmartArt,
-  generateKanbanSmartArt,
-  generateClassDiagramSmartArt,
-  generateGitGraphSmartArt,
-  generateStateDiagramSmartArt,
-  escapeXml,
-  generateTreeViewSmartArt,
-  translateMindmapToOoxml,
-  parseClassDiagram,
-  translateClassDiagramToOoxml,
-  parseStateDiagram,
-  translateStateDiagramToOoxml,
-  parseErDiagram,
-  translateErDiagramToOoxml,
-  parseRequirementDiagram,
-  translateRequirementDiagramToOoxml,
-  parseArchitectureDiagram,
-  translateArchitectureDiagramToOoxml,
-  parseGanttChart,
-  translateGanttToOoxml,
-  parseC4Diagram,
-  translateC4DiagramToOoxml,
-  parseGitGraphDiagram,
-  translateGitGraphToOoxml,
-  parseCynefinDiagram,
-  translateCynefinToOoxml,
-  parsePieChart,
-  translatePieToOoxml,
-  translatePieToChart,
-  translateXyChartToChart,
-  translateRadarToChart,
-  parseTimeline,
-  translateTimelineToOoxml,
-  parseKanban,
-  translateKanbanToOoxml,
-  parsePacketDiagram,
-  translatePacketToOoxml,
-  parseTreemap,
-  translateTreemapToOoxml,
-  parseJourney,
-  translateJourneyToOoxml,
-  parseTreeView,
-  translateTreeViewToOoxml,
-  parseRadar,
-  translateRadarToOoxml,
-  parseIshikawa,
-  translateIshikawaToOoxml,
-  parseXyChart,
-  translateXyChartToOoxml,
-  parseBlock,
-  translateBlockToOoxml,
-  parseSankey,
-  translateSankeyToOoxml,
-  parseWardley,
-  translateWardleyToOoxml,
-  parseEventModeling,
-  translateEventModelingToOoxml,
-  parseSequence,
-  translateSequenceToOoxml,
-  parseZenuml,
-} from '@md2nativedocx/core';
+import { renderDiagram } from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
 const input = inputPath ? readFileSync(inputPath, 'utf8') : readFileSync(0, 'utf8');
 
-/**
- * `MD2NATIVEDOCX_MAX_DRAWING_CX`/`_CY` (EMU) — set by
- * `packages/cli/bin/md2nativedocx.mjs` from the resolved page format/
- * orientation/margins (export_customization_SPEC.md §2.4, Lot 1) when they
- * differ from the Letter-portrait default `ooxml-translator.ts` otherwise
- * assumes. Absent/unparseable falls back to that default (same
- * `TranslateOptions` field left `undefined`) rather than failing the export
- * over a formatting nicety.
- */
-function translateOptionsFromEnv() {
-  const cx = Number.parseInt(process.env.MD2NATIVEDOCX_MAX_DRAWING_CX ?? '', 10);
-  const cy = Number.parseInt(process.env.MD2NATIVEDOCX_MAX_DRAWING_CY ?? '', 10);
-  const options = {};
-  if (Number.isFinite(cx) && cx > 0) options.maxDrawingCx = cx;
-  if (Number.isFinite(cy) && cy > 0) options.maxDrawingCy = cy;
-  return options;
-}
-
-/**
- * Try the SmartArt path; `generate(options)` runs the generator for this
- * diagram (`generateSmartArt` for a flowchart, `generateMindmapSmartArt` /
- * `generateTreeViewSmartArt` for those tree-shaped types) and returns its
- * parts or `null`. Returns the `<w:p>` fragment to emit, or
- * `null` to fall back to the `wpg:wgp` translator. Never throws — any
- * failure here (including `generateSmartArt` itself, defensively) falls
- * back rather than failing the whole export over an alternate rendering
- * path that was never guaranteed in the first place.
- */
-function trySmartArt(generate, smartArtDir) {
-  if (!smartArtDir) return null;
-  try {
-    // The pre-rendered dsp:drawing (fifth part) is on by default: Word and LibreOffice then show the same
-    // geometry. MD2NATIVEDOCX_SMARTART_DRAWING=0 leaves it out so Word lays the diagram out itself (used by
-    // the "no-drawing" real-Word checks).
-    const requestedStyle = process.env.MD2NATIVEDOCX_SMARTART_STYLE;
-    const style = SMARTART_STYLES.includes(requestedStyle) ? requestedStyle : 'colorful';
-    const generated = generate({ drawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING !== '0', style });
-    if (!generated) return null;
-
-    const id = randomUUID();
-    const dir = join(smartArtDir, id);
-    mkdirSync(dir, { recursive: true });
-    if (generated.drawingXml !== undefined) writeFileSync(join(dir, 'drawing.xml'), generated.drawingXml, 'utf8');
-    writeFileSync(join(dir, 'data.xml'), generated.dataXml.split('SMARTART_DRAWING_REL').join(`SMARTART_PLACEHOLDER:${id}:dr`), 'utf8');
-    writeFileSync(join(dir, 'layout.xml'), generated.layoutXml, 'utf8');
-    writeFileSync(join(dir, 'colors.xml'), generated.colorsXml, 'utf8');
-    writeFileSync(join(dir, 'quickStyle.xml'), generated.styleXml, 'utf8');
-
-    return buildSmartArtDrawingXml({
-      dm: `SMARTART_PLACEHOLDER:${id}:dm`,
-      lo: `SMARTART_PLACEHOLDER:${id}:lo`,
-      qs: `SMARTART_PLACEHOLDER:${id}:qs`,
-      cs: `SMARTART_PLACEHOLDER:${id}:cs`,
-    }, generated.frame ? { widthEmu: generated.frame.cx, heightEmu: generated.frame.cy } : {});
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`md2nativedocx: SmartArt path failed, falling back to shapes: ${message}\n`);
-    return null;
-  }
-}
-
-/**
- * The diagram title as a bold centred paragraph, for a SmartArt that has no place for it (timeline, journey);
- * empty when there is no title. XML-escaped: the title is untrusted text.
- */
-function smartArtTitleXml(title) {
-  return title
-    ? `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">${escapeXml(title)}</w:t></w:r></w:p>`
-    : '';
+/** A positive integer from the environment, or `undefined`. */
+function positiveIntFromEnv(name) {
+  const value = Number.parseInt(process.env[name] ?? '', 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 /** `MD2NATIVEDOCX_NATIVE_CHARTS`: unset or `1` enables every chart type, `0` none, a comma-separated list only those types. */
-function nativeChartTypeEnabled(type) {
+function nativeChartsFromEnv() {
   const value = (process.env.MD2NATIVEDOCX_NATIVE_CHARTS ?? '').trim();
   if (value === '' || value === '1') return true;
   if (value === '0') return false;
-  return value.split(',').map((t) => t.trim()).includes(type);
+  return value.split(',').map((t) => t.trim());
 }
 
-/**
- * Native Word chart (ADR 0011) for `pie`, `xychart` and `radar`. Same hand-off as SmartArt: the
- * chart part and the workbook data are written to `<MD2NATIVEDOCX_CHART_DIR>/<random id>/` and the
- * returned `<w:p>` carries a `CHART_PLACEHOLDER:<id>` relationship id that the CLI's post-processing
- * replaces. Never throws: any failure (including a diagram Word cannot chart, e.g. a horizontal xychart
- * with a line series) falls back to the shape-built diagram and says why on stderr.
- *
- * @param {'pie' | 'xychart' | 'radar'} type
- * @param {(chartId: string, options: object) => import('@md2nativedocx/core').NativeChart} translate
- */
-function tryNativeChart(type, translate, chartDir, options) {
-  if (!chartDir || !nativeChartTypeEnabled(type)) return null;
-  try {
-    const id = randomUUID();
-    const chart = translate(id, { ...options, embedWorkbook: true });
-    const dir = join(chartDir, id);
+const smartArtDir = process.env.MD2NATIVEDOCX_SMARTART_DIR;
+const chartDir = process.env.MD2NATIVEDOCX_CHART_DIR;
+
+/** @type {import('@md2nativedocx/core').RenderOptions} */
+const options = {
+  smartArt: Boolean(smartArtDir),
+  smartArtStyle: process.env.MD2NATIVEDOCX_SMARTART_STYLE,
+  smartArtDrawing: process.env.MD2NATIVEDOCX_SMARTART_DRAWING !== '0',
+  nativeCharts: chartDir ? nativeChartsFromEnv() : false,
+  newPartId: randomUUID,
+};
+const maxDrawingCx = positiveIntFromEnv('MD2NATIVEDOCX_MAX_DRAWING_CX');
+const maxDrawingCy = positiveIntFromEnv('MD2NATIVEDOCX_MAX_DRAWING_CY');
+if (maxDrawingCx !== undefined) options.maxDrawingCx = maxDrawingCx;
+if (maxDrawingCy !== undefined) options.maxDrawingCy = maxDrawingCy;
+
+/** Write one rendered part where the CLI's post-processing expects it. */
+function writePart(part) {
+  if (part.kind === 'smartart') {
+    const dir = join(smartArtDir, part.id);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'chart.xml'), chart.chartXml, 'utf8');
-    writeFileSync(join(dir, 'data.json'), JSON.stringify(chart.workbook), 'utf8');
-    writeFileSync(join(dir, 'meta.json'), JSON.stringify({ hasWorkbook: chart.hasWorkbook }), 'utf8');
-    return chart.paragraphXml;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`md2nativedocx: warning: native chart not used, drawn as shapes instead: ${message}\n`);
-    return null;
+    if (part.drawingXml !== undefined) writeFileSync(join(dir, 'drawing.xml'), part.drawingXml, 'utf8');
+    writeFileSync(join(dir, 'data.xml'), part.dataXml, 'utf8');
+    writeFileSync(join(dir, 'layout.xml'), part.layoutXml, 'utf8');
+    writeFileSync(join(dir, 'colors.xml'), part.colorsXml, 'utf8');
+    writeFileSync(join(dir, 'quickStyle.xml'), part.styleXml, 'utf8');
+  } else {
+    const dir = join(chartDir, part.id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'chart.xml'), part.chartXml, 'utf8');
+    writeFileSync(join(dir, 'data.json'), JSON.stringify(part.workbook), 'utf8');
+    writeFileSync(join(dir, 'meta.json'), JSON.stringify({ hasWorkbook: part.hasWorkbook }), 'utf8');
   }
 }
 
 try {
-  // Diagram-type guard-rail (spec §4 "Phase 0", item 1): a recognized
-  // non-flowchart diagram (gitGraph, mindmap, sequenceDiagram, ...) must
-  // never reach parseMermaid() — its flowchart-shaped grammar can happen to
-  // "parse" such text into a silently-wrong diagram (bare words, `((...))`
-  // bullets, etc. coincidentally look like valid node syntax) rather than
-  // failing cleanly. 'unknown' is deliberately treated the same as
-  // 'flowchart' here — see detectDiagramType's doc comment for why.
-  const diagramType = detectDiagramType(input);
-  if (diagramType.type === 'quadrant') {
-    // First non-flowchart diagram type shipped (docs/specs/
-    // FUTURE_full_mermaid_coverage_SPEC.md §4 item 2 module convention) —
-    // no Dagre layout step, no SmartArt dispatch, straight AST -> OOXML.
-    const { ast, warnings } = parseQuadrantChart(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateQuadrantToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'venn') {
-    // Second non-flowchart diagram type shipped, same module convention.
-    const { ast, warnings } = parseVennChart(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateVennToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'mindmap') {
-    // Third non-flowchart diagram type shipped, same module convention.
-    const { ast, warnings } = parseMindmap(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, a mindmap becomes a left-to-right SmartArt hierarchy (editable as such in Word);
-    // otherwise, or if it cannot (empty, too deep), the radial shape-built mindmap.
-    const smartArtXml = trySmartArt((options) => generateMindmapSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ?? translateMindmapToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'class') {
-    // Fifth non-flowchart diagram type shipped (swimlane-beta, the fourth,
-    // is a flowchart alias with no dedicated branch here — see
-    // detectDiagramType), first of Family B (reuses Dagre, same module
-    // convention otherwise).
-    const { ast, warnings } = parseClassDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, an inheritance-only class tree becomes a SmartArt hierarchy (members in each box).
-    const smartArtXml = trySmartArt((options) => generateClassDiagramSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ?? translateClassDiagramToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'state') {
-    // Sixth non-flowchart diagram type shipped, second of Family B.
-    const { ast, warnings } = parseStateDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, a state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
-    const smartArtXml = trySmartArt((options) => generateStateDiagramSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ?? translateStateDiagramToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'er') {
-    // Seventh non-flowchart diagram type shipped, third of Family B.
-    const { ast, warnings } = parseErDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateErDiagramToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'requirement') {
-    // Eighth non-flowchart diagram type shipped, fourth of Family B.
-    const { ast, warnings } = parseRequirementDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateRequirementDiagramToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'architecture') {
-    // Ninth non-flowchart diagram type shipped, fifth of Family B.
-    const { ast, warnings } = parseArchitectureDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateArchitectureDiagramToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'gantt') {
-    // Tenth non-flowchart diagram type shipped, first of Family D (calendar
-    // shapes, no `c:chart` — docs/adr/spikes/spike-gantt-parser/spike.md).
-    const { ast, warnings } = parseGanttChart(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateGanttToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'c4') {
-    // Eleventh non-flowchart diagram type shipped, sixth of Family B.
-    const { ast, warnings } = parseC4Diagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateC4DiagramToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'gitGraph') {
-    // Twelfth non-flowchart diagram type shipped, first of Family F (fixed
-    // branch lanes + fixed commit-sequence axis, no Dagre — re-classified
-    // from the spec's original Family B default, see diagrams/git-graph/
-    // types.ts's doc comment).
-    const { ast, warnings } = parseGitGraphDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, a main-branch-only history becomes a SmartArt process (one box per commit).
-    const smartArtXml = trySmartArt((options) => generateGitGraphSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ? smartArtTitleXml(ast.title) + smartArtXml : translateGitGraphToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'cynefin') {
-    // Thirteenth non-flowchart diagram type shipped, second of Family D
-    // (calculated shapes, no c:chart — same shape as quadrant/venn, NOT a
-    // reuse of quadrantChart's own translator, see diagrams/cynefin/
-    // types.ts's doc comment for why the "2x2" resemblance is superficial).
-    const { ast, warnings } = parseCynefinDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateCynefinToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'pie') {
-    // Fourteenth non-flowchart diagram type shipped, third of Family D
-    // (calculated `pie`-preset shapes, no c:chart).
-    const { ast, warnings } = parsePieChart(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    const nativeChart = tryNativeChart(
-      'pie',
-      (id, o) => translatePieToChart(ast, id, o),
-      process.env.MD2NATIVEDOCX_CHART_DIR,
-      translateOptionsFromEnv(),
-    );
-    process.stdout.write(nativeChart ?? translatePieToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'timeline') {
-    // Fifteenth non-flowchart diagram type shipped, fourth of Family D.
-    const { ast, warnings } = parseTimeline(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, a section-less timeline becomes a SmartArt process (one box per period, events
-    // under it); its title, not part of the SmartArt, goes in a bold centred paragraph above.
-    const smartArtXml = trySmartArt((options) => generateTimelineSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ? smartArtTitleXml(ast.title) + smartArtXml : translateTimelineToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'kanban') {
-    // Sixteenth non-flowchart diagram type shipped, fifth of Family D.
-    const { ast, warnings } = parseKanban(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, a board becomes a SmartArt grouped list (columns, then cards) when its text fits.
-    const smartArtXml = trySmartArt((options) => generateKanbanSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ?? translateKanbanToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'packet') {
-    // Seventeenth non-flowchart diagram type shipped, sixth of Family D.
-    const { ast, warnings } = parsePacketDiagram(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translatePacketToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'treemap') {
-    // Eighteenth non-flowchart diagram type shipped, seventh of Family D.
-    const { ast, warnings } = parseTreemap(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateTreemapToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'journey') {
-    // Nineteenth non-flowchart diagram type shipped, eighth of Family D.
-    const { ast, warnings } = parseJourney(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // With SmartArt on, a journey becomes a SmartArt time line grouped by section (task, stars, actors per
-    // card); its title goes in a bold centred paragraph above, as for a timeline.
-    const smartArtXml = trySmartArt((options) => generateJourneySmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ? smartArtTitleXml(ast.title) + smartArtXml : translateJourneyToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'treeView') {
-    // Twentieth non-flowchart diagram type shipped, ninth of Family D.
-    const { ast, warnings } = parseTreeView(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    // Same as mindmap: a top-down SmartArt hierarchy when SmartArt is on and the file tree has one root.
-    const smartArtXml = trySmartArt((options) => generateTreeViewSmartArt(ast, options), process.env.MD2NATIVEDOCX_SMARTART_DIR);
-    process.stdout.write(smartArtXml ?? translateTreeViewToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'radar') {
-    // Twenty-first non-flowchart diagram type shipped, tenth of Family D.
-    const { ast, warnings } = parseRadar(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    const nativeChart = tryNativeChart(
-      'radar',
-      (id, o) => translateRadarToChart(ast, id, o),
-      process.env.MD2NATIVEDOCX_CHART_DIR,
-      translateOptionsFromEnv(),
-    );
-    process.stdout.write(nativeChart ?? translateRadarToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'ishikawa') {
-    // Twenty-second non-flowchart diagram type shipped, eleventh of Family D.
-    const { ast, warnings } = parseIshikawa(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateIshikawaToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'xychart') {
-    // Twenty-third non-flowchart diagram type shipped, twelfth of Family D.
-    const { ast, warnings } = parseXyChart(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    const nativeChart = tryNativeChart(
-      'xychart',
-      (id, o) => translateXyChartToChart(ast, id, o),
-      process.env.MD2NATIVEDOCX_CHART_DIR,
-      translateOptionsFromEnv(),
-    );
-    process.stdout.write(nativeChart ?? translateXyChartToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'block') {
-    // Twenty-fourth non-flowchart diagram type shipped, thirteenth of Family D.
-    const { ast, warnings } = parseBlock(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateBlockToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'sankey') {
-    // Twenty-fifth non-flowchart diagram type shipped, fourteenth of Family D.
-    const { ast, warnings } = parseSankey(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateSankeyToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'wardley') {
-    // Twenty-sixth non-flowchart diagram type shipped, fifteenth of Family D.
-    const { ast, warnings } = parseWardley(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateWardleyToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'eventModeling') {
-    // Twenty-seventh non-flowchart diagram type shipped, sixteenth of Family D.
-    const { ast, warnings } = parseEventModeling(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateEventModelingToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'sequence') {
-    // Twenty-eighth non-flowchart diagram type shipped, first of Family E.
-    const { ast, warnings } = parseSequence(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateSequenceToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type === 'zenuml') {
-    // Same AST and translator as sequenceDiagram; only the parser differs.
-    const { ast, warnings } = parseZenuml(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-    process.stdout.write(translateSequenceToOoxml(ast, translateOptionsFromEnv()));
-  } else if (diagramType.type !== 'flowchart' && diagramType.type !== 'unknown') {
-    process.stderr.write(
-      `md2nativedocx: warning: ${diagramType.label} diagrams are not yet supported; diagram not converted.\n`,
-    );
-    process.stdout.write(buildUnsupportedDiagramTypeNoteXml(diagramType));
-  } else {
-    const { ast, warnings } = parseMermaid(input);
-    for (const warning of warnings) {
-      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-    }
-
-    const smartArtDir = process.env.MD2NATIVEDOCX_SMARTART_DIR;
-    const smartArtXml = trySmartArt((options) => generateSmartArt(ast, options), smartArtDir);
-    if (smartArtXml) {
-      process.stdout.write(smartArtXml);
-    } else {
-      const result = layout(ast);
-      for (const warning of result.warnings) {
-        process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
-      }
-      let output = translateToOoxml(ast, result, translateOptionsFromEnv());
-      // Only note the fallback when SmartArt was actually attempted for this
-      // diagram (smartArtDir set) and rejected for one of classifyTopology's
-      // structured reasons — never for an unexpected generation error (already
-      // logged by trySmartArt above) and never when SmartArt wasn't attempted
-      // at all (spec §10.3: "jamais ... sur le pipeline wpg:wgp").
-      if (smartArtDir) {
-        const classification = classifyTopology(ast);
-        if (!classification.eligible) {
-          output += '\n' + buildSmartArtFallbackNoteXml(classification);
-        }
-      }
-      process.stdout.write(output);
-    }
+  const result = renderDiagram(input, options);
+  for (const warning of result.metadata.warnings) {
+    process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
   }
+  for (const part of result.parts) writePart(part);
+  process.stdout.write(result.fragment);
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`md2nativedocx: ${message}\n`);
