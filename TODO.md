@@ -48,16 +48,18 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       tolérants ; voir si un appelant de `renderDiagram()` a besoin de plus avant d'inventer une taxonomie.
       Côté CLI c'est fait le 2026-10-07 : `ConversionError` (`stage`), codes de sortie 0 / 1 / 2
       documentés dans `packages/cli/README.md`.
-- [ ] **Limites de ressources : reste le délai.** Fait le 2026-10-07 : plafonds de graphe pour tout
-      ce qui passe par Dagre (500 nœuds conteneurs de `subgraph` compris, 800 arêtes, surchargeables par
-      `maxNodes` / `maxEdges`), plafond de source (`maxSourceLength`, 1 000 000 caractères),
-      `DiagramTooLargeError` typée, et dans le pont du filtre une note visible à la place du diagramme
-      trop gros (le document se convertit). Pas encore fait : un **délai** réel. Les plafonds bornent le pire
-      cas sans le rendre bon marché : un maillage aléatoire dense à la limite prend encore ~35 s
-      (mesuré : 400 nœuds / 800 arêtes), alors qu'un rapport creux de 413 nœuds prend 0,7 s. Un hôte
-      serveur/MCP doit lancer la conversion sous son propre délai (processus enfant ou worker tué à
-      l'échéance). `pptx` met maintenant une note sur la diapositive d'un bloc trop gros au lieu de
-      faire échouer l'export (2026-10-07). Reste la taille du paquet produit.
+- [ ] **Limites de ressources : reste la taille du paquet produit.** Fait le 2026-10-07 : plafonds de
+      graphe pour tout ce qui passe par Dagre (500 nœuds conteneurs de `subgraph` compris, 800 arêtes,
+      surchargeables par `maxNodes` / `maxEdges`), plafond de source (`maxSourceLength`, 1 000 000
+      caractères), `DiagramTooLargeError` typée, une note visible à la place du diagramme trop gros dans le
+      pont du filtre et dans `pptx` (le document se convertit). Le **délai** est dans `packages/mcp` : chaque
+      appel tourne dans un processus enfant tué avec ses descendants à l'échéance (30 s / 120 s). Les plafonds
+      bornent le pire cas sans le rendre bon marché (~35 s mesurés pour 400 nœuds / 800 arêtes), d'où le
+      délai ; le CLI et le pont n'ont toujours pas le leur.
+- [ ] **MCP : Pandoc lit et télécharge les images du Markdown** (chemins relatifs à la racine, URL
+      `http(s)`) : fuite de fichier ou SSRF possible si le serveur reçoit du Markdown non fiable.
+      Documenté dans `packages/mcp/README.md`. Une vraie réponse demande une option de `convert()` (donc
+      l'API du CLI : escalade), pas un contournement dans l'adaptateur.
 - [ ] **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
       dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
 - [ ] **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de
