@@ -107,9 +107,20 @@ async function main() {
     process.exit(2);
   }
 
-  // Validate paths (anti path traversal).
-  const input = resolveSafePath(args.input, cwd);
-  const output = resolveSafePath(args.output, cwd);
+  // Validate paths (anti path traversal): a path outside the working directory is a usage error (exit 2),
+  // as on the .pptx path.
+  let input;
+  let output;
+  try {
+    input = resolveSafePath(args.input, cwd);
+    output = resolveSafePath(args.output, cwd);
+  } catch (err) {
+    if (err instanceof CliError) {
+      process.stderr.write(`${err.message}\n`);
+      process.exit(err.exitCode);
+    }
+    throw err;
+  }
   if (!existsSync(input)) {
     process.stderr.write(`Input file not found: ${args.input}\n`);
     process.exit(1);

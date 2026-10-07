@@ -56,8 +56,10 @@ test('cli rejects a missing input file', () => {
 });
 
 test('cli rejects a path that escapes the working directory', () => {
-  const { code } = runCli(['../../etc/passwd', '-o', '/tmp/out.docx']);
-  assert.notEqual(code, 0);
+  const { code, err } = runCli(['../../etc/passwd', '-o', '/tmp/out.docx']);
+  // A usage error (2), as on the .pptx path, not a conversion failure (1).
+  assert.equal(code, 2);
+  assert.match(err, /escapes the working directory/);
 });
 
 test('cli prints usage on --help', () => {
