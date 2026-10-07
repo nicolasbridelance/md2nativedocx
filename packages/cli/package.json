@@ -32,6 +32,14 @@
   "engines": {
     "node": ">=18"
   },
+  "exports": {
+    ".": {
+      "types": "./src/convert.d.mts",
+      "default": "./src/convert.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./src/convert.d.mts",
   "bin": {
     "md2nativedocx": "bin/md2nativedocx.mjs"
   },

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Clean-room verification for the 3 packages published to npm (core,
- * pandoc-filter, cli): `npm pack` each one, install the tarballs into a
+ * Clean-room verification for the 4 packages published to npm (core,
+ * pandoc-filter, pptx, cli): `npm pack` each one, install the tarballs into a
  * fresh directory *outside* this workspace (no symlinks, no hoisting this
  * repo's own node_modules could paper over), and run the real installed
  * `md2nativedocx` binary end to end.
@@ -15,7 +15,7 @@
  * that fix honest on every future change to the package boundaries.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,7 +74,21 @@ try {
     throw new Error('The installed CLI produced a .pptx with no <p:sp> shape — the diagram was not rendered.');
   }
 
-  console.log('verify-npm-packages: OK — the installed CLI renders a real diagram end to end.');
+  // The library entry point (`convert()`, ADR 0012), imported by package name as an integrator would,
+  // and its type declarations shipped alongside.
+  const libraryCheck = [
+    "import { convert, ConversionError } from '@md2nativedocx/cli';",
+    "if (typeof ConversionError !== 'function') throw new Error('ConversionError is not exported');",
+    "const { document } = await convert('```mermaid\\ngraph TD\\n  A --> B\\n```\\n');",
+    "if (document.subarray(0, 2).toString('latin1') !== 'PK') throw new Error('convert() did not return a .docx');",
+  ].join('\n');
+  writeFileSync(join(cleanroomDir, 'library-check.mjs'), libraryCheck);
+  execFileSync(process.execPath, ['library-check.mjs'], { cwd: cleanroomDir, stdio: 'inherit' });
+  if (!existsSync(join(cleanroomDir, 'node_modules', '@md2nativedocx', 'cli', 'src', 'convert.d.mts'))) {
+    throw new Error('The installed @md2nativedocx/cli has no convert.d.mts type declarations.');
+  }
+
+  console.log('verify-npm-packages: OK — the installed CLI and convert() render a real diagram end to end.');
 } finally {
   rmSync(workDir, { recursive: true, force: true });
 }

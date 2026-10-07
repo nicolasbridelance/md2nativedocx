@@ -9,27 +9,28 @@
  * SmartArt diagram instead (spec §7 step 5). See postprocess.mjs's
  * `injectSmartArtParts` doc comment for how that dispatch is wired end to end.
  *
+ * The conversion itself is `convert()` (src/convert.mjs), the package's
+ * library entry point; this file only reads the `MD2NATIVEDOCX_*` variables
+ * into its options (src/envOptions.mjs), handles files and arguments, and
+ * reports warnings, errors and the Word compatibility check.
+ *
  * Security (AGENTS.md):
  *   * Rule #4: Pandoc is invoked via execFile with an argument array — never a
- *     shell string that interpolates a file path.
+ *     shell string that interpolates a file path (src/convert.mjs).
  *   * Path traversal: input/output paths are resolved and validated against the
  *     expected root before any file operation.
  *   * Errors are typed (ParseError/TranslationError) and mapped to exit codes.
  */
 
-import { execFile, execFileSync } from 'node:child_process';
-import { resolve, isAbsolute, dirname, basename, join, extname } from 'node:path';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { postProcessDocx, injectSmartArtParts } from '../src/postprocess.mjs';
-import { injectChartParts } from '../src/chartParts.mjs';
+import { execFileSync } from 'node:child_process';
+import { basename, extname } from 'node:path';
+import { existsSync, writeFileSync } from 'node:fs';
 import { CliError, resolveSafePath } from '../src/cliSupport.mjs';
-import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from '../src/referenceDocBuilder.mjs';
+import { ConversionError, convert } from '../src/convert.mjs';
+import { hasLayoutOptions, readConvertOptionsFromEnv } from '../src/envOptions.mjs';
 
-// `-o something.pptx` takes the Pandoc-free deck path (packages/pptx). Dispatched here, before any of
-// the module-level .docx setup below (reference document build, Pandoc lookup), none of which a
-// deck export needs — and some of which (`unzip`/`zip` shell-outs) can fail on a bare machine.
+// `-o something.pptx` takes the Pandoc-free deck path (packages/pptx), dispatched before anything a
+// .docx export needs.
 {
   const argv = process.argv.slice(2);
   const outIndex = argv.findIndex((a) => a === '-o' || a === '--output');
@@ -38,176 +39,6 @@ import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolve
     process.exit(await runPptxCli(argv, process.cwd()));
   }
 }
-
-// Where @md2nativedocx/pandoc-filter actually lands on disk relative to this
-// file varies by how the CLI itself was deployed — hoisted to the repo root
-// node_modules (npm workspace dev), nested under packages/cli/node_modules,
-// a sibling under a flat npm install's node_modules/@md2nativedocx/ (found
-// 2026-09-08, via a real clean-room `npm pack`+install test: two hardcoded
-// relative-path guesses covered the first two shapes but not this one, the
-// actual shape a real `npm install -g @md2nativedocx/cli` produces), or
-// wherever bundle-cli.mjs lays out the vendored VS Code extension's copy.
-// import.meta.resolve() is Node's own package-resolution algorithm (the same
-// one require()/import use), so it finds the right one in every case without
-// this file having to guess directory-climbing depths by hand.
-let FILTER_PATH;
-try {
-  FILTER_PATH = fileURLToPath(import.meta.resolve('@md2nativedocx/pandoc-filter/md2nativedocx.lua'));
-} catch (err) {
-  process.stderr.write(`md2nativedocx: could not locate @md2nativedocx/pandoc-filter: ${err instanceof Error ? err.message : String(err)}\n`);
-  process.exit(1);
-}
-
-// Custom reference.docx (Word's current default look -- Aptos font scheme,
-// modern "Office" theme colors, non-bold flat heading hierarchy) instead of
-// Pandoc's own bundled default, which is still the original 2007-2010 Office
-// theme (Calibri/Cambria mix, bold colored headings) verbatim. See
-// packages/cli/assets/README.md for how it was built and what it changes.
-const REFERENCE_DOC_PATH = fileURLToPath(new URL('../assets/reference.docx', import.meta.url));
-
-// MD2NATIVEDOCX_REFERENCE_DOC lets a caller (the VS Code extension's
-// `md2nativedocx.referenceDocument` setting — mirrors Pandoc's own
-// `--reference-doc`) point Pandoc at a company/corporate template instead of
-// this package's bundled default above. Unset for standalone `npx
-// md2nativedocx` usage, which is unaffected.
-const referenceDocOverride = process.env.MD2NATIVEDOCX_REFERENCE_DOC;
-const hasCustomReferenceDoc = Boolean(referenceDocOverride && existsSync(referenceDocOverride));
-
-/**
- * Page/typography options for the export (spec §1.1-1.8/1.14, "Lot 1"),
- * read one env var per setting — same convention as
- * MD2NATIVEDOCX_REFERENCE_DOC/MD2NATIVEDOCX_ENABLE_SMARTART above, set by the
- * VS Code extension's `exportService.ts` from
- * `md2nativedocx.layout.*`/`md2nativedocx.typography.*` settings, or by hand
- * for standalone CLI usage. Every field is optional; an absent one leaves
- * `referenceDocBuilder.mjs`'s corresponding patch untouched.
- */
-function readLayoutOptionsFromEnv() {
-  const str = (name) => {
-    const v = process.env[name];
-    return v && v.trim() !== '' ? v.trim() : undefined;
-  };
-  const num = (name) => {
-    const v = process.env[name];
-    if (v === undefined || v.trim() === '') return undefined;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
-  };
-  const marginsCustomCm = {
-    top: num('MD2NATIVEDOCX_MARGINS_CUSTOM_TOP'),
-    right: num('MD2NATIVEDOCX_MARGINS_CUSTOM_RIGHT'),
-    bottom: num('MD2NATIVEDOCX_MARGINS_CUSTOM_BOTTOM'),
-    left: num('MD2NATIVEDOCX_MARGINS_CUSTOM_LEFT'),
-  };
-  return {
-    pageSize: str('MD2NATIVEDOCX_PAGE_SIZE'),
-    orientation: str('MD2NATIVEDOCX_ORIENTATION'),
-    margins: str('MD2NATIVEDOCX_MARGINS'),
-    marginsCustomCm: Object.values(marginsCustomCm).some((v) => v !== undefined) ? marginsCustomCm : undefined,
-    headingFont: str('MD2NATIVEDOCX_HEADING_FONT'),
-    bodyFont: str('MD2NATIVEDOCX_BODY_FONT'),
-    fontSizePt: num('MD2NATIVEDOCX_FONT_SIZE'),
-    lineSpacing: str('MD2NATIVEDOCX_LINE_SPACING'),
-    justify: str('MD2NATIVEDOCX_JUSTIFY'),
-    accentColor: str('MD2NATIVEDOCX_ACCENT_COLOR'),
-    tableHeaderColor: str('MD2NATIVEDOCX_TABLE_HEADER_COLOR'),
-    // Lot 1 fast-follow (spec §1.13): footer with a page number. Patches the
-    // *reference* doc (unlike TOC's updateFields, see tocEnabled's doc
-    // comment below) — confirmed empirically that Pandoc DOES carry over a
-    // reference doc's footer part/relationship/footerReference verbatim,
-    // unlike settings.xml. See referenceDocBuilder.mjs's patchRelsForFooter
-    // doc comment for the empirical confirmation.
-    footerPageNumber: process.env.MD2NATIVEDOCX_FOOTER_PAGE_NUMBER === '1' ? true : undefined,
-    // Lot 5 (spec §1.9/§2.3): dedicated landscape section for a title+table
-    // pair. Grouped with the rest of Lot 1 (not treated like TOC/emoji,
-    // which work regardless of the reference doc): the Lua filter needs to
-    // know the document's actual page geometry (see landscapeTablesGeometry
-    // below) to build a correct "return to portrait" section, which we
-    // don't have for a custom `referenceDocument` — same silent-ignore rule
-    // as the rest of this function's fields (spec §2.1, option (a)).
-    landscapeTables: process.env.MD2NATIVEDOCX_LANDSCAPE_TABLES === '1' ? true : undefined,
-  };
-}
-
-function hasAnyLayoutOption(options) {
-  return Object.values(options).some((v) => v !== undefined);
-}
-
-/**
- * `MD2NATIVEDOCX_TOC`/`MD2NATIVEDOCX_TOC_DEPTH` (spec §1.10/§2.2, "Lot 3") —
- * kept separate from `readLayoutOptionsFromEnv()` above: unlike page/
- * typography (which patch the *reference* doc), TOC support works
- * unconditionally, custom `referenceDocument` or not. `--toc` is a Pandoc
- * content-generation flag, independent of which reference doc is used, and
- * the `w:updateFields` auto-refresh patch (`postProcessDocx`, below) is
- * applied to the *final generated* `.docx`'s own `settings.xml` — confirmed
- * empirically that Pandoc synthesizes that file itself regardless of the
- * reference doc, so there is nothing here to skip for a custom template.
- */
-const tocEnabled = process.env.MD2NATIVEDOCX_TOC === '1';
-const tocDepthRaw = Number(process.env.MD2NATIVEDOCX_TOC_DEPTH);
-const tocDepth = Number.isFinite(tocDepthRaw) ? Math.min(4, Math.max(2, Math.round(tocDepthRaw))) : 3;
-
-// MD2NATIVEDOCX_EMOJI_FONT (spec §1.15/§2.5, "Lot 2") — on by default (the
-// spec's own default for `md2nativedocx.emoji.forceColorFont`); '0' opts
-// out, e.g. if the "à tester" Segoe UI Emoji substitution turns out to
-// misbehave on some platform (fallback documented in the spec: custom
-// `w:shd` badges, not implemented — not needed unless this is found to fail).
-const emojiFontEnabled = process.env.MD2NATIVEDOCX_EMOJI_FONT !== '0';
-
-const rawLayoutOptions = readLayoutOptionsFromEnv();
-
-// Conflict resolution (spec §2.1/§5, option (a) — confirmed with the
-// maintainer): a custom `referenceDocument` wins outright. We don't know its
-// page setup, so Lot 1 options are silently ignored for it rather than
-// patched into a document we didn't build — logged as an info line (not the
-// `md2nativedocx: ` prefix `extractWarnings` counts, since this isn't a
-// defect in the export, just a settings precedence the user should know
-// about) only when it would otherwise have done something.
-if (hasCustomReferenceDoc && hasAnyLayoutOption(rawLayoutOptions)) {
-  process.stderr.write(
-    'md2nativedocx (info): page/typography options are ignored because a custom reference document (MD2NATIVEDOCX_REFERENCE_DOC) is set.\n',
-  );
-}
-const layoutOptions = hasCustomReferenceDoc ? {} : rawLayoutOptions;
-
-// This runs at module load, before main()'s try/catch exists — without its
-// own try/catch, any failure here (e.g. the 2026-09-08 corporate-Windows
-// incident: buildReferenceDoc() shells out to `unzip`/`zip`, absent from
-// stock Windows, so extraction throws `spawnSync unzip ENOENT`) would crash
-// with a raw, unprefixed Node stack trace instead of the
-// `md2nativedocx: ... failed: ...` message every other CLI error path
-// produces — which is also the only thing exportService.ts's runCli() can
-// key off of to tell "Pandoc itself is missing" apart from "something else
-// inside the CLI failed" (see its own comment on the `ENOENT` check).
-let generatedReferenceDoc = null;
-try {
-  generatedReferenceDoc = hasCustomReferenceDoc ? null : buildReferenceDoc(REFERENCE_DOC_PATH, layoutOptions);
-} catch (err) {
-  process.stderr.write(`md2nativedocx: reference document setup failed: ${err instanceof Error ? err.message : String(err)}\n`);
-  process.exit(1);
-}
-const EFFECTIVE_REFERENCE_DOC_PATH = hasCustomReferenceDoc
-  ? referenceDocOverride
-  : (generatedReferenceDoc?.path ?? REFERENCE_DOC_PATH);
-
-// Usable page area for the diagram translator (spec §2.4) — independent of
-// whether a reference.docx patch was actually needed above (e.g. only a
-// font changed, not the page): a page size/orientation/margins choice must
-// still reach the translator so it doesn't keep assuming Letter portrait.
-const maxDrawingExtentEmu = hasCustomReferenceDoc ? null : resolveMaxDrawingExtentEmu(layoutOptions);
-
-// Lot 5 (spec §1.9/§2.3): the Lua filter's "return to portrait" section
-// needs the document's *actual* page geometry (whatever Lot 1 resolved, or
-// A4/normal-margins by default) — same resolution `buildReferenceDoc` uses
-// for `word/document.xml`'s own `sectPr`, computed independently here since
-// this needs to reach the Lua filter (an env var) rather than patch a file.
-const landscapeTablesGeometry = layoutOptions.landscapeTables
-  ? {
-      pgSize: resolvePageSize(layoutOptions.pageSize, layoutOptions.orientation),
-      margins: resolveMargins(layoutOptions.margins, layoutOptions.marginsCustomCm),
-    }
-  : null;
 
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx|output.pptx> [options]
 
@@ -242,6 +73,16 @@ function parseArgs(argv) {
 
 async function main() {
   const cwd = process.cwd();
+  const options = readConvertOptionsFromEnv(process.env);
+  // A custom reference document wins over page/typography options (spec §2.1, option (a)). Said as an
+  // info line, not with the `md2nativedocx: ` prefix that counts as a warning: nothing is wrong with
+  // the export, the user should just know.
+  if (options.referenceDoc && hasLayoutOptions(options.layout)) {
+    process.stderr.write(
+      'md2nativedocx (info): page/typography options are ignored because a custom reference document (MD2NATIVEDOCX_REFERENCE_DOC) is set.\n',
+    );
+  }
+
   let args;
   try {
     args = parseArgs(process.argv.slice(2));
@@ -274,143 +115,30 @@ async function main() {
     process.exit(1);
   }
 
-  // Invoke Pandoc via execFile with an argument array (rule #4).
-  const pandocArgs = [
-    input,
-    '-o',
-    output,
-    '--lua-filter',
-    FILTER_PATH,
-  ];
-  if (extname(input).toLowerCase() === '.qmd') {
-    // Pandoc guesses its reader from the input extension and doesn't know
-    // `.qmd` (Quarto Markdown) — left alone, it falls back to markdown but
-    // prints a "Could not deduce format" warning on every export. Quarto
-    // markdown is Pandoc markdown plus optional YAML front matter and
-    // executable code chunks (both already valid Pandoc markdown syntax —
-    // pandoc's markdown reader just treats a chunk as an ordinary fenced
-    // code block), so declaring the reader explicitly is correct, not a
-    // guess, and drops the warning.
-    pandocArgs.push('--from', 'markdown');
-  }
-  if (existsSync(EFFECTIVE_REFERENCE_DOC_PATH)) {
-    pandocArgs.push('--reference-doc', EFFECTIVE_REFERENCE_DOC_PATH);
-  }
-  // TOC generation itself works with any reference doc (spec §1.10/§2.2) —
-  // only the w:updateFields auto-refresh patch above needs one we can patch.
-  if (tocEnabled) {
-    pandocArgs.push('--toc', `--toc-depth=${tocDepth}`);
-  }
-
-  // MD2NATIVEDOCX_PANDOC_BIN lets a caller (the VS Code extension's automatic
-  // Pandoc provisioning, see packages/vscode-extension/src/pandocProvisioner.ts)
-  // point at a specific Pandoc binary instead of relying on PATH. Unset for
-  // standalone `npx md2nativedocx` usage, which is unaffected.
-  const pandocBin = process.env.MD2NATIVEDOCX_PANDOC_BIN || 'pandoc';
-
-  // SmartArt and native Word charts are on by default, as in the VS Code extension (every mapping has been
-  // confirmed in real Word, test-corpus/word-verification/CHECKLIST.md). MD2NATIVEDOCX_ENABLE_SMARTART=0 and
-  // MD2NATIVEDOCX_NATIVE_CHARTS=0 turn them off; a diagram SmartArt or a chart cannot express falls back to
-  // shapes either way.
-  const smartArtEnabled = process.env.MD2NATIVEDOCX_ENABLE_SMARTART !== '0';
-
-  // A scratch directory the core bridge (spawned by the Lua filter, once per
-  // ```mermaid block) uses to hand SmartArt-eligible diagram parts back to
-  // this process — see postprocess.mjs's injectSmartArtParts doc comment for
-  // why this indirection exists (Pandoc's Lua filter API cannot add .docx
-  // package parts/relationships itself). Created whenever SmartArt isn't
-  // disabled: the cost of an unused empty temp dir is negligible, and it
-  // keeps this code path identical whether or not any block turns out
-  // eligible.
-  const smartArtDir = smartArtEnabled ? mktempSmartArtDir() : null;
-  // Native Word charts (ADR 0011): MD2NATIVEDOCX_NATIVE_CHARTS unset or `1` charts pie, xychart and radar, a
-  // comma-separated list only those types, `0` none; the core bridge reads the same variable and keeps every
-  // other type as shapes.
-  const nativeCharts = (process.env.MD2NATIVEDOCX_NATIVE_CHARTS ?? '').trim();
-  const chartDir = nativeCharts !== '0' ? mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-')) : null;
-  const pandocEnv = { ...process.env };
-  if (smartArtDir) pandocEnv.MD2NATIVEDOCX_SMARTART_DIR = smartArtDir;
-  if (chartDir) pandocEnv.MD2NATIVEDOCX_CHART_DIR = chartDir;
-  // md2nativedocx.lua's core_command() needs this on Windows (no shebang/
-  // file-association handling there, so it can't invoke a bare .mjs file the
-  // way Unix does) — process.execPath is *this* script's own interpreter,
-  // which is always Node: either a real system Node (standalone CLI usage)
-  // or the VS Code extension's own bundled Electron-as-Node binary (already
-  // spawned with ELECTRON_RUN_AS_NODE=1 by exportService.ts's runCli(),
-  // inherited into process.env above and passed through unchanged). Setting
-  // this unconditionally is harmless on Unix — nothing reads it there.
-  pandocEnv.MD2NATIVEDOCX_NODE_BIN = process.execPath;
-  // An explicit MD2NATIVEDOCX_MAX_DRAWING_CX/_CY already in the environment wins over the
-  // page-derived cap, so a caller can size diagrams for a layout the page geometry can't
-  // know about (e.g. a diagram placed inside a half-width table cell).
-  if (maxDrawingExtentEmu) {
-    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CX ??= String(Math.round(maxDrawingExtentEmu.cx));
-    pandocEnv.MD2NATIVEDOCX_MAX_DRAWING_CY ??= String(Math.round(maxDrawingExtentEmu.cy));
-  }
-  if (landscapeTablesGeometry) {
-    pandocEnv.MD2NATIVEDOCX_LANDSCAPE_TABLES = '1';
-    pandocEnv.MD2NATIVEDOCX_PAGE_W_TWIPS = String(landscapeTablesGeometry.pgSize.w);
-    pandocEnv.MD2NATIVEDOCX_PAGE_H_TWIPS = String(landscapeTablesGeometry.pgSize.h);
-    pandocEnv.MD2NATIVEDOCX_MARGIN_TOP_TWIPS = String(landscapeTablesGeometry.margins.top);
-    pandocEnv.MD2NATIVEDOCX_MARGIN_RIGHT_TWIPS = String(landscapeTablesGeometry.margins.right);
-    pandocEnv.MD2NATIVEDOCX_MARGIN_BOTTOM_TWIPS = String(landscapeTablesGeometry.margins.bottom);
-    pandocEnv.MD2NATIVEDOCX_MARGIN_LEFT_TWIPS = String(landscapeTablesGeometry.margins.left);
-  }
-
-  execFile(pandocBin, pandocArgs, { cwd, env: pandocEnv }, (err, stdout, stderr) => {
-    try {
-      if (err) {
-        process.stderr.write(`md2nativedocx: Pandoc failed (exit ${err.code ?? '?'})\n`);
-        if (stderr) process.stderr.write(stderr);
-        process.exit(1);
-      }
-      try {
-        // Post-process the .docx to declare the extended OOXML namespaces on
-        // the document root (wpc/wpg/wps/wp14/mc) and renumber drawing ids —
-        // without this, Word does not recognize the drawing and drops it
-        // (compatibility mode). Must run before injectSmartArtParts, which
-        // reads the namespace-fixed/id-renumbered document.xml this writes.
-        postProcessDocx(output, { toc: tocEnabled, emojiFont: emojiFontEnabled });
-        // Complete the SmartArt wiring for any diagram the core bridge
-        // dispatched to it (no-op if none did, and skipped entirely when
-        // SmartArt is disabled — nothing could have been dispatched).
-        if (smartArtDir) injectSmartArtParts(output, smartArtDir);
-        if (chartDir) injectChartParts(output, chartDir);
-      } catch (postErr) {
-        process.stderr.write(`md2nativedocx: post-processing failed: ${postErr instanceof Error ? postErr.message : String(postErr)}\n`);
-        process.exit(1);
-      }
-
-      // Every `md2nativedocx-core.mjs` invocation (one per ```mermaid block,
-      // spawned by the Lua filter) writes non-fatal notices to its own
-      // stderr, prefixed `md2nativedocx: ` — parser warnings and SmartArt
-      // fallback failures alike. Those child processes inherit Pandoc's own
-      // stderr fd, so they end up here in Pandoc's captured `stderr`
-      // alongside anything Pandoc itself printed. Surface them: never leave
-      // a successful export silently hiding something the author should
-      // know about.
-      const warnings = extractWarnings(stderr);
-      const wordCompatibility = runWordCompatibilityCheck(output);
-      const logPath = writeExportLog({ input, output, warnings, rawStderr: stderr, wordCompatibility });
-      if (warnings.length > 0) {
-        process.stdout.write(`Warnings: ${warnings.length} (see ${basename(logPath)})\n`);
-        for (const warning of warnings) process.stderr.write(`${warning}\n`);
-      }
-      process.stdout.write(`Wrote ${basename(output)}\n`);
-    } finally {
-      if (smartArtDir) rmSync(smartArtDir, { recursive: true, force: true });
-      if (chartDir) rmSync(chartDir, { recursive: true, force: true });
-      if (generatedReferenceDoc) rmSync(generatedReferenceDoc.dir, { recursive: true, force: true });
+  let result;
+  try {
+    result = await convert({ path: input }, { ...options, cwd });
+  } catch (err) {
+    if (err instanceof ConversionError) {
+      process.stderr.write(`md2nativedocx: ${err.message}\n`);
+      // `exportService.ts` (VS Code) reads Pandoc's own message, e.g. to tell a missing Pandoc apart.
+      if (err.stage === 'pandoc' && err.pandocStderr) process.stderr.write(err.pandocStderr);
+      process.exit(1);
     }
-  });
-}
+    throw err;
+  }
+  writeFileSync(output, result.document);
 
-/** Lines this project itself wrote to stderr (`md2nativedocx: ...`) — as
- * opposed to Pandoc's own diagnostics, which share the same stream but
- * aren't ours to count as "warnings". */
-function extractWarnings(stderrText) {
-  if (!stderrText) return [];
-  return stderrText.split('\n').filter((line) => line.startsWith('md2nativedocx: ') && line.trim().length > 0);
+  // Surface the diagrams' non-fatal notices: never let a successful export silently hide something the
+  // author should know about.
+  const warnings = result.warnings.map((w) => `md2nativedocx: ${w}`);
+  const wordCompatibility = runWordCompatibilityCheck(output);
+  const logPath = writeExportLog({ input, output, warnings, rawStderr: result.pandocStderr, wordCompatibility });
+  if (warnings.length > 0) {
+    process.stdout.write(`Warnings: ${warnings.length} (see ${basename(logPath)})\n`);
+    for (const warning of warnings) process.stderr.write(`${warning}\n`);
+  }
+  process.stdout.write(`Wrote ${basename(output)}\n`);
 }
 
 /**
@@ -527,11 +255,6 @@ function formatWordCompatibility(result) {
     lines.push(`  - ${e.Path}: ${e.Description}`);
   }
   return lines;
-}
-
-/** A fresh, empty temp directory for this run's SmartArt part hand-off. */
-function mktempSmartArtDir() {
-  return mkdtempSync(join(tmpdir(), 'md2nativedocx-smartart-'));
 }
 
 main().catch((err) => {
