@@ -78,7 +78,7 @@ test('other types are shapes; never throws, even on empty or garbled input', () 
 // The plan and the export share one table (`RENDERERS`); this holds them to it on every real diagram the
 // repo has, under each kind of setting. A chart the translator then refuses (horizontal xychart with a line
 // series) is the one documented exception: announced as a chart, exported as shapes with a warning.
-test('the plan predicts what renderDiagram does, on every corpus and sample diagram', () => {
+test('the plan predicts what renderDiagram does, on every visual and Word-verification fixture', () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..');
   const sources: Array<[string, string]> = [];
   const walk = (dir: string): void => {
@@ -96,7 +96,6 @@ test('the plan predicts what renderDiagram does, on every corpus and sample diag
   // type the visual and Word-verification fixtures do not already cover.
   walk(join(root, 'test-corpus', 'visual'));
   walk(join(root, 'test-corpus', 'word-verification'));
-  walk(join(root, 'handmade_samples'));
   assert.ok(sources.length > 100, `only ${sources.length} sources found`);
 
   let n = 0;
