@@ -124,8 +124,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit + golden tests (cli, core, pandoc-filter)
-        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter
+      - name: Unit + golden tests (cli, core, pandoc-filter, pptx)
+        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter --workspace=@md2nativedocx/pptx
 
       - name: Build the packaged extension (.vsix)
         # Exercises the esbuild bundling step end to end — the vendored CLI's
@@ -171,8 +171,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit + golden tests (cli, core, pandoc-filter)
-        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter
+      - name: Unit + golden tests (cli, core, pandoc-filter, pptx)
+        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter --workspace=@md2nativedocx/pptx
 
       - name: Build the packaged extension (.vsix)
         run: npm run package --workspace=md2nativedocx
@@ -209,6 +209,30 @@ jobs:
         run: |
           node --test scripts/audit-gate.test.mjs
           node scripts/audit-gate.mjs
+
+  # DCO (AGENTS.md → Licensing): every commit of a PR carries a Signed-off-by trailer.
+  # Plain git, no third-party action. Merge commits are exempt.
+  dco:
+    name: DCO sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check Signed-off-by on every PR commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=0
+          for c in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            if ! git show -s --format=%B "$c" | grep -qiE '^Signed-off-by: .+ <.+>'; then
+              echo "::error::Commit $c has no Signed-off-by trailer (use git commit -s)"
+              missing=1
+            fi
+          done
+          exit $missing
 
   secret-scan:
     name: Secret scan (gitleaks)

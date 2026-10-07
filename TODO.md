@@ -13,15 +13,7 @@
 
 ## 1. En attente du mainteneur
 
-- [ ] **Installer la 0.7.0 depuis la Marketplace sur le poste Windows d'entreprise** et exporter un
-      document mixte. Les nouveaux défauts (SmartArt et graphiques Word activés) changent le rendu des
-      utilisateurs existants à la mise à jour automatique. Profiter de la même occasion pour clore les
-      deux incidents Windows de septembre (`spawnSync unzip ENOENT`, crash Pandoc/Lua `os.tmpname`), qui
-      n'ont été re-vérifiés qu'en reproduction Linux (récit : `docs/history/TODO_ARCHIVE.md`).
-- [ ] **Décision produit : `venn-beta` en SmartArt ?** Un *Venn simple* SmartArt est faisable quand
-      aucune intersection ne porte de texte ; sinon on garde les ellipses translucides. Voir backlog
-      §3, piste A.
-- [ ] **Publication npm** des paquets `core` → `pandoc-filter` → `cli` : bloquée sur un jeton.
+- [ ] **Publication npm** des paquets `core` → `pandoc-filter` → `cli` : prête, en attente du feu vert pour publier.
       **Même priorité que le chantier V2** : sans `npx md2nativedocx`, un pilote qui ne passe pas par
       VS Code ne peut rien essayer, et le SDK comme le MCP n'ont aucun utilisateur possible.
       **Débloqué le 2026-10-07** : jeton dans `.env` (`NPM_TOKEN`, `npm whoami` → `nicolasbridelance`),
@@ -29,23 +21,6 @@
       (§2bis), pour que la première 0.x ait déjà la forme de son API. API de `renderDiagram()` validée
       telle quelle (synchrone, noms d'options actuels). `scripts/verify-npm-packages.mjs` vérifie les
       paquets en salle blanche avant publication.
-- [ ] **Changement `ci.yml` à relire** : les jobs Windows et macOS listent leurs workspaces à la main
-      et ne lancent pas les tests `packages/pptx`. Une ligne à ajouter, mais `ci.yml` est un fichier
-      à revue humaine (AGENTS.md). Même occasion : un contrôle DCO sur les PR (DCO adopté le
-      2026-10-07, `CONTRIBUTING.md`), par exemple l'application GitHub *DCO* ou un job qui vérifie
-      la ligne `Signed-off-by:` de chaque commit.
-- [ ] **Démo vidéo dans un vrai Word, 40 secondes** (spec 04, priorité 1). L'agent prépare le `.docx`
-      de démo et le découpage plan par plan ; le mainteneur enregistre sous Windows (Win+Alt+R ou
-      Clipchamp). Scénario : le Markdown dans VS Code → l'export → dans Word, clic sur un nœud →
-      changement de libellé → déplacement, le connecteur suit → en bonus, *Modifier les données* sur
-      un `pie`. Éviter `crossing-stress-bipartite` (défaut connu, §2). Livrer aussi un GIF de moins
-      de 5 Mo pour le README et la Marketplace ; la Marketplace charge les images depuis `main` sur
-      GitHub, donc ces fichiers ne doivent plus être déplacés ni supprimés ensuite.
-- [ ] **Validation utilisateurs, version légère** (cahier §12.4), liée au jeton npm. Une seule
-      question mesurable : combien de temps pour corriger un diagramme dans Word, image PNG contre
-      formes natives. Canaux : répondre sur `mermaid-js/mermaid#8060`, puis les issues « mermaid docx
-      editable » chez Pandoc, Quarto et MkDocs ; les équipes doc de l'entourage, après avoir vérifié
-      le cadre de l'activité accessoire.
 - ⏸ **Add-in Word (Phase 4), en pause, hors de `main`** : le scaffold vit sur la branche
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
   *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :
@@ -53,6 +28,9 @@
 
 ## 2. Faisable par l'agent
 
+- [ ] **Démo vidéo dans un vrai Word, 40 secondes** (spec 04, priorité 1). Reportée par le mainteneur
+      (2026-10-07) : le GIF animé existant suffit pour l'instant, d'autres pourront suivre. L'agent prépare
+      le `.docx` de démo et le découpage plan par plan quand le mainteneur voudra enregistrer.
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
       produit par un script resté hors dépôt. Aujourd'hui le `.md` est la source à éditer à la main.
       Le manuel ne dit encore rien des SmartArt ni des graphiques Word, qui sont pourtant devenus les
@@ -99,16 +77,11 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
 
 ## 3. Backlog — pistes SmartArt et graphiques (analysées, pas commencées)
 
-Cinq pistes restent après la campagne SmartArt d'octobre. Pour chacune : ce que ça apporterait, ce
+Quatre pistes restent après la campagne SmartArt d'octobre. Pour chacune : ce que ça apporterait, ce
 qui bloque ou coûte, mon avis. Toutes passent par le même circuit que les précédentes : rendu
 LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans un vrai Word
 (CHECKLIST).
 
-- **A. `venn-beta` → SmartArt *Venn simple*.** Gain : un Venn restylable depuis l'onglet Création SmartArt,
-  cohérent avec le reste. Limite : SmartArt n'a pas de texte d'intersection, et ses cercles ont tous
-  la même taille (le `:N` de Mermaid est déjà ignoré). Coût : un `layoutDef` de plus, petit (cercles en
-  anneau, transparence par le `colorsDef`). Avis : à faire si le mainteneur dit oui, en ne l'appliquant
-  qu'aux Venn sans `text` d'union ; les autres restent en formes.
 - **B. Petit `gantt` sur la frise SmartArt.** Gain : un planning court (quelques jalons, quelques
   tâches) lisible en frise. Limite : la frise perd l'échelle de temps (durées, chevauchements), ce qui
   est l'information principale d'un Gantt. Avis : n'en vaut la peine que pour un Gantt fait
@@ -131,7 +104,7 @@ LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans 
   Avis : la piste la plus utile des cinq pour qui présente, mais la plus coûteuse à valider
   (bissection dans un vrai PowerPoint en cas de réparation).
 
-Écartées avec preuve, à ne pas rouvrir sans élément nouveau : fusion après branchement, `subgraph`
+Écartées, à ne pas rouvrir sans élément nouveau : `venn-beta` en SmartArt (décision du mainteneur, 2026-10-07 : on garde les ellipses) ; fusion après branchement, `subgraph`
 (trois formes essayées), frise en simple chaîne. Détail : `docs/coverage.md` § « What was ruled out ».
 
 ## 4. Idées notées, non engagées

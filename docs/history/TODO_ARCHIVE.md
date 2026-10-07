@@ -3458,3 +3458,7 @@ que de partir tête baissée :
 - Assouplissement d'une règle de lint sécurité ou d'une ligne du tableau de sécurité.
 - Modification de `.devcontainer/` ou `.vscode/`.
 - Questions de licence.
+
+## 2026-10-07 — incidents Windows de septembre clos
+
+La 0.7.0 installée depuis la Marketplace sur le poste Windows d'entreprise a été validée par le mainteneur : `spawnSync unzip ENOENT` et le crash Pandoc/Lua `os.tmpname` sont clos.
