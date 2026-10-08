@@ -34,6 +34,8 @@
   "Export this diagram…": "Exporter ce diagramme…",
   "Only this diagram, into its own Word document or a one-slide PowerPoint deck.": "Ce diagramme seul, dans son propre document Word ou une présentation PowerPoint d'une diapositive.",
   "Open in PowerPoint": "Ouvrir dans PowerPoint",
+  "Open in LibreOffice": "Ouvrir dans LibreOffice",
+  "LibreOffice (.odt)": "LibreOffice (.odt)",
   "Exported {0} files": "{0} fichiers exportés",
   "Exported {0} of {1} files; failed: {2}": "{0} fichiers exportés sur {1} ; échec : {2}",
   "Word (.docx)": "Word (.docx)",

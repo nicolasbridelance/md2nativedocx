@@ -36,6 +36,9 @@ const cliEntry = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 const coreBridgeEntry = join(repoRoot, 'packages', 'pandoc-filter', 'bin', 'md2nativedocx-core.mjs');
 const luaFilter = join(repoRoot, 'packages', 'pandoc-filter', 'md2nativedocx.lua');
 const referenceDoc = join(repoRoot, 'packages', 'cli', 'assets', 'reference.docx');
+// The .odt pair (ADR 0013), found by convert.mjs at ../assets/ relative to the bundled CLI, like
+// reference.docx. The derived template's BSD-3 notice is in this extension's THIRD_PARTY_NOTICES.md.
+const odtAssets = ['reference.odt', 'md2nativedocx.opendocument'].map((name) => join(repoRoot, 'packages', 'cli', 'assets', name));
 const coreDist = join(repoRoot, 'packages', 'core', 'dist', 'index.js');
 
 if (!existsSync(coreDist)) {
@@ -91,6 +94,7 @@ copyFileSync(luaFilter, luaOut);
 
 mkdirSync(dirname(referenceDocOut), { recursive: true });
 copyFileSync(referenceDoc, referenceDocOut);
+for (const asset of odtAssets) copyFileSync(asset, join(dirname(referenceDocOut), asset.split(/[\\/]/).pop()));
 
 // Self-check: a broken bundle (a missed import, a wrong relative path) must
 // fail this script, not surface later as a silent MODULE_NOT_FOUND inside a
@@ -106,6 +110,11 @@ try {
   execFileSync('node', [cliOut, input, '-o', output], { encoding: 'utf8' });
   if (!existsSync(output)) {
     throw new Error('vendored CLI ran without error but produced no .docx');
+  }
+  const odt = join(smokeDir, 'smoke.odt');
+  execFileSync('node', [cliOut, input, '-o', odt], { encoding: 'utf8' });
+  if (!existsSync(odt)) {
+    throw new Error('vendored CLI ran without error but produced no .odt');
   }
 } finally {
   rmSync(smokeDir, { recursive: true, force: true });

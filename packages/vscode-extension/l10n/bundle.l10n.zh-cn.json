@@ -30,6 +30,8 @@
   "Export this diagram…": "导出此图表…",
   "Only this diagram, into its own Word document or a one-slide PowerPoint deck.": "仅此图表，导出为独立的 Word 文档或单页 PowerPoint 演示文稿。",
   "Open in PowerPoint": "在 PowerPoint 中打开",
+  "Open in LibreOffice": "在 LibreOffice 中打开",
+  "LibreOffice (.odt)": "LibreOffice (.odt)",
   "Exported {0} files": "已导出 {0} 个文件",
   "Exported {0} of {1} files; failed: {2}": "已导出 {0}/{1} 个文件；失败：{2}",
   "Word (.docx)": "Word (.docx)",

@@ -127,6 +127,22 @@ test('exportDocument in pptx format writes a deck and its .log, without Pandoc',
   }
 });
 
+test('exportDocument in odt format writes a LibreOffice document with native shapes, and its .log', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-odt-export-test-'));
+  try {
+    const mdPath = join(dir, 'rapport.md');
+    writeFileSync(mdPath, '# Title\n\n```mermaid\ngraph TD\n  A -->|yes| B\n```\n\n```mermaid\npie\n  "a" : 1\n```\n');
+    const result = await exportDocument(mdPath, '', { format: 'odt' });
+    assert.equal(result.outputPath, join(dir, 'rapport.odt'));
+    assert.equal(result.logPath, join(dir, 'rapport.log'));
+    const content = execFileSync('unzip', ['-p', result.outputPath, 'content.xml'], { encoding: 'utf8' });
+    assert.match(content, /<draw:connector /);
+    assert.equal(result.warningCount, 1, 'the pie chart becomes a note and a warning');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('exportBlock in pptx format makes a one-slide deck named after the diagram; showSource is passed through', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-pptx-block-test-'));
   try {

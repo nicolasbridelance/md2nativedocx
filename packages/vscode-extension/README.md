@@ -84,6 +84,16 @@ or not.
 
 A bare `.mmd` file (only the diagram, no surrounding text) works too.
 
+**7. LibreOffice: flowcharts as native shapes**
+
+<img src="docs/demo-libreoffice.png" width="300" alt="A flowchart with two subgraphs exported to .odt and opened in LibreOffice Writer: boxes, a diamond and labelled connectors, each one a separate LibreOffice shape"/>
+
+**md2nativedocx → Export to LibreOffice (.odt)** (right-click, or the command palette) writes an
+OpenDocument text: headings, tables and the rest as for Word, and each flowchart as one group of
+LibreOffice shapes whose connectors stay attached when you move a box (*F3* enters the group). Other
+diagram types are not drawn in `.odt` yet: a note says so in their place. Page and typography settings,
+SmartArt and charts apply to Word only.
+
 **The result, opened**
 
 <img src="docs/demo-word.png" width="480" alt="The resulting .docx: title, box and diamond shapes, and labeled arrows — every one of them an individually selectable native Word shape, not a flattened image"/>
@@ -245,6 +255,7 @@ contact IT for an exception — rather than the generic "Pandoc could not be fou
 - No Word-rendering preview before export (VS Code already shows a native Mermaid preview in its
   built-in Markdown panel since 1.121).
 - No batch conversion (whole folder) — one file at a time for now.
+- In `.odt` (LibreOffice), only flowcharts are drawn so far; the 28 other types become a note.
 
 Roadmap and full positioning details: see the
 [monorepo README](https://github.com/nicolasbridelance/md2nativedocx#readme).

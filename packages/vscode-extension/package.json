@@ -90,6 +90,12 @@
         "category": "md2nativedocx"
       },
       {
+        "command": "md2nativedocx.exportDocumentOdt",
+        "title": "%command.exportDocumentOdt.title%",
+        "shortTitle": "%command.exportDocumentOdt.shortTitle%",
+        "category": "md2nativedocx"
+      },
+      {
         "command": "md2nativedocx.exportBlock",
         "title": "%command.exportBlock.title%",
         "shortTitle": "%command.exportBlock.shortTitle%",
@@ -103,6 +109,11 @@
       {
         "command": "md2nativedocx.exportBlockPptx",
         "title": "%command.exportBlockPptx.title%",
+        "category": "md2nativedocx"
+      },
+      {
+        "command": "md2nativedocx.exportBlockOdt",
+        "title": "%command.exportBlockOdt.title%",
         "category": "md2nativedocx"
       },
       {
@@ -145,6 +156,10 @@
           "group": "1_document@2"
         },
         {
+          "command": "md2nativedocx.exportDocumentOdt",
+          "group": "1_document@3"
+        },
+        {
           "command": "md2nativedocx.exportBlockDocx",
           "when": "md2nativedocx.cursorInMermaidBlock && editorFocus",
           "group": "2_diagram@1"
@@ -153,6 +168,11 @@
           "command": "md2nativedocx.exportBlockPptx",
           "when": "md2nativedocx.cursorInMermaidBlock && editorFocus",
           "group": "2_diagram@2"
+        },
+        {
+          "command": "md2nativedocx.exportBlockOdt",
+          "when": "md2nativedocx.cursorInMermaidBlock && editorFocus",
+          "group": "2_diagram@3"
         },
         {
           "command": "md2nativedocx.openSettings",
@@ -191,6 +211,10 @@
         },
         {
           "command": "md2nativedocx.exportBlockPptx",
+          "when": "false"
+        },
+        {
+          "command": "md2nativedocx.exportBlockOdt",
           "when": "false"
         }
       ]

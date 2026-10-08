@@ -50,11 +50,15 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('md2nativedocx.exportDocumentPptx', (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
       handleExportDocument(uri, selection, 'pptx'),
     ),
+    vscode.commands.registerCommand('md2nativedocx.exportDocumentOdt', (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
+      handleExportDocument(uri, selection, 'odt'),
+    ),
     vscode.commands.registerCommand('md2nativedocx.exportBlock', (uri?: vscode.Uri, blockIndex?: number) =>
       handleExportBlock(uri, blockIndex),
     ),
     vscode.commands.registerCommand('md2nativedocx.exportBlockDocx', (uri?: vscode.Uri) => handleExportBlock(uri, undefined, 'docx')),
     vscode.commands.registerCommand('md2nativedocx.exportBlockPptx', (uri?: vscode.Uri) => handleExportBlock(uri, undefined, 'pptx')),
+    vscode.commands.registerCommand('md2nativedocx.exportBlockOdt', (uri?: vscode.Uri) => handleExportBlock(uri, undefined, 'odt')),
     vscode.commands.registerCommand('md2nativedocx.openSettings', () =>
       vscode.commands.executeCommand(`${CONFIG_VIEW_ID}.focus`),
     ),
@@ -222,6 +226,9 @@ function pptxShowSourceSetting(): boolean {
  */
 async function exportOptions(progress: vscode.Progress<{ message?: string }>, format: ExportFormat): Promise<RunCliOptions> {
   if (format === 'pptx') return { format, pptxShowSource: pptxShowSourceSetting() };
+  // LibreOffice: Pandoc and the bundled reference.odt; the template, page layout, SmartArt, charts and the
+  // Word compatibility check are Word features (ADR 0013).
+  if (format === 'odt') return { format, pandocBin: await resolvePandocBin(progress), toc: tocEnabledSetting(), tocDepth: tocDepthSetting() };
   const pandocBin = await resolvePandocBin(progress);
   const referenceDoc = referenceDocumentSetting();
   const layout = layoutOptionsSetting();
@@ -304,12 +311,13 @@ async function handleExportMany(uris: vscode.Uri[], format: ExportFormat): Promi
   if (choice === viewLogs) outputChannel.show();
 }
 
-/** Ask Word or PowerPoint (used by "Exporter ce diagramme…"). `undefined` if dismissed. */
+/** Ask Word, PowerPoint or LibreOffice (used by "Exporter ce diagramme…"). `undefined` if dismissed. */
 async function pickFormat(): Promise<ExportFormat | undefined> {
   const pick = await vscode.window.showQuickPick(
     [
       { label: `$(file) ${vscode.l10n.t('Word (.docx)')}`, format: 'docx' as const },
       { label: `$(preview) ${vscode.l10n.t('PowerPoint (.pptx), one slide')}`, format: 'pptx' as const },
+      { label: `$(file-text) ${vscode.l10n.t('LibreOffice (.odt)')}`, format: 'odt' as const },
     ],
     { placeHolder: vscode.l10n.t('Export this diagram to…') },
   );
@@ -538,7 +546,8 @@ async function runExportFlow(
     return;
   }
 
-  const openInWord = format === 'pptx' ? vscode.l10n.t('Open in PowerPoint') : vscode.l10n.t('Open in Word');
+  const openInWord =
+    format === 'pptx' ? vscode.l10n.t('Open in PowerPoint') : format === 'odt' ? vscode.l10n.t('Open in LibreOffice') : vscode.l10n.t('Open in Word');
   const revealInExplorer = vscode.l10n.t('Reveal in Explorer');
   const hasWarnings = outcome.warningCount > 0;
   const viewWarnings = vscode.l10n.t('View warnings');

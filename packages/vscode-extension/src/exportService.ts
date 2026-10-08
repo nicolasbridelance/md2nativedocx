@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, extname } from 'node:path';
 import {
   blockAtLine,
   parseMermaidBlocks,
@@ -131,11 +131,13 @@ export interface LayoutOptions {
   landscapeTables?: boolean;
 }
 
-/** Output format of an export: a Word document, or a PowerPoint deck (one slide per diagram). */
-export type ExportFormat = 'docx' | 'pptx';
+/** Output format of an export: a Word document, a PowerPoint deck (one slide per diagram), or an
+ * OpenDocument text for LibreOffice (flowcharts as native shapes, ADR 0013). */
+export type ExportFormat = 'docx' | 'pptx' | 'odt';
 
 export interface RunCliOptions {
-  /** `docx` (default) or `pptx`. A deck needs no Pandoc and ignores every Word-only option below. */
+  /** `docx` (default), `pptx` or `odt`. A deck needs no Pandoc and ignores every Word-only option below;
+   * a `.odt` uses Pandoc and the table of contents, not the Word-only options. */
   format?: ExportFormat;
   /** Mirrors `md2nativedocx.pptx.showSource`: put each diagram's Mermaid source beside it on its slide. */
   pptxShowSource?: boolean;
@@ -297,8 +299,8 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
 /** Path to the `.log` file `md2nativedocx.mjs` writes next to `output` —
  * same basename, `.log` extension, mirroring the CLI's own naming. */
 function logPathFor(output: string): string {
-  const lower = output.toLowerCase();
-  return lower.endsWith('.docx') || lower.endsWith('.pptx') ? `${output.slice(0, -'.docx'.length)}.log` : `${output}.log`;
+  const ext = extname(output).toLowerCase();
+  return ['.docx', '.pptx', '.odt'].includes(ext) ? `${output.slice(0, -ext.length)}.log` : `${output}.log`;
 }
 
 /** Read back the warning count the CLI recorded in `output`'s `.log` file

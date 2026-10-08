@@ -30,6 +30,8 @@
   "Export this diagram…": "Экспортировать эту диаграмму…",
   "Only this diagram, into its own Word document or a one-slide PowerPoint deck.": "Только эта диаграмма — в отдельный документ Word или презентацию PowerPoint из одного слайда.",
   "Open in PowerPoint": "Открыть в PowerPoint",
+  "Open in LibreOffice": "Открыть в LibreOffice",
+  "LibreOffice (.odt)": "LibreOffice (.odt)",
   "Exported {0} files": "Экспортировано файлов: {0}",
   "Exported {0} of {1} files; failed: {2}": "Экспортировано {0} из {1}; ошибка: {2}",
   "Word (.docx)": "Word (.docx)",

@@ -5,6 +5,15 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+### Added
+- **Export to LibreOffice (.odt)**, for a document or a single diagram (md2nativedocx menu, command
+  palette): flowcharts become native LibreOffice shapes, with connectors attached to them that follow
+  a moved box, subgraphs as containers, `classDef`/`style`/`linkStyle` colours kept. Other diagram types
+  become a note for now. Uses Pandoc like the Word export, with a page and styles written by the project.
+
+### Fixed
+- A diagram whose subgraph listed its own name as a member was left as raw Mermaid text.
+
 ## [0.7.0] — 2026-10-06
 
 ### Added
