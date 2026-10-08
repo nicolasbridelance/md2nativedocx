@@ -248,3 +248,15 @@ test('edge labels: the connector text area is centred, so the label sits mid-edg
   assert.ok(style.includes('draw:textarea-horizontal-align="center"'));
   assert.ok(style.includes('draw:textarea-vertical-align="middle"'));
 });
+
+test('glue points: a connector whose direct elbow would cross a third node is attached elsewhere', () => {
+  // B's "no" branch goes down-left to E, past C (under B): bottom-to-top would run through C.
+  const src = 'flowchart TD\n  A --> B{ok?}\n  B -->|yes| C[Reserve items]\n  C --> D\n  B -->|no| E[Notify]\n  D --> F\n  E --> F';
+  const { fragment } = renderDiagramOdf(src, { idPrefix: 'r' });
+  const shapes = new Map(tags(fragment, 'draw:custom-shape').map((t) => [attr(t, 'draw:name'), attr(t, 'draw:id')]));
+  const no = tags(fragment, 'draw:connector').find((c) => attr(c, 'draw:end-shape') === shapes.get('Notify'))!;
+  const yes = tags(fragment, 'draw:connector').find((c) => attr(c, 'draw:end-shape') === shapes.get('Reserve items'))!;
+  assert.equal(attr(yes, 'draw:start-glue-point'), '2', 'the unobstructed branch keeps bottom to top');
+  assert.equal(attr(yes, 'draw:end-glue-point'), '0');
+  assert.notDeepEqual([attr(no, 'draw:start-glue-point'), attr(no, 'draw:end-glue-point')], ['2', '0']);
+});

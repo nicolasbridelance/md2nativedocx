@@ -340,7 +340,10 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     }
     const a = place(from);
     const b = place(to);
-    const { start, end } = chooseGluePoints(a, b);
+    const obstacles = Object.entries(layout.nodes)
+      .filter(([id]) => id !== edge.from && id !== edge.to)
+      .map(([, box]) => place(box));
+    const { start, end } = chooseGluePoints(a, b, obstacles);
     const p1 = gluePoint(a, start);
     const p2 = gluePoint(b, end);
     parts.push(
@@ -429,13 +432,90 @@ function labelSpans(tokens: LabelToken[], sheet: StyleSheet): string {
 }
 
 /** Which side each end of a connector attaches to, from the relative position of the two boxes. */
-function chooseGluePoints(from: Box, to: Box): { start: number; end: number } {
+function defaultGluePoints(from: Box, to: Box): { start: number; end: number } {
   const dx = to.x + to.width / 2 - (from.x + from.width / 2);
   const dy = to.y + to.height / 2 - (from.y + from.height / 2);
   if (Math.abs(dy) >= Math.abs(dx)) {
     return dy > 0 ? { start: GLUE.bottom, end: GLUE.top } : { start: GLUE.top, end: GLUE.bottom };
   }
   return dx > 0 ? { start: GLUE.right, end: GLUE.left } : { start: GLUE.left, end: GLUE.right };
+}
+
+/** Outward direction of each glue point. */
+const OUTWARD: Readonly<Record<number, LayoutPoint>> = {
+  [GLUE.top]: { x: 0, y: -1 },
+  [GLUE.right]: { x: 1, y: 0 },
+  [GLUE.bottom]: { x: 0, y: 1 },
+  [GLUE.left]: { x: -1, y: 0 },
+};
+
+/**
+ * The elbow route LibreOffice's standard connector takes between two glue points, approximately: one
+ * bend when one end leaves vertically and the other horizontally, two bends (through the middle) when
+ * both ends share an orientation.
+ */
+function elbowRoute(p1: LayoutPoint, start: number, p2: LayoutPoint, end: number): LayoutPoint[] {
+  const vertical = (glue: number): boolean => glue === GLUE.top || glue === GLUE.bottom;
+  if (vertical(start) && !vertical(end)) return [p1, { x: p1.x, y: p2.y }, p2];
+  if (!vertical(start) && vertical(end)) return [p1, { x: p2.x, y: p1.y }, p2];
+  if (vertical(start)) {
+    const midY = (p1.y + p2.y) / 2;
+    return [p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2];
+  }
+  const midX = (p1.x + p2.x) / 2;
+  return [p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2];
+}
+
+/** Whether an axis-aligned segment passes through the inside of a box (touching its edge does not count). */
+function segmentCrossesBox(a: LayoutPoint, b: LayoutPoint, box: Box): boolean {
+  const inset = 1;
+  const left = box.x + inset;
+  const right = box.x + box.width - inset;
+  const top = box.y + inset;
+  const bottom = box.y + box.height - inset;
+  const [x1, x2] = a.x <= b.x ? [a.x, b.x] : [b.x, a.x];
+  const [y1, y2] = a.y <= b.y ? [a.y, b.y] : [b.y, a.y];
+  return x1 < right && x2 > left && y1 < bottom && y2 > top;
+}
+
+/**
+ * Glue points for a connector between `from` and `to`. LibreOffice routes a standard connector itself
+ * and only steers clear of the two shapes it joins, so the sides picked from the boxes' relative
+ * position alone can send it straight through a third node (seen in a render, 2026-10-08: a decision's
+ * "no" branch crossing the "yes" branch's first box). Every pair of sides is scored on its estimated
+ * elbow route: crossings first, then a route leaving or reaching a box from the wrong side; the
+ * position-based choice wins any tie on those two (a merely shorter route that enters a box from the
+ * side reads worse in a top-down flow), then length decides among the others.
+ */
+function chooseGluePoints(from: Box, to: Box, obstacles: Box[]): { start: number; end: number } {
+  const preferred = defaultGluePoints(from, to);
+  let best = preferred;
+  let bestScore = Infinity;
+  for (let start = 0; start < 4; start++) {
+    for (let end = 0; end < 4; end++) {
+      const p1 = gluePoint(from, start);
+      const p2 = gluePoint(to, end);
+      const route = elbowRoute(p1, start, p2, end);
+      let crossings = 0;
+      let length = 0;
+      for (let i = 1; i < route.length; i++) {
+        const a = route[i - 1]!;
+        const b = route[i]!;
+        length += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+        crossings += obstacles.filter((box) => segmentCrossesBox(a, b, box)).length;
+      }
+      const out = OUTWARD[start]!;
+      const back = OUTWARD[end]!;
+      const wrongSide = (p2.x - p1.x) * out.x + (p2.y - p1.y) * out.y < 0 || (p1.x - p2.x) * back.x + (p1.y - p2.y) * back.y < 0;
+      const isPreferred = start === preferred.start && end === preferred.end;
+      const score = crossings * 1e6 + (wrongSide ? 1e4 : 0) + (isPreferred ? 0 : 1e3) + length;
+      if (score < bestScore) {
+        bestScore = score;
+        best = { start, end };
+      }
+    }
+  }
+  return best;
 }
 
 function gluePoint(box: Box, glue: number): LayoutPoint {
