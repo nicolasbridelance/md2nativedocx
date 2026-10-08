@@ -104,10 +104,10 @@ reached: their order against ODF phase 2 is to be decided.
 - `test:visual` 100/100 (68 `.docx`/`.pptx`, 32 `.odt`). `test:oxml-validate`: 0 schema errors under
   `word/diagrams/`; the rest from Pandoc's own `.docx` writer. `test:odf-validate`: three documents,
   two written by the CLI, zero errors.
-- **The `visual` CI job never runs.** It is gated on `schedule` or a `release/*` branch, but `ci.yml`
-  has no `schedule:` trigger (never had one) and only runs on pushes to `main` and on pull requests,
-  so the pinned-LibreOffice install and the Markdown import check have never run in CI. Fixing it
-  touches `ci.yml`: maintainer's call (a `schedule:` cron plus `workflow_dispatch`).
+- The `visual` CI job runs weekly (Monday cron), on `release/**` pushes and on demand (Actions tab;
+  the Codespace token cannot dispatch it, push a `release/` branch instead). It had never run before
+  2026-10-08 (no schedule trigger). First run green: 100/100 renders, `test:odf-connectors` 221
+  connectors, pinned LibreOffice 26.2.6 Markdown import.
 - `npm audit --omit=dev` clean; one dated audit exception (`braces`, **expires 2026-12-31**).
 
 ## Open items outside ODF
