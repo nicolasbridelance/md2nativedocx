@@ -56,6 +56,11 @@ jobs:
       - name: Open XML schema validation
         run: npm run test:oxml-validate
 
+      - name: ODF schema validation
+        # Java ships with ubuntu-latest; the odfvalidator jar is fetched from Maven Central and
+        # checked against the SHA-256 pinned in scripts/test-odf-validate.mjs.
+        run: npm run test:odf-validate
+
       - name: Verify npm packages (clean-room install of core/pandoc-filter/cli)
         # OS-independent by nature (this is about npm's package-resolution
         # layout, not platform code) — one job is enough, unlike

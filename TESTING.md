@@ -13,7 +13,7 @@
 | 2 | [Pipeline integration](#2-pipeline-integration) | `packages/cli/test`, `packages/pandoc-filter/test` | yes, on every push | the real chain Markdown → Pandoc → Lua filter → core → `.docx` |
 | 3 | [Real diagram corpus](#3-real-diagram-corpus) | `test-corpus/corpus/` | yes (regeneration + conformance) + manual Word review | real `.mmd` files from mermaid-js/mermaid go through the whole pipeline |
 | 4 | [Visual regression](#4-visual-regression) | `test-corpus/visual/`, `scripts/test-visual.mjs` | yes, on demand (LibreOffice required) | the actual render doesn't regress, not just the XML |
-| 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs` | yes, on demand (.NET SDK required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML |
+| 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs`, `scripts/test-odf-validate.mjs` | yes, on demand (.NET SDK / Java required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML; same for `.odt` against the ODF schema |
 | 6 | [Native Word comparison](#6-native-word-comparison) | `tools/word-reference/` | no, manual, Windows | OOXML structure compared against an authentic Word document |
 | 7 | [Manual Word acceptance checklist](#7-manual-word-acceptance-checklist) | `test-corpus/word-verification/` | no, manual, real Word required | spec §9 release gate: known LibreOffice-only-verified defects and a crossing-heavy adversarial case, opened and eyeballed in actual Word |
 | 8 | [Historical spikes](#8-historical-spikes) | `docs/adr/spikes/` | no, archive | evidence that motivated ADR 0001/0002 |
@@ -120,6 +120,15 @@ chapter's job to fix) — printed for visibility, never failed on.
 
 **Adding a case**: add an entry to `SMARTART_FIXTURES` (or `PLAIN_FIXTURE_NAMES`, reusing a
 `test-corpus/visual/fixtures/*.mmd` file) in `scripts/test-oxml-validate.mjs`.
+
+**ODF (`.odt`), since 2026-10-08.** `scripts/test-odf-validate.mjs` runs the ODF Toolkit's
+`odfvalidator` (Apache-2.0, the validator behind odfvalidator.org; jar fetched from Maven Central
+into `~/.cache/md2nativedocx/` and checked against a pinned SHA-256). Every document must have
+**zero** errors: a plain Pandoc `.odt` validates cleanly, so there is no inherited noise. Requires
+Java and Pandoc; skips with exit 0 without them. Until the CLI writes `.odt` (phase 1 of
+`docs/specs/05-libreoffice-odf-spec.md`), the fixtures are a plain Pandoc document and the S2
+diagram spike; its first run found a required `svg:viewBox` missing from our `draw:connector`
+(`docs/adr/spikes/spike-odf-validator/`). **Adding a case**: extend `buildFixtures()`.
 
 ## 6. Native Word comparison
 

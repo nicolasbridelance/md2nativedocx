@@ -169,6 +169,7 @@ All of these exist; `TESTING.md` says which ones CI runs and when:
 | `npm run test:fuzz -w packages/core` | property-based tests on the parser/translator boundary |
 | `npm run test:visual` | LibreOffice-headless render + pixel-diff regression (spec §9) |
 | `npm run test:oxml-validate` | Open XML **schema** validation against generated `.docx` files (`.NET` SDK required) — see "Diagnosing 'Word won't open the file'" below |
+| `npm run test:odf-validate` | ODF **schema** validation against generated `.odt` files (Java required; ODF Toolkit `odfvalidator`, pinned by SHA-256) |
 
 See `TESTING.md` for the full picture: why testing is split into eight chapters, what each one
 actually catches that the others can't, and where each one lives on disk — this table is just
