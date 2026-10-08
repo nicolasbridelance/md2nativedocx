@@ -2,8 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
   pull_request:
+  # The visual job runs weekly and on demand (Actions tab, "Run workflow"), not on every push: see its
+  # comment below. Until 2026-10-08 there was no schedule at all, so that job had never run.
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 jobs:
   build-test:
@@ -256,7 +261,7 @@ jobs:
   visual:
     name: Visual regression (LibreOffice headless)
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/')
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/')
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -268,14 +273,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq pandoc lua5.4
       - name: Install LibreOffice headless
-        run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress
+        # python3-uno: the .odt connector check drives LibreOffice through UNO.
+        run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress python3-uno
       # Pinned release for the ODF target, next to the apt one (which stays the visual-test
       # renderer). Version and SHA-256 are in the script, shared with .devcontainer/setup.sh.
       - name: Install pinned LibreOffice (ODF target)
         run: bash scripts/install-libreoffice-pinned.sh
       - run: npm ci
+      # The CLI runs the core through the Pandoc filter, from packages/*/dist.
+      - run: npm run build
       - name: Visual tests
         run: npm run test:visual
+      - name: ODF connector attachment (UNO)
+        run: npm run test:odf-connectors
       # Watches the behaviour spike S3 recorded: the pinned release still imports Markdown.
       - name: ODF smoke check (Markdown import of the pinned LibreOffice)
         run: |

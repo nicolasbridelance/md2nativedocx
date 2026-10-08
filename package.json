@@ -19,6 +19,7 @@
     "test:visual:update-baseline": "node scripts/test-visual.mjs --update-baseline",
     "test:oxml-validate": "node scripts/test-oxml-validate.mjs",
     "test:odf-validate": "node scripts/test-odf-validate.mjs",
+    "test:odf-connectors": "node scripts/test-odf-connectors.mjs",
     "verify:npm-packages": "node scripts/verify-npm-packages.mjs",
     "audit:gate": "node scripts/audit-gate.mjs"
   },
