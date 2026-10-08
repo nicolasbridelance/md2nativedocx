@@ -4,3 +4,4 @@
 packages/cli/reference-odt-src/** text eol=lf
 packages/cli/reference-docx-src/** text eol=lf
 packages/cli/assets/md2nativedocx.opendocument text eol=lf
+packages/core/test/golden/fixtures/** text eol=lf

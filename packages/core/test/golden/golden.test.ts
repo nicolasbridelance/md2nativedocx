@@ -57,6 +57,6 @@ test('golden: simple two-node flowchart matches fixture', () => {
 
 test('golden: simple two-node flowchart as ODF matches fixture (fragment, then its automatic styles)', () => {
   const { fragment, automaticStyles } = renderDiagramOdf('graph TD\n  A[Start] --> B[End]', { idPrefix: 'g1' });
-  const golden = readFileSync(join(fixturesDir, 'two-node.odf.xml'), 'utf8');
+  const golden = readFileSync(join(fixturesDir, 'two-node.odf.xml'), 'utf8').replace(/\r\n/g, '\n');
   assert.equal([fragment, ...automaticStyles].join('\n') + '\n', golden);
 });

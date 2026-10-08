@@ -56,8 +56,10 @@ test('reference.odt: mimetype first and stored, the diagram definitions in its s
 });
 
 test('reference.odt: rebuilding from reference-odt-src gives the committed file', () => {
-  const committed = readFileSync(join(assets, 'reference.odt'));
-  assert.ok(referenceOdtBuffer().equals(committed), 'reference.odt is stale: run scripts/build-odt-assets.mjs and commit');
+  // Entries, not raw bytes: the ZIP headers AdmZip writes differ by platform (seen on Windows CI).
+  const entries = (buffer) =>
+    new AdmZip(buffer).getEntries().map((e) => ({ name: e.entryName, method: e.header.method, data: e.getData().toString('base64') }));
+  assert.deepEqual(entries(referenceOdtBuffer()), entries(readFileSync(join(assets, 'reference.odt'))), 'reference.odt is stale: run scripts/build-odt-assets.mjs and commit');
 });
 
 test('the derived template differs from Pandoc 3.1.3 opendocument by the styles loop only', (t) => {
