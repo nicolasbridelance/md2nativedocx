@@ -18,11 +18,12 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   `convert()` as the library entry point of `@md2nativedocx/cli`; size limits on every Dagre layout
   (`DiagramTooLargeError`, a visible note instead of a failed export); the MCP server runs each call in
   a child process killed at its deadline.
-- **Versions.** Extension 0.7.0 on the Marketplace. `@md2nativedocx/core`, `cli`, `pandoc-filter` and
-  `pptx` 0.1.0 published on npm by the maintainer (2026-10-07). `mcp` is not published.
-- **Released artifacts still carry the old `reference.docx`.** It was derived from Pandoc's own
-  (GPL-2+) and was rewritten from scratch on 2026-10-08 (below). Extension 0.7.0 and npm `cli` 0.1.0
-  ship the old one until the next release; when to release is the maintainer's call.
+- **Versions.** Extension **0.8.0** published to the Marketplace on 2026-10-08 (tag `vscode-v0.8.0`):
+  `.odt` export, the project's own `reference.docx`. npm: the repo is at core, pandoc-filter, cli
+  **0.2.0** and pptx **0.1.1**, but the registry still serves 0.1.0: `npm publish` asked for a one-time
+  password (the `NPM_TOKEN` in `.env` does not bypass 2FA). Publish with an OTP, or replace the token
+  with an Automation / granular token allowed to bypass 2FA, then `npm publish --access public` in
+  `packages/{core,pandoc-filter,pptx,cli}` in that order. `mcp` is not published.
 
 ## Priority since 2026-10-08: LibreOffice / ODF
 
@@ -65,7 +66,7 @@ criterion checked without a human: renders, `odfvalidator` zero errors, and thro
 (`scripts/odf-connector-check.py`) 221 connectors in the 32 flowcharts of the corpus attached on open
 and following a moved shape. Open points of phase 1 and what comes next: `TODO.md` §0 (edge-label
 placement, narrow preset text areas, no page options for `.odt`; then phase 2 measurement, the `.odt`
-export in the VS Code extension, door B). Not released: the published CLI 0.1.0 has no `.odt`.
+export in the VS Code extension, door B). Released in extension 0.8.0; on npm once 0.2.0 is published (Versions above).
 
 **Hold until there is something to show:** a comment on LibreOffice bug 172531 presenting the
 extension. Public communication; the maintainer agreed to wait for a first working version.
