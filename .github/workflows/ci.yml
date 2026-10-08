@@ -264,6 +264,18 @@ jobs:
           sudo apt-get install -y -qq pandoc lua5.4
       - name: Install LibreOffice headless
         run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress
+      # Pinned release for the ODF target, next to the apt one (which stays the visual-test
+      # renderer). Version and SHA-256 are in the script, shared with .devcontainer/setup.sh.
+      - name: Install pinned LibreOffice (ODF target)
+        run: bash scripts/install-libreoffice-pinned.sh
       - run: npm ci
       - name: Visual tests
         run: npm run test:visual
+      # Watches the behaviour spike S3 recorded: the pinned release still imports Markdown.
+      - name: ODF smoke check (Markdown import of the pinned LibreOffice)
+        run: |
+          out="$(mktemp -d)"
+          soffice-26.2 -env:UserInstallation="file://${out}/profile" --headless --convert-to fodt \
+            --outdir "${out}" docs/adr/spikes/spike-odf-markdown-import/source.md
+          grep -q '<table:table ' "${out}/source.fodt"
+          grep -q '<text:h ' "${out}/source.fodt"
