@@ -27,10 +27,11 @@ md2nativedocx report.md -o report.docx
 ```
 
 ```
-Usage: md2nativedocx <input.md> -o <output.docx> [options]
+Usage: md2nativedocx <input.md> -o <output.docx|output.odt|output.pptx> [options]
 
 Options:
-  -o, --output <file>   Output .docx path (required)
+  -o, --output <file>   Output .docx, .odt or .pptx path (required)
+  --show-source         .pptx only: show each diagram's Mermaid source beside it
   -h, --help            Show this help
 ```
 
@@ -46,6 +47,22 @@ Pandoc as usual. Per-type detail:
 | `MD2NATIVEDOCX_ENABLE_SMARTART=0` | No SmartArt: every diagram as shapes |
 | `MD2NATIVEDOCX_NATIVE_CHARTS=0` (or `pie,xychart`) | No Word charts (or only those types) |
 | `MD2NATIVEDOCX_SMARTART_STYLE` | SmartArt look: `simple`, `subtle`, `moderate`, `intense-accent`, `colorful` (default), `colorful-moderate`, `intense` |
+
+### LibreOffice (`.odt`)
+
+```sh
+md2nativedocx report.md -o report.odt
+```
+
+Writes an OpenDocument text for LibreOffice: the document as Pandoc converts it, and each flowchart as one
+group of native LibreOffice shapes (boxes, diamonds, cylinders…) with connectors attached to them, which
+follow a box you move (*F3* enters the group), subgraphs as containers, `classDef`/`style`/`linkStyle`
+colours kept. Other diagram types become a note in their place for now. The page is A4 with 2.54 cm
+margins; the page and typography variables below, SmartArt and charts apply to `.docx` only. Pandoc
+writes the whole file, with a reference document and template shipped in `assets/` (see
+`THIRD_PARTY_NOTICES.md` for the template's BSD-3 notice).
+
+From code: `convert(markdown, { format: 'odt' })`.
 
 ## Configuration
 

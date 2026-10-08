@@ -32,7 +32,8 @@ All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER,
 graph, …). A document without any diagram converts just as well. Use it from the
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (one
 click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc filter. It can also write a
-`.pptx` deck. Public domain (CC0).
+`.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
+there: soon). Public domain (CC0).
 
 ![A Mermaid sankey, mindmap, Venn, timeline and treemap being exported to native Word shapes](docs/showcase/wow.gif)
 
@@ -142,6 +143,10 @@ graphic or a Word chart when enabled) — see "Supported diagram types" above.
 
 Want slides instead? `npx md2nativedocx deck.md -o deck.pptx` writes one 16:9 slide per Mermaid block, again
 with editable shapes (see [`packages/pptx`](packages/pptx/README.md)).
+
+Working in LibreOffice? `npx md2nativedocx report.md -o report.odt` writes an OpenDocument text where each
+flowchart is a group of native LibreOffice shapes, connectors attached to them (other diagram types become a
+note in `.odt` for now; see [`docs/specs/05-libreoffice-odf-spec.md`](docs/specs/05-libreoffice-odf-spec.md)).
 
 ## FAQ
 
