@@ -1,7 +1,7 @@
 # Cahier des charges — Cible LibreOffice / ODF
 
 > **Statut au 2026-10-08 : priorité du projet** (décision du mainteneur). Phase 0 (reconnaissance)
-> commencée : S0, S1, S2, S3 et S5 faits. Rien n'est encore livré.
+> terminée côté recherche : S0 à S5 faits ; reste l'ADR de fin de phase. Rien n'est encore livré.
 > Révise `docs/specs/cahier_des_charges.md` §2.1, qui laissait ODF aux contributeurs externes.
 
 ## 1. Contexte et décision
@@ -60,6 +60,13 @@ extension LibreOffice (UNO) qui appelle notre moteur ; un point d'extension prop
 (« bloc de code avec telle info-string → convertisseur externe ») ; une contribution en C++, qui serait
 une réécriture, pas un portage (même constat que pour Pandoc en Haskell, `TODO.md` §4).
 
+**Tranché par S4 (2026-10-08) : une extension LibreOffice.** Les développeurs ont déjà refusé de garder
+l'info-string (bug 172530, WONTFIX : il faudrait changer la norme ODF) et préfèrent garder Mermaid hors
+du code de base (bug 172531). L'extension reconnaît un bloc Mermaid à son contenu
+(`detectDiagramType()`, plus une analyse qui doit réussir) et le remplace par le diagramme natif ;
+d'abord comme commande, ensuite à l'ouverture d'un `.md`. Détail :
+`docs/adr/spikes/spike-odf-libreoffice-filter/`.
+
 **Ordre retenu : A d'abord.** Toutes les variantes de B supposent un moteur qui sait déjà produire de
 l'ODF ; A le construit et se livre seul. B reste de la recherche jusqu'à la fin de S4, et rien n'est
 promis publiquement (ni aux développeurs LibreOffice) avant.
@@ -111,11 +118,11 @@ l'ADR 0012 attendaient avant toute abstraction : `.pptx` réutilise le DrawingML
   caractère (`docs/adr/spikes/spike-odf-styles/`).
 - **S3 (fait, 2026-10-08).** LibreOffice 26.2.6 officiel, extrait dans le Codespace sans toucher à
   `.devcontainer/` : le bloc Mermaid devient du texte préformaté sans son info-string, les tableaux
-  passent, les maths restent du texte altéré. La porte B passe donc par le filtre lui-même (S4).
-  Épingler 26.2 dans `.devcontainer/` et `ci.yml` reste à décider (revue humaine).
-- **S4.** Porte B : lire le code du filtre Markdown de LibreOffice (où passent les blocs de code,
-  quelle info-string est conservée), lister les options, et seulement ensuite écrire aux développeurs
-  LibreOffice.
+  passent, les maths restent du texte altéré. 26.2.6 est épinglé (spec 05 §8.3).
+- **S4 (fait, 2026-10-08).** Le filtre jette l'info-string (`BeginCodeBlock()` ne reçoit pas le
+  détail du bloc) et n'active pas les maths de MD4C. LibreOffice a déjà refusé de garder l'info-string
+  (bug 172530) et préfère Mermaid hors du code de base (bug 172531) : la porte B sera une extension
+  (`docs/adr/spikes/spike-odf-libreoffice-filter/`).
 - **S5 (fait, 2026-10-08).** `odfvalidator` 0.13.0 de l'ODF Toolkit (Java, Apache-2.0) : un `.odt`
   Pandoc ordinaire passe sans erreur ; notre connecteur manquait de `svg:viewBox` (corrigé dans S2).
   Son ajout au dépôt (`test:odf-validate`) attend l'accord du mainteneur, règle 6
@@ -129,7 +136,7 @@ ouvert dans LibreOffice, formes et connecteurs éditables (même critère que la
 **Phase 2 — Les 28 autres types**, par la voie retenue au §5 ; graphiques ODF pour `pie`, `xychart`,
 `radar` si la phase 1 laisse de la marge.
 
-**Phase 3 — Porte B**, selon les conclusions de S4.
+**Phase 3 — Porte B** : extension LibreOffice, adaptateur mince sur la sortie ODF du core (S4).
 
 ## 7. Sécurité
 

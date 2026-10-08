@@ -82,6 +82,10 @@ format, no shape primitive in the Docs API); Slides stays reachable through `.pp
   S5: the ODF Toolkit's `odfvalidator` 0.13.0 is the proposed validator; it caught a missing
   required `svg:viewBox` on the connector that LibreOffice silently tolerated
   ([`docs/adr/spikes/spike-odf-validator/`](docs/adr/spikes/spike-odf-validator/spike.md)).
+  S4: door B will be a LibreOffice extension. LibreOffice already refused to keep the code-fence
+  language (bug 172530, WONTFIX) and prefers Mermaid out of core (bug 172531), so the extension
+  recognises Mermaid by content (`detectDiagramType()` plus a successful parse)
+  ([`docs/adr/spikes/spike-odf-libreoffice-filter/`](docs/adr/spikes/spike-odf-libreoffice-filter/spike.md)).
   Next steps are in `TODO.md` §0.
 - V2 work (below) now comes second: only the tasks that also serve ODF or close an open security risk
   continue (marked ▶ in `TODO.md` §2bis, decided 2026-10-08). LibreOffice 26.2.6 is pinned next to the

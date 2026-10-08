@@ -22,7 +22,10 @@ perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-o
 S2, couleurs, tailles et flèches sans post-traitement du `.odt` (gabarit Pandoc dérivé, styles
 déclarés par le filtre, diagramme dans un `draw:g` ancré comme caractère :
 `docs/adr/spikes/spike-odf-styles/`) ; S5, `odfvalidator` de l'ODF Toolkit retenu, il a trouvé un
-attribut obligatoire manquant sur le connecteur (`docs/adr/spikes/spike-odf-validator/`).
+attribut obligatoire manquant sur le connecteur (`docs/adr/spikes/spike-odf-validator/`) ; S4, la
+porte B sera une extension LibreOffice, les développeurs ayant refusé de garder l'info-string (bug
+172530) et préférant Mermaid hors du code de base (bug 172531)
+(`docs/adr/spikes/spike-odf-libreoffice-filter/`).
 
 Mainteneur :
 
@@ -33,8 +36,6 @@ Mainteneur :
 
 Agent :
 
-- [ ] **S4** : lire le filtre Markdown de LibreOffice (traitement des blocs de code, info-string) et
-      lister les options d'intégration côté LibreOffice ; aucun contact public avant.
 - [ ] Puis ADR de fin de phase 0 et début de la phase 1 (`.odt` pour les flowcharts).
 
 ## 1. En attente du mainteneur
