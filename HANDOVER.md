@@ -6,7 +6,7 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 ## Where the project stands
 
 - **The product works end to end.** Markdown with Mermaid becomes a `.docx` where every diagram is
-  editable in Word, from the VS Code extension (0.7.0 on the Marketplace, tag `vscode-v0.7.0`), the
+  editable in Word, or (since 2026-10-08, flowcharts only) a `.odt` where it is editable in LibreOffice, from the VS Code extension (0.7.0 on the Marketplace, tag `vscode-v0.7.0`), the
   CLI, the Pandoc filter, or the MCP server (`packages/mcp`). The same source can also become a
   `.pptx` deck (`packages/pptx`), which opens in PowerPoint and imports into Google Slides.
 - **All 29 Mermaid types are covered.** What each one becomes (SmartArt, Word chart or shapes), under
@@ -54,16 +54,25 @@ with Pandoc's notice; the project writes its own `reference.odt`, never Pandoc's
 2, 3, 7 and the security table now cover ODF (no operation on a Pandoc-written `.odt`; no macro,
 script, external link, DDE or linked object; style values validated).
 
-**Next: phase 1, flowcharts to `.odt`**, in order in [`TODO.md`](TODO.md) §0: `renderDiagramOdf()`;
-the project's `reference.odt` and the derived template in `packages/cli/assets/`; the ODF branch of
-the Lua filter and `-o doc.odt` in the CLI; `test:odf-validate` and `test:visual` on real CLI output.
-Done when a 10-node flowchart with subgraphs opens in LibreOffice with editable shapes and connectors.
+**Phase 1 (flowcharts to `.odt`) is done (2026-10-08).** `md2nativedocx doc.md -o doc.odt`, or
+`convert(source, { format: 'odt' })`: each flowchart becomes one group of native LibreOffice shapes
+with connectors bound to them (`renderDiagramOdf()` in `core`); every other type becomes a note and a
+warning. Pandoc writes the package with two project files (`packages/cli/assets/`, built by
+`scripts/build-odt-assets.mjs`): a `reference.odt` written by the project (a minimal one is not
+enough: LibreOffice does not supply its built-in look for a style a document cites without defining
+it) and Pandoc 3.1.3's `opendocument` template plus one loop (BSD-3, `THIRD_PARTY_NOTICES.md`). End
+criterion checked without a human: renders, `odfvalidator` zero errors, and through UNO
+(`scripts/odf-connector-check.py`) 221 connectors in the 32 flowcharts of the corpus attached on open
+and following a moved shape. Open points of phase 1 and what comes next: `TODO.md` §0 (edge-label
+placement, narrow preset text areas, no page options for `.odt`; then phase 2 measurement, the `.odt`
+export in the VS Code extension, door B). Not released: the published CLI 0.1.0 has no `.odt`.
 
 **Hold until there is something to show:** a comment on LibreOffice bug 172531 presenting the
 extension. Public communication; the maintainer agreed to wait for a first working version.
 
 V2 work comes second: only the tasks marked ▶ in `TODO.md` §2bis continue (they serve ODF too, or
-close an open security risk); the ones marked ⏸ wait for the end of ODF phase 1.
+close an open security risk); the ones marked ⏸ waited for the end of ODF phase 1, which is now
+reached: their order against ODF phase 2 is to be decided.
 
 ## What changed since the last handover (2026-10-06 → 08)
 
@@ -79,6 +88,10 @@ close an open security risk); the ones marked ⏸ wait for the end of ODF phase 
   and the `visual` CI job, which also re-runs the Markdown import check). The apt LibreOffice stays
   the visual-test renderer, so baselines did not move. 26.8 from 26.8.2 on (26.8.0 behaves the same
   on the S3 test).
+- **2026-10-08, ODF phase 1** (above). Found on the way and fixed: nine visual fixtures without a
+  trailing newline had never been converted (their baselines showed raw Mermaid text; 11 baselines
+  replaced after review); a subgraph listing its own id crashed Dagre for both formats; the CLI's
+  path check refused every relative path on Windows.
 - **2026-10-08, `reference.docx` rewritten from scratch** (maintainer's licence decision): hand-written
   parts in `packages/cli/reference-docx-src/`, assembled by `scripts/build-reference-docx.mjs`.
   Pixel-identical render, no external relationship (the old one had an unused `http://example.com`),
@@ -86,13 +99,15 @@ close an open security risk); the ones marked ⏸ wait for the end of ODF phase 
 
 ## Health (2026-10-08)
 
-- Tests: core 771, cli 139, vscode-extension 73, pptx 26, pandoc-filter 15, mcp 7, all green.
-  Typecheck and lint clean.
-- `test:visual` 68/68. `test:oxml-validate`: 0 schema errors under `word/diagrams/`; 598 elsewhere, all
-  from Pandoc's own `.docx` writer. `test:odf-validate`: the two current ODF fixtures valid.
-- CI green on Linux, macOS and Windows; the ODF validation step really validates in CI (not skipped).
-  The `visual` job runs on schedule and release branches only, so the pinned-LibreOffice install and
-  the Markdown import check have not run in CI yet: check the first scheduled run.
+- Tests: core 797, cli 150, vscode-extension 73, pptx 26, pandoc-filter 15, mcp 7, all green.
+  Typecheck and lint clean. CI green on Linux, macOS and Windows.
+- `test:visual` 100/100 (68 `.docx`/`.pptx`, 32 `.odt`). `test:oxml-validate`: 0 schema errors under
+  `word/diagrams/`; the rest from Pandoc's own `.docx` writer. `test:odf-validate`: three documents,
+  two written by the CLI, zero errors.
+- **The `visual` CI job never runs.** It is gated on `schedule` or a `release/*` branch, but `ci.yml`
+  has no `schedule:` trigger (never had one) and only runs on pushes to `main` and on pull requests,
+  so the pinned-LibreOffice install and the Markdown import check have never run in CI. Fixing it
+  touches `ci.yml`: maintainer's call (a `schedule:` cron plus `workflow_dispatch`).
 - `npm audit --omit=dev` clean; one dated audit exception (`braces`, **expires 2026-12-31**).
 
 ## Open items outside ODF
