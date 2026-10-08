@@ -132,8 +132,10 @@ suite('md2nativedocx extension host', () => {
     assert.deepEqual(items, [
       'md2nativedocx.exportDocument',
       'md2nativedocx.exportDocumentPptx',
+      'md2nativedocx.exportDocumentOdt',
       'md2nativedocx.exportBlockDocx',
       'md2nativedocx.exportBlockPptx',
+      'md2nativedocx.exportBlockOdt',
       'md2nativedocx.openSettings',
     ]);
   });
@@ -148,6 +150,21 @@ suite('md2nativedocx extension host', () => {
       const out = path.join(outDir, 'deck.pptx');
       for (let i = 0; i < 100 && !fs.existsSync(out); i++) await new Promise((r) => setTimeout(r, 250));
       assert.ok(fs.existsSync(out), 'expected deck.pptx next to the source');
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  test('exportDocumentOdt command writes a real .odt with native LibreOffice shapes', async () => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'md2nativedocx-odt-suite-'));
+    const mdCopy = path.join(outDir, 'report.md');
+    fs.copyFileSync(FIXTURE, mdCopy);
+    try {
+      // Not awaited: the command only resolves once its success toast is dismissed.
+      void vscode.commands.executeCommand('md2nativedocx.exportDocumentOdt', vscode.Uri.file(mdCopy));
+      const out = path.join(outDir, 'report.odt');
+      for (let i = 0; i < 100 && !fs.existsSync(out); i++) await new Promise((r) => setTimeout(r, 250));
+      assert.ok(fs.existsSync(out), 'expected report.odt next to the source');
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
