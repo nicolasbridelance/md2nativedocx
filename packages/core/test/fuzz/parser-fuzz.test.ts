@@ -4,6 +4,7 @@ import fc from 'fast-check';
 import { parseMermaid } from '../../src/parser/index.js';
 import { layout } from '../../src/layout/layout.js';
 import { translateToOoxml } from '../../src/translator/ooxml-translator.js';
+import { renderDiagramOdf } from '../../src/render-diagram-odf.js';
 
 /**
  * Property-based tests on the untrusted-input boundary (AGENTS.md Security
@@ -101,6 +102,31 @@ test('property: every node id in the AST has a layout box', () => {
           assert.ok(result.nodes[n.id], `missing layout box for node ${n.id}`);
           assert.ok(result.nodes[n.id]!.width > 0);
           assert.ok(result.nodes[n.id]!.height > 0);
+        }
+      },
+    ),
+    { numRuns: 200 },
+  );
+});
+
+test('property: ODF output is always well-formed XML, with no hostile markup (AGENTS.md rules 2 and 3)', () => {
+  fc.assert(
+    fc.property(
+      fc.array(fc.record({ id: nodeId, label: hostileText, edge: hostileText }), { minLength: 1, maxLength: 8 }),
+      hostileText,
+      (nodes, title) => {
+        const lines = ['graph TD', `subgraph S["${title}"]`];
+        nodes.forEach((n, i) => {
+          lines.push(`${n.id}["${n.label}"]`);
+          if (i > 0) lines.push(`${nodes[i - 1]!.id} -->|${n.edge}| ${n.id}`);
+        });
+        lines.push('end');
+        const { fragment, automaticStyles } = renderDiagramOdf(lines.join('\n'), { idPrefix: 'f' });
+        assertWellFormedXml(fragment);
+        for (const style of automaticStyles) assertWellFormedXml(style);
+        const all = fragment + automaticStyles.join('');
+        for (const element of ['office:scripts', 'event-listener', 'text:a', 'draw:a', 'draw:image', 'draw:object']) {
+          assert.ok(!all.includes(`<${element}`), element);
         }
       },
     ),

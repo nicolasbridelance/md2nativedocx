@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { parseMermaid } from '../../src/parser/index.js';
 import { layout } from '../../src/layout/layout.js';
 import { translateToOoxml } from '../../src/translator/ooxml-translator.js';
+import { renderDiagramOdf } from '../../src/render-diagram-odf.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Fixtures live in the source tree (test/golden/fixtures), not in dist-test.
@@ -52,4 +53,10 @@ test('golden: simple two-node flowchart matches fixture', () => {
     structuralEqual(xml, golden),
     `XML structure differs from golden fixture.\n--- actual ---\n${xml}\n--- golden ---\n${golden}`,
   );
+});
+
+test('golden: simple two-node flowchart as ODF matches fixture (fragment, then its automatic styles)', () => {
+  const { fragment, automaticStyles } = renderDiagramOdf('graph TD\n  A[Start] --> B[End]', { idPrefix: 'g1' });
+  const golden = readFileSync(join(fixturesDir, 'two-node.odf.xml'), 'utf8');
+  assert.equal([fragment, ...automaticStyles].join('\n') + '\n', golden);
 });

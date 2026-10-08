@@ -126,6 +126,11 @@ export type { DiagramLimit } from './layout/graph-limits.js';
 export type { RenderOptions, RenderResult, RenderMetadata, RenderedPart, SmartArtPart, ChartPart, NativeChartType } from './render-diagram.js';
 export type { ChartWorkbook } from './translator/native-chart.js';
 
+// One diagram in, one ODF drawing out, for a `.odt` (ADR 0013 decision 1, spec 05). Flowcharts for now.
+export { renderDiagramOdf, buildOdfDiagramTooLargeNote } from './render-diagram-odf.js';
+export type { OdfRenderOptions, OdfRenderResult } from './render-diagram-odf.js';
+export { ODF_STYLE_NAMES, ODF_GRAPHIC_DEFINITIONS } from './translator/odf-translator.js';
+
 // What a diagram will become in Word (SmartArt, chart, shapes), without generating it — for editor UIs.
 export { planRendering } from './rendering-plan.js';
 export type { RenderingPlan, RenderingSettings } from './rendering-plan.js';
