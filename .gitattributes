@@ -1,0 +1,6 @@
+# Sources assembled byte for byte into files handed to Pandoc: a CRLF checkout (Windows) would change
+# the rebuilt reference.odt and the derived template, and the CLI tests compare them with the committed
+# ones (packages/cli/test/odt.test.mjs).
+packages/cli/reference-odt-src/** text eol=lf
+packages/cli/reference-docx-src/** text eol=lf
+packages/cli/assets/md2nativedocx.opendocument text eol=lf
