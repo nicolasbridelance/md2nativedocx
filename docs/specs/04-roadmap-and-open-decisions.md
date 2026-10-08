@@ -7,6 +7,9 @@
 > (§1 pour ce qui revient au mainteneur, §2bis pour le chantier V2). Les notes « État connu » ajoutées
 > sous les décisions du §5 rappellent les contraintes que le projet a déjà posées ailleurs ; elles ne
 > tranchent rien.
+>
+> **2026-10-08 : nouvelle priorité 0, la cible LibreOffice / ODF** (§2 ci-dessous,
+> `docs/specs/05-libreoffice-odf-spec.md`). Elle passe avant les priorités 1 à 8, qui restent valables.
 
 ## 1. Product phases
 
@@ -49,6 +52,20 @@ After the public engine surface is stable:
 Start with a narrow Word -> semantic diff experiment before building a graphical product.
 
 ## 2. Recommended near-term sequence
+
+### Priority 0 — LibreOffice / ODF target (added 2026-10-08)
+
+Decided by the maintainer after LibreOffice 26.2 and Google Docs both shipped native Markdown in 2026
+without rendering Mermaid as editable shapes. Spec: `docs/specs/05-libreoffice-odf-spec.md`.
+
+- phase 0 reconnaissance: ODF connector behaviour in real LibreOffice, styles without package
+  post-processing, what LibreOffice 26.2 does with a Mermaid block, how a LibreOffice-side
+  integration could work, an ODF validator;
+- phase 1: `.odt` output for flowcharts, through the same Pandoc raw-block mechanism as `.docx`;
+- phase 2: the other 28 types; phase 3: LibreOffice opening a `.md` and rendering its Mermaid blocks.
+
+Priorities 1-8 below keep their order; V2 work continues where it serves this target or is already
+under way (spec 05 §8).
 
 ### Priority 1 — Real Word demo
 
@@ -260,6 +277,10 @@ Revisit when a genuinely different third target is selected, for example:
 > d'avoir son propre traducteur : c'est exactement la situation que ce point accepte (ADR 0010).
 > Google Slides passe déjà par l'import `.pptx` ; ODF est laissé aux contributeurs externes
 > (`cahier_des_charges.md` §2.1).
+>
+> **Décidé le 2026-10-08** (mainteneur) : ODF est cette troisième cible, et la priorité du projet
+> (`docs/specs/05-libreoffice-odf-spec.md`). Conformément à l'ADR 0012, le modèle neutre ne sera
+> extrait qu'à partir de ce que les traducteurs OOXML et ODF partagent réellement (spec 05 §5).
 
 ## 6. Open product decisions
 

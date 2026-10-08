@@ -8,8 +8,34 @@
 > État du produit : `HANDOVER.md`. Ce que devient chaque type Mermaid : `docs/coverage.md`. Règles et
 > escalades : `AGENTS.md`. Suite du produit (V2 moteur, V3 aller-retour) : `docs/specs/01-…`, `03-…`,
 > `04-…` et `docs/adr/0012-evolution-by-extraction.md` ; phases au §11 du cahier des charges.
+> **Priorité depuis le 2026-10-08 : la cible LibreOffice / ODF** (§0 ci-dessous,
+> `docs/specs/05-libreoffice-odf-spec.md`).
 
 ---
+
+## 0. Priorité — cible LibreOffice / ODF (phase 0, reconnaissance)
+
+Fait : S0, un `.odt` produit par Pandoc à partir d'un bloc brut `{=opendocument}`, formes et
+connecteur attaché rendus par LibreOffice (`docs/adr/spikes/spike-odf-connector/`).
+
+Mainteneur :
+
+- [ ] **S1** : ouvrir le `.odt` de S0 dans LibreOffice, déplacer une forme ; le connecteur suit-il,
+      chaque forme se sélectionne-t-elle seule ? (commande dans le `spike.md`)
+- [ ] **S3** : dans LibreOffice 26.2, ouvrir un `.md` avec un bloc Mermaid, un tableau, une formule ;
+      noter ce que chacun devient. Ou décider d'épingler 26.2 dans `.devcontainer/` et `ci.yml`.
+- [ ] Trancher les points de la spec 05 §8 au fil de l'eau (API du core, `AGENTS.md`, place de la V2).
+
+Agent :
+
+- [ ] **S2** : colorer et dimensionner les formes ODF depuis un bloc brut (styles automatiques
+      impossibles dans un bloc brut ?) ; si un post-traitement du `.odt` est nécessaire, proposer la
+      liste autorisée (amendement de la règle 7 : décision du mainteneur).
+- [ ] **S4** : lire le filtre Markdown de LibreOffice (traitement des blocs de code, info-string) et
+      lister les options d'intégration côté LibreOffice ; aucun contact public avant.
+- [ ] **S5** : choisir un validateur ODF (équivalent de `scripts/oxml-validator/`), justification de
+      dépendance de développement à l'appui.
+- [ ] Puis ADR de fin de phase 0 et début de la phase 1 (`.odt` pour les flowcharts).
 
 ## 1. En attente du mainteneur
 
@@ -41,6 +67,9 @@
       une version corrigée existe ; sinon prolonger avec motif dans `audit-exceptions.json`.
 
 ## 2bis. Chantier V2 — moteur (ADR 0012 accepté le 2026-10-07)
+
+> Depuis le 2026-10-08, passe après le §0 : poursuivre ce qui sert la cible ODF ou est déjà engagé
+> (proposition de la spec 05 §8, à confirmer par le mainteneur).
 
 Ordre de la spec 04 §2, ramené au code (détail section par section : `docs/specs/01-v2-engine-spec.md`,
 annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne changent pas d'un octet

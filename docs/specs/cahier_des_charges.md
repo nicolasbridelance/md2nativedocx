@@ -26,6 +26,11 @@ extraire ce qui existe avant d'abstraire, aucun traducteur réécrit), `docs/spe
 Thèse de travail : le goulot n'est plus la capacité technique mais son **emballage** derrière des
 interfaces que d'autres peuvent appeler sans connaître ses entrailles.
 
+**Priorité depuis le 2026-10-08 — cible LibreOffice / ODF.** LibreOffice 26.2 (février 2026) et Google
+Docs (octobre 2026) ont ajouté le Markdown natif, sans rendre Mermaid en formes éditables. Le
+mainteneur fait de la sortie ODF (`.odt`, formes `draw:` natives) la priorité, ce qui révise le §2.1 :
+`docs/specs/05-libreoffice-odf-spec.md`. La sortie `.docx` reste la sortie riche.
+
 ---
 
 ## 1. Vision et positionnement
@@ -54,7 +59,16 @@ interfaces que d'autres peuvent appeler sans connaître ses entrailles.
 
 Le principe directeur : **chaque ligne de code écrite doit concerner la traduction diagramme → OOXML, rien d'autre.** Toute tentation de "juste aussi gérer les tableaux nous-mêmes" est un signal d'alerte de dérive de scope.
 
-### 2.1 Piste ouverte aux contributeurs externes (hors roadmap de l'équipe cœur)
+### 2.1 Export ODF/ODT — priorité depuis le 2026-10-08 (décision révisée)
+
+**Décision du 2026-10-08 (mainteneur) : l'équipe cœur développe la sortie ODF, et c'est la
+priorité.** Le motif ci-dessous reste vrai pour qui ouvre le fichier dans Word ; la cible ODF vise un
+autre public, qui l'ouvre dans LibreOffice. Ce qui a changé : LibreOffice 26.2 lit le Markdown, et ni
+lui ni Google Docs ne rendent Mermaid en formes. Détail, phases et décisions ouvertes :
+`docs/specs/05-libreoffice-odf-spec.md`.
+
+Texte d'origine, conservé pour l'historique (« piste ouverte aux contributeurs externes, hors roadmap
+de l'équipe cœur ») :
 
 **Export ODF/ODT.** Techniquement peu coûteux à ajouter vu l'architecture (§5.3 isole déjà le traducteur du parseur et du layout — un second traducteur ciblant `<draw:custom-shape>`/`<draw:frame>` en plus du traducteur OOXML suffirait, sans toucher au reste du pipeline). **L'équipe cœur ne le développera pas elle-même** : le cas d'usage principal (§3) est spécifiquement centré sur Microsoft Word, et le support ODF de Word reste connu pour ses pertes de fidélité à l'import — packager du natif via ODT réintroduirait justement le risque que ce projet existe pour éliminer côté OOXML. Ceci dit, la demande (secteur public européen, organisations LibreOffice-first) est réelle et légitime pour qui cible cet écosystème directement plutôt que Word. Documenté ici comme point d'extension propre pour quiconque veut s'en emparer — licence CC0 (§13), aucune permission à demander.
 
@@ -313,6 +327,7 @@ Hors scope (non reconnu par le parseur) : modificateurs de longueur (`---->`) �
 | **Phase 5+ — Autres types de diagrammes** | 28 types Mermaid restants, **tous livrés au 2026-10-02** (sequenceDiagram, classDiagram, pie, gantt, mindmap, etc.) — taxonomie par famille de rendu, prérequis architectural et priorisation proposée dans `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` (2026-09-04) | Piloté par les retours communauté post-launch |
 | **V2 — Moteur** (proposé 2026-10-07, pas commencé) | Extraire ce qui existe, sans réécrire de traducteur (ADR 0012) : `renderDiagram()` dans `core` (aujourd'hui un `if/else` sur 29 types dans le pont JS du filtre Pandoc), puis `convert()` hors de `core` (Pandoc + post-traitement), options et erreurs typées, CLI réduit à un adaptateur, codes de sortie documentés, limites de ressources, Pandoc testé comme contrat, corpus Word vérifié systématisé. Puis adaptateurs minces : SDK Node, MCP, Quarto. Détail : `docs/specs/01-v2-engine-spec.md` (annexe A : état du code par section) | Spec 01 §18 (11 critères) ; PlantUML, draw.io, Visio et WYSIWYG explicitement exclus |
 | **V2 — Sondes** (après le moteur) | Un PlantUML étroit (type flowchart) et un import draw.io étroit, pour découvrir ce qu'un second langage source ou un modèle de présentation explicite exige du moteur. Aucune abstraction créée avant ces preuves | Un compte rendu d'architecture ; « pas d'abstraction commune utile » est un résultat valide |
+| **Cible LibreOffice / ODF** (priorité depuis le 2026-10-08) | Phase 0 reconnaissance (connecteur ODF, styles, import Markdown de LibreOffice 26.2, piste d'intégration dans LibreOffice, validateur ODF) ; phase 1 `.odt` pour les flowcharts par le même mécanisme que le `.docx` (`RawBlock('opendocument')`, Pandoc assemble) ; phase 2 les 28 autres types ; phase 3 LibreOffice qui ouvre un `.md` et rend ses blocs Mermaid. Détail : `docs/specs/05-libreoffice-odf-spec.md` | Phase 1 : un flowchart de 10 nœuds avec sous-graphes, ouvert dans LibreOffice, formes et connecteurs éditables |
 | **V3 — Édition humaine et aller-retour** (vision) | V3.0 spike : flowcharts/SmartArt générés, retouchés dans un vrai Word, ce qui survit (ids, connecteurs, points SmartArt). V3.1 modèle d'opérations, V3.2 réconciliation par LLM, V3.3 éditeur minimal (diagrams.net d'abord), V3.4 hôte VS Code. Détail : `docs/specs/03-v3-human-editing-roundtrip-spec.md` | La boucle Mermaid → Word → retouche → diff → LLM → Mermaid révisé fonctionne de façon fiable sur un domaine étroit |
 
 Séquence et décisions ouvertes (emplacement de `convert()`, stockage des ids, modèle Pandoc, Quarto,

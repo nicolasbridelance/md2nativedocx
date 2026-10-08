@@ -59,6 +59,22 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 - **Extension 0.7.0 published** (tag `vscode-v0.7.0`): the SmartArt additions above, the new
   Marketplace description, the drawing setting removed, a smaller `.vsix`.
 
+## Priority since 2026-10-08: LibreOffice / ODF
+
+LibreOffice 26.2 (February 2026) and Google Docs (October 2026) both shipped native Markdown, and
+neither renders Mermaid as editable shapes. The maintainer made an ODF output (`.odt`, native `draw:`
+shapes and attached connectors) the project's priority, reversing `cahier_des_charges.md` §2.1, which
+had left ODF to external contributors. Google itself is out of reach for now (proprietary internal
+format, no shape primitive in the Docs API); Slides stays reachable through `.pptx` import.
+
+- Spec, phases and the decisions left to the maintainer:
+  [`docs/specs/05-libreoffice-odf-spec.md`](docs/specs/05-libreoffice-odf-spec.md).
+- Phase 0 (reconnaissance) under way: S0 showed that Pandoc copies a raw `{=opendocument}` block into
+  an `.odt` and that LibreOffice draws the shapes with the connector attached
+  ([`docs/adr/spikes/spike-odf-connector/`](docs/adr/spikes/spike-odf-connector/spike.md)). Next steps
+  are in `TODO.md` §0.
+- V2 work (below) now comes second; spec 05 §8 proposes continuing it where it serves ODF.
+
 ## Direction after V1 (decided 2026-10-07)
 
 Four documents propose what comes after the current product, and are now wired into the roadmap
@@ -90,7 +106,8 @@ options, parts → files); its output was checked byte-identical on 255 corpus s
 
 ## What's next
 
-Everything open is in [`TODO.md`](TODO.md), in five sections:
+Everything open is in [`TODO.md`](TODO.md). Since 2026-10-08 its §0, the LibreOffice / ODF phase 0,
+comes first; the five sections below follow (written 2026-10-06, some items have moved since):
 
 1. **Maintainer:** install 0.7.0 on the corporate Windows machine and export a mixed document (the new
    defaults change existing users' output); decide on Venn as SmartArt; npm token; review a one-line
@@ -124,6 +141,7 @@ Everything open is in [`TODO.md`](TODO.md), in five sections:
 | What each Mermaid type becomes | `docs/coverage.md` |
 | Rules, conventions, escalation | `AGENTS.md`, `TESTING.md` |
 | Product intent (French) | `docs/specs/cahier_des_charges.md` |
+| Current priority (LibreOffice / ODF) | `docs/specs/05-libreoffice-odf-spec.md` |
 | What comes after V1 | `docs/specs/01-v2-engine-spec.md`, `03-v3-…`, `04-roadmap-…`, ADR 0012 |
 | Decisions | `docs/adr/` (0006 SmartArt corruption, 0010 pptx, 0011 charts, 0012 evolution by extraction) |
 | Real-Word verification log | `test-corpus/word-verification/CHECKLIST.md` |
