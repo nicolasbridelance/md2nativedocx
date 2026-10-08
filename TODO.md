@@ -18,17 +18,19 @@
 Fait : S0, un `.odt` produit par Pandoc à partir d'un bloc brut `{=opendocument}`, formes et
 connecteur attaché rendus par LibreOffice ; S1, le connecteur suit la forme déplacée (par l'API UNO,
 sans fenêtre) (`docs/adr/spikes/spike-odf-connector/`) ; S3, l'import Markdown de LibreOffice 26.2
-perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-odf-markdown-import/`).
+perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-odf-markdown-import/`) ;
+S2, couleurs, tailles et flèches sans post-traitement du `.odt` (gabarit Pandoc dérivé, styles
+déclarés par le filtre, diagramme dans un `draw:g` ancré comme caractère :
+`docs/adr/spikes/spike-odf-styles/`).
 
 Mainteneur :
 
-- [ ] Trancher les points de la spec 05 §8 au fil de l'eau (API du core, `AGENTS.md`, place de la V2).
+- [ ] Trancher les points restants de la spec 05 §8 : API du core, `AGENTS.md` (règle 7 : citer le
+      gabarit `opendocument` dérivé et le `reference.odt` ; interdits ODF du §7), licence des deux
+      fichiers fournis à Pandoc (S2).
 
 Agent :
 
-- [ ] **S2** : colorer et dimensionner les formes ODF depuis un bloc brut (styles automatiques
-      impossibles dans un bloc brut ?) ; si un post-traitement du `.odt` est nécessaire, proposer la
-      liste autorisée (amendement de la règle 7 : décision du mainteneur).
 - [ ] **S4** : lire le filtre Markdown de LibreOffice (traitement des blocs de code, info-string) et
       lister les options d'intégration côté LibreOffice ; aucun contact public avant.
 - [ ] **S5** : choisir un validateur ODF (équivalent de `scripts/oxml-validator/`), justification de

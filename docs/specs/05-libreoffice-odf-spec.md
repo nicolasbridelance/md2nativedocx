@@ -1,7 +1,7 @@
 # Cahier des charges — Cible LibreOffice / ODF
 
 > **Statut au 2026-10-08 : priorité du projet** (décision du mainteneur). Phase 0 (reconnaissance)
-> commencée : S0, S1 et S3 faits. Rien n'est encore livré.
+> commencée : S0 à S3 faits. Rien n'est encore livré.
 > Révise `docs/specs/cahier_des_charges.md` §2.1, qui laissait ODF aux contributeurs externes.
 
 ## 1. Contexte et décision
@@ -68,12 +68,12 @@ promis publiquement (ni aux développeurs LibreOffice) avant.
 
 | Concept | OOXML (existant) | ODF (cible) | Point d'attention |
 |---|---|---|---|
-| Groupe du diagramme | `wpg:wgp` dans `w:drawing` | `draw:g`, ou formes ancrées au paragraphe | Ancrage et habillage à choisir dans S1 |
+| Groupe du diagramme | `wpg:wgp` dans `w:drawing` | `draw:g` ancré comme caractère (`as-char`) | **Tranché par S2** : formes ancrées une à une au paragraphe, le connecteur se détache à l'ouverture |
 | Forme | `wps:wsp` + `a:prstGeom` | `draw:custom-shape` + `draw:enhanced-geometry draw:type="…"` | Table des géométries prédéfinies (rectangle, losange, ellipse, …) à établir |
 | Connecteur attaché | `stCxn` / `endCxn` (`id`, `idx`) | `draw:connector` + `draw:start-shape` / `draw:end-shape` (référence à `draw:id` / `xml:id`) + `draw:start-glue-point` | Points standard : 0 haut, 1 droite, 2 bas, 3 gauche ; ce n'est pas la numérotation OOXML |
 | Unités | EMU | Longueurs avec unité (`cm`, `in`) | Conversion simple |
 | Texte | `a:t` | `text:p` / `text:span` | Même échappement XML |
-| Couleurs, traits | Propriétés en ligne (`a:solidFill`, `a:ln`) | **Styles** (`draw:style-name` → `office:automatic-styles`) | Un bloc brut ne peut pas déclarer de style automatique : **probable besoin de post-traitement** du `content.xml` (S2) |
+| Couleurs, traits | Propriétés en ligne (`a:solidFill`, `a:ln`) | **Styles** (`draw:style-name` → `office:automatic-styles`) | **Tranché par S2** : pas de post-traitement. Le filtre déclare les styles par une variable d'un gabarit `opendocument` dérivé de celui de Pandoc ; les flèches (`draw:marker`) vivent dans le `reference.odt` |
 | Graphique Word (`pie`, `xychart`, `radar`) | `c:chart` + classeur embarqué (ADR 0011) | Objet graphique ODF (`chart:chart` dans un sous-document) | À évaluer en phase 2 |
 | SmartArt | `dgm:` + dessin de secours | **Aucun équivalent** | Sortie en formes, comme le dessin de secours |
 
@@ -105,8 +105,10 @@ l'ADR 0012 attendaient avant toute abstraction : `.pptx` réutilise le DrawingML
   deux formes et un connecteur attaché, rendu correct dans LibreOffice 24.2.
 - **S1 (fait, 2026-10-08).** Forme déplacée par l'API UNO dans LibreOffice 24.2 sans fenêtre : le
   connecteur suit et reste attaché, y compris après enregistrement ; les trois objets sont distincts.
-- **S2.** Styles : peut-on colorer les formes sans post-traitement du paquet ? Sinon, définir la liste
-  autorisée des opérations sur le `.odt` (amendement de la règle 7, décision du mainteneur).
+- **S2 (fait, 2026-10-08).** Couleurs, hauteur, texte centré et flèches sans post-traitement du
+  paquet : gabarit `opendocument` dérivé avec une variable dans `office:automatic-styles`, remplie
+  par le filtre ; `draw:marker` dans le `reference.odt` ; diagramme dans un `draw:g` ancré comme
+  caractère (`docs/adr/spikes/spike-odf-styles/`).
 - **S3 (fait, 2026-10-08).** LibreOffice 26.2.6 officiel, extrait dans le Codespace sans toucher à
   `.devcontainer/` : le bloc Mermaid devient du texte préformaté sans son info-string, les tableaux
   passent, les maths restent du texte altéré. La porte B passe donc par le filtre lui-même (S4).
@@ -145,8 +147,10 @@ Ces interdictions sont à ajouter au tableau de sécurité d'`AGENTS.md` au mome
 
 1. **API publique du core** : comment exposer la sortie ODF (nouvelle fonction de traduction, ou
    option de format dans `renderDiagram()`). À trancher au début de la phase 1.
-2. **`AGENTS.md`** : extension de la règle 7 au paquet `.odt` si S2 montre qu'un post-traitement est
-   nécessaire ; mise à jour de la ligne « Zip bomb » du tableau de sécurité, qui cite encore le §2.1
+2. **`AGENTS.md`** : S2 montre qu'aucun post-traitement du `.odt` n'est nécessaire ; la règle 7 doit
+   seulement citer les deux fichiers fournis à Pandoc (gabarit `opendocument` dérivé, `reference.odt`),
+   dont la licence est aussi à trancher (gabarits Pandoc : GPL-2+ ou BSD-3 ; `reference.odt` : GPL-2+,
+   ou le nôtre fait dans LibreOffice) ; mise à jour de la ligne « Zip bomb » du tableau de sécurité, qui cite encore le §2.1
    comme piste de contributeurs ; interdictions du §7.
 3. **Environnement : décidé le 2026-10-08.** LibreOffice 26.2.6 épinglé (version et SHA-256) dans
    `scripts/install-libreoffice-pinned.sh`, appelé par `.devcontainer/setup.sh` et par le job
