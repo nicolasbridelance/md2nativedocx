@@ -26,6 +26,25 @@ soffice --headless --convert-to png s0.odt
   premier essai avec des noms a été recopié par Pandoc sans erreur : Pandoc ne valide rien, donc une
   référence fausse ne se voit qu'au rendu (ce premier essai n'a pas été rendu).
 
-**Non vérifié (S1).** Que le connecteur suive la forme quand on la déplace dans LibreOffice, et que
-chaque forme soit sélectionnable seule. Demande une interface graphique : ouvrir `s0.odt` dans
-LibreOffice et déplacer B.
+## S1 — le connecteur suit-il la forme ? (2026-10-08)
+
+Fait par l'agent, sans interface graphique : `move-b.py` pilote LibreOffice 24.2.7.2 sans fenêtre
+par l'API UNO (`python3-uno` du système), ouvre `s0.odt`, descend B de 3 cm, enregistre `s1.odt`.
+
+```bash
+pandoc docs/adr/spikes/spike-odf-connector/source.md -o s0.odt
+/usr/bin/python3 -I docs/adr/spikes/spike-odf-connector/move-b.py s0.odt s1.odt
+soffice --headless --convert-to png s1.odt
+```
+
+**Résultats.**
+
+- La page de dessin contient trois objets distincts (A, B, le connecteur), non groupés : chaque
+  forme est un objet à part, donc sélectionnable seule.
+- Après le déplacement, le connecteur reste attaché (`StartShape=A@1`, `EndShape=B@3`) et son
+  extrémité descend de 3 cm avec B ; LibreOffice le réachemine en coude (`s1-after-move.png`).
+- L'attache survit à l'enregistrement : dans `s1.odt`, LibreOffice a renommé les ids (`id1`, `id2`)
+  et le connecteur pointe vers les nouveaux, avec un tracé `svg:d` recalculé.
+- Limite : un déplacement par l'API n'est pas un glisser à la souris. Le recalcul se fait dans le
+  modèle, le même que celui de l'interface, mais l'affichage à l'écran n'a pas été vu. Un essai à la
+  souris par le mainteneur confirmerait en 30 secondes ; il n'est plus bloquant.

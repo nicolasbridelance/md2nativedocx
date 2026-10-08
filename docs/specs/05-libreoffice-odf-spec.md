@@ -1,7 +1,7 @@
 # Cahier des charges — Cible LibreOffice / ODF
 
 > **Statut au 2026-10-08 : priorité du projet** (décision du mainteneur). Phase 0 (reconnaissance)
-> commencée : S0 fait, S1 à faire dans un vrai LibreOffice. Rien n'est encore livré.
+> commencée : S0 et S1 faits. Rien n'est encore livré.
 > Révise `docs/specs/cahier_des_charges.md` §2.1, qui laissait ODF aux contributeurs externes.
 
 ## 1. Contexte et décision
@@ -43,7 +43,7 @@ sécurité s'appliquent à l'ODF (§7).
 | Ce que devient un bloc ```` ```mermaid ```` à l'import LibreOffice | **Inconnu** (probablement un bloc de code) | — |
 | Pandoc 3.1.3 transmet tel quel un bloc brut `{=opendocument}` dans un `.odt` | **Vérifié** 2026-10-08 | S0, `docs/adr/spikes/spike-odf-connector/` |
 | LibreOffice 24.2 affiche `draw:custom-shape` et `draw:connector` attaché aux deux formes (par `draw:id`, points de collage) dans ce `.odt` | **Vérifié au rendu** 2026-10-08 | S0 |
-| Le connecteur suit la forme quand on la déplace dans LibreOffice | **Non vérifié** (demande une manipulation à la main) | S1 |
+| Le connecteur suit la forme quand on la déplace dans LibreOffice | **Vérifié par l'API UNO** 2026-10-08 (déplacement scripté, enregistrement, rendu) ; glisser à la souris non vu | S1 |
 | Le Codespace a LibreOffice 24.2, antérieur au Markdown | Vérifié | `soffice --version` |
 
 ## 3. Deux portes d'entrée
@@ -103,9 +103,8 @@ l'ADR 0012 attendaient avant toute abstraction : `.pptx` réutilise le DrawingML
 
 - **S0 (fait, 2026-10-08).** Un `.odt` produit par Pandoc à partir d'un bloc brut `{=opendocument}` :
   deux formes et un connecteur attaché, rendu correct dans LibreOffice 24.2.
-- **S1.** Ouvrir le `.odt` de S0 dans un vrai LibreOffice et déplacer une forme : le connecteur
-  suit-il ? Les formes sont-elles sélectionnables une à une ? Demande une interface graphique
-  (mainteneur).
+- **S1 (fait, 2026-10-08).** Forme déplacée par l'API UNO dans LibreOffice 24.2 sans fenêtre : le
+  connecteur suit et reste attaché, y compris après enregistrement ; les trois objets sont distincts.
 - **S2.** Styles : peut-on colorer les formes sans post-traitement du paquet ? Sinon, définir la liste
   autorisée des opérations sur le `.odt` (amendement de la règle 7, décision du mainteneur).
 - **S3.** LibreOffice 26.2 : ce que devient un `.md` avec Mermaid, tableaux, maths. Sur le poste du

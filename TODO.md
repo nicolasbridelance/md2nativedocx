@@ -16,12 +16,11 @@
 ## 0. Priorité — cible LibreOffice / ODF (phase 0, reconnaissance)
 
 Fait : S0, un `.odt` produit par Pandoc à partir d'un bloc brut `{=opendocument}`, formes et
-connecteur attaché rendus par LibreOffice (`docs/adr/spikes/spike-odf-connector/`).
+connecteur attaché rendus par LibreOffice ; S1, le connecteur suit la forme déplacée (par l'API UNO,
+sans fenêtre) (`docs/adr/spikes/spike-odf-connector/`).
 
 Mainteneur :
 
-- [ ] **S1** : ouvrir le `.odt` de S0 dans LibreOffice, déplacer une forme ; le connecteur suit-il,
-      chaque forme se sélectionne-t-elle seule ? (commande dans le `spike.md`)
 - [ ] **S3** : dans LibreOffice 26.2, ouvrir un `.md` avec un bloc Mermaid, un tableau, une formule ;
       noter ce que chacun devient. Ou décider d'épingler 26.2 dans `.devcontainer/` et `ci.yml`.
 - [ ] Trancher les points de la spec 05 §8 au fil de l'eau (API du core, `AGENTS.md`, place de la V2).
