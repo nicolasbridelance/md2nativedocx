@@ -18,20 +18,39 @@
 Phase 0 terminée le 2026-10-08 : spikes S0 à S5 sous `docs/adr/spikes/spike-odf-*`, conclusions et
 décisions (API, licences, règles) dans `docs/adr/0013-odf-output-phase-0.md`.
 
-Agent, dans l'ordre :
+**Phase 1 terminée le 2026-10-08** (critère de fin de la spec 05 §6 vérifié sans intervention humaine :
+rendu LibreOffice, validateur ODF, et par UNO 221 connecteurs attachés sur les 32 flowcharts du corpus,
+qui suivent leur forme déplacée) :
 
-- [ ] `renderDiagramOdf()` dans le core pour les flowcharts (formes, connecteurs attachés, sous-graphes,
-      styles `classDef`/`style` validés, `idPrefix`), avec tests unitaires, golden et cas d'injection.
-- [ ] `reference.odt` du projet (écrit à la main, flèches `draw:marker`) et gabarit `opendocument`
-      dérivé dans `packages/cli/assets/`, notice BSD-3 de Pandoc dans un `THIRD_PARTY_NOTICES.md` ;
-      vérifier que Pandoc s'en contente pour titres, code et tableaux.
-- [ ] Branche ODF du filtre Lua et `-o doc.odt` dans le CLI.
-- [ ] `test:odf-validate` et `test:visual` sur la sortie réelle du CLI.
-- [ ] Critère de fin (spec 05 §6) : un flowchart de 10 nœuds avec sous-graphes, ouvert dans
-      LibreOffice, formes et connecteurs éditables.
+- [x] `renderDiagramOdf()` dans le core (formes, connecteurs attachés, sous-graphes, styles
+      `classDef`/`style`/`linkStyle` validés, `idPrefix`), tests unitaires, golden, injection, fuzz.
+- [x] `reference.odt` écrit par le projet (`packages/cli/reference-odt-src/`) et gabarit `opendocument`
+      dérivé dans `packages/cli/assets/` (`scripts/build-odt-assets.mjs`), notice BSD-3 dans
+      `packages/cli/THIRD_PARTY_NOTICES.md`. Pandoc ne s'en contente **pas** avec un `styles.xml`
+      minimal (LibreOffice ne fournit pas ses styles intégrés à un document qui les cite sans les
+      définir) : chaque style utilisé par Pandoc y est écrit.
+- [x] Branche ODF du filtre Lua et du pont (`--odf <prefix>`, JSON), `-o doc.odt` dans le CLI,
+      `convert({ format: 'odt' })`.
+- [x] `test:odf-validate` et `test:visual` (suite `baseline-odt/`, 32 flowcharts) sur la sortie réelle
+      du CLI ; contrôle des connecteurs `scripts/odf-connector-check.py`.
 
-Plus tard : porte B (extension LibreOffice, spike S4). Présentation sur le bug 172531 seulement avec
-une première version montrable.
+Limites connues de la phase 1, à reprendre :
+
+- [ ] Étiquettes d'arêtes : texte du connecteur, que LibreOffice place près du départ du tracé et non
+      au milieu (deux étiquettes d'un même losange se touchent). Piste : une zone de texte au milieu
+      du tracé de Dagre, comme la sortie `.docx`, au prix du suivi au déplacement.
+- [ ] Formes prédéfinies à zone de texte étroite (triangle, accolades, `das`, sous-routine) : le texte
+      se coupe au milieu des mots.
+- [ ] Les options de page et de typographie ne s'appliquent pas au `.odt` (A4, marges 2,54 cm).
+- [ ] Pandoc 3.1.3 écrit un `abstract` hors paragraphe (invalide, aussi avec son propre gabarit).
+
+Ensuite, dans l'ordre :
+
+- [ ] Phase 2 (spec 05 §5-§6) : mesurer la voie 1 (conversion du fragment OOXML en ODF) sur trois types
+      variés avant d'étendre aux 28 autres types.
+- [ ] Export `.odt` dans l'extension VS Code (elle n'embarque aujourd'hui que le `reference.docx`).
+- [ ] Porte B (extension LibreOffice, spike S4). Présentation sur le bug 172531 seulement avec une
+      première version montrable.
 
 ## 1. En attente du mainteneur
 

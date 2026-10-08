@@ -3,7 +3,9 @@
  * Visual regression tests (spec §9): render each fixture in
  * `test-corpus/visual/fixtures/` to a `.docx` through the real CLI, convert it
  * to PNG with LibreOffice headless, and pixel-diff it against the checked-in
- * baseline in `test-corpus/visual/baseline/`.
+ * baseline in `test-corpus/visual/baseline/`. A spread of fixtures is also
+ * rendered as `.pptx` (`baseline-pptx/`), and every flowchart as `.odt`
+ * (`baseline-odt/`).
  *
  * This exists because structural XML conformance (the other test suites) does
  * not catch actual rendering defects: several of the connector-geometry bugs
@@ -38,6 +40,14 @@ const SHAPES_ONLY_ENV = { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD
 const fixturesDir = join(repoRoot, 'test-corpus', 'visual', 'fixtures');
 const baselineDir = join(repoRoot, 'test-corpus', 'visual', 'baseline');
 const pptxBaselineDir = join(repoRoot, 'test-corpus', 'visual', 'baseline-pptx');
+const odtBaselineDir = join(repoRoot, 'test-corpus', 'visual', 'baseline-odt');
+
+/** Fixtures also rendered as a .odt (ADR 0013): every flowchart, the only type the .odt output draws so
+ * far. Recognised by their first line, as `detectDiagramType()` does. */
+function isFlowchart(mmdPath) {
+  const first = readFileSync(mmdPath, 'utf8').split('\n').find((line) => line.trim() !== '' && !line.trim().startsWith('%%')) ?? '';
+  return /^\s*(graph|flowchart)\b/.test(first);
+}
 
 /** Fixtures also rendered as a .pptx slide (first slide -> PNG): a representative spread of the
  * rewrite paths in packages/pptx (flat flowchart, subgraph boxes, custom geometry, text-heavy
@@ -122,6 +132,12 @@ function main() {
         fixtures: PPTX_FIXTURES.map((n) => `${n}.mmd`).filter((f) => fixtures.includes(f)),
         format: 'pptx',
         baselineDir: pptxBaselineDir,
+      },
+      {
+        label: 'odt ',
+        fixtures: fixtures.filter((f) => isFlowchart(join(fixturesDir, f))),
+        format: 'odt',
+        baselineDir: odtBaselineDir,
       },
     ];
     for (const suite of suites) {

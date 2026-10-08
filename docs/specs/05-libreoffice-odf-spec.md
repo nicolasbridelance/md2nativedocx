@@ -1,7 +1,8 @@
 # Cahier des charges — Cible LibreOffice / ODF
 
 > **Statut au 2026-10-08 : priorité du projet** (décision du mainteneur). Phase 0 (reconnaissance)
-> terminée (S0 à S5, ADR 0013). Phase 1 à commencer. Rien n'est encore livré.
+> terminée (S0 à S5, ADR 0013). **Phase 1 terminée** : `md2nativedocx doc.md -o doc.odt` dessine les
+> flowcharts en formes et connecteurs LibreOffice natifs ; les autres types deviennent une note.
 > Révise `docs/specs/cahier_des_charges.md` §2.1, qui laissait ODF aux contributeurs externes.
 
 ## 1. Contexte et décision
@@ -128,7 +129,7 @@ l'ADR 0012 attendaient avant toute abstraction : `.pptx` réutilise le DrawingML
   Son ajout au dépôt (`test:odf-validate`) attend l'accord du mainteneur, règle 6
   (`docs/adr/spikes/spike-odf-validator/`).
 
-**Phase 1 — `.odt` pour les flowcharts.** CLI `-o doc.odt`, tests golden ODF, `test:visual` étendu à
+**Phase 1 — `.odt` pour les flowcharts (terminée le 2026-10-08, détail et limites dans `TODO.md` §0).** CLI `-o doc.odt`, tests golden ODF, `test:visual` étendu à
 Writer en `.odt`, validateur de S5. Critère de fin : un flowchart de 10 nœuds avec sous-graphes,
 ouvert dans LibreOffice, formes et connecteurs éditables (même critère que la phase 0 historique du
 `.docx`).

@@ -88,6 +88,12 @@ tests in real Word before each release).
 adding a case in its own `test-corpus/visual/README.md`. Mechanism: `scripts/test-visual.mjs` +
 `scripts/lib/png.mjs` (in-house PNG decoder/diff, zero dependency).
 
+Three suites: every fixture as `.docx` (`baseline/`), a spread as `.pptx` (`baseline-pptx/`), and
+every flowchart as `.odt` (`baseline-odt/`, since 2026-10-08; the only type the `.odt` output draws
+so far). The `.odt` renders say nothing about connector attachment, which a static image cannot
+show: `scripts/odf-connector-check.py` checks that through UNO (every connector bound on open, and
+still on its glue point after its shape is moved).
+
 **Known blind spot, not a bug in this chapter itself**: LibreOffice never dynamically resolves a
 SmartArt `layoutDef`'s own `forEach`/`presOf` queries — it only ever displays whatever static
 presentation mirror `packages/core/src/smartart/{chain,tree,cycle}.ts` hand-authored into the data
@@ -126,10 +132,11 @@ printed for visibility, never failed on. The bundled `reference.docx`, rewritten
 `odfvalidator` (Apache-2.0, the validator behind odfvalidator.org; jar fetched from Maven Central
 into `~/.cache/md2nativedocx/` and checked against a pinned SHA-256). Every document must have
 **zero** errors: a plain Pandoc `.odt` validates cleanly, so there is no inherited noise. Requires
-Java and Pandoc; skips with exit 0 without them. Until the CLI writes `.odt` (phase 1 of
-`docs/specs/05-libreoffice-odf-spec.md`), the fixtures are a plain Pandoc document and the S2
-diagram spike; its first run found a required `svg:viewBox` missing from our `draw:connector`
-(`docs/adr/spikes/spike-odf-validator/`). **Adding a case**: extend `buildFixtures()`.
+Java and Pandoc; skips with exit 0 without them. Fixtures: a plain Pandoc document, and two written
+by the real CLI (`-o doc.odt`): one using every style Pandoc's ODT writer refers to, one holding
+every flowchart of the visual corpus. Its first run (on a spike) found a required `svg:viewBox`
+missing from our `draw:connector` (`docs/adr/spikes/spike-odf-validator/`). **Adding a case**:
+extend `buildFixtures()`.
 
 ## 6. Native Word comparison
 

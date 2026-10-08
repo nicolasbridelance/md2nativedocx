@@ -13,8 +13,8 @@
  * Every document must have zero errors: unlike Pandoc's `.docx`, a plain Pandoc `.odt` validates
  * cleanly, so there is no inherited noise to tolerate.
  *
- * Fixtures, until the CLI writes `.odt` (phase 1 of docs/specs/05-libreoffice-odf-spec.md): a plain
- * Pandoc document, and the S2 diagram spike (`docs/adr/spikes/spike-odf-styles/build.sh`).
+ * Fixtures: a plain Pandoc document, and two documents written by the real CLI (`-o doc.odt`): one using
+ * every style Pandoc's ODT writer refers to, one holding every flowchart of the visual corpus.
  *
  * Requires Java (`java` on PATH) and Pandoc; skips with exit 0 when either is missing, same
  * convention as `test-oxml-validate.mjs` without .NET.
@@ -22,7 +22,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, renameSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,18 +69,46 @@ async function ensureValidatorJar() {
   return jar;
 }
 
+/** Markdown using every style Pandoc's ODT writer refers to (no `abstract`: Pandoc 3.1.3 writes it as
+ * bare text outside a paragraph, invalid with its own reference.odt too, packages/cli/assets/README.md). */
+const ALL_STYLES_MD = [
+  '---', 'title: Title', 'subtitle: Subtitle', 'author: Author', 'date: 2026-10-08', '---', '',
+  '# Heading 1', '', 'Text with **strong**, *emphasis*, `code`, a [link](#heading-2) and a note.[^1]', '',
+  '## Heading 2', '', '> A quotation.', '', '### Heading 3', '', '- bullet', '  1. numbered', '',
+  '#### Heading 4', '', '```python', 'def f(x):', '    return x', '```', '',
+  '| Left | Right |', '|:-----|------:|', '| a | 1 |', '', ': Caption', '',
+  'Term', ':   Definition.', '', '[^1]: The note.', '',
+].join('\n');
+
+/** Every flowchart of the visual corpus in one document, rendered by the real CLI. */
+function flowchartCorpusMd() {
+  const dir = join(repoRoot, 'test-corpus', 'visual', 'fixtures');
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.mmd'))
+    .sort()
+    .map((f) => ({ f, src: readFileSync(join(dir, f), 'utf8') }))
+    .filter(({ src }) => /^\s*(graph|flowchart)\b/.test(src.split('\n').find((l) => l.trim() && !l.trim().startsWith('%%')) ?? ''))
+    .map(({ f, src }) => `## ${f}\n\n\`\`\`mermaid\n${src.endsWith('\n') ? src : `${src}\n`}\`\`\`\n`)
+    .join('\n');
+}
+
 function buildFixtures(workDir) {
   const plainMd = join(workDir, 'plain.md');
   writeFileSync(plainMd, '# Plain\n\nA paragraph, a list and a table.\n\n- one\n- two\n\n| a | b |\n|---|---|\n| 1 | 2 |\n');
   const plain = join(workDir, 'plain.odt');
   execFileSync('pandoc', [plainMd, '-o', plain], { stdio: 'pipe' });
 
-  const s2Dir = join(workDir, 's2');
-  execFileSync('bash', [join(repoRoot, 'docs/adr/spikes/spike-odf-styles/build.sh'), s2Dir], { stdio: 'pipe' });
+  const cli = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
+  const viaCli = (name, markdown) => {
+    writeFileSync(join(workDir, `${name}.md`), markdown);
+    execFileSync(process.execPath, [cli, `${name}.md`, '-o', `${name}.odt`], { cwd: workDir, stdio: 'pipe' });
+    return join(workDir, `${name}.odt`);
+  };
 
   return [
     { name: 'plain Pandoc document', path: plain },
-    { name: 'S2 diagram spike (shapes, connector, styles)', path: join(s2Dir, 's2.odt') },
+    { name: 'CLI: every Pandoc style, bundled reference.odt and template', path: viaCli('styles', ALL_STYLES_MD) },
+    { name: 'CLI: every flowchart of the visual corpus', path: viaCli('flowcharts', flowchartCorpusMd()) },
   ];
 }
 
