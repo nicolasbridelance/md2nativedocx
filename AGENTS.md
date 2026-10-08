@@ -22,11 +22,18 @@ Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or s
    generated on someone else's behalf, which this project cannot assume is well-formed. Any of
    `& < > " '` in that text MUST be converted to XML entities before being written into an `<a:t>`
    run or any other XML fragment. No exceptions, no "it's probably fine for a diagram label."
+   Values that end up in a style or attribute (colours from a Mermaid `style` or `classDef`, in
+   OOXML or in an ODF `style:style`) are untrusted too: validated against a strict colour pattern
+   before they enter the XML, as `hexColor()` in `ooxml-translator.ts` already does.
 3. **Never emit an external OOXML relationship.** No `TargetMode="External"`, no remote template
    reference, no URL a `.docx` produced by this project could ever be made to fetch. CVE-2022-30190
    ("Follina") showed exactly this packaging feature being used as a delivery mechanism for RCE.
    This project only emits self-contained, internal drawing XML — that's a hard constraint on the
-   translator's output, not a style preference.
+   translator's output, not a style preference. The same holds for ODF (ADR 0013): the ODF
+   translator never emits a macro or script (`office:scripts`, `office:event-listeners`,
+   `script:event-listener`), a hyperlink or `xlink:href` to a URL (`text:a`, `draw:a`, `draw:image`,
+   `draw:object`, `draw:plugin`, `draw:applet`, `draw:floating-frame`), a DDE source
+   (`office:dde-source`), or any object linked outside the package.
 4. **Never build a subprocess command by string-concatenating input.** The Pandoc bridge (§5.4.a of
    the spec) must invoke Pandoc via `execFile`/`spawn` with an argument array, never via a shell
    string that interpolates a file path or diagram text.
@@ -53,6 +60,12 @@ Operating instructions for any AI coding agent (Claude Code, Cursor, Codex, or s
    pipeline** (the V3 round-trip) stays forbidden until a separate decision adds decompressed-size
    and ratio caps (zip bomb row of the Security table). The `.pptx` package is assembled by
    `packages/pptx` itself under ADR 0010; the same "no `External`" rule applies there.
+
+   **ODF (`.odt`, ADR 0013):** Pandoc writes the package and **no** operation is allowed on an `.odt`
+   Pandoc produced. The only project files handed to Pandoc are the derived `opendocument` template
+   (its one difference from Pandoc's: a variable inside `office:automatic-styles` for the diagram
+   styles) and the project's own `reference.odt` (arrow `draw:marker` definitions; never Pandoc's
+   `reference.odt`). Anything beyond that is an escalation.
 
 ---
 
@@ -254,9 +267,10 @@ checklist tacked on at the end, it's load-bearing for the architecture itself.
 | XML injection via node/edge labels | Translator (§5.3) | Strict XML-escaping (`& < > " '`) of all user text before insertion into any `<a:t>` run or attribute |
 | XXE (XML External Entity) | Any XML parsing anywhere in the pipeline, including tests | DTD processing and external entity resolution disabled on every parser used |
 | External OOXML relationships (Follina-class, CVE-2022-30190) | Translator | Never emit `TargetMode="External"` or any remote reference — output must be fully self-contained |
+| ODF macros, scripts, external references | ODF translator (ADR 0013, spec 05 §7) | Never emit `office:scripts`, event listeners, `xlink:href` to a URL, `text:a`/`draw:a` links, DDE sources or linked objects; `test:odf-validate` must report zero errors |
 | Command injection | CLI → Pandoc bridge (§5.4.a) | `execFile`/`spawn` with argument arrays only, never shell string interpolation |
 | Path traversal | CLI I/O paths, VS Code extension | Resolve and validate paths against the expected root before any file operation |
-| Zip bomb / decompression ratio | Out of direct scope today (delegated to Pandoc) but relevant to §2.1 (ODF contribution path) | Cap decompressed size/ratio if any contributor ever manipulates ZIP archives directly |
+| Zip bomb / decompression ratio | Out of direct scope today: Pandoc writes both `.docx` and `.odt`, and nothing reads an outside package yet | Cap decompressed size/ratio before any code reads a `.docx`/`.odt` from outside this pipeline (V3 round-trip) |
 | Supply chain | Whole repo | `npm audit` + Dependabot/Renovate in CI; every new dependency justified in the PR (rule 6 above) |
 | Secret leakage | Whole repo, public from commit #1 | Secret scanning (e.g. `gitleaks`) in pre-commit hook and CI |
 | Untested untrusted input | Mermaid parser — the most exposed boundary, since input may be AI-generated on someone else's behalf | Property-based / fuzz testing (e.g. `fast-check`) specifically on this boundary, not just example-based unit tests |

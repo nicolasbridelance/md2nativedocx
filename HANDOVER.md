@@ -86,7 +86,10 @@ format, no shape primitive in the Docs API); Slides stays reachable through `.pp
   language (bug 172530, WONTFIX) and prefers Mermaid out of core (bug 172531), so the extension
   recognises Mermaid by content (`detectDiagramType()` plus a successful parse)
   ([`docs/adr/spikes/spike-odf-libreoffice-filter/`](docs/adr/spikes/spike-odf-libreoffice-filter/spike.md)).
-  Next steps are in `TODO.md` §0.
+  Phase 0 closed by [`docs/adr/0013-odf-output-phase-0.md`](docs/adr/0013-odf-output-phase-0.md):
+  `renderDiagramOdf()` as a separate core function, no post-processing of the `.odt`, derived Pandoc
+  template under BSD-3, the project's own `reference.odt`, AGENTS.md rules 2/3/7 extended to ODF,
+  `npm run test:odf-validate` in CI. Phase 1 (flowcharts to `.odt`) is next, in `TODO.md` §0.
 - V2 work (below) now comes second: only the tasks that also serve ODF or close an open security risk
   continue (marked ▶ in `TODO.md` §2bis, decided 2026-10-08). LibreOffice 26.2.6 is pinned next to the
   apt one as `soffice-26.2` (`scripts/install-libreoffice-pinned.sh`).

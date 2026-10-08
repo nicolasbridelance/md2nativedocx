@@ -1,7 +1,7 @@
 # Cahier des charges — Cible LibreOffice / ODF
 
 > **Statut au 2026-10-08 : priorité du projet** (décision du mainteneur). Phase 0 (reconnaissance)
-> terminée côté recherche : S0 à S5 faits ; reste l'ADR de fin de phase. Rien n'est encore livré.
+> terminée (S0 à S5, ADR 0013). Phase 1 à commencer. Rien n'est encore livré.
 > Révise `docs/specs/cahier_des_charges.md` §2.1, qui laissait ODF aux contributeurs externes.
 
 ## 1. Contexte et décision
@@ -154,13 +154,14 @@ Ces interdictions sont à ajouter au tableau de sécurité d'`AGENTS.md` au mome
 
 ## 8. Décisions qui reviennent au mainteneur
 
-1. **API publique du core** : comment exposer la sortie ODF (nouvelle fonction de traduction, ou
-   option de format dans `renderDiagram()`). À trancher au début de la phase 1.
-2. **`AGENTS.md`** : S2 montre qu'aucun post-traitement du `.odt` n'est nécessaire ; la règle 7 doit
-   seulement citer les deux fichiers fournis à Pandoc (gabarit `opendocument` dérivé, `reference.odt`),
-   dont la licence est aussi à trancher (gabarits Pandoc : GPL-2+ ou BSD-3 ; `reference.odt` : GPL-2+,
-   ou le nôtre fait dans LibreOffice) ; mise à jour de la ligne « Zip bomb » du tableau de sécurité, qui cite encore le §2.1
-   comme piste de contributeurs ; interdictions du §7.
+1. **API publique du core : décidé le 2026-10-08** (ADR 0013, délégué à l'agent). Une fonction à
+   part, `renderDiagramOdf()`, qui rend un fragment `<text:p>` + `draw:g` et la liste des styles
+   automatiques ; pas d'option de format dans `renderDiagram()`, dont le résultat est fait pour Word.
+2. **`AGENTS.md` et licences : décidé le 2026-10-08** (ADR 0013). Règle 7 : aucune opération sur un
+   `.odt` produit par Pandoc ; seuls le gabarit `opendocument` dérivé et notre `reference.odt` lui
+   sont fournis. Règle 3 étendue aux interdits du §7, règle 2 aux valeurs de style, nouvelle ligne au
+   tableau de sécurité, ligne « Zip bomb » mise à jour. Gabarit dérivé livré sous BSD-3-Clause avec la
+   notice de Pandoc ; `reference.odt` écrit par le projet (CC0), jamais celui de Pandoc (GPL-2+).
 3. **Environnement : décidé le 2026-10-08.** LibreOffice 26.2.6 épinglé (version et SHA-256) dans
    `scripts/install-libreoffice-pinned.sh`, appelé par `.devcontainer/setup.sh` et par le job
    `visual` de `ci.yml`. Installé à côté de celui d'apt, qui reste le moteur des tests visuels, sous
@@ -174,3 +175,6 @@ Ces interdictions sont à ajouter au tableau de sécurité d'`AGENTS.md` au mome
 5. **Nom du projet** : `md2nativedocx` porte « docx ». Rien à changer maintenant ; à rouvrir si la
    sortie ODF prend de l'ampleur.
 6. **Communication publique** : rien de promis (LinkedIn, développeurs LibreOffice) avant S1 à S4.
+   S4 fait : le bon endroit est le bug 172531, **quand une première version de l'extension sera
+   montrable** (accord du mainteneur, 2026-10-08). Pas avant.
+7. **Validateur ODF : accepté le 2026-10-08** (`npm run test:odf-validate`, en CI).

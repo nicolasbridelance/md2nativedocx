@@ -13,32 +13,32 @@
 
 ---
 
-## 0. Priorité — cible LibreOffice / ODF (phase 0, reconnaissance)
+## 0. Priorité — cible LibreOffice / ODF (phase 1 : `.odt` pour les flowcharts)
 
-Fait : S0, un `.odt` produit par Pandoc à partir d'un bloc brut `{=opendocument}`, formes et
-connecteur attaché rendus par LibreOffice ; S1, le connecteur suit la forme déplacée (par l'API UNO,
-sans fenêtre) (`docs/adr/spikes/spike-odf-connector/`) ; S3, l'import Markdown de LibreOffice 26.2
-perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-odf-markdown-import/`) ;
-S2, couleurs, tailles et flèches sans post-traitement du `.odt` (gabarit Pandoc dérivé, styles
-déclarés par le filtre, diagramme dans un `draw:g` ancré comme caractère :
-`docs/adr/spikes/spike-odf-styles/`) ; S5, `odfvalidator` de l'ODF Toolkit retenu, il a trouvé un
-attribut obligatoire manquant sur le connecteur (`docs/adr/spikes/spike-odf-validator/`) ; S4, la
-porte B sera une extension LibreOffice, les développeurs ayant refusé de garder l'info-string (bug
-172530) et préférant Mermaid hors du code de base (bug 172531)
-(`docs/adr/spikes/spike-odf-libreoffice-filter/`).
+Phase 0 terminée le 2026-10-08 : spikes S0 à S5 sous `docs/adr/spikes/spike-odf-*`, conclusions et
+décisions (API, licences, règles) dans `docs/adr/0013-odf-output-phase-0.md`.
 
-Mainteneur :
+Agent, dans l'ordre :
 
-- [ ] Trancher les points restants de la spec 05 §8 : API du core, `AGENTS.md` (règle 7 : citer le
-      gabarit `opendocument` dérivé et le `reference.odt` ; interdits ODF du §7), licence des deux
-      fichiers fournis à Pandoc (S2) ; accord pour `odfvalidator` 0.13.0 comme outil de développement
-      (S5, `docs/adr/spikes/spike-odf-validator/`).
+- [ ] `renderDiagramOdf()` dans le core pour les flowcharts (formes, connecteurs attachés, sous-graphes,
+      styles `classDef`/`style` validés, `idPrefix`), avec tests unitaires, golden et cas d'injection.
+- [ ] `reference.odt` du projet (écrit à la main, flèches `draw:marker`) et gabarit `opendocument`
+      dérivé dans `packages/cli/assets/`, notice BSD-3 de Pandoc dans un `THIRD_PARTY_NOTICES.md` ;
+      vérifier que Pandoc s'en contente pour titres, code et tableaux.
+- [ ] Branche ODF du filtre Lua et `-o doc.odt` dans le CLI.
+- [ ] `test:odf-validate` et `test:visual` sur la sortie réelle du CLI.
+- [ ] Critère de fin (spec 05 §6) : un flowchart de 10 nœuds avec sous-graphes, ouvert dans
+      LibreOffice, formes et connecteurs éditables.
 
-Agent :
-
-- [ ] Puis ADR de fin de phase 0 et début de la phase 1 (`.odt` pour les flowcharts).
+Plus tard : porte B (extension LibreOffice, spike S4). Présentation sur le bug 172531 seulement avec
+une première version montrable.
 
 ## 1. En attente du mainteneur
+
+- [ ] **Licence du `reference.docx` livré par le CLI** (relevé le 2026-10-08, ADR 0013) : il est dérivé
+      de celui de Pandoc (`packages/cli/assets/README.md`). Selon le `copyright` du paquet Debian de
+      Pandoc, les données hors gabarits sont sous GPL-2+ seule, alors que le paquet npm est CC0. Pistes :
+      le refaire de zéro, ou l'assumer avec notice. Question de licence : décision du mainteneur.
 
 - ⏸ **Add-in Word (Phase 4), en pause, hors de `main`** : le scaffold vit sur la branche
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
