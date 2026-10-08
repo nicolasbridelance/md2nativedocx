@@ -37,5 +37,12 @@ soffice --headless --convert-to pdf source.md    # rendu (s3-render.png)
   LibreOffice avec S4, et argument pour la porte A (Pandoc convertit `$…$` en objet formule).
 - Le `.odt` de S0/S1 (formes et connecteur) s'affiche à l'identique en 26.2.
 
+**LibreOffice 26.8.0** (sortie le 2026-10-08, même vérification de signature) : résultat identique
+sur le même `source.md`, info-string perdue et maths altérées comprises.
+
 **Non vérifié.** Le comportement à l'ouverture dans l'interface (même filtre, donc même résultat
-attendu) ; l'export Markdown de 26.2 ; LibreOffice 26.8.0, sortie entre-temps sur le miroir stable.
+attendu) ; l'export Markdown.
+
+**Suite.** La version 26.2.6 est désormais épinglée (`scripts/install-libreoffice-pinned.sh`,
+commande `soffice-26.2`) et la CI refait la conversion de `source.md` à chaque passage du job
+`visual`.

@@ -148,9 +148,16 @@ Ces interdictions sont à ajouter au tableau de sécurité d'`AGENTS.md` au mome
 2. **`AGENTS.md`** : extension de la règle 7 au paquet `.odt` si S2 montre qu'un post-traitement est
    nécessaire ; mise à jour de la ligne « Zip bomb » du tableau de sécurité, qui cite encore le §2.1
    comme piste de contributeurs ; interdictions du §7.
-3. **Environnement** : épingler LibreOffice 26.2 dans `.devcontainer/` et `ci.yml` (S3).
-4. **Place du chantier V2** (`TODO.md` §2bis) : proposition, ne poursuivre la V2 que là où elle sert
-   l'ODF (en particulier `renderDiagram()` et l'identité des objets) ou ce qui est déjà engagé.
+3. **Environnement : décidé le 2026-10-08.** LibreOffice 26.2.6 épinglé (version et SHA-256) dans
+   `scripts/install-libreoffice-pinned.sh`, appelé par `.devcontainer/setup.sh` et par le job
+   `visual` de `ci.yml`. Installé à côté de celui d'apt, qui reste le moteur des tests visuels, sous
+   le nom `soffice-26.2`. La CI vérifie que son import Markdown marche toujours. Choix de 26.2 plutôt
+   que 26.8.0, sortie le même jour : comportement identique sur le test S3, et une version `.0` est la
+   moins mûre de sa série. Passer à 26.8 à partir de 26.8.2, ou dès qu'un changement du filtre
+   Markdown nous concerne.
+4. **Place du chantier V2 : décidé le 2026-10-08** (le mainteneur s'en remet à l'agent). Ne
+   continuent que les tâches qui servent l'ODF ou qui ferment un risque de sécurité déjà ouvert ;
+   la répartition tâche par tâche est dans `TODO.md` §2bis.
 5. **Nom du projet** : `md2nativedocx` porte « docx ». Rien à changer maintenant ; à rouvrir si la
    sortie ODF prend de l'ampleur.
 6. **Communication publique** : rien de promis (LinkedIn, développeurs LibreOffice) avant S1 à S4.

@@ -22,8 +22,6 @@ perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-o
 
 Mainteneur :
 
-- [ ] Décider d'épingler LibreOffice 26.2 dans `.devcontainer/` et `ci.yml` (S3 a été fait avec les
-      paquets officiels extraits à la main ; la méthode est dans le `spike.md` de S3).
 - [ ] Trancher les points de la spec 05 §8 au fil de l'eau (API du core, `AGENTS.md`, place de la V2).
 
 Agent :
@@ -68,18 +66,19 @@ Agent :
 
 ## 2bis. Chantier V2 — moteur (ADR 0012 accepté le 2026-10-07)
 
-> Depuis le 2026-10-08, passe après le §0 : poursuivre ce qui sert la cible ODF ou est déjà engagé
-> (proposition de la spec 05 §8, à confirmer par le mainteneur).
+> **Décidé le 2026-10-08** (spec 05 §8.4) : passe après le §0. Continuent, marquées « ▶ » : ce qui
+> sert aussi la sortie ODF, et les risques de sécurité déjà ouverts. Les autres, « ⏸ », attendent
+> la fin de la phase 1 ODF.
 
 Ordre de la spec 04 §2, ramené au code (détail section par section : `docs/specs/01-v2-engine-spec.md`,
 annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne changent pas d'un octet
 (golden tests et `test:visual` en garde-fou).
 
-- [ ] **Erreurs typées côté core** (spec 01 §9) : `MermaidParseError` existe mais les parseurs sont
+- [ ] ⏸ **Erreurs typées côté core** (spec 01 §9) : `MermaidParseError` existe mais les parseurs sont
       tolérants ; voir si un appelant de `renderDiagram()` a besoin de plus avant d'inventer une taxonomie.
       Côté CLI c'est fait le 2026-10-07 : `ConversionError` (`stage`), codes de sortie 0 / 1 / 2
       documentés dans `packages/cli/README.md`.
-- [ ] **Limites de ressources : reste le délai du CLI et du pont.** Fait le 2026-10-07 : plafonds de
+- [ ] ▶ **Limites de ressources : reste le délai du CLI et du pont.** Fait le 2026-10-07 : plafonds de
       graphe pour tout ce qui passe par Dagre (500 nœuds conteneurs de `subgraph` compris, 800 arêtes,
       surchargeables par `maxNodes` / `maxEdges`), plafond de source (`maxSourceLength`, 1 000 000
       caractères), `DiagramTooLargeError` typée, une note visible à la place du diagramme trop gros dans le
@@ -88,22 +87,24 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       bornent le pire cas sans le rendre bon marché (~35 s mesurés pour 400 nœuds / 800 arêtes), d'où le
       délai ; le CLI et le pont n'ont toujours pas le leur. Taille du paquet : `packages/mcp` refuse d'écrire
       un `.docx` de plus de 100 Mo ; `convert()` n'a pas de plafond (l'ajouter = option d'API, escalade).
-- [ ] **MCP : Pandoc lit et télécharge les images du Markdown** (chemins relatifs à la racine, URL
+- [ ] ▶ **MCP : Pandoc lit et télécharge les images du Markdown** (chemins relatifs à la racine, URL
       `http(s)`) : fuite de fichier ou SSRF possible si le serveur reçoit du Markdown non fiable.
       Documenté dans `packages/mcp/README.md`. Une vraie réponse demande une option de `convert()` (donc
       l'API du CLI : escalade), pas un contournement dans l'adaptateur.
-- [ ] **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
+- [ ] ⏸ **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
       dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
-- [ ] **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de
+- [ ] ⏸ **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de
       Word par round, et une table d'index fixture → comportement attendu → validateur → date.
-- [ ] **Pandoc comme contrat** : plage supportée testée en CI (`ci.yml`, revue humaine) ; post-traitement
+- [ ] ▶ **Pandoc comme contrat** : plage supportée testée en CI (`ci.yml`, revue humaine) ; post-traitement
       XML au lieu de regex là où ça renforce vraiment, en réutilisant `fast-xml-parser` déjà présent
       dans `packages/pptx` (nouvelle dépendance pour `cli` : escalade).
-- [ ] **Identité des objets** (spec 01 §5, spec 04 §5.2 ; ADR 0012 règle 7, précisée : seulement pour
+- [ ] ▶ **Identité des objets** (spec 01 §5, spec 04 §5.2 ; ADR 0012 règle 7, précisée : seulement pour
       les types qui ont un vrai id source, et rien de plus dans `descr` d'ici là) : l'id Mermaid des nœuds de flowchart est dans
       `cNvPr/@descr`, qui est le **texte de remplacement lu par les lecteurs d'écran** (bruit
-      d'accessibilité). Choisir un autre emplacement, vérifié dans un vrai Word, avant le spike V3.0.
-- Puis, adaptateurs minces sur l'API publique : documentation SDK Node, serveur MCP
+      d'accessibilité). Choisir un autre emplacement, vérifié dans un vrai Word, avant le spike V3.0, et
+      le choisir avec son équivalent ODF (`draw:id` / `xml:id`, renommés par LibreOffice à
+      l'enregistrement : spike S1).
+- ⏸ Puis, adaptateurs minces sur l'API publique : documentation SDK Node, serveur MCP
   (`render_diagram`, `convert_document`), Quarto (vérifier d'abord : le filtre lance `node`, absent de
   Quarto, et l'injection SmartArt/graphiques vit dans le CLI, pas dans le filtre). Puis les deux sondes
   PlantUML et draw.io (cahier §11).
@@ -165,8 +166,8 @@ LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans 
 - **Aperçu dans VS Code (Phase 2.5 de `docs/specs/UX_SPEC.md`)** : jamais commencé ; lecture seule
   stricte si un jour. La V3 (§3.4 de la spec 03) envisage un éditeur visuel dans VS Code : si l'aperçu
   se fait, le construire comme composant réutilisable plutôt que spécifique à VS Code.
-- **Environnement** : LibreOffice et Xvfb ne sont pas épinglés en version (`.devcontainer/` : revue
-  humaine). Pas urgent : la dérive observée venait des polices, réglée par
+- **Environnement** : le LibreOffice d'apt (moteur des tests visuels) et Xvfb ne sont pas épinglés
+  en version ; celui de la cible ODF l'est (`scripts/install-libreoffice-pinned.sh`). Pas urgent : la dérive observée venait des polices, réglée par
   `test-corpus/visual/fontconfig/fonts.conf`.
 
 Écartées après discussion (2026-09-08), à rouvrir seulement sur un besoin concret : binaire compilé

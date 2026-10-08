@@ -77,7 +77,9 @@ format, no shape primitive in the Docs API); Slides stays reachable through `.pp
   info-string; it leaves maths as altered plain text
   ([`docs/adr/spikes/spike-odf-markdown-import/`](docs/adr/spikes/spike-odf-markdown-import/spike.md)).
   Next steps are in `TODO.md` §0.
-- V2 work (below) now comes second; spec 05 §8 proposes continuing it where it serves ODF.
+- V2 work (below) now comes second: only the tasks that also serve ODF or close an open security risk
+  continue (marked ▶ in `TODO.md` §2bis, decided 2026-10-08). LibreOffice 26.2.6 is pinned next to the
+  apt one as `soffice-26.2` (`scripts/install-libreoffice-pinned.sh`).
 
 ## Direction after V1 (decided 2026-10-07)
 
