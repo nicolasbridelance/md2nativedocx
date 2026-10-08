@@ -1,6 +1,6 @@
 {
   "name": "@md2nativedocx/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Complete Markdown to Word (.docx) converter, or PowerPoint (.pptx), with editable diagrams — all 29 Mermaid types become real shapes, SmartArt and charts that readers can change in Word, not flattened PNGs.",
   "license": "CC0-1.0",
   "repository": {
@@ -57,8 +57,8 @@
     "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs"
   },
   "dependencies": {
-    "@md2nativedocx/pandoc-filter": "0.1.0",
-    "@md2nativedocx/pptx": "0.1.0",
+    "@md2nativedocx/pandoc-filter": "0.2.0",
+    "@md2nativedocx/pptx": "0.1.1",
     "adm-zip": "^0.6.1"
   }
 }

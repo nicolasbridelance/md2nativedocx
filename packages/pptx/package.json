@@ -1,6 +1,6 @@
 {
   "name": "@md2nativedocx/pptx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rewrites the DrawingML shapes produced by @md2nativedocx/core into a .pptx deck (one slide per Mermaid block) \u2014 no new per-diagram translators.",
   "license": "CC0-1.0",
   "repository": {
@@ -29,7 +29,7 @@
     "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml dist-test/test/*.test.js"
   },
   "dependencies": {
-    "@md2nativedocx/core": "0.1.0",
+    "@md2nativedocx/core": "0.2.0",
     "adm-zip": "^0.6.1",
     "fast-xml-parser": "^5.0.0"
   },
