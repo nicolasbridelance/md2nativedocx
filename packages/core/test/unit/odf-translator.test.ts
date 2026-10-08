@@ -110,9 +110,20 @@ test('classDef, style and linkStyle colours reach the styles', () => {
   assert.ok(all.includes('svg:stroke-width="3pt"'), '4px is 3pt');
 });
 
-test('a dark fill gets white text', () => {
-  const { automaticStyles } = renderDiagramOdf('graph TD\n  A\n  style A fill:#111111', { idPrefix: 'k' });
-  assert.ok(automaticStyles.some((s) => s.includes('draw:fill-color="#111111"') && s.includes('fo:color="#FFFFFF"')));
+test('a dark fill gets white text, in the paragraph style of that shape', () => {
+  const { fragment, automaticStyles } = renderDiagramOdf('graph TD\n  A\n  style A fill:#111111', { idPrefix: 'k' });
+  const byName = (n: string) => automaticStyles.find((s) => s.includes(`style:name="${n}"`))!;
+  const shape = /<draw:custom-shape draw:style-name="([^"]+)"[^>]*><text:p text:style-name="([^"]+)"/.exec(fragment)!;
+  assert.ok(byName(shape[1]!).includes('draw:fill-color="#111111"'));
+  assert.ok(byName(shape[2]!).includes('fo:color="#FFFFFF"'));
+});
+
+test('text size and colour live in paragraph styles, not graphic ones, and scale with the drawing', () => {
+  const src = 'graph TD\n' + Array.from({ length: 30 }, (_, i) => `  n${i} -->|l| n${i + 1}`).join('\n');
+  const { automaticStyles } = renderDiagramOdf(src, { idPrefix: 'z' });
+  for (const s of automaticStyles.filter((x) => x.includes('style:family="graphic"'))) assert.ok(!s.includes('text-properties'), s);
+  const sizes = automaticStyles.flatMap((s) => [...s.matchAll(/fo:font-size="([\d.]+)pt"/g)].map((m) => Number(m[1])));
+  assert.ok(sizes.length >= 2 && sizes.every((size) => size < 8), `scaled sizes ${sizes}`);
 });
 
 test('subgraphs: a container shape behind the nodes, the outer one first', () => {

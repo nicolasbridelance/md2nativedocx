@@ -238,9 +238,18 @@ class StyleSheet {
   }
 }
 
-/** Character properties of a text-bearing shape (colour and size apply from the graphic style). */
-function textProperties(color: string, fontPt: number): string {
-  return `<style:text-properties fo:color="#${color}" fo:font-size="${pt(fontPt)}"/>`;
+/**
+ * The paragraph style of a shape's text: centred, with its colour and size. Both go here and not on the
+ * graphic style: LibreOffice ignores paragraph properties set there, and the paragraph style's own
+ * inherited size (the document default, 12pt in the bundled reference.odt) wins over a size set there
+ * (seen in renders, 2026-10-08: a scaled-down diagram kept 12pt text).
+ */
+function shapeText(sheet: StyleSheet, color: string, fontPt: number, background?: string): string {
+  const highlight = background ? ` fo:background-color="#${background}"` : '';
+  return sheet.paragraph(
+    '<style:paragraph-properties fo:text-align="center"/>' +
+      `<style:text-properties fo:color="#${color}" fo:font-size="${pt(fontPt)}"${highlight}/>`,
+  );
 }
 
 /**
@@ -267,9 +276,6 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
   const linePt = (base: number): number => Math.max(MIN_LINE_PT, base * scale);
 
   const parts: string[] = [];
-  // Shape text is centred by a paragraph style: LibreOffice ignores paragraph properties set on the
-  // graphic style (seen in a render, 2026-10-08).
-  const centered = sheet.paragraph('<style:paragraph-properties fo:text-align="center"/>');
 
   // Subgraph containers first, outer before inner: document order is z-order, so they stay behind.
   for (const sg of subgraphsOuterFirst(flowchart)) {
@@ -280,13 +286,12 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
       `<style:graphic-properties draw:fill="solid" draw:fill-color="#${SUBGRAPH_FILL}" draw:opacity="40%" ` +
         `draw:stroke="dash" draw:stroke-dash="${ODF_STYLE_NAMES.dash}" svg:stroke-color="#${SUBGRAPH_LINE}" svg:stroke-width="${pt(linePt(0.75))}" ` +
         `draw:auto-grow-height="false" draw:auto-grow-width="false" draw:textarea-vertical-align="top" ` +
-        `fo:min-height="${cm(SUBGRAPH_TITLE_HEIGHT * scale)}" ${padding(scale)}/>` +
-        textProperties('000000', fontPt(NODE_FONT_PT)),
+        `fo:min-height="${cm(SUBGRAPH_TITLE_HEIGHT * scale)}" ${padding(scale)}/>`,
     );
     const title = escapeXml(sg.title);
     parts.push(
       `<draw:custom-shape draw:style-name="${style}" draw:name="${title}" ${frame(box)}>` +
-        `<text:p text:style-name="${centered}">${title}</text:p><draw:enhanced-geometry draw:type="rectangle"/></draw:custom-shape>`,
+        `<text:p text:style-name="${shapeText(sheet, '000000', fontPt(NODE_FONT_PT))}">${title}</text:p><draw:enhanced-geometry draw:type="rectangle"/></draw:custom-shape>`,
     );
   }
 
@@ -302,9 +307,9 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     const style = sheet.graphic(
       `<style:graphic-properties draw:fill="solid" draw:fill-color="#${nodeFill}" draw:stroke="solid" ` +
         `svg:stroke-color="#${nodeLine}" svg:stroke-width="${pt(linePt(LINE_PT))}" ` +
-        `draw:auto-grow-height="false" draw:auto-grow-width="false" draw:textarea-vertical-align="middle" ${padding(scale)}/>` +
-        textProperties(textColorFor(nodeFill), fontPt(NODE_FONT_PT)),
+        `draw:auto-grow-height="false" draw:auto-grow-width="false" draw:textarea-vertical-align="middle" ${padding(scale)}/>`,
     );
+    const textStyle = shapeText(sheet, textColorFor(nodeFill), fontPt(NODE_FONT_PT));
     const mirrorAttr = MIRRORED_SHAPES.has(node.shape) ? ' draw:mirror-horizontal="true"' : '';
     const geometry =
       node.shape === 'trapezoid'
@@ -312,7 +317,7 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
         : `<draw:enhanced-geometry draw:type="${ODF_TYPE_BY_SHAPE[node.shape] ?? 'rectangle'}"${mirrorAttr}/>`;
     parts.push(
       `<draw:custom-shape draw:style-name="${style}" draw:name="${escapeXml(node.label)}" xml:id="${id}" draw:id="${id}" ${frame(place(raw))}>` +
-        `<text:p text:style-name="${centered}">${labelSpans(node.labelRuns, sheet)}</text:p>${geometry}</draw:custom-shape>`,
+        `<text:p text:style-name="${textStyle}">${labelSpans(node.labelRuns, sheet)}</text:p>${geometry}</draw:custom-shape>`,
     );
   });
 
@@ -324,9 +329,10 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     const fromId = shapeIds.get(edge.from);
     const toId = shapeIds.get(edge.to);
     if (!from || !to || fromId === undefined || toId === undefined) return;
-    const style = sheet.graphic(edgeGraphicProperties(edge, linePt, fontPt, scale));
+    const style = sheet.graphic(edgeGraphicProperties(edge, linePt, scale));
     const name = escapeXml(`${edge.from}--${edge.to}`);
-    const text = edge.labelRuns ? `<text:p text:style-name="${centered}">${labelSpans(edge.labelRuns, sheet)}</text:p>` : '';
+    const labelStyle = (): string => shapeText(sheet, '000000', fontPt(EDGE_LABEL_FONT_PT), 'FFFFFF');
+    const text = edge.labelRuns ? `<text:p text:style-name="${labelStyle()}">${labelSpans(edge.labelRuns, sheet)}</text:p>` : '';
     if (edge.from === edge.to) {
       parts.push(selfLoop(style, name, (layout.edges[i] ?? []).map(placePoint), text));
       return;
@@ -363,8 +369,8 @@ function padding(scale: number): string {
   return `fo:padding-left="${x}" fo:padding-right="${x}" fo:padding-top="${y}" fo:padding-bottom="${y}"`;
 }
 
-/** Graphic style of one edge: line, dash, markers, and its label's text. */
-function edgeGraphicProperties(edge: FlowEdge, linePt: (base: number) => number, fontPt: (base: number) => number, scale: number): string {
+/** Graphic style of one edge: line, dash and markers. */
+function edgeGraphicProperties(edge: FlowEdge, linePt: (base: number) => number, scale: number): string {
   const kind = LINE_BY_EDGE[edge.type] ?? LINE_BY_EDGE.arrow;
   const color = validateHexColor(edge.stroke, DEFAULT_LINE);
   const customPx = validStrokeWidthPx(edge.strokeWidth);
@@ -376,10 +382,7 @@ function edgeGraphicProperties(edge: FlowEdge, linePt: (base: number) => number,
       ? ''
       : (kind.start !== 'none' ? ` draw:marker-start="${MARKER_NAMES[kind.start]}" draw:marker-start-width="${markerWidth}"` : '') +
         (kind.end !== 'none' ? ` draw:marker-end="${MARKER_NAMES[kind.end]}" draw:marker-end-width="${markerWidth}"` : '');
-  return (
-    `<style:graphic-properties ${stroke} svg:stroke-color="#${color}" svg:stroke-width="${pt(widthPt)}"${markers}/>` +
-    `<style:text-properties fo:color="#000000" fo:font-size="${pt(fontPt(EDGE_LABEL_FONT_PT))}" fo:background-color="#ffffff"/>`
-  );
+  return `<style:graphic-properties ${stroke} svg:stroke-color="#${color}" svg:stroke-width="${pt(widthPt)}"${markers}/>`;
 }
 
 /** A `linkStyle` stroke width in px, or `undefined` when absent or not a sane positive number. */
