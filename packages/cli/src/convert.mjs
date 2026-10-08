@@ -1,5 +1,6 @@
 /**
- * `convert()`: Markdown in, finished `.docx` bytes out (docs/specs/01-v2-engine-spec.md §6, ADR 0012).
+ * `convert()`: Markdown in, finished `.docx` (or `.odt`) bytes out (docs/specs/01-v2-engine-spec.md §6,
+ * ADR 0012; `.odt`: ADR 0013).
  *
  * The library entry point of `@md2nativedocx/cli`, and what `bin/md2nativedocx.mjs` itself calls. It owns
  * the whole document path: reference document build, Pandoc with the Lua filter (which renders each
@@ -10,6 +11,11 @@
  * from the environment Pandoc and the filter see, then the ones the filter and the bridge read are set from
  * the options, so a host process's environment cannot change a conversion behind its caller's back. The
  * variables remain the CLI's interface (`envOptions.mjs` reads them).
+ *
+ * `format: 'odt'` hands Pandoc the derived `opendocument` template and the project's `reference.odt`
+ * (`assets/`, built by `scripts/build-odt-assets.mjs`), and the filter draws each flowchart as native
+ * ODF shapes. Nothing touches the `.odt` Pandoc writes (AGENTS.md rule 7). Page and typography options,
+ * SmartArt, charts and the emoji font are `.docx` features and do not apply.
  *
  * Security (AGENTS.md): Pandoc runs through `execFile` with an argument array (rule 4); every file is written
  * in a fresh temporary directory removed afterwards; the post-processing is the rule 7 allowlist.
@@ -43,6 +49,12 @@ export class ConversionError extends Error {
 // 2007-2010 Office theme. See packages/cli/assets/README.md for how it was built and what it changes.
 // `src/` and `bin/` are at the same depth, so this also holds in the VS Code extension's vendored bundle.
 const DEFAULT_REFERENCE_DOC = fileURLToPath(new URL('../assets/reference.docx', import.meta.url));
+// The `.odt` pair (ADR 0013): the project's own reference.odt (A4, 2.54 cm margins, diagram markers) and
+// Pandoc's opendocument template plus the diagram-styles loop. See packages/cli/assets/README.md.
+const DEFAULT_REFERENCE_ODT = fileURLToPath(new URL('../assets/reference.odt', import.meta.url));
+const ODT_TEMPLATE = fileURLToPath(new URL('../assets/md2nativedocx.opendocument', import.meta.url));
+/** 9 in in EMU: the `.docx` output's default drawing height (core's `MAX_DRAWING_CY`). */
+const ODT_MAX_DRAWING_CY = 8229600;
 
 /**
  * Where @md2nativedocx/pandoc-filter lands varies with how the CLI was deployed (npm workspace, nested or
@@ -122,8 +134,60 @@ function extractWarnings(stderrText) {
     .map((line) => line.slice('md2nativedocx: '.length));
 }
 
+/** Where Pandoc reads from: the given file, or the text written to `work/input.md`. */
+function inputFile(source, work) {
+  if (typeof source !== 'string') return source.path;
+  const inputPath = join(work, 'input.md');
+  writeFileSync(inputPath, source, 'utf8');
+  return inputPath;
+}
+
+/** Pandoc's reader and table-of-contents arguments, shared by both formats. */
+function commonPandocArgs(inputPath, options) {
+  const args = [];
+  // Pandoc picks its reader from the extension and does not know `.qmd`; Quarto Markdown is Pandoc
+  // Markdown plus front matter and code chunks, so naming the reader is correct and drops its warning.
+  if (extname(inputPath).toLowerCase() === '.qmd') args.push('--from', 'markdown');
+  const tocDepth = Math.min(4, Math.max(2, Math.round(options.tocDepth ?? 3)));
+  if (options.toc) args.push('--toc', `--toc-depth=${tocDepth}`);
+  return args;
+}
+
+/** The `.odt` path: Pandoc writes the whole package, nothing is done to it afterwards (rule 7). */
+async function convertOdt(source, options) {
+  const filterPath = resolveFilterPath();
+  const cwd = options.cwd ?? process.cwd();
+  const referenceDoc = options.referenceDoc ?? DEFAULT_REFERENCE_ODT;
+  if (!existsSync(referenceDoc)) {
+    throw new ConversionError(`reference document not found: ${referenceDoc}`, { stage: 'setup' });
+  }
+  if (extname(referenceDoc).toLowerCase() !== '.odt') {
+    throw new ConversionError(`a .odt output needs a .odt reference document, got ${referenceDoc}`, { stage: 'setup' });
+  }
+  const work = mkdtempSync(join(tmpdir(), 'md2nativedocx-convert-'));
+  try {
+    const inputPath = inputFile(source, work);
+    const outputPath = join(work, 'output.odt');
+    const pandocArgs = [inputPath, '-o', outputPath, '--lua-filter', filterPath, '--template', ODT_TEMPLATE, '--reference-doc', referenceDoc];
+    pandocArgs.push(...commonPandocArgs(inputPath, options));
+    // Diagrams are scaled to fit the bundled reference.odt's text width (A4, 2.54 cm margins) and at most
+    // 9 in high, the `.docx` default, which leaves room for a heading above a page-tall diagram instead of
+    // pushing it alone onto the next page.
+    const page = resolveMaxDrawingExtentEmu({ pageSize: 'A4' });
+    const env = pandocEnvironment(
+      { ...options, smartArtStyle: undefined, smartArtDrawing: undefined },
+      { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: { cx: page.cx, cy: Math.min(page.cy, ODT_MAX_DRAWING_CY) }, landscapeGeometry: null },
+    );
+    const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env });
+    return { document: readFileSync(outputPath), warnings: extractWarnings(pandocStderr), pandocStderr };
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
 /**
- * Convert a Markdown document to `.docx`. See `convert.d.mts` for the option and result types.
+ * Convert a Markdown document to `.docx`, or `.odt` with `format: 'odt'`. See `convert.d.mts` for the
+ * option and result types.
  *
  * @param {string | { path: string }} source Markdown text, or a file for Pandoc to read (its extension picks
  *   the reader; `.qmd` is read as Markdown).
@@ -131,6 +195,11 @@ function extractWarnings(stderrText) {
  * @returns {Promise<import('./convert.d.mts').ConvertResult>}
  */
 export async function convert(source, options = {}) {
+  const format = options.format ?? 'docx';
+  if (format !== 'docx' && format !== 'odt') {
+    throw new ConversionError(`unknown format ${JSON.stringify(format)}; expected "docx" or "odt"`, { stage: 'setup' });
+  }
+  if (format === 'odt') return convertOdt(source, options);
   const filterPath = resolveFilterPath();
   const cwd = options.cwd ?? process.cwd();
   const customReferenceDoc = options.referenceDoc;
@@ -151,22 +220,12 @@ export async function convert(source, options = {}) {
     }
     const referenceDoc = customReferenceDoc ?? generatedReferenceDoc?.path ?? DEFAULT_REFERENCE_DOC;
 
-    let inputPath;
-    if (typeof source === 'string') {
-      inputPath = join(work, 'input.md');
-      writeFileSync(inputPath, source, 'utf8');
-    } else {
-      inputPath = source.path;
-    }
+    const inputPath = inputFile(source, work);
     const outputPath = join(work, 'output.docx');
 
     const pandocArgs = [inputPath, '-o', outputPath, '--lua-filter', filterPath];
-    // Pandoc picks its reader from the extension and does not know `.qmd`; Quarto Markdown is Pandoc
-    // Markdown plus front matter and code chunks, so naming the reader is correct and drops its warning.
-    if (extname(inputPath).toLowerCase() === '.qmd') pandocArgs.push('--from', 'markdown');
     if (existsSync(referenceDoc)) pandocArgs.push('--reference-doc', referenceDoc);
-    const tocDepth = Math.min(4, Math.max(2, Math.round(options.tocDepth ?? 3)));
-    if (options.toc) pandocArgs.push('--toc', `--toc-depth=${tocDepth}`);
+    pandocArgs.push(...commonPandocArgs(inputPath, options));
 
     // The bridge (one run per ```mermaid block, spawned by the Lua filter) hands SmartArt and chart parts
     // back through these directories: a Lua filter cannot add package parts itself.

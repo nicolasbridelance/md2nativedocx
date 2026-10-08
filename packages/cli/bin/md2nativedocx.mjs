@@ -40,13 +40,16 @@ import { hasLayoutOptions, readConvertOptionsFromEnv } from '../src/envOptions.m
   }
 }
 
-const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx|output.pptx> [options]
+const USAGE = `Usage: md2nativedocx <input.md> -o <output.docx|output.odt|output.pptx> [options]
+
+A .odt output is for LibreOffice: flowcharts become native, editable shapes and connectors;
+other diagram types become a note for now.
 
 A .pptx output is a slide deck: one slide per \`\`\`mermaid block, titled with the nearest
 preceding heading (text outside diagrams is not exported).
 
 Options:
-  -o, --output <file>   Output .docx or .pptx path (required)
+  -o, --output <file>   Output .docx, .odt or .pptx path (required)
   --show-source         .pptx only: show each diagram's Mermaid source beside it
   -h, --help            Show this help
 `;
@@ -126,9 +129,18 @@ async function main() {
     process.exit(1);
   }
 
+  const format = extname(output).toLowerCase() === '.odt' ? 'odt' : 'docx';
+  if (format === 'odt' && hasLayoutOptions(options.layout)) {
+    process.stderr.write('md2nativedocx (info): page/typography options apply to .docx only; the .odt uses A4 with 2.54 cm margins.\n');
+  }
+  // MD2NATIVEDOCX_REFERENCE_DOC names a Word template; a .odt keeps the bundled reference.odt.
+  const formatOptions = format === 'odt' && options.referenceDoc && extname(options.referenceDoc).toLowerCase() !== '.odt'
+    ? { ...options, referenceDoc: undefined }
+    : options;
+
   let result;
   try {
-    result = await convert({ path: input }, { ...options, cwd });
+    result = await convert({ path: input }, { ...formatOptions, cwd, format });
   } catch (err) {
     if (err instanceof ConversionError) {
       process.stderr.write(`md2nativedocx: ${err.message}\n`);
@@ -143,7 +155,7 @@ async function main() {
   // Surface the diagrams' non-fatal notices: never let a successful export silently hide something the
   // author should know about.
   const warnings = result.warnings.map((w) => `md2nativedocx: ${w}`);
-  const wordCompatibility = runWordCompatibilityCheck(output);
+  const wordCompatibility = format === 'docx' ? runWordCompatibilityCheck(output) : null;
   const logPath = writeExportLog({ input, output, warnings, rawStderr: result.pandocStderr, wordCompatibility });
   if (warnings.length > 0) {
     process.stdout.write(`Warnings: ${warnings.length} (see ${basename(logPath)})\n`);
@@ -219,7 +231,7 @@ function runWordCompatibilityCheck(docxPath) {
  * every successful export, not just when there are warnings, for a
  * consistent, discoverable location. */
 function writeExportLog({ input, output, warnings, rawStderr, wordCompatibility }) {
-  const logPath = extname(output).toLowerCase() === '.docx'
+  const logPath = ['.docx', '.odt'].includes(extname(output).toLowerCase())
     ? output.slice(0, -extname(output).length) + '.log'
     : `${output}.log`;
   const lines = [

@@ -10,6 +10,12 @@
  * shell string.
  *
  * Usage: md2nativedocx-core.mjs <diagram.mmd> > diagram.xml
+ *        md2nativedocx-core.mjs <diagram.mmd> --odf <idPrefix> > diagram.json
+ *
+ * With `--odf`, the diagram is rendered for a `.odt` by `renderDiagramOdf()` (ADR 0013) and stdout is
+ * one JSON object `{ "fragment": "<text:p>…", "automaticStyles": ["<style:style …>", …] }`: the Lua
+ * filter inserts the fragment as a raw `opendocument` block and passes the styles to the derived
+ * template. `idPrefix` (from the filter's own counter) keeps ids and style names unique per document.
  *
  * ## Adapter only (ADR 0012)
  *
@@ -49,9 +55,16 @@
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { renderDiagram, buildDiagramTooLargeNoteXml, DiagramTooLargeError } from '@md2nativedocx/core';
+import {
+  renderDiagram,
+  renderDiagramOdf,
+  buildDiagramTooLargeNoteXml,
+  buildOdfDiagramTooLargeNote,
+  DiagramTooLargeError,
+} from '@md2nativedocx/core';
 
 const inputPath = process.argv[2];
+const odfPrefix = process.argv[3] === '--odf' ? process.argv[4] : undefined;
 const input = inputPath ? readFileSync(inputPath, 'utf8') : readFileSync(0, 'utf8');
 
 /** A positive integer from the environment, or `undefined`. */
@@ -103,20 +116,42 @@ function writePart(part) {
   }
 }
 
-try {
-  const result = renderDiagram(input, options);
-  for (const warning of result.metadata.warnings) {
-    process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+/** `.odt` mode: same limits and page size, no SmartArt or charts (no ODF equivalent yet). */
+function renderOdf() {
+  const odfOptions = { idPrefix: odfPrefix };
+  for (const key of ['maxDrawingCx', 'maxDrawingCy']) if (options[key] !== undefined) odfOptions[key] = options[key];
+  try {
+    const result = renderDiagramOdf(input, odfOptions);
+    for (const warning of result.metadata.warnings) process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    return { fragment: result.fragment, automaticStyles: result.automaticStyles };
+  } catch (err) {
+    if (!(err instanceof DiagramTooLargeError)) throw err;
+    // Deliberate fallback, as for .docx: a visible note, the rest of the document converts.
+    process.stderr.write(`md2nativedocx: warning: ${err.message}\n`);
+    return buildOdfDiagramTooLargeNote(err, odfPrefix);
   }
-  for (const part of result.parts) writePart(part);
-  process.stdout.write(result.fragment);
-} catch (err) {
-  if (err instanceof DiagramTooLargeError) {
+}
+
+/** `.docx` mode: the WordprocessingML fragment, its SmartArt/chart parts written for the CLI. */
+function renderDocx() {
+  try {
+    const result = renderDiagram(input, options);
+    for (const warning of result.metadata.warnings) {
+      process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
+    }
+    for (const part of result.parts) writePart(part);
+    return result.fragment;
+  } catch (err) {
+    if (!(err instanceof DiagramTooLargeError)) throw err;
     // Deliberate fallback: an oversized diagram becomes a visible note, the rest of the document converts.
     process.stderr.write(`md2nativedocx: warning: ${err.message}\n`);
-    process.stdout.write(buildDiagramTooLargeNoteXml(err));
-    process.exit(0);
+    return buildDiagramTooLargeNoteXml(err);
   }
+}
+
+try {
+  process.stdout.write(odfPrefix !== undefined ? JSON.stringify(renderOdf()) : renderDocx());
+} catch (err) {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`md2nativedocx: ${message}\n`);
   process.exit(1);

@@ -33,6 +33,12 @@ export interface LayoutOptions {
 
 /** How {@link convert} builds the document. Every field is optional; the defaults match the CLI's. */
 export interface ConvertOptions {
+  /**
+   * `docx` (default) or `odt`. A `.odt` draws flowcharts as native LibreOffice shapes (other diagram types
+   * become a note for now); `layout`, `emojiFont`, SmartArt and native charts apply to `.docx` only, and
+   * `referenceDoc`, when given, must then be a `.odt`.
+   */
+  format?: 'docx' | 'odt';
   /** Pandoc's working directory, against which relative image paths resolve. Default: `process.cwd()`. */
   cwd?: string;
   /** A `.docx` template to use instead of the bundled one (Pandoc's `--reference-doc`). Must exist. */
@@ -64,7 +70,7 @@ export interface ConvertOptions {
 
 /** A finished document. */
 export interface ConvertResult {
-  /** The `.docx` file's bytes. */
+  /** The `.docx` (or `.odt`) file's bytes. */
   document: Buffer;
   /** Non-fatal problems in the diagrams (syntax ignored, a SmartArt or chart drawn as shapes instead). */
   warnings: string[];

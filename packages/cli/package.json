@@ -46,7 +46,8 @@
   "files": [
     "bin",
     "src",
-    "assets"
+    "assets",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "echo \"cli: no build step (plain JS)\"",

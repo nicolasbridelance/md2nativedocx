@@ -38,3 +38,28 @@ file: Pandoc writes them itself.
 
 **To verify in a real Word** (no Word in this environment; checked with LibreOffice and the Open XML
 validator): heading styling and whether Word's current built-in template still matches.
+
+# `reference.odt` and `md2nativedocx.opendocument`
+
+The two files handed to Pandoc for a `.odt` (ADR 0013; `AGENTS.md` rule 7: nothing touches the
+`.odt` Pandoc writes). Both are built by:
+
+```bash
+node scripts/build-odt-assets.mjs
+```
+
+- **`reference.odt`**, written by this project (CC0) from `packages/cli/reference-odt-src/`, never
+  Pandoc's own (GPL-2+). Pandoc keeps its `styles.xml` and writes the rest. It defines the styles
+  Pandoc's ODT writer refers to (headings, title block, code, quotations, tables, captions,
+  definition lists, footnotes, links), an A4 page with 2.54 cm margins, and the arrow markers and
+  dash pattern the diagrams use (`ODF_GRAPHIC_DEFINITIONS` in `@md2nativedocx/core`, kept equal by
+  `test/odt.test.mjs`). LibreOffice does **not** supply its built-in look for a style a document
+  references without defining (headings came out as plain text with a minimal `styles.xml`,
+  2026-10-08), so each one is written here.
+- **`md2nativedocx.opendocument`**, Pandoc 3.1.3's `opendocument` template plus one loop inside
+  `office:automatic-styles` for the diagram styles. BSD-3-Clause, see `../THIRD_PARTY_NOTICES.md`.
+  The build refuses any other Pandoc version, and `test/odt.test.mjs` checks the file still differs
+  from `pandoc -D opendocument` by that loop only.
+
+Known Pandoc 3.1.3 limitation, not ours: a front-matter `abstract` is written as bare text outside
+any paragraph, which the ODF validator rejects (same with Pandoc's own reference document).
