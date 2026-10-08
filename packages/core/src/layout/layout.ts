@@ -317,6 +317,10 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
 
   const warnings: string[] = [];
 
+  // Subgraphs get their own keys in Dagre's graph: Mermaid lets a node and a subgraph share an id
+  // (`subgraph S` holding a node `S`), and one shared key made Dagre throw "Setting S as parent of S
+  // would create a cycle" (found by the ODF fuzz property, 2026-10-08). A NUL cannot appear in an id.
+  const clusterKey = (id: string): string => `\u0000subgraph:${id}`;
   const buildGraph = (useClusters: boolean) => {
     const g = new dagre.graphlib.Graph({ compound: true });
     g.setGraph({
@@ -341,12 +345,12 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     if (useClusters) {
       // Register subgraphs as Dagre clusters and assign their nodes to them.
       for (const sg of flowchart.subgraphs) {
-        g.setNode(sg.id, { width: 0, height: 0, cluster: true });
+        g.setNode(clusterKey(sg.id), { width: 0, height: 0, cluster: true });
         for (const nodeId of sg.nodeIds) {
-          if (g.hasNode(nodeId)) g.setParent(nodeId, sg.id);
+          if (g.hasNode(nodeId)) g.setParent(nodeId, clusterKey(sg.id));
         }
         for (const childId of sg.subgraphIds) {
-          if (g.hasNode(childId)) g.setParent(childId, sg.id);
+          if (g.hasNode(clusterKey(childId))) g.setParent(clusterKey(childId), clusterKey(sg.id));
         }
       }
     }
@@ -402,7 +406,7 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   // Subgraph container boxes from Dagre cluster geometry.
   const subgraphs: Record<string, SubgraphBox> = Object.create(null) as Record<string, SubgraphBox>;
   for (const sg of flowchart.subgraphs) {
-    const c = g.node(sg.id);
+    const c = g.node(clusterKey(sg.id));
     if (c) {
       subgraphs[sg.id] = {
         x: c.x - c.width / 2,

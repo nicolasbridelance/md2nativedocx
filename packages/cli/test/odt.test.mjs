@@ -63,8 +63,10 @@ test('reference.odt: rebuilding from reference-odt-src gives the committed file'
 test('the derived template differs from Pandoc 3.1.3 opendocument by the styles loop only', (t) => {
   const version = execFileSync('pandoc', ['--version'], { encoding: 'utf8' }).split('\n')[0].trim();
   if (version !== 'pandoc 3.1.3') return t.skip(`template comparison needs pandoc 3.1.3, found ${version}`);
-  const committed = readFileSync(join(assets, 'md2nativedocx.opendocument'), 'utf8');
-  assert.equal(committed, deriveTemplate(execFileSync('pandoc', ['-D', 'opendocument'], { encoding: 'utf8' })));
+  // Line endings aside: Pandoc on Windows may print the template with CRLF.
+  const lf = (text) => text.replace(/\r\n/g, '\n');
+  const committed = lf(readFileSync(join(assets, 'md2nativedocx.opendocument'), 'utf8'));
+  assert.equal(committed, deriveTemplate(lf(execFileSync('pandoc', ['-D', 'opendocument'], { encoding: 'utf8' }))));
 });
 
 test('convert({ format: "odt" }): a 10-node flowchart with subgraphs as one group of shapes and attached connectors', async () => {
