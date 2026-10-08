@@ -71,8 +71,12 @@ format, no shape primitive in the Docs API); Slides stays reachable through `.pp
   [`docs/specs/05-libreoffice-odf-spec.md`](docs/specs/05-libreoffice-odf-spec.md).
 - Phase 0 (reconnaissance) under way: S0 showed that Pandoc copies a raw `{=opendocument}` block into
   an `.odt` and that LibreOffice draws the shapes with the connector attached
-  ([`docs/adr/spikes/spike-odf-connector/`](docs/adr/spikes/spike-odf-connector/spike.md)). Next steps
-  are in `TODO.md` §0.
+  ([`docs/adr/spikes/spike-odf-connector/`](docs/adr/spikes/spike-odf-connector/spike.md)). S1: the
+  connector follows a shape moved through the UNO API, and stays attached after save. S3: LibreOffice
+  26.2's Markdown import turns a Mermaid block into preformatted text and drops the `mermaid`
+  info-string; it leaves maths as altered plain text
+  ([`docs/adr/spikes/spike-odf-markdown-import/`](docs/adr/spikes/spike-odf-markdown-import/spike.md)).
+  Next steps are in `TODO.md` §0.
 - V2 work (below) now comes second; spec 05 §8 proposes continuing it where it serves ODF.
 
 ## Direction after V1 (decided 2026-10-07)

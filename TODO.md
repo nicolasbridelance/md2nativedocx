@@ -17,12 +17,13 @@
 
 Fait : S0, un `.odt` produit par Pandoc à partir d'un bloc brut `{=opendocument}`, formes et
 connecteur attaché rendus par LibreOffice ; S1, le connecteur suit la forme déplacée (par l'API UNO,
-sans fenêtre) (`docs/adr/spikes/spike-odf-connector/`).
+sans fenêtre) (`docs/adr/spikes/spike-odf-connector/`) ; S3, l'import Markdown de LibreOffice 26.2
+perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-odf-markdown-import/`).
 
 Mainteneur :
 
-- [ ] **S3** : dans LibreOffice 26.2, ouvrir un `.md` avec un bloc Mermaid, un tableau, une formule ;
-      noter ce que chacun devient. Ou décider d'épingler 26.2 dans `.devcontainer/` et `ci.yml`.
+- [ ] Décider d'épingler LibreOffice 26.2 dans `.devcontainer/` et `ci.yml` (S3 a été fait avec les
+      paquets officiels extraits à la main ; la méthode est dans le `spike.md` de S3).
 - [ ] Trancher les points de la spec 05 §8 au fil de l'eau (API du core, `AGENTS.md`, place de la V2).
 
 Agent :
