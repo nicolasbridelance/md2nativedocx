@@ -321,8 +321,9 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     );
   });
 
-  // Edges, each a connector attached to its two shapes; its label is the connector's own text, which
-  // LibreOffice draws horizontally at the middle of the line and moves with it.
+  // Edges, each a connector attached to its two shapes; its label is the connector's own text, drawn
+  // horizontally at the middle of the line (centred text area, see edgeGraphicProperties) and moving
+  // with it.
   flowchart.edges.forEach((edge, i) => {
     const from = layout.nodes[edge.from];
     const to = layout.nodes[edge.to];
@@ -382,7 +383,12 @@ function edgeGraphicProperties(edge: FlowEdge, linePt: (base: number) => number,
       ? ''
       : (kind.start !== 'none' ? ` draw:marker-start="${MARKER_NAMES[kind.start]}" draw:marker-start-width="${markerWidth}"` : '') +
         (kind.end !== 'none' ? ` draw:marker-end="${MARKER_NAMES[kind.end]}" draw:marker-end-width="${markerWidth}"` : '');
-  return `<style:graphic-properties ${stroke} svg:stroke-color="#${color}" svg:stroke-width="${pt(widthPt)}"${markers}/>`;
+  // Centred text area: without it LibreOffice draws a connector's label at the top left of its bounding
+  // box, i.e. against the start shape, whatever the connector type (seen in renders, 2026-10-08).
+  return (
+    `<style:graphic-properties ${stroke} svg:stroke-color="#${color}" svg:stroke-width="${pt(widthPt)}"${markers} ` +
+    'draw:textarea-horizontal-align="center" draw:textarea-vertical-align="middle"/>'
+  );
 }
 
 /** A `linkStyle` stroke width in px, or `undefined` when absent or not a sane positive number. */

@@ -240,3 +240,11 @@ test('no link, image, object, script, event listener or DDE source in the output
     assert.ok(!all.includes(forbidden), forbidden);
   }
 });
+
+test('edge labels: the connector text area is centred, so the label sits mid-edge, not at its start', () => {
+  const { fragment, automaticStyles } = renderDiagramOdf('graph TD\n  A -->|yes| B', { idPrefix: 'm' });
+  const connector = tags(fragment, 'draw:connector')[0]!;
+  const style = automaticStyles.find((s) => s.includes(`style:name="${attr(connector, 'draw:style-name')}"`))!;
+  assert.ok(style.includes('draw:textarea-horizontal-align="center"'));
+  assert.ok(style.includes('draw:textarea-vertical-align="middle"'));
+});

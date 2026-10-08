@@ -36,9 +36,8 @@ qui suivent leur forme déplacée) :
 
 Limites connues de la phase 1, à reprendre :
 
-- [ ] Étiquettes d'arêtes : texte du connecteur, que LibreOffice place près du départ du tracé et non
-      au milieu (deux étiquettes d'un même losange se touchent). Piste : une zone de texte au milieu
-      du tracé de Dagre, comme la sortie `.docx`, au prix du suivi au déplacement.
+- [x] Étiquettes d'arêtes au milieu du tracé (zone de texte du connecteur centrée ; elles restent le
+      texte du connecteur, donc suivent un déplacement). Fait le 2026-10-08.
 - [ ] Formes prédéfinies à zone de texte étroite (triangle, accolades, `das`, sous-routine) : le texte
       se coupe au milieu des mots.
 - [ ] Les options de page et de typographie ne s'appliquent pas au `.odt` (A4, marges 2,54 cm).
