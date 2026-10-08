@@ -35,11 +35,6 @@ une première version montrable.
 
 ## 1. En attente du mainteneur
 
-- [ ] **Licence du `reference.docx` livré par le CLI** (relevé le 2026-10-08, ADR 0013) : il est dérivé
-      de celui de Pandoc (`packages/cli/assets/README.md`). Selon le `copyright` du paquet Debian de
-      Pandoc, les données hors gabarits sont sous GPL-2+ seule, alors que le paquet npm est CC0. Pistes :
-      le refaire de zéro, ou l'assumer avec notice. Question de licence : décision du mainteneur.
-
 - ⏸ **Add-in Word (Phase 4), en pause, hors de `main`** : le scaffold vit sur la branche
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
   *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :

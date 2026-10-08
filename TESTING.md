@@ -115,8 +115,9 @@ any of them.
 
 Errors are split into two buckets: those under `/word/diagrams/*` (our own SmartArt translator's
 output) must be zero and fail the test; everything else is known pre-existing schema noise
-inherited from `packages/cli/assets/reference.docx` (Pandoc's own, see `docs/history/TODO_ARCHIVE.md`; not this
-chapter's job to fix) — printed for visibility, never failed on.
+from Pandoc's own `.docx` writer (see `docs/history/TODO_ARCHIVE.md`; not this chapter's job to fix) —
+printed for visibility, never failed on. The bundled `reference.docx`, rewritten from scratch on
+2026-10-08, adds no error of its own.
 
 **Adding a case**: add an entry to `SMARTART_FIXTURES` (or `PLAIN_FIXTURE_NAMES`, reusing a
 `test-corpus/visual/fixtures/*.mmd` file) in `scripts/test-oxml-validate.mjs`.

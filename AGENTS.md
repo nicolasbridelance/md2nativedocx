@@ -317,9 +317,11 @@ a concrete sense of how expensive guessing is compared to validating.
 `scripts/oxml-validator/` requires the `.NET` SDK; skips gracefully (not a failure) when
 unavailable, same convention as `test:visual` without LibreOffice. Errors under `/word/diagrams/*`
 are this project's own SmartArt/diagram output and must be zero; errors elsewhere are known
-pre-existing noise inherited from `packages/cli/assets/reference.docx` (investigated 2026-09-06: the
-same errors are in Pandoc's own `reference.docx`; see `docs/history/TODO_ARCHIVE.md`), not
-something a diagram-focused fix needs to also resolve.
+pre-existing noise from Pandoc's own `.docx` writer (its syntax-highlighting styles, numbering
+`nsid`, settings order, table properties; investigated 2026-09-06, see `docs/history/TODO_ARCHIVE.md`),
+not something a diagram-focused fix needs to also resolve. Since 2026-10-08 the bundled
+`packages/cli/assets/reference.docx` is written by this project (`packages/cli/reference-docx-src/`,
+`scripts/build-reference-docx.mjs`) and contributes no error of its own.
 
 ---
 

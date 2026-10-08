@@ -102,5 +102,7 @@ Vérifié dans le fichier `copyright` du paquet Debian de Pandoc 3.1.3 : les gab
   golden tests ODF, `test:odf-validate` sur la sortie réelle du CLI.
 - Porte B (phase 3) : extension LibreOffice, adaptateur mince sur `renderDiagramOdf()`. Contact sur
   le bug 172531 seulement quand une première version est montrable (décision du mainteneur).
-- Hors de cette ADR, signalé au mainteneur : le `reference.docx` déjà livré par le CLI est dérivé de
-  celui de Pandoc (`packages/cli/assets/README.md`), donc relève de la GPL-2+ selon la même source.
+- Le `reference.docx` déjà livré par le CLI était dérivé de celui de Pandoc, donc GPL-2+ selon la même
+  source. Le mainteneur a choisi de le refaire de zéro (2026-10-08) : il est désormais écrit par le
+  projet (`packages/cli/reference-docx-src/`, `scripts/build-reference-docx.mjs`), même rendu au pixel
+  près dans LibreOffice, sans relation externe.

@@ -282,7 +282,11 @@ function patchTableHeaderColor(stylesXml, tableHeaderColor) {
     /(<w:style[^>]*\bw:styleId="Table"[^>]*>[\s\S]*?<w:tblStylePr w:type="firstRow">[\s\S]*?<w:tcPr>)([\s\S]*?)(<\/w:tcPr>)/,
     (whole, open, inner, close) => {
       const shd = `<w:shd w:val="clear" w:color="auto" w:fill="${safe}"/>`;
-      const nextInner = /<w:shd\b[^>]*\/>/.test(inner) ? inner.replace(/<w:shd\b[^>]*\/>/, shd) : `${inner}${shd}`;
+      // Schema order inside w:tcPr puts w:shd after w:tcBorders and before w:vAlign.
+      let nextInner;
+      if (/<w:shd\b[^>]*\/>/.test(inner)) nextInner = inner.replace(/<w:shd\b[^>]*\/>/, shd);
+      else if (/<w:vAlign\b/.test(inner)) nextInner = inner.replace(/<w:vAlign\b/, `${shd}<w:vAlign`);
+      else nextInner = `${inner}${shd}`;
       return `${open}${nextInner}${close}`;
     },
   );
