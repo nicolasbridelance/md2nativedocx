@@ -74,7 +74,11 @@ function renderFixture(sofficeBin, mmdPath, workDir, format = 'docx') {
   const name = basename(mmdPath, '.mmd');
   const source = readFileSync(mmdPath, 'utf8');
   const mdPath = join(workDir, `${name}.md`);
-  writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${source}\`\`\`\n`);
+  // The closing fence must start its own line: nine fixtures have no trailing newline, and gluing the
+  // fence to their last line left the block unclosed, so they rendered as plain text (and their first
+  // baselines canonized that, until 2026-10-08).
+  const body = source.endsWith('\n') ? source : `${source}\n`;
+  writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${body}\`\`\`\n`);
 
   const docxPath = join(workDir, `${name}.${format}`);
   // The baselines are the shape translators' output: SmartArt and Word charts (on by default) are turned off.
