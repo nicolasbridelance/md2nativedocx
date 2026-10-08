@@ -21,20 +21,20 @@ sans fenêtre) (`docs/adr/spikes/spike-odf-connector/`) ; S3, l'import Markdown 
 perd l'info-string `mermaid` et ne gère pas les maths (`docs/adr/spikes/spike-odf-markdown-import/`) ;
 S2, couleurs, tailles et flèches sans post-traitement du `.odt` (gabarit Pandoc dérivé, styles
 déclarés par le filtre, diagramme dans un `draw:g` ancré comme caractère :
-`docs/adr/spikes/spike-odf-styles/`).
+`docs/adr/spikes/spike-odf-styles/`) ; S5, `odfvalidator` de l'ODF Toolkit retenu, il a trouvé un
+attribut obligatoire manquant sur le connecteur (`docs/adr/spikes/spike-odf-validator/`).
 
 Mainteneur :
 
 - [ ] Trancher les points restants de la spec 05 §8 : API du core, `AGENTS.md` (règle 7 : citer le
       gabarit `opendocument` dérivé et le `reference.odt` ; interdits ODF du §7), licence des deux
-      fichiers fournis à Pandoc (S2).
+      fichiers fournis à Pandoc (S2) ; accord pour `odfvalidator` 0.13.0 comme outil de développement
+      (S5, `docs/adr/spikes/spike-odf-validator/`).
 
 Agent :
 
 - [ ] **S4** : lire le filtre Markdown de LibreOffice (traitement des blocs de code, info-string) et
       lister les options d'intégration côté LibreOffice ; aucun contact public avant.
-- [ ] **S5** : choisir un validateur ODF (équivalent de `scripts/oxml-validator/`), justification de
-      dépendance de développement à l'appui.
 - [ ] Puis ADR de fin de phase 0 et début de la phase 1 (`.odt` pour les flowcharts).
 
 ## 1. En attente du mainteneur

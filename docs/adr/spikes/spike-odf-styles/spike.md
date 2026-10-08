@@ -61,5 +61,10 @@ sélectionner une forme seule.
   on peut l'éviter en créant le nôtre dans LibreOffice. Livrer l'un ou l'autre avec le CLI est une
   question de licence, donc une décision du mainteneur (rien de livré par ce spike).
 
-**Non vérifié.** Validation par un validateur ODF (S5) ; rendu avec LibreOffice 24.2 (seul le
+**Validation (S5, `docs/adr/spikes/spike-odf-validator/`).** Le premier `source.md` donnait une
+erreur de schéma : `draw:connector` sans `svg:viewBox`, que LibreOffice affichait sans rien dire.
+Corrigé ici (extrémités `svg:x1`…`svg:y2` et `svg:viewBox`) : le fichier est valide, le rendu et le
+déplacement de B inchangés.
+
+**Non vérifié.** rendu avec LibreOffice 24.2 (seul le
 déplacement par l'API y a été fait) ; une vraie interface graphique.

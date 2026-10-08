@@ -1,7 +1,7 @@
 # Cahier des charges — Cible LibreOffice / ODF
 
 > **Statut au 2026-10-08 : priorité du projet** (décision du mainteneur). Phase 0 (reconnaissance)
-> commencée : S0 à S3 faits. Rien n'est encore livré.
+> commencée : S0, S1, S2, S3 et S5 faits. Rien n'est encore livré.
 > Révise `docs/specs/cahier_des_charges.md` §2.1, qui laissait ODF aux contributeurs externes.
 
 ## 1. Contexte et décision
@@ -116,8 +116,10 @@ l'ADR 0012 attendaient avant toute abstraction : `.pptx` réutilise le DrawingML
 - **S4.** Porte B : lire le code du filtre Markdown de LibreOffice (où passent les blocs de code,
   quelle info-string est conservée), lister les options, et seulement ensuite écrire aux développeurs
   LibreOffice.
-- **S5.** Validateur ODF, l'équivalent de `scripts/oxml-validator/` (par exemple l'ODF Validator de
-  l'ODF Toolkit, Java, Apache-2.0). Nouvel outil de développement : à justifier (règle 6).
+- **S5 (fait, 2026-10-08).** `odfvalidator` 0.13.0 de l'ODF Toolkit (Java, Apache-2.0) : un `.odt`
+  Pandoc ordinaire passe sans erreur ; notre connecteur manquait de `svg:viewBox` (corrigé dans S2).
+  Son ajout au dépôt (`test:odf-validate`) attend l'accord du mainteneur, règle 6
+  (`docs/adr/spikes/spike-odf-validator/`).
 
 **Phase 1 — `.odt` pour les flowcharts.** CLI `-o doc.odt`, tests golden ODF, `test:visual` étendu à
 Writer en `.odt`, validateur de S5. Critère de fin : un flowchart de 10 nœuds avec sous-graphes,

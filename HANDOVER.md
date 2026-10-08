@@ -79,6 +79,9 @@ format, no shape primitive in the Docs API); Slides stays reachable through `.pp
   S2: colours, sizes and arrows need no `.odt` post-processing (a derived Pandoc template carries
   the filter's styles; the diagram is one `draw:g` anchored as a character)
   ([`docs/adr/spikes/spike-odf-styles/`](docs/adr/spikes/spike-odf-styles/spike.md)).
+  S5: the ODF Toolkit's `odfvalidator` 0.13.0 is the proposed validator; it caught a missing
+  required `svg:viewBox` on the connector that LibreOffice silently tolerated
+  ([`docs/adr/spikes/spike-odf-validator/`](docs/adr/spikes/spike-odf-validator/spike.md)).
   Next steps are in `TODO.md` §0.
 - V2 work (below) now comes second: only the tasks that also serve ODF or close an open security risk
   continue (marked ▶ in `TODO.md` §2bis, decided 2026-10-08). LibreOffice 26.2.6 is pinned next to the
