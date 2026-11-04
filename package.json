@@ -35,7 +35,7 @@
     "node": ">=18"
   },
   "overrides": {
-    "serialize-javascript": "^7.1.2",
+    "serialize-javascript": "^7.1.4",
     "diff": "^8.0.3",
     "adm-zip": "^0.6.1",
     "qs": "^6.16.0"
