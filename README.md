@@ -191,6 +191,12 @@ npm run test:oxml-validate  # schema validation via Microsoft's Open XML SDK (ne
 - `docs/compliance/` — license, dependencies, IT risk analysis, non-technical guide.
 - `CONTRIBUTING.md` — how to contribute.
 
+## About
+
+md2nativedocx is made by [Ennead Studio](https://ennead-studio.github.io/), an independent studio in Paris,
+under the sign of Seshat, the Egyptian goddess of writing and measurement. Like every Ennead project, it is
+built with restraint: it runs on your machine, your documents stay with you, and the code is open.
+
 ## License
 
 **CC0 1.0 Universal** — public domain. See `LICENSE` for the full legal text.
