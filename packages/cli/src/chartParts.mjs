@@ -12,8 +12,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
+import { UUID_PATTERN, existingPartIds } from './partIds.mjs';
 
-const PLACEHOLDER_RE = /CHART_PLACEHOLDER:([A-Za-z0-9-]+)/g;
+const PLACEHOLDER_RE = new RegExp(`CHART_PLACEHOLDER:(${UUID_PATTERN})`, 'g');
 const REL_BASE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const CHART_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml';
 const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -127,9 +128,12 @@ export function injectChartParts(docxPath, chartDir) {
   const archive = resolve(docxPath);
   const zip = new AdmZip(archive);
   let documentXml = readZipEntry(zip, 'word/document.xml');
-  const ids = [...new Set([...documentXml.matchAll(PLACEHOLDER_RE)].map((m) => m[1]))];
-  if (ids.length === 0) return;
+  const candidates = [...new Set([...documentXml.matchAll(PLACEHOLDER_RE)].map((m) => m[1]))];
+  if (candidates.length === 0) return;
   if (!chartDir) throw new Error('md2nativedocx: document.xml references native charts but no chartDir was given');
+  // Only ids the bridge really wrote: a look-alike in the document's prose is left as text.
+  const ids = existingPartIds(candidates, chartDir);
+  if (ids.length === 0) return;
 
   let contentTypes = readZipEntry(zip, '[Content_Types].xml');
   let relsXml = readZipEntry(zip, 'word/_rels/document.xml.rels');

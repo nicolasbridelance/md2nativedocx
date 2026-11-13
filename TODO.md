@@ -143,7 +143,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
 
 ### R3 — Sécurité (branche `security/untrusted-text-hardening`)
 
-- [ ] **R3.1 Marqueurs SmartArt et graphiques.**
+- [x] **R3.1 Marqueurs SmartArt et graphiques.** *Fait 2026-11-13 : `packages/cli/src/partIds.mjs` (UUID seul, dossier existant, contenu dans la base, lien symbolique sortant refusé) ; un marqueur qui n'est pas de nous reste du texte. Écart : un id bien formé sans dossier est désormais ignoré au lieu de lever « no SmartArt parts found » (sinon une prose bien formée casse l'export) ; un vrai marqueur dont le dossier manquerait laisserait donc un r:dm invalide au lieu d'une erreur.*
       - Identifiant limité au format UUID (`[0-9a-f]{8}-…`, ce que génère `randomUUID()`), pour
         `SMARTART_PLACEHOLDER` comme pour `CHART_PLACEHOLDER` ;
       - contrôle que `resolve(dir, id)` reste bien dans `dir` ;
