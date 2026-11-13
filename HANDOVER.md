@@ -84,7 +84,7 @@ reached: their order against ODF phase 2 is to be decided.
 - **2026-10-08, ODF phase 0:** spec [`05-libreoffice-odf-spec.md`](docs/specs/05-libreoffice-odf-spec.md),
   spikes S0-S5, ADR 0013, `AGENTS.md` extended to ODF.
 - **2026-10-08, tooling:** `npm run test:odf-validate` (ODF Toolkit `odfvalidator` 0.13.0, Apache-2.0,
-  jar pinned by SHA-256, zero errors required, runs in CI); LibreOffice 26.2.6 pinned next to the apt
+  jar pinned by SHA-256, zero errors required, runs in CI); LibreOffice 26.2.7 pinned next to the apt
   one as `soffice-26.2` (`scripts/install-libreoffice-pinned.sh`, called by `.devcontainer/setup.sh`
   and the `visual` CI job, which also re-runs the Markdown import check). The apt LibreOffice stays
   the visual-test renderer, so baselines did not move. 26.8 from 26.8.2 on (26.8.0 behaves the same
@@ -108,7 +108,7 @@ reached: their order against ODF phase 2 is to be decided.
 - The `visual` CI job runs weekly (Monday cron), on `release/**` pushes and on demand (Actions tab;
   the Codespace token cannot dispatch it, push a `release/` branch instead). It had never run before
   2026-10-08 (no schedule trigger). First run green: 100/100 renders, `test:odf-connectors` 221
-  connectors, pinned LibreOffice 26.2.6 Markdown import.
+  connectors, pinned LibreOffice 26.2.7 Markdown import.
 - `npm audit --omit=dev` clean; one dated audit exception (`braces`, **expires 2026-12-31**).
 
 ## Open items outside ODF

@@ -15,9 +15,11 @@
 # installed, so their shared-library dependencies come from the distribution package.
 set -euo pipefail
 
-VERSION="26.2.6"
+VERSION="26.2.7"
 SERIES="26.2"
-SHA256="fd0e8f8f2408dd2e5b90286e60f3f97cf566ba441cd48cfc5bcc68067303e0bc"
+# The archive (downloadarchive.documentfoundation.org) names releases with all four numbers.
+FULL_VERSION="26.2.7.3"
+SHA256="8cd04a88396a9230264ff784ec89cc090cbfd0960c192483ba2b80fa53939416"
 
 TARGET="/opt/libreoffice${SERIES}"
 LAUNCHER="/usr/local/bin/soffice-${SERIES}"
@@ -31,8 +33,15 @@ work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
 
 tarball="LibreOffice_${VERSION}_Linux_x86-64_deb.tar.gz"
-curl -fsSL "https://download.documentfoundation.org/libreoffice/stable/${VERSION}/deb/x86_64/${tarball}" \
-  -o "${work}/${tarball}"
+archive_tarball="LibreOffice_${FULL_VERSION}_Linux_x86-64_deb.tar.gz"
+# /stable/ only ever holds the current release: once TDF ships the next one, the pinned version
+# moves to the archive. Try both, so the pin keeps working (the SHA-256 below is what is trusted).
+curl -fsSL --retry 3 --retry-delay 5 \
+  "https://download.documentfoundation.org/libreoffice/stable/${VERSION}/deb/x86_64/${tarball}" \
+  -o "${work}/${tarball}" ||
+  curl -fsSL --retry 3 --retry-delay 5 \
+    "https://downloadarchive.documentfoundation.org/libreoffice/old/${FULL_VERSION}/deb/x86_64/${archive_tarball}" \
+    -o "${work}/${tarball}"
 echo "${SHA256}  ${work}/${tarball}" | sha256sum -c -
 
 mkdir -p "${work}/x" "${work}/root"

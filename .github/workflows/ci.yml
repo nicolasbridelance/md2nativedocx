@@ -262,11 +262,38 @@ jobs:
 
   # Visual-regression tests need LibreOffice headless and are slower; run them
   # on a schedule and on release branches rather than every PR. This trade-off
-  # is explicit: see AGENTS.md → CI/CD.
+  # is explicit: see AGENTS.md → CI/CD. Exception: a PR that touches the visual
+  # job's own infrastructure (this workflow, the runner script, the pinned
+  # LibreOffice installer, the visual corpus) runs it too, so that a change to
+  # the job is validated by the job itself instead of by a manual dispatch.
+  visual-scope:
+    name: Visual job scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          run=false
+          if [ "${EVENT}" = "pull_request" ]; then
+            if git diff --name-only "origin/${BASE_REF}...HEAD" \
+              | grep -qE '^(\.github/workflows/ci\.yml|scripts/test-visual\.mjs|scripts/lib/|scripts/install-libreoffice-pinned\.sh|test-corpus/visual/)'; then
+              run=true
+            fi
+          fi
+          echo "run=${run}" >> "$GITHUB_OUTPUT"
+
   visual:
     name: Visual regression (LibreOffice headless)
+    needs: visual-scope
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/')
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/') || needs.visual-scope.outputs.run == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -274,7 +301,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install Lua
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+        run: sudo apt-get -o Acquire::Retries=3 update -qq && sudo apt-get -o Acquire::Retries=3 install -y -qq lua5.4
 
       - name: Install Pandoc (pinned, same as the Windows/macOS jobs and .devcontainer)
         # Not apt: Ubuntu's pandoc jumped from 3.1.3 to 3.7.0.2 in Nov 2026 and
@@ -284,16 +311,44 @@ jobs:
           pandoc-version: '3.1.3'
       - name: Install LibreOffice headless
         # python3-uno: the .odt connector check drives LibreOffice through UNO.
-        run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress python3-uno
+        run: sudo apt-get -o Acquire::Retries=3 install -y -qq libreoffice-writer libreoffice-impress python3-uno
       # Pinned release for the ODF target, next to the apt one (which stays the visual-test
       # renderer). Version and SHA-256 are in the script, shared with .devcontainer/setup.sh.
       - name: Install pinned LibreOffice (ODF target)
         run: bash scripts/install-libreoffice-pinned.sh
+      # Drift watch: the baselines were accepted with this apt series (fontconfig is pinned by
+      # test-corpus/visual/fontconfig). A different series is the first suspect when pixels move.
+      - name: Record tool versions (drift watch)
+        env:
+          EXPECTED_LO_SERIES: '24.2'
+        run: |
+          lo="$(soffice --version | head -1)"
+          {
+            echo "### Visual job toolchain"
+            echo "- apt LibreOffice: ${lo}"
+            echo "- pinned LibreOffice: $(soffice-26.2 --version | head -1)"
+            echo "- Pandoc: $(pandoc --version | head -1)"
+            echo "- Ubuntu: $(. /etc/os-release && echo "${PRETTY_NAME}")"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          case "${lo}" in
+            *"LibreOffice ${EXPECTED_LO_SERIES}."*) ;;
+            *) echo "::warning title=LibreOffice series changed::baselines were accepted with ${EXPECTED_LO_SERIES}.x, runner has: ${lo}" ;;
+          esac
       - run: npm ci
       # The CLI runs the core through the Pandoc filter, from packages/*/dist.
       - run: npm run build
       - name: Visual tests
+        env:
+          MD2NATIVEDOCX_VISUAL_FAILURE_DIR: ${{ runner.temp }}/visual-failures
         run: npm run test:visual
+      - name: Upload failing renders
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-failures-${{ github.sha }}
+          path: ${{ runner.temp }}/visual-failures
+          retention-days: 30
+          if-no-files-found: ignore
       - name: ODF connector attachment (UNO)
         run: npm run test:odf-connectors
       # Watches the behaviour spike S3 recorded: the pinned release still imports Markdown.
