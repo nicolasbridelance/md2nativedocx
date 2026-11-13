@@ -36,7 +36,7 @@ mock.module('node:child_process', {
 });
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { exportMermaidFile, PandocMissingError, PandocBlockedByPolicyError, ExportFailedError } = require('../../src/exportService');
+const { exportMermaidFile, PandocMissingError, PandocBlockedByPolicyError, ExportFailedError, OutputLockedError } = require('../../src/exportService');
 
 function withTempMmd(fn: (mmdPath: string) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-enoent-classification-test-'));
@@ -107,5 +107,31 @@ test('the CLI\'s own "Pandoc failed (exit EACCES)" marker is still classified as
         assert.ok(err instanceof PandocBlockedByPolicyError);
         return true;
       },
+    );
+  }));
+
+// R1.2: the CLI's "output is open in Word" refusal (exit 2) becomes OutputLockedError carrying the refused
+// path; a plain usage error (also exit 2) stays a generic ExportFailedError.
+test('exit 2 with the CLI "is open in Word" message is classified as OutputLockedError', () =>
+  withTempMmd(async (mmdPath) => {
+    mockErr = Object.assign(new Error('Command failed'), { code: 2 });
+    mockStderr = 'md2nativedocx: flux_arcs.docx is open in Word: close it or export under another name.\n';
+    await assert.rejects(
+      () => exportMermaidFile(mmdPath, '', { outputPath: '/x/flux_arcs.docx' }),
+      (err: unknown) => {
+        assert.ok(err instanceof OutputLockedError);
+        assert.equal((err as { outputPath: string }).outputPath, '/x/flux_arcs.docx');
+        return true;
+      },
+    );
+  }));
+
+test('exit 2 for a usage error is not an OutputLockedError', () =>
+  withTempMmd(async (mmdPath) => {
+    mockErr = Object.assign(new Error('Command failed'), { code: 2 });
+    mockStderr = 'Path escapes the working directory: ../x\n';
+    await assert.rejects(
+      () => exportMermaidFile(mmdPath, ''),
+      (err: unknown) => err instanceof ExportFailedError && !(err instanceof OutputLockedError),
     );
   }));

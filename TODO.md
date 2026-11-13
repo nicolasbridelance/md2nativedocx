@@ -56,7 +56,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 
 ### R1 — L'incident lui-même → release 0.8.1 (branche `fix/safe-docx-write`)
 
-- [ ] **R1.1 Écriture sûre de la sortie.** Un seul utilitaire `writeOutputSafely(path, buffer)` dans
+- [x] **R1.1 Écriture sûre de la sortie.** Un seul utilitaire `writeOutputSafely(path, buffer)` dans
       `packages/cli/src/`, utilisé par `bin/md2nativedocx.mjs` (`.docx`, `.odt`, journal) et `pptxExport.mjs` :
       - refus si le fichier de verrou Word existe dans le dossier de sortie. Il y a deux formes :
         `~$` + nom complet, et `~$` + nom privé de ses 2 premiers caractères pour les noms longs ;
@@ -67,13 +67,13 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
         utilisable : « X.docx est ouvert dans Word : fermez-le ou exportez sous un autre nom ».
       - Tests : verrou présent → refus et cible intacte au même octet près ; réussite → aucun `.tmp`
         laissé ; échec de `rename` simulé → cible intacte.
-- [ ] **R1.2 Extension : notification claire** quand le CLI renvoie l'erreur `write`, avec un bouton
+- [x] **R1.2 Extension : notification claire** quand le CLI renvoie l'erreur `write`, avec un bouton
       « Exporter sous… ». Aujourd'hui l'erreur ne serait visible que dans le canal de sortie.
-- [ ] **R1.3 Enregistrer avant d'exporter.** Dans l'export du document et l'export multi-fichiers, si
+- [x] **R1.3 Enregistrer avant d'exporter.** Dans l'export du document et l'export multi-fichiers, si
       un `TextDocument` ouvert correspond au fichier et `isDirty`, faire `await doc.save()` avant de
       lancer le CLI. (Choisi plutôt que d'exporter `getText()` : Pandoc résout images et chemins
       relatifs depuis le disque.)
-- [ ] **R1.4 Contrôle Word honnête.** Classer chaque erreur du validateur :
+- [x] **R1.4 Contrôle Word honnête.** Classer chaque erreur du validateur :
       - **les nôtres** : `/word/diagrams/*`, `/word/charts/*`, `/word/document.xml` ;
       - **connues de Pandoc** : liste fermée de signatures relevées le 2026-11-13 (styles `*Tok` →
         `w:rPr`, `w:nsid` de `numbering.xml`, `doNotTrackMoves`), liée à la version de Pandoc ;
@@ -81,14 +81,31 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       Le message dit par partie ce qui a été vérifié, sans jamais affirmer un effet sur Word. Test sur
       un `.docx` dont le canevas `wpc` est cassé exprès : le contrôle **doit** le signaler, ce qui
       vérifie l'« angle mort » annoncé par les analyses.
-- [ ] **R1.5 Bloc ```` ```mermaid ```` non fermé.**
+- [x] **R1.5 Bloc ```` ```mermaid ```` non fermé.**
       - `mermaidBlocks.ts` renvoie les blocs non fermés au lieu de `break` ;
       - avertissement à l'export, et diagnostic `DiagnosticCollection` dans l'éditeur avec un Quick
         Fix « ajouter ```` ``` ```` » ;
       - côté CLI, détection équivalente avant Pandoc, avec un avertissement dans le journal.
+- [ ] **R1.7 (suite de R1.4, hors release 0.8.1) Un seul classement des erreurs du validateur.**
+      `scripts/test-oxml-validate.mjs` (`isOwnDiagramOutput`) garde son propre filtre, déjà plus large que
+      l'ancien filtre du CLI mais distinct de `classifyValidatorErrors` (`packages/cli/src/wordCheck.mjs`).
+      Le brancher dessus pour que CI et journal classent pareil, et que `test:oxml-validate` distingue aussi
+      les écarts Pandoc connus des erreurs « autres » au lieu de les compter en bloc.
 - [ ] **R1.6 Release.** Extension 0.8.1 et CLI en patch. Vérification manuelle par le mainteneur sur
       son poste Windows + OneDrive : export pendant que le `.docx` est ouvert dans Word → message, pas
       de plantage. Rédiger alors `docs/history/incident-flux-arcs-2026-11.md` et faire sortir R1 d'ici.
+
+#### Journal de R1 : réalisé, écarts avec le plan, reste à faire (tenu à jour au fil de l'eau)
+
+| Lot | État | Écart avec le plan / limite connue |
+|---|---|---|
+| R1.1 | fait | Test d'échec de `rename` : la cible est un dossier, donc l'échec survient au contrôle `r+` et non au `rename` ; il prouve que la cible reste intacte mais pas le nettoyage du `.tmp`. |
+| R1.2 | fait | Pas de « Exporter sous… » dans l'export multi-fichiers (un nom par fichier à choisir) : l'échec est compté et détaillé dans le canal de sortie. Dialogue non testé dans un VS Code réel (`test:extension-host` non lancé). |
+| R1.3 | fait | L'export d'un seul diagramme n'enregistre pas : il lit le tampon de l'éditeur, pas le disque. `doc.save()` non testé dans un VS Code réel. |
+| R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. Le test `wpc` publie le validateur depuis une copie privée : le premier essai a échoué sur le runner Windows, vraisemblablement un conflit de `obj/` avec l'autre test qui publie le même projet en parallèle (cause non confirmée par les journaux ; corrigé, CI verte). |
+| R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
+| R1.6 | préparé | Versions (extension 0.8.1, CLI 0.2.1, `mcp` aligné), CHANGELOG et brouillon `docs/history/incident-flux-arcs-2026-11.md` faits. **Reste au mainteneur** : vérification manuelle Windows + OneDrive (liste dans le rapport), puis merge de la PR, tag, publication npm (CLI 0.2.1) et Marketplace (0.8.1), et sortie de R1 de ce fichier. Rien n'est publié. |
+| R1.7 | à faire | Hors 0.8.1 : un seul classement des erreurs du validateur (CI et journal). |
 
 ### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
 

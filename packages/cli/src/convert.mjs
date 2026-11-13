@@ -27,6 +27,7 @@ import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts } from './postprocess.mjs';
+import { unclosedFenceWarnings } from './unclosedFences.mjs';
 import { injectChartParts } from './chartParts.mjs';
 import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from './referenceDocBuilder.mjs';
 
@@ -34,7 +35,7 @@ import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolve
 export class ConversionError extends Error {
   /**
    * @param {string} message
-   * @param {{ stage: 'setup' | 'pandoc' | 'postprocess', pandocStderr?: string, cause?: unknown }} details
+   * @param {{ stage: 'setup' | 'pandoc' | 'postprocess' | 'write', pandocStderr?: string, cause?: unknown }} details
    */
   constructor(message, { stage, pandocStderr = '', cause } = {}) {
     super(message, cause === undefined ? undefined : { cause });
@@ -134,6 +135,18 @@ function extractWarnings(stderrText) {
     .map((line) => line.slice('md2nativedocx: '.length));
 }
 
+/** Warnings about the source text itself, found before Pandoc runs (an unclosed ```mermaid fence). */
+function sourceWarnings(source) {
+  let text;
+  try {
+    text = typeof source === 'string' ? source : readFileSync(source.path, 'utf8');
+  } catch {
+    // An unreadable input is Pandoc's error to report with its own message; this check is only advisory.
+    return [];
+  }
+  return unclosedFenceWarnings(text);
+}
+
 /** Where Pandoc reads from: the given file, or the text written to `work/input.md`. */
 function inputFile(source, work) {
   if (typeof source !== 'string') return source.path;
@@ -179,7 +192,7 @@ async function convertOdt(source, options) {
       { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: { cx: page.cx, cy: Math.min(page.cy, ODT_MAX_DRAWING_CY) }, landscapeGeometry: null },
     );
     const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env });
-    return { document: readFileSync(outputPath), warnings: extractWarnings(pandocStderr), pandocStderr };
+    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr)], pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
@@ -253,7 +266,7 @@ export async function convert(source, options = {}) {
       throw new ConversionError(`post-processing failed: ${errorMessage(err)}`, { stage: 'postprocess', pandocStderr, cause: err });
     }
 
-    return { document: readFileSync(outputPath), warnings: extractWarnings(pandocStderr), pandocStderr };
+    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr)], pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
     if (generatedReferenceDoc) rmSync(generatedReferenceDoc.dir, { recursive: true, force: true });

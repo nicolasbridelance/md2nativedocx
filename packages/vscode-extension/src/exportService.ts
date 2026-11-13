@@ -61,6 +61,18 @@ export class ExportFailedError extends Error {
     super(message);
   }
 }
+/** The CLI refused to write the output because Word (or another program) holds it open (R1.1: lock file
+ * beside the target, or the target not writable). Distinct from {@link ExportFailedError} so
+ * `extension.ts` can offer "Export as…" instead of a bare error. `outputPath` is the file that was refused. */
+export class OutputLockedError extends ExportFailedError {
+  constructor(
+    message: string,
+    details: string,
+    public readonly outputPath: string,
+  ) {
+    super(message, details);
+  }
+}
 /** Thrown when a palette-invoked block export no longer matches any block in
  * the document (it changed between CodeLens render and click). Distinguished
  * from the generic ExportFailedError so the caller (extension.ts, which has
@@ -142,6 +154,9 @@ export interface RunCliOptions {
   /** Mirrors `md2nativedocx.pptx.showSource`: put each diagram's Mermaid source beside it on its slide. */
   pptxShowSource?: boolean;
   pandocBin?: string;
+  /** Write the result here instead of the default location (the "Export as…" recovery after an
+   * {@link OutputLockedError}). Absolute path; its extension should match `format`. */
+  outputPath?: string;
   /** Path to a `.docx` used as Pandoc's `--reference-doc` (mirrors the
    * `md2nativedocx.referenceDocument` setting) — a company/corporate
    * template instead of the bundled default. */
@@ -287,6 +302,12 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
         reject(new PandocBlockedByPolicyError('Pandoc execution was blocked by a security policy.', stderr));
         return;
       }
+      // Exit code 2 plus the CLI's own R1.1 wording: the output file is open in Word / locked. Exit code
+      // 2 alone is also a usage error, so the message is matched too.
+      if (err.code === 2 && /is open in Word|cannot be overwritten/.test(stderr)) {
+        reject(new OutputLockedError(stderr.trim().split('\n')[0] ?? err.message, stderr, output));
+        return;
+      }
       // The reason (raw Pandoc/CLI stderr) can't be translated — it's
       // external tool output. extension.ts prepends a localized "Export
       // failed: " prefix when displaying it.
@@ -341,7 +362,7 @@ export async function exportDocument(
   outputDirectory: string,
   options: RunCliOptions = {},
 ): Promise<ExportResult> {
-  const outputPath = resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory, options.format);
+  const outputPath = options.outputPath ?? resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory, options.format);
   await runCli(sourcePath, outputPath, dirname(sourcePath), options);
   const logPath = logPathFor(outputPath);
   return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -371,7 +392,7 @@ export async function exportBlock(
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapBlockAsDocument(block));
     const outputBaseName = `${sourceBaseName(sourcePath)}-diagram-${blockIndex + 1}`;
-    const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory, options.format);
+    const outputPath = options.outputPath ?? resolveOutputPath(sourcePath, outputBaseName, outputDirectory, options.format);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);
     return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -395,7 +416,7 @@ export async function exportMermaidFile(
   try {
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapMermaidSource(source, title));
-    const outputPath = resolveOutputPath(sourcePath, title, outputDirectory, options.format);
+    const outputPath = options.outputPath ?? resolveOutputPath(sourcePath, title, outputDirectory, options.format);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);
     return { outputPath, logPath, warningCount: readWarningCount(logPath) };

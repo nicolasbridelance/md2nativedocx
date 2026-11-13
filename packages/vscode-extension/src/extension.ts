@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { existsSync } from 'node:fs';
-import { basename, isAbsolute, join } from 'node:path';
+import { basename, extname, isAbsolute, join } from 'node:path';
 import { MermaidCodeLensProvider } from './codeLensProvider';
 import { planFor, planHover } from './diagramPlan';
 import { nativeChartTypesSetting } from './settings';
@@ -14,6 +14,7 @@ import {
   resolveOxmlValidatorDll,
   PandocMissingError,
   PandocBlockedByPolicyError,
+  OutputLockedError,
   BlockNotFoundError,
   ExportFailedError,
   type ExportFormat,
@@ -23,6 +24,7 @@ import {
   SMARTART_STYLE_NAMES,
   type SmartArtStyleName,
 } from './exportService';
+import { registerUnclosedFenceDiagnostics } from './unclosedFenceDiagnostics';
 import { ensurePandoc } from './pandocProvisioner';
 import { ensureDotnet } from './dotnetProvisioner';
 import { ConfigPanelProvider, CONFIG_VIEW_ID } from './configPanel';
@@ -35,6 +37,7 @@ export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('md2nativedocx');
   context.subscriptions.push(outputChannel);
 
+  registerUnclosedFenceDiagnostics(context);
   const codeLenses = new MermaidCodeLensProvider();
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd,qmd}' }, codeLenses),
@@ -249,6 +252,14 @@ async function exportOptions(progress: vscode.Progress<{ message?: string }>, fo
   };
 }
 
+/** Save the open editors for `uris` that have unsaved changes, so an export reads what the author sees. */
+async function saveIfDirty(uris: readonly vscode.Uri[]): Promise<void> {
+  const wanted = new Set(uris.map((u) => u.toString()));
+  for (const doc of vscode.workspace.textDocuments) {
+    if (doc.isDirty && wanted.has(doc.uri.toString())) await doc.save();
+  }
+}
+
 /** Export one document (`.md`/`.qmd`, or a raw `.mmd` diagram) in `format`. */
 function exportOne(uri: vscode.Uri, options: RunCliOptions): Promise<ExportResult> {
   return isMermaidFilePath(uri.fsPath)
@@ -260,7 +271,12 @@ function exportOne(uri: vscode.Uri, options: RunCliOptions): Promise<ExportResul
  * "Exporter en Word" / "Exporter en PowerPoint" for a whole document. From the Explorer with several files
  * selected, VS Code passes the clicked file then the whole selection: each exportable file is exported.
  */
-async function handleExportDocument(uriArg?: vscode.Uri, selection?: vscode.Uri[], format: ExportFormat = 'docx'): Promise<void> {
+async function handleExportDocument(
+  uriArg?: vscode.Uri,
+  selection?: vscode.Uri[],
+  format: ExportFormat = 'docx',
+  outputPath?: string,
+): Promise<void> {
   const many = (selection ?? []).filter((u) => isExportablePath(u.fsPath));
   if (many.length > 1) {
     await handleExportMany(many, format);
@@ -268,17 +284,21 @@ async function handleExportDocument(uriArg?: vscode.Uri, selection?: vscode.Uri[
   }
   const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
+  // Pandoc reads the file from disk (images, relative paths): unsaved edits would be silently left out.
+  await saveIfDirty([uri]);
   await runExportFlow(
-    async (progress) => exportOne(uri, await exportOptions(progress, format)),
+    async (progress) => exportOne(uri, { ...(await exportOptions(progress, format)), outputPath }),
     format,
     // "Réessayer" on a Pandoc-missing toast must restart this exact command
-    // with the same target URI (missing_pandoc_bugfix.md §4).
-    () => handleExportDocument(uri, undefined, format),
+    // with the same target URI (missing_pandoc_bugfix.md §4). "Export as…" after a locked output
+    // restarts it with the chosen file name.
+    (newOutputPath) => handleExportDocument(uri, undefined, format, newOutputPath ?? outputPath),
   );
 }
 
 /** Several files selected in the Explorer: one progress notification, one summary at the end. */
 async function handleExportMany(uris: vscode.Uri[], format: ExportFormat): Promise<void> {
+  await saveIfDirty(uris);
   const failures: string[] = [];
   let lastOutput: string | undefined;
   await vscode.window.withProgress(
@@ -328,7 +348,12 @@ async function pickFormat(): Promise<ExportFormat | undefined> {
  * "Exporter ce diagramme…": one diagram, into its own `.docx` or one-slide `.pptx`. `format` comes from a
  * direct menu entry; without it (CodeLens, palette) the user picks.
  */
-async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number, formatArg?: ExportFormat): Promise<void> {
+async function handleExportBlock(
+  uriArg?: vscode.Uri,
+  blockIndexArg?: number,
+  formatArg?: ExportFormat,
+  outputPath?: string,
+): Promise<void> {
   const uri = await resolveExportableUri(uriArg);
   if (!uri) return;
 
@@ -366,11 +391,11 @@ async function handleExportBlock(uriArg?: vscode.Uri, blockIndexArg?: number, fo
   const format = formatArg ?? (await pickFormat());
   if (!format) return;
   await runExportFlow(
-    async (progress) => exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), await exportOptions(progress, format)),
+    async (progress) => exportBlock(uri.fsPath, text, blockIndex as number, outputDirectorySetting(), { ...(await exportOptions(progress, format)), outputPath }),
     format,
     // "Réessayer" on a Pandoc-missing toast must restart this exact command
     // with the same target URI + block index (missing_pandoc_bugfix.md §4).
-    () => handleExportBlock(uri, blockIndex, format),
+    (newOutputPath) => handleExportBlock(uri, blockIndex, format, newOutputPath ?? outputPath),
   );
 }
 
@@ -527,7 +552,7 @@ type ExportOutcome =
 async function runExportFlow(
   run: (progress: vscode.Progress<{ message?: string }>) => Promise<ExportResult>,
   format: ExportFormat,
-  retry?: () => Promise<void>,
+  retry?: (outputPath?: string) => Promise<void>,
 ): Promise<void> {
   const outcome = await vscode.window.withProgress<ExportOutcome>(
     { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Export in progress'), cancellable: false },
@@ -568,7 +593,23 @@ async function runExportFlow(
   }
 }
 
-async function handleExportError(err: unknown, retry?: () => Promise<void>): Promise<void> {
+async function handleExportError(err: unknown, retry?: (outputPath?: string) => Promise<void>): Promise<void> {
+  if (err instanceof OutputLockedError) {
+    outputChannel.appendLine(err.details || err.message);
+    const exportAs = vscode.l10n.t('Export as…');
+    const choice = await vscode.window.showErrorMessage(
+      vscode.l10n.t('{0} is open in Word (or locked): close it, or export under another name.', basename(err.outputPath)),
+      exportAs,
+    );
+    if (choice === exportAs && retry) {
+      const target = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(err.outputPath),
+        filters: { [extname(err.outputPath).slice(1).toUpperCase()]: [extname(err.outputPath).slice(1)] },
+      });
+      if (target) await retry(target.fsPath);
+    }
+    return;
+  }
   if (err instanceof PandocMissingError) {
     // Always log the real reason before the toast — otherwise the output
     // channel stays empty and the cause becomes a diagnostic black hole

@@ -138,5 +138,9 @@
   "SmartArt — timeline": "SmartArt — cronología",
   "Not kept as SmartArt: the title, which becomes a bold paragraph above.": "No se conserva en SmartArt: el título, que pasa a ser un párrafo en negrita encima.",
   "In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.": "En SmartArt, cada puntuación se muestra con estrellas (★★★★☆); el título pasa a ser un párrafo en negrita encima.",
-  "SmartArt — grouped list": "SmartArt — lista agrupada"
+  "SmartArt — grouped list": "SmartArt — lista agrupada",
+  "{0} is open in Word (or locked): close it, or export under another name.": "{0} está abierto en Word (o bloqueado): ciérrelo o exporte con otro nombre.",
+  "Export as…": "Exportar como…",
+  "This ```mermaid block is never closed: everything after it is treated as plain code and no diagram is exported.": "Este bloque ```mermaid nunca se cierra: todo lo que sigue se trata como código sin formato y no se exporta ningún diagrama.",
+  "Add the closing ```": "Añadir el ``` de cierre"
 }

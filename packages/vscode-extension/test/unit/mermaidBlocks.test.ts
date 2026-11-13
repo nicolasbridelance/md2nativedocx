@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseMermaidBlocks,
+  findUnclosedMermaidFences,
   blockAtLine,
   wrapBlockAsDocument,
   wrapMermaidSource,
@@ -121,4 +122,16 @@ test('isMermaidFilePath is true only for .mmd (a .qmd file is markdown-like, not
   assert.equal(isMermaidFilePath('/a/b/DIAGRAM.MMD'), true);
   assert.equal(isMermaidFilePath('/a/b/notes.md'), false);
   assert.equal(isMermaidFilePath('/a/b/report.qmd'), false);
+});
+
+// R1.5: an unclosed fence is reported (with where a closing fence most likely belongs), not silently dropped.
+test('findUnclosedMermaidFences: reports an unclosed block and suggests closing before the next heading', () => {
+  const found = findUnclosedMermaidFences('# T\n\n```mermaid\ngraph TD\n  A-->B\n\n## Next\ntext\n');
+  assert.deepEqual(found, [{ fenceLine: 2, marker: '```', suggestedCloseBeforeLine: 6 }]);
+});
+
+test('findUnclosedMermaidFences: suggests the end of the file when nothing follows, ignores closed and foreign blocks', () => {
+  assert.equal(findUnclosedMermaidFences('```mermaid\ngraph TD\n  A-->B\n').at(0)?.suggestedCloseBeforeLine, 4); // 3 lines + the empty one after the final newline, as VS Code counts
+  assert.deepEqual(findUnclosedMermaidFences('```mermaid\ngraph TD\n```\n'), []);
+  assert.deepEqual(findUnclosedMermaidFences('```js\nlet a\n\n```mermaid\ngraph TD\n'), []);
 });
