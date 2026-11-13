@@ -35,7 +35,7 @@ jobs:
         with:
           pandoc-version: '3.1.3'
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         # Optional dependency: only used by scripts/oxml-validator/ (npm run
         # test:oxml-validate, AGENTS.md → "Diagnosing 'Word won't open the
         # file'"). Version kept in sync with .devcontainer/setup.sh's
@@ -117,7 +117,7 @@ jobs:
         with:
           pandoc-version: '3.1.3'
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         # Needed to build scripts/oxml-validator/ during `npm run package`
         # below (packaging always bundles it, see bundle-oxml-validator.mjs).
         # Version kept in sync with build-test's own setup-dotnet step.
@@ -170,7 +170,7 @@ jobs:
         with:
           pandoc-version: '3.1.3'
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         # Needed to build scripts/oxml-validator/ during `npm run package`
         # below (packaging always bundles it, see bundle-oxml-validator.mjs).
         # Version kept in sync with build-test's own setup-dotnet step.
