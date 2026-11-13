@@ -81,7 +81,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       Le message dit par partie ce qui a été vérifié, sans jamais affirmer un effet sur Word. Test sur
       un `.docx` dont le canevas `wpc` est cassé exprès : le contrôle **doit** le signaler, ce qui
       vérifie l'« angle mort » annoncé par les analyses.
-- [ ] **R1.5 Bloc ```` ```mermaid ```` non fermé.**
+- [x] **R1.5 Bloc ```` ```mermaid ```` non fermé.**
       - `mermaidBlocks.ts` renvoie les blocs non fermés au lieu de `break` ;
       - avertissement à l'export, et diagnostic `DiagnosticCollection` dans l'éditeur avec un Quick
         Fix « ajouter ```` ``` ```` » ;

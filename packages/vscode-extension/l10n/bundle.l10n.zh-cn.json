@@ -140,5 +140,7 @@
   "In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.": "在 SmartArt 中，每个评分显示为星级（★★★★☆）；标题变为上方的加粗段落。",
   "SmartArt — grouped list": "SmartArt — 分组列表",
   "{0} is open in Word (or locked): close it, or export under another name.": "{0} 已在 Word 中打开（或被锁定）：请关闭它，或以其他名称导出。",
-  "Export as…": "导出为…"
+  "Export as…": "导出为…",
+  "This ```mermaid block is never closed: everything after it is treated as plain code and no diagram is exported.": "此 ```mermaid 代码块未闭合：其后的所有内容都被当作普通代码，不会导出任何图表。",
+  "Add the closing ```": "添加结束的 ```"
 }

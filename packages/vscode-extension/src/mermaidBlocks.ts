@@ -83,6 +83,42 @@ export function parseMermaidBlocks(text: string): MermaidBlock[] {
   return blocks;
 }
 
+/** A ```mermaid fence that is never closed (TODO §R1.5). Pandoc turns it into a code block running to the
+ * end of the file, silently: the diagram and everything after it stop being converted. */
+export interface UnclosedMermaidFence {
+  /** 0-based line of the opening fence. */
+  fenceLine: number;
+  /** The fence marker to close with (```` ``` ```` or longer). */
+  marker: string;
+  /** 0-based line before which a closing fence is most likely meant: the next heading or fenced block
+   * after the opening, else the end of the file (`lineCount`). */
+  suggestedCloseBeforeLine: number;
+}
+
+/** Every unclosed ```mermaid fence in `text` (at most one: an unterminated fence runs to the end of the
+ * file, so nothing after it is parsed). Other fenced blocks are skipped wholesale, as Pandoc does.
+ * Mirrors `packages/cli/src/unclosedFences.mjs`. */
+export function findUnclosedMermaidFences(text: string): UnclosedMermaidFence[] {
+  const lines = text.split(/\r\n|\r|\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = (lines[i] ?? '').trim();
+    const mermaid = OPEN_FENCE.exec(trimmed);
+    const marker = mermaid?.[1] ?? ANY_FENCE.exec(trimmed)?.[1];
+    if (!marker) continue;
+    const closeRe = new RegExp(`^${marker}\\s*$`);
+    let j = i + 1;
+    while (j < lines.length && !closeRe.test((lines[j] ?? '').trim())) j++;
+    if (j >= lines.length) {
+      if (!mermaid) return [];
+      let at = i + 1;
+      while (at < lines.length && !HEADING.test(lines[at] ?? '') && !ANY_FENCE.test((lines[at] ?? '').trim())) at++;
+      return [{ fenceLine: i, marker, suggestedCloseBeforeLine: at }];
+    }
+    i = j;
+  }
+  return [];
+}
+
 /** Find the block whose fence spans a given 0-based line, if any. */
 export function blockAtLine(blocks: MermaidBlock[], line: number): MermaidBlock | null {
   return blocks.find((b) => line >= b.fenceLine && line <= b.closingFenceLine) ?? null;

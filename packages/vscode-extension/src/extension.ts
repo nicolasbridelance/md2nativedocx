@@ -24,6 +24,7 @@ import {
   SMARTART_STYLE_NAMES,
   type SmartArtStyleName,
 } from './exportService';
+import { registerUnclosedFenceDiagnostics } from './unclosedFenceDiagnostics';
 import { ensurePandoc } from './pandocProvisioner';
 import { ensureDotnet } from './dotnetProvisioner';
 import { ConfigPanelProvider, CONFIG_VIEW_ID } from './configPanel';
@@ -36,6 +37,7 @@ export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('md2nativedocx');
   context.subscriptions.push(outputChannel);
 
+  registerUnclosedFenceDiagnostics(context);
   const codeLenses = new MermaidCodeLensProvider();
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ pattern: '**/*.{md,mmd,qmd}' }, codeLenses),
