@@ -6,8 +6,10 @@ name: Publish to npm
 # (package Settings -> Trusted Publisher: owner nicolasbridelance, repo md2nativedocx, workflow
 # publish.yml, environment npm-publish).
 #
-# The `npm-publish` GitHub environment is the human gate: give it a required reviewer (repo Settings ->
-# Environments) so nothing reaches npm without the maintainer's approval in the Actions tab.
+# The `npm-publish` GitHub environment has no required reviewer (solo maintainer, releases are meant to be
+# automated). Its guard is the deployment rule "selected branches: main" (repo Settings -> Environments),
+# plus the `main`-only condition on the job below and the fact that only someone with write access to the
+# repository can start a workflow_dispatch run.
 on:
   workflow_dispatch:
     inputs:

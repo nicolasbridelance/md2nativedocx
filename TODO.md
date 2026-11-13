@@ -113,10 +113,10 @@ Le jeton `NPM_TOKEN` du `.env` exige un OTP, et npm retire l'option « bypass 2F
 (annonce du 2026-07-08 : opérations sensibles dès août 2026, publication directe vers janvier 2027 ;
 résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la **publication de confiance
 (OIDC)** : `.github/workflows/publish.yml`, déclenchement manuel, environnement GitHub `npm-publish`
-(relecteur obligatoire = mainteneur). Aucun jeton npm nulle part.
+(sans relecteur : mainteneur solo, publication automatisée ; garde-fou = règle de déploiement « branche `main` uniquement »). Aucun jeton npm nulle part.
 - [ ] Mainteneur : configurer l'éditeur de confiance sur npmjs.com pour les 4 paquets (owner
       `nicolasbridelance`, repo `md2nativedocx`, workflow `publish.yml`, environnement `npm-publish`).
-- [ ] Mainteneur : créer l'environnement `npm-publish` (Settings → Environments, relecteur obligatoire).
+- [ ] Mainteneur : créer l'environnement `npm-publish` (Settings → Environments), sans relecteur, avec « Selected branches and tags » = `main`.
 - [ ] Lancer le workflow en dry run, puis pour de vrai : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1.
 - [ ] Ensuite : « Require two-factor authentication and disallow bypass 2fa tokens » sur les 4 paquets, et
       révoquer le jeton classique de `.env`.
