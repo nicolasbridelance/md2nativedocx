@@ -47,10 +47,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Typecheck and test before publishing
-        run: |
-          npm run typecheck
-          npm run test --workspaces
+      # No test step here on purpose: the suite needs Pandoc, Lua and .NET (see ci.yml), and this workflow only
+      # runs from main, where every commit has already passed ci.yml. Build is kept because the packages are
+      # published from their build output.
 
       - name: npm version
         run: npm --version
