@@ -25,7 +25,7 @@ import { join } from 'node:path';
 // The real fs must be captured *before* the mock, otherwise we can't delegate
 // to it. A plain `import` would be hoisted above this capture, so an explicit
 // require is the only way to get the un-mocked module.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const realFs = require('node:fs');
 
 // Mock `node:fs` so `rmSync` throws only for the provisioning temp dir
@@ -55,7 +55,7 @@ mock.module('node:fs', {
 // Load the module under test *after* the fs mock is registered. A plain
 // `import` can't be hoisted after the mock call, so this is an explicit
 // runtime require — the only `require` this file legitimately needs.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { provisionForPlatform, isCachedBinaryIntact, PANDOC_MANIFEST } = require('../../src/pandocProvisioner');
 
 /** Build a fake Pandoc release archive (a `.tar.gz` containing the binary at

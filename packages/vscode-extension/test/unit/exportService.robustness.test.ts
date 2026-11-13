@@ -36,7 +36,7 @@ mock.module('node:child_process', {
   },
 });
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { exportMermaidFile } = require('../../src/exportService');
 
 test('runCli spawns process.execPath (the editor\'s own Node), not a bare "node" from PATH', async () => {

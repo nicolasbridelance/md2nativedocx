@@ -69,7 +69,7 @@ export function parsePieChart(text: string): PieParseResult {
       continue;
     }
 
-    if ((match = line.match(/^showData$/i))) {
+    if (/^showData$/i.test(line)) {
       ast.showData = true;
       continue;
     }
