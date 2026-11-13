@@ -1,6 +1,6 @@
 # TODO — `md2nativedocx`
 
-> Backlog des items **réellement ouverts** au 2026-10-07, chacun vérifié contre le code et l'historique.
+> Backlog des items **réellement ouverts** au 2026-11-13 (§R ajouté ce jour ; le reste au 2026-10-07), chacun vérifié contre le code et l'historique.
 > Rien de terminé ici : un item fini sort du fichier (son détail va dans le message de commit, ou dans
 > `docs/history/TODO_ARCHIVE.md` s'il mérite un récit). L'ancien `TODO.md` complet (1 500 lignes, tous
 > les chantiers fermés) est recopié en fin de `docs/history/TODO_ARCHIVE.md`.
@@ -8,36 +8,181 @@
 > État du produit : `HANDOVER.md`. Ce que devient chaque type Mermaid : `docs/coverage.md`. Règles et
 > escalades : `AGENTS.md`. Suite du produit (V2 moteur, V3 aller-retour) : `docs/specs/01-…`, `03-…`,
 > `04-…` et `docs/adr/0012-evolution-by-extraction.md` ; phases au §11 du cahier des charges.
-> **Priorité depuis le 2026-10-08 : la cible LibreOffice / ODF** (§0 ci-dessous,
-> `docs/specs/05-libreoffice-odf-spec.md`).
+> **Priorité depuis le 2026-11-13 : la robustesse (§R ci-dessous)**, après l'incident `flux_arcs`
+> sur la 0.8.0 publiée. La cible LibreOffice / ODF (§0, `docs/specs/05-libreoffice-odf-spec.md`)
+> reprend ensuite. Les numéros de section existants ne bougent pas : d'autres documents les citent.
 
 ---
 
-## 0. Priorité — cible LibreOffice / ODF (phase 1 : `.odt` pour les flowcharts)
+## R. Priorité — robustesse (incident `flux_arcs`, 2026-11-13)
+
+**Ce qui s'est passé.** Un utilisateur sous Windows et OneDrive Entreprise exporte `flux_arcs.md` avec
+l'extension 0.8.0. Word plante, puis affiche « erreur grave » à chaque réouverture de ce chemin.
+Trois analyses faites par un autre modèle sont arrivées (texte collé, 2026-11-13). Leur contre-analyse
+a fait le test qui tranche : une copie identique octet pour octet du `.docx` s'ouvre, se modifie et
+s'enregistre sans problème dans Word. **Le contenu XML n'est donc pas la cause du plantage.**
+Cause retenue :
+1. Le CLI écrase le fichier pendant que Word l'ouvre. Word note « Opération annulée » à 08:54:40 et
+   l'écrasement a lieu à 08:54:42-43, dans un dossier synchronisé par OneDrive.
+2. Word met ensuite ce chemin en quarantaine dans `Resiliency` / `PotentialDataLossInfo2`.
+
+Le fichier exporté ne contenait **aucun** diagramme. Le bloc ```` ```mermaid ```` n'était pas fermé,
+et Pandoc 3.1.3 en a fait un paragraphe de texte brut sans le moindre avertissement (reproduit le
+2026-11-13).
+
+**Vérifié dans le code le 2026-11-13** (tout ce qui suit l'est, sauf mention « à vérifier ») :
+
+| Affirmation des analyses | Verdict |
+|---|---|
+| Écriture directe sur la cible, sans fichier temporaire ni contrôle du verrou (`bin/md2nativedocx.mjs:153`, `src/pptxExport.mjs:60`) | **vrai** |
+| « Exporter le document » lit le fichier sur disque et ignore les modifications non enregistrées (aucun `isDirty`) | **vrai** |
+| Un bloc non fermé est abandonné sans rien dire (`mermaidBlocks.ts:71`) | **vrai** (côté Pandoc aussi) |
+| `class A,B c;` rejeté à cause du `;` (`parser/parser.ts:668`, `block/parser.ts:237`) | **vrai, et pire** : une **arête** finie par `;` (`R1 --> P2;`) est aussi ignorée, donc des liens disparaissent |
+| `color:` ignoré dans `classDef` / `style` (`ooxml-translator.ts:794`) | **vrai** |
+| Marqueur `SMARTART_PLACEHOLDER:([^:]+)` puis `join(smartArtDir, id)` sans contrôle (`postprocess.mjs:468`, `:556`) | **vrai** (traversée de chemin depuis la prose) |
+| `escapeXml` laisse passer les caractères interdits en XML 1.0 (`xml-escape.ts:28`) | **vrai** |
+| Le contrôle Word ne compte que `/word/diagrams/` (`bin/md2nativedocx.mjs:204`) | **vrai** ; le message « 0 error(s) » est trompeur |
+| « 13 erreurs viennent du `reference.docx` maison » | **faux** : 11 erreurs sur les styles `*Tok` de coloration syntaxique, plus `w:nsid` et `doNotTrackMoves`, sont toutes écrites par Pandoc 3.1.3. Aucune dans `document.xml` |
+| Style de tableau par défaut `Table` avec `tblStylePr` : « régression 0.8.0 » | **faux** : identique au `reference.docx` de Pandoc |
+| Pas de `compatibilityMode` dans `settings.xml` | vrai, mais Pandoc ne le met pas non plus. Ce n'est pas une régression ; c'est une amélioration possible (R4) |
+| `latentStyles` et `a:objectDefaults` absents | **vrai, écart réel introduit par `a8d411a`** (Pandoc les avait) |
+| Injection de formules dans les classeurs `.xlsx` des graphiques | **ne s'applique pas** : le texte est écrit en `inlineStr`, les nombres passent par `Number.isFinite`, aucun `<f>` (`chartParts.mjs:44-64`) |
+
+**Règles du chantier.** Une PR par lot (ou par point si le lot est gros), dépôt vert à chaque étape.
+Les commits de R3 portent le préfixe `security:`. Pas de refonte (ADR 0012) : on extrait, on ne
+réécrit pas. Une modification de message non commitée sur `bin/md2nativedocx.mjs`
+(« No problem found… do not affect how Word opens the file ») est **à abandonner**. Elle affirme ce
+que le contrôle ne vérifie pas ; R1.4 la remplace.
+
+### R1 — L'incident lui-même → release 0.8.1 (branche `fix/safe-docx-write`)
+
+- [ ] **R1.1 Écriture sûre de la sortie.** Un seul utilitaire `writeOutputSafely(path, buffer)` dans
+      `packages/cli/src/`, utilisé par `bin/md2nativedocx.mjs` (`.docx`, `.odt`, journal) et `pptxExport.mjs` :
+      - refus si le fichier de verrou Word existe dans le dossier de sortie. Il y a deux formes :
+        `~$` + nom complet, et `~$` + nom privé de ses 2 premiers caractères pour les noms longs ;
+      - refus si la cible existe et ne s'ouvre pas en `r+` (EBUSY / EPERM / EACCES sous Windows) ;
+      - écriture dans `<cible>.<pid>.tmp` dans le **même dossier**, `fsync`, puis `rename` ; le
+        temporaire est supprimé en cas d'échec, et la cible d'origine n'est jamais tronquée ;
+      - échec signalé par `ConversionError` (`stage: 'write'`), code de sortie 2 et message
+        utilisable : « X.docx est ouvert dans Word : fermez-le ou exportez sous un autre nom ».
+      - Tests : verrou présent → refus et cible intacte au même octet près ; réussite → aucun `.tmp`
+        laissé ; échec de `rename` simulé → cible intacte.
+- [ ] **R1.2 Extension : notification claire** quand le CLI renvoie l'erreur `write`, avec un bouton
+      « Exporter sous… ». Aujourd'hui l'erreur ne serait visible que dans le canal de sortie.
+- [ ] **R1.3 Enregistrer avant d'exporter.** Dans l'export du document et l'export multi-fichiers, si
+      un `TextDocument` ouvert correspond au fichier et `isDirty`, faire `await doc.save()` avant de
+      lancer le CLI. (Choisi plutôt que d'exporter `getText()` : Pandoc résout images et chemins
+      relatifs depuis le disque.)
+- [ ] **R1.4 Contrôle Word honnête.** Classer chaque erreur du validateur :
+      - **les nôtres** : `/word/diagrams/*`, `/word/charts/*`, `/word/document.xml` ;
+      - **connues de Pandoc** : liste fermée de signatures relevées le 2026-11-13 (styles `*Tok` →
+        `w:rPr`, `w:nsid` de `numbering.xml`, `doNotTrackMoves`), liée à la version de Pandoc ;
+      - **autre** : signalé comme erreur.
+      Le message dit par partie ce qui a été vérifié, sans jamais affirmer un effet sur Word. Test sur
+      un `.docx` dont le canevas `wpc` est cassé exprès : le contrôle **doit** le signaler, ce qui
+      vérifie l'« angle mort » annoncé par les analyses.
+- [ ] **R1.5 Bloc ```` ```mermaid ```` non fermé.**
+      - `mermaidBlocks.ts` renvoie les blocs non fermés au lieu de `break` ;
+      - avertissement à l'export, et diagnostic `DiagnosticCollection` dans l'éditeur avec un Quick
+        Fix « ajouter ```` ``` ```` » ;
+      - côté CLI, détection équivalente avant Pandoc, avec un avertissement dans le journal.
+- [ ] **R1.6 Release.** Extension 0.8.1 et CLI en patch. Vérification manuelle par le mainteneur sur
+      son poste Windows + OneDrive : export pendant que le `.docx` est ouvert dans Word → message, pas
+      de plantage. Rédiger alors `docs/history/incident-flux-arcs-2026-11.md` et faire sortir R1 d'ici.
+
+### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
+
+- [ ] **R2.1 Fins d'instruction.** Une passe de normalisation partagée dans `packages/core/src/parser/` :
+      - CRLF ;
+      - `;` final ;
+      - plusieurs instructions sur une ligne séparées par `;` (`A-->B; B-->C`) ;
+      - commentaire `%%` en fin de ligne, mais pas `%%{init}%%` ;
+      - BOM.
+      Les `;` à l'intérieur d'une étiquette entre guillemets ou crochets sont préservés.
+      Brancher d'abord le flowchart, puis chaque parseur, avec un test en table : « chaque type
+      accepte les `;` finaux ». Les golden ne doivent pas bouger.
+- [ ] **R2.2 `color:` dans `classDef` / `style`** → couleur du texte du nœud, passée par
+      `validateHexColor`, en OOXML **et** en ODF. Sinon, le calcul automatique actuel reste.
+- [ ] **R2.3 Diagramme réduit au point d'être illisible.** Avertissement (journal et extension) quand
+      la police effective tombe sous 7 pt, avec une suggestion : `TB` ou page en paysage. Un plancher
+      de police imposé obligerait à agrandir les boîtes, donc à toucher le layout : à rattacher à
+      l'idée « Gros diagrammes » du §4, pas ici.
+- [ ] **R2.4 `direction` dans un `subgraph`** (déjà signalé par un avertissement) : layout récursif
+      par sous-graphe. C'est une vraie fonctionnalité, pas un correctif ; à chiffrer après R1-R3.
+
+### R3 — Sécurité (branche `security/untrusted-text-hardening`)
+
+- [ ] **R3.1 Marqueurs SmartArt et graphiques.**
+      - Identifiant limité au format UUID (`[0-9a-f]{8}-…`, ce que génère `randomUUID()`), pour
+        `SMARTART_PLACEHOLDER` comme pour `CHART_PLACEHOLDER` ;
+      - contrôle que `resolve(dir, id)` reste bien dans `dir` ;
+      - un identifiant inconnu est ignoré sans planter.
+      - Tests : prose contenant `SMARTART_PLACEHOLDER:../../x:dm`, et un document qui documente le
+        projet lui-même.
+      - Le manifeste hors bande proposé par les analyses change le contrat de `renderDiagram()` :
+        **escalade**, pas dans ce lot.
+- [ ] **R3.2 Caractères interdits en XML 1.0** (`\x00-\x08`, `\x0B`, `\x0C`, `\x0E-\x1F`, demi-paires
+      UTF-16 isolées, `￾`, `￿`) remplacés par U+FFFD dans `escapeXml`. Vérifier qu'aucun
+      autre point d'écriture ne contourne `escapeXml` (`esc` de `chartParts.mjs`, `pptx`, ODF).
+      Ajouter à `test:fuzz` une propriété : toute chaîne JS dans une étiquette donne un XML bien
+      formé.
+- [ ] **R3.3 Intégrité après renumérotation.** Test sur un document avec plusieurs diagrammes,
+      des images Markdown et des zones de texte : chaque `stCxn` / `endCxn` désigne un `cNvPr id`
+      existant dans le même canevas, et les ids sont uniques dans tout le document. Vérifie les
+      regex de `renumberDrawingIds()`.
+- [ ] **R3.4 Temps de réponse sur entrées pathologiques.**
+      - Budget pour `planFor` (appelé à chaque frappe dans l'extension), sur une ligne de 100 Ko, des
+        crochets jamais fermés ×50 000 et un graphe complet K40 ;
+      - délai pour le CLI et le pont, qui reste à faire (voir « Limites de ressources », §2bis) ;
+      - `eslint-plugin-regexp` / `recheck` contre les ReDoS : nouvelle dépendance, **escalade**.
+- [ ] **R3.5 Images `\\serveur\partage` et `file://` lues par Pandoc** (fuite de hash NTLM sous
+      Windows). Même sujet que l'item MCP du §2bis : une option de `convert()` est nécessaire
+      (**escalade**). En attendant, documenter le risque dans le README de l'extension.
+
+### R4 — Gabarit et compatibilité Word : vérifier dans Word avant de changer (branche `fix/reference-docx-parity`)
+
+- [ ] **R4.1 Rétablir `w:latentStyles` et `a:objectDefaults`** dans `packages/cli/reference-docx-src/`,
+      écrits par le projet (pas copiés de Pandoc : licence, voir `a8d411a`). Contrôles :
+      `test:oxml-validate`, puis un aller-retour dans Word (galerie de styles, insertion d'une forme
+      par l'utilisateur).
+- [ ] **R4.2 `compatibilityMode` = 15** : sort Word du « mode de compatibilité ». Cela peut changer
+      la mise en page, donc il faut un round CHECKLIST dans un vrai Word avant de l'adopter.
+- [ ] **R4.3 Formes de sous-graphe** (`<wps:bodyPr/>` nu, sans `wps:style`) : valides au schéma.
+      Les aligner sur les nœuds seulement si un round Word montre une différence.
+- **Écarté sans preuve d'un problème** : envelopper `wpc` dans `mc:AlternateContent`, car ce rendu a
+  été validé de nombreuses fois dans Word réel. Corriger les erreurs de Pandoc en post-traitement :
+  hors de la liste fermée de la règle 7 d'AGENTS.md (`styles.xml` / `numbering.xml` d'une sortie
+  Pandoc), donc **escalade** si un jour c'est utile.
+
+### R5 — Architecture : ce qu'on retient de la proposition « 4 étages »
+
+L'ADR 0012 interdit de réécrire un traducteur qui fonctionne. On ne fait **ni** IR complète, **ni**
+builder XML générique. On garde ce qui s'extrait sans refonte :
+- [ ] l'étape de normalisation en entrée, qui est R2.1 ;
+- [ ] une fonction unique `buildWordShape()` dans `ooxml-translator.ts`, introduite uniquement là où
+      R2 / R4.3 modifient déjà le code ;
+- [ ] des types bornés (`HexColor`, coordonnées EMU finies et positives) seulement aux endroits
+      où un bug réel les justifie.
+
+### Décisions demandées au mainteneur (escalade AGENTS.md)
+
+- Manifeste hors bande au lieu des marqueurs (contrat public de `renderDiagram()`).
+- `eslint-plugin-regexp` ou `recheck` (nouvelle dépendance).
+- Option de `convert()` pour refuser les ressources externes (API du CLI).
+- Test « vrai Word » en CI : les runners GitHub n'ont pas Word. Pour l'instant, round manuel avant
+  chaque release ; une machine Windows avec Office en runner auto-hébergé serait une décision de
+  coût et de sécurité.
+
+## 0. Cible LibreOffice / ODF (phase 1 : `.odt` pour les flowcharts) — reprend après §R
 
 Phase 0 terminée le 2026-10-08 : spikes S0 à S5 sous `docs/adr/spikes/spike-odf-*`, conclusions et
 décisions (API, licences, règles) dans `docs/adr/0013-odf-output-phase-0.md`.
 
-**Phase 1 terminée le 2026-10-08** (critère de fin de la spec 05 §6 vérifié sans intervention humaine :
-rendu LibreOffice, validateur ODF, et par UNO 221 connecteurs attachés sur les 32 flowcharts du corpus,
-qui suivent leur forme déplacée) :
-
-- [x] `renderDiagramOdf()` dans le core (formes, connecteurs attachés, sous-graphes, styles
-      `classDef`/`style`/`linkStyle` validés, `idPrefix`), tests unitaires, golden, injection, fuzz.
-- [x] `reference.odt` écrit par le projet (`packages/cli/reference-odt-src/`) et gabarit `opendocument`
-      dérivé dans `packages/cli/assets/` (`scripts/build-odt-assets.mjs`), notice BSD-3 dans
-      `packages/cli/THIRD_PARTY_NOTICES.md`. Pandoc ne s'en contente **pas** avec un `styles.xml`
-      minimal (LibreOffice ne fournit pas ses styles intégrés à un document qui les cite sans les
-      définir) : chaque style utilisé par Pandoc y est écrit.
-- [x] Branche ODF du filtre Lua et du pont (`--odf <prefix>`, JSON), `-o doc.odt` dans le CLI,
-      `convert({ format: 'odt' })`.
-- [x] `test:odf-validate` et `test:visual` (suite `baseline-odt/`, 32 flowcharts) sur la sortie réelle
-      du CLI ; contrôle des connecteurs `scripts/odf-connector-check.py`.
+Phase 1 terminée le 2026-10-08 (détail des items fermés : `docs/history/TODO_ARCHIVE.md`,
+section « 2026-11-13 — phase 1 ODF »).
 
 Limites connues de la phase 1, à reprendre :
 
-- [x] Étiquettes d'arêtes au milieu du tracé (zone de texte du connecteur centrée ; elles restent le
-      texte du connecteur, donc suivent un déplacement). Fait le 2026-10-08.
 - [ ] Formes prédéfinies à zone de texte étroite (triangle, accolades, `das`, sous-routine) : le texte
       se coupe au milieu des mots.
 - [ ] Les options de page et de typographie ne s'appliquent pas au `.odt` (A4, marges 2,54 cm).
@@ -82,7 +227,7 @@ Ensuite, dans l'ordre :
 
 ## 2bis. Chantier V2 — moteur (ADR 0012 accepté le 2026-10-07)
 
-> **Décidé le 2026-10-08** (spec 05 §8.4) : passe après le §0. Continuent, marquées « ▶ » : ce qui
+> **Décidé le 2026-10-08** (spec 05 §8.4) : passe après le §0 (et, depuis le 2026-11-13, après le §R). Continuent, marquées « ▶ » : ce qui
 > sert aussi la sortie ODF, et les risques de sécurité déjà ouverts. Les autres, « ⏸ », attendent
 > la fin de la phase 1 ODF.
 

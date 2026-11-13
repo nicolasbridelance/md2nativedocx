@@ -3466,3 +3466,23 @@ La 0.7.0 installée depuis la Marketplace sur le poste Windows d'entreprise a é
 ## 2026-10-07 — première publication npm
 
 `@md2nativedocx/core`, `pandoc-filter`, `pptx` et `cli` publiés en 0.1.0 (ordre des dépendances ; `pptx` est requis par `cli`). Vérifié depuis le registre : `npx @md2nativedocx/cli@0.1.0` produit un `.docx` valide dans un répertoire vierge. Le registre a mis environ 5 minutes à répondre 200 après le publish.
+
+## 2026-11-13 — phase 1 ODF : items fermés sortis de `TODO.md` §0
+
+**Phase 1 terminée le 2026-10-08** (critère de fin de la spec 05 §6 vérifié sans intervention humaine :
+rendu LibreOffice, validateur ODF, et par UNO 221 connecteurs attachés sur les 32 flowcharts du corpus,
+qui suivent leur forme déplacée) :
+
+- [x] `renderDiagramOdf()` dans le core (formes, connecteurs attachés, sous-graphes, styles
+      `classDef`/`style`/`linkStyle` validés, `idPrefix`), tests unitaires, golden, injection, fuzz.
+- [x] `reference.odt` écrit par le projet (`packages/cli/reference-odt-src/`) et gabarit `opendocument`
+      dérivé dans `packages/cli/assets/` (`scripts/build-odt-assets.mjs`), notice BSD-3 dans
+      `packages/cli/THIRD_PARTY_NOTICES.md`. Pandoc ne s'en contente **pas** avec un `styles.xml`
+      minimal (LibreOffice ne fournit pas ses styles intégrés à un document qui les cite sans les
+      définir) : chaque style utilisé par Pandoc y est écrit.
+- [x] Branche ODF du filtre Lua et du pont (`--odf <prefix>`, JSON), `-o doc.odt` dans le CLI,
+      `convert({ format: 'odt' })`.
+- [x] `test:odf-validate` et `test:visual` (suite `baseline-odt/`, 32 flowcharts) sur la sortie réelle
+      du CLI ; contrôle des connecteurs `scripts/odf-connector-check.py`.
+- [x] Étiquettes d'arêtes au milieu du tracé (zone de texte du connecteur centrée ; elles restent le
+      texte du connecteur, donc suivent un déplacement). Fait le 2026-10-08.

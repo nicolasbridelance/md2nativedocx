@@ -129,7 +129,7 @@ l'ADR 0012 attendaient avant toute abstraction : `.pptx` réutilise le DrawingML
   Son ajout au dépôt (`test:odf-validate`) attend l'accord du mainteneur, règle 6
   (`docs/adr/spikes/spike-odf-validator/`).
 
-**Phase 1 — `.odt` pour les flowcharts (terminée le 2026-10-08, détail et limites dans `TODO.md` §0).** CLI `-o doc.odt`, tests golden ODF, `test:visual` étendu à
+**Phase 1 — `.odt` pour les flowcharts (terminée le 2026-10-08, limites dans `TODO.md` §0, détail dans `docs/history/TODO_ARCHIVE.md`).** CLI `-o doc.odt`, tests golden ODF, `test:visual` étendu à
 Writer en `.odt`, validateur de S5. Critère de fin : un flowchart de 10 nœuds avec sous-graphes,
 ouvert dans LibreOffice, formes et connecteurs éditables (même critère que la phase 0 historique du
 `.docx`).
