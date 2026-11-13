@@ -1,9 +1,0 @@
-{
-  "root": true,
-  "plugins": [
-    "office-addins"
-  ],
-  "extends": [
-    "plugin:office-addins/recommended"
-  ]
-}

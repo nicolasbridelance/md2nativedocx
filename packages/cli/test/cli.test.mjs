@@ -56,8 +56,10 @@ test('cli rejects a missing input file', () => {
 });
 
 test('cli rejects a path that escapes the working directory', () => {
-  const { code } = runCli(['../../etc/passwd', '-o', '/tmp/out.docx']);
-  assert.notEqual(code, 0);
+  const { code, err } = runCli(['../../etc/passwd', '-o', '/tmp/out.docx']);
+  // A usage error (2), as on the .pptx path, not a conversion failure (1).
+  assert.equal(code, 2);
+  assert.match(err, /escapes the working directory/);
 });
 
 test('cli prints usage on --help', () => {
@@ -139,7 +141,7 @@ test('cli falls back to the bundled reference.docx when MD2NATIVEDOCX_REFERENCE_
   }
 });
 
-test('MD2NATIVEDOCX_DISABLE_SMARTART forces the wpc:wpc canvas fallback even for a SmartArt-eligible diagram', () => {
+test('MD2NATIVEDOCX_ENABLE_SMARTART=0 forces the wpc:wpc canvas fallback even for a SmartArt-eligible diagram', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');
   const docx = join(dir, 'doc.docx');
@@ -148,7 +150,7 @@ test('MD2NATIVEDOCX_DISABLE_SMARTART forces the wpc:wpc canvas fallback even for
   writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n  B --> C\n```\n');
   try {
     const { code, out } = runCli([md, '-o', docx], {
-      env: { ...process.env, MD2NATIVEDOCX_DISABLE_SMARTART: '1' },
+      env: { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0' },
     });
     assert.equal(code, 0, out);
     const xml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });

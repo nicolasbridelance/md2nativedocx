@@ -23,11 +23,12 @@ import type { VennChart, VennSet, VennUnion } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml, validateHexColor } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
+  EMU_PER_PX,
   scaledExtent,
   scaledFontSizeHalfPt,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 
 const CIRCLE_R = 130;
@@ -155,7 +156,7 @@ function note(text: string): string {
 
 /** Translate a parsed Venn chart into a self-contained WordprocessingML
  * paragraph (+ a trailing degradation note paragraph for 4+ sets or 0 sets). */
-export function translateVennToOoxml(chart: VennChart): string {
+export function translateVennToOoxml(chart: VennChart, options: CanvasOptions = {}): string {
   if (chart.sets.length === 0) {
     return note('This Venn diagram has no sets to render.');
   }
@@ -180,7 +181,7 @@ export function translateVennToOoxml(chart: VennChart): string {
   const canvasH = maxY - minY + 2 * PAD + topMargin;
   const dx = -minX + PAD;
   const dy = -minY + PAD + topMargin;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const parts: string[] = [];
 
@@ -236,32 +237,54 @@ export function translateVennToOoxml(chart: VennChart): string {
         s,
       ),
     );
+    // `text` nodes of this set stack under its title.
+    set.items.forEach((item, k) => {
+      const w = Math.min(CIRCLE_R * 1.6, estimateTextWidth(item, 12) + 8);
+      parts.push(
+        textBox(
+          nextId(),
+          scalePt(lx - w / 2 + dx, s),
+          scalePt(ly + 12 + k * 17 + dy, s),
+          scalePt(w, s),
+          scalePt(16, s),
+          item,
+          { sizeHalfPt: 15, color: '000000' },
+          s,
+        ),
+      );
+    });
   });
 
   // Union (overlap) labels, only meaningful with true overlapping geometry.
   if (overlapping) {
     for (const union of chart.unions) {
       const pos = unionLabelPosition(union, chart.sets, centers, centroid);
-      if (!pos || !union.label) continue;
-      const labelWidth = Math.min(CIRCLE_R * 1.6, estimateTextWidth(union.label, 12) + 8);
-      parts.push(
-        textBox(
-          nextId(),
-          scalePt(pos.x - labelWidth / 2 + dx, s),
-          scalePt(pos.y - 8 + dy, s),
-          scalePt(labelWidth, s),
-          scalePt(16, s),
-          union.label,
-          { sizeHalfPt: 15, color: '000000', italic: true },
-          s,
-        ),
-      );
+      const lines = [...(union.label ? [union.label] : []), ...union.items];
+      if (!pos || lines.length === 0) continue;
+      // Stack the union's own label (italic) and its `text` nodes, centred on the overlap point.
+      const top = pos.y - ((lines.length - 1) * 17) / 2;
+      lines.forEach((line, k) => {
+        const isLabel = k === 0 && union.label !== undefined;
+        const labelWidth = Math.min(CIRCLE_R * 1.6, estimateTextWidth(line, 12) + 8);
+        parts.push(
+          textBox(
+            nextId(),
+            scalePt(pos.x - labelWidth / 2 + dx, s),
+            scalePt(top + k * 17 - 8 + dy, s),
+            scalePt(labelWidth, s),
+            scalePt(16, s),
+            line,
+            { sizeHalfPt: 15, color: '000000', italic: isLabel },
+            s,
+          ),
+        );
+      });
     }
   }
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  let output = wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Venn diagram');
+  let output = wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Venn diagram', options);
 
   if (!overlapping) {
     output +=

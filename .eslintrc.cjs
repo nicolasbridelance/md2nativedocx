@@ -15,17 +15,10 @@ module.exports = {
     node: true,
     es2022: true,
   },
-  // packages/word-addin has its own lint pipeline (office-addin-lint, its own .eslintrc.json
-  // scoped with root:true) built for browser/Office.js code on a newer eslint-plugin-office-addins
-  // that isn't compatible with this root config's ESLint 8 runtime — mixing the two here crashes
-  // `eslint .` outright (TypeError: Converting circular structure to JSON while validating the
-  // nested config), not just producing noisy findings. Run `npm run lint -w packages/word-addin`
-  // for that package instead.
   ignorePatterns: [
     'dist/',
     'node_modules/',
     '*.js',
-    'packages/word-addin/',
     // Vendored MIT source kept only as a read-only reference for the Gantt
     // parser spike (decision: reuse rejected at runtime — see
     // docs/adr/spikes/spike-gantt-parser/spike.md) — not code this project

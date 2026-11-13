@@ -1,5 +1,11 @@
 # FUTURE — `mmd2smartart` (spec de première intention)
 
+> **Statut au 2026-10-06 : réalisée et dépassée.** SmartArt est activé par défaut dans l'extension
+> VS Code et confirmé dans un vrai Word pour les flowcharts (chaîne, cycle, arbres jusqu'à 10 niveaux,
+> formes par nœud) et pour `mindmap`, `treeView-beta`, `timeline`, `journey`, `kanban`, `gitGraph`,
+> `stateDiagram` et `classDiagram` simples. État par type : `docs/coverage.md`. Les statuts plus bas
+> sont historiques.
+
 > Statut (mis à jour 2026-09-03) : spec de cadrage, **partiellement implémentée**. Le classifieur
 > (`classify.ts`) et les 3 générateurs `chain`/`tree`/`cycle` (`chain.ts`/`tree.ts`/`cycle.ts`) sont
 > livrés, testés, **et validés par rendu LibreOffice réel** (pas seulement par test XML — cette
@@ -141,6 +147,9 @@ initiale de cette section, écrite avant tout test dans un vrai Word/LibreOffice
    (contrairement à `hierarchy1`, qui est dynamique). Généraliser à une profondeur adaptative reste
    un chantier séparé, non fait. Voir le commentaire de doc de `MAX_TREE_DEPTH` dans `classify.ts`
    et de `TREE_LAYOUT_XML` dans `tree.ts`.
+   **Mise à jour (2026-10-06)** : le chantier « profondeur adaptative » est fait, dans les 4 directions —
+   `tree-deep.ts` utilise `hierRoot`/`hierChild` (comme `hierarchy1`) avec récursion `forEach ref=`, plafond
+   `MAX_TREE_DEPTH = 10`, sans limite de largeur ; `tree.ts` reste le générateur 2 niveaux.
 4. **Bug critique trouvé et corrigé le même jour sur `chain.ts` (déjà "livré")** : le rendu réel
    (LibreOffice headless) de la sortie de `generateChain()` — jamais vérifié jusqu'ici, seule la
    structure XML était testée — était **entièrement blanc**. Cause : il manquait le connecteur
@@ -165,7 +174,7 @@ classifyTopology(flowchart: Flowchart): 'chain' | 'tree' | 'cycle' | 'unsupporte
 | Topologie détectée | Condition | Layout SmartArt (`layoutDef` URN) | Avantage | Limitation |
 |---|---|---|---|---|
 | **Chaîne** | Tout nœud a in-degré ≤1 ET out-degré ≤1 (chemin simple) | auto-écrit, `urn:md2nativedocx/smartart-layout/chain1` — **livré** (`chain.ts`) | Réordonnancement au glisser-déposer, style en 1 clic | Casse dès qu'un nœud a 2 sorties |
-| **Arbre** | Chaque nœud a au plus 1 parent, pas de fusion, pas de cycle, profondeur ≤ 2 (`MAX_TREE_DEPTH`) | auto-écrit, `urn:md2nativedocx/smartart-layout/tree1` — **livré** (`tree.ts`), rendu validé | Ajout/suppression de branches natif dans Word ; **forme par nœud préservable** (§5.1) | Une fusion casse tout ; pas de texte natif sur les connecteurs (§5.2) ; profondeur limitée à 2 (racine + enfants directs), voir §3.1 point 3 |
+| **Arbre** | Chaque nœud a au plus 1 parent, pas de fusion, pas de cycle, profondeur ≤ 10 (`MAX_TREE_DEPTH`) | auto-écrit, `urn:md2nativedocx/smartart-layout/tree1` — **livré** (`tree.ts`), rendu validé | Ajout/suppression de branches natif dans Word ; **forme par nœud préservable** (§5.1) | Une fusion casse tout ; pas de texte natif sur les connecteurs (§5.2) ; profondeur limitée à 2 (racine + enfants directs), voir §3.1 point 3 |
 | **Cycle** | in-degré = out-degré = 1 pour chaque nœud, boucle fermée | auto-écrit, `urn:md2nativedocx/smartart-layout/cycle1` — **livré** (`cycle.ts`), rendu validé | Rendu circulaire propre — Dagre ne le fait pas nativement | Direction LR/TD de Mermaid perd son sens (pas d'orientation naturelle pour un cercle, une seule variante de layout) |
 | *(tout le reste)* | fusion après branche, cross-links, cycles partiels, multi-parents | — | — | fallback pipeline `wpg:wgp`/`custGeom` existant, couverture 100 % comme aujourd'hui |
 
@@ -243,6 +252,12 @@ reçoit `<dgm:spPr><a:prstGeom prst="diamond"><a:avLst/></a:prstGeom></dgm:spPr>
 correspondant ; les autres restent sur la forme par défaut du layout (généralement rectangle).
 Coût d'implémentation marginal — c'est un attribut de plus par point, pas une nouvelle partie ni
 une nouvelle relation.
+
+**Correction (2026-10-06, échantillon Word réel `handmade_samples/processus_shape.docx`)** : Word n'écrit pas
+l'override sur le `dgm:pt` de **contenu** mais sur le point de **présentation** de la boîte (`type="pres"`,
+`presName` de la boîte), sans autre marqueur. C'est pourquoi l'essai de 2026-09-03 (sur le point de contenu,
+sous LibreOffice seul) n'avait rien donné. Implémenté pour toutes les formes non rectangulaires
+(`smartart/node-shape.ts`), pas seulement les décisions.
 
 ### 5.2 Labels d'arête (« Oui / Non ») — convention adoptée
 

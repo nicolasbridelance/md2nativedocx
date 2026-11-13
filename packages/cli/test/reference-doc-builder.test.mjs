@@ -185,6 +185,21 @@ test('patchStyles: tableHeaderColor adds w:shd to the Table style\'s firstRow tc
   assert.ok(out.includes('<w:tcBorders><w:bottom w:val="single"/></w:tcBorders>'), 'existing borders must survive');
 });
 
+test('patchStyles: tableHeaderColor puts w:shd before w:vAlign, the schema order inside w:tcPr', () => {
+  const styles = STYLES_FIXTURE_ACCENT_TABLE.replace('</w:tcBorders></w:tcPr>', '</w:tcBorders><w:vAlign w:val="bottom"/></w:tcPr>');
+  const out = patchStyles(styles, { tableHeaderColor: 'abcdef' });
+  assert.ok(
+    out.includes('</w:tcBorders><w:shd w:val="clear" w:color="auto" w:fill="ABCDEF"/><w:vAlign w:val="bottom"/></w:tcPr>'),
+    out,
+  );
+});
+
+test('patchStyles: the bundled reference.docx Table style takes a header colour in schema order', () => {
+  const stylesXml = new AdmZip(REFERENCE_DOC).readAsText('word/styles.xml');
+  const out = patchStyles(stylesXml, { tableHeaderColor: 'abcdef' });
+  assert.match(out, /<\/w:tcBorders>\s*<w:shd w:val="clear" w:color="auto" w:fill="ABCDEF"\/>\s*<w:vAlign w:val="bottom"\/>/);
+});
+
 test('patchStyles: tableHeaderColor replaces (not duplicates) an existing w:shd', () => {
   const once = patchStyles(STYLES_FIXTURE_ACCENT_TABLE, { tableHeaderColor: '111111' });
   const twice = patchStyles(once, { tableHeaderColor: '222222' });
@@ -395,4 +410,15 @@ test('buildReferenceDoc: landscapeTables alone (no pageSize/orientation/margins)
   } finally {
     rmSync(result.dir, { recursive: true, force: true });
   }
+});
+
+test('bundled reference.docx: hand-written, no external relationship, no sample content', () => {
+  const zip = new AdmZip(REFERENCE_DOC);
+  for (const entry of zip.getEntries()) {
+    if (entry.entryName.endsWith('.rels')) {
+      assert.ok(!entry.getData().toString('utf8').includes('External'), `${entry.entryName} must not reference anything outside the package`);
+    }
+  }
+  assert.match(zip.readAsText('word/document.xml'), /<w:sectPr\s*\/>/, 'the empty sectPr patchSectPr fills');
+  assert.match(zip.readAsText('word/theme/theme1.xml'), /<a:accent1><a:srgbClr val="[0-9A-F]{6}"\/><\/a:accent1>/);
 });

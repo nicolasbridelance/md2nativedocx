@@ -17,6 +17,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { Requirement, RequirementDiagram, RequirementElement } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -25,6 +26,7 @@ import {
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, edgePoint, parallelEdgeOffset, perpendicularUnit, rect, scalePt, shiftPoint, textBoxLines } from '../../translator/graph-shapes.js';
 
@@ -105,7 +107,7 @@ function boxShapes(nextId: () => number, content: BoxContent, size: BoxSize, x: 
  * WordprocessingML paragraph. An empty diagram renders a visible note,
  * matching the other Family B translators' zero-content convention —
  * never a silent blank canvas. */
-export function translateRequirementDiagramToOoxml(chart: RequirementDiagram): string {
+export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, options: CanvasOptions = {}): string {
   const boxContents = new Map<string, BoxContent>();
   for (const req of chart.requirements) boxContents.set(req.name, { name: req.name, bodyLines: requirementBody(req) });
   for (const el of chart.elements) boxContents.set(el.name, { name: el.name, bodyLines: elementBody(el) });
@@ -134,7 +136,7 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram): s
   for (const rel of chart.relationships) {
     if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;
@@ -153,7 +155,7 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram): s
   const canvasH = maxY - minY + 2 * PAD;
   const dx = -minX + PAD;
   const dy = -minY + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -264,5 +266,5 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram): s
 
   const contentXml = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(contentXml, canvasW, canvasH, docPrId, 'Requirement diagram');
+  return wrapDrawingCanvas(contentXml, canvasW, canvasH, docPrId, 'Requirement diagram', options);
 }

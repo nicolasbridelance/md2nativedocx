@@ -24,7 +24,18 @@ export interface MindmapParseResult {
 }
 
 const ICON_SUFFIX = /::icon\([^)]*\)/g;
-const CLASS_SUFFIX = /:::[\w-]+/g;
+const CLASS_NAME = /^[\w-]+$/;
+
+/** `text:::a b c` -> `text`, or undefined when there is no class suffix. Mermaid takes a
+ * space-separated class list running to the end of the line; a string split (not one big
+ * regex) keeps this linear and clear of `security/detect-unsafe-regex`. */
+function stripClassSuffix(content: string): string | undefined {
+  const at = content.indexOf(':::');
+  if (at < 0) return undefined;
+  const names = content.slice(at + 3).trim().split(/\s+/);
+  if (!names.every((name) => CLASS_NAME.test(name))) return undefined;
+  return content.slice(0, at).trim();
+}
 
 interface ShapeMatcher {
   shape: MindmapShape;
@@ -75,9 +86,10 @@ export function parseMindmap(text: string): MindmapParseResult {
       warnings.push(`::icon(...) is not yet supported for mindmaps, ignored: ${content}`);
       content = content.replace(ICON_SUFFIX, '').trim();
     }
-    if (content.match(CLASS_SUFFIX)) {
+    const withoutClass = stripClassSuffix(content);
+    if (withoutClass !== undefined) {
       warnings.push(`:::className is not yet supported for mindmaps, ignored: ${content}`);
-      content = content.replace(CLASS_SUFFIX, '').trim();
+      content = withoutClass;
     }
     if (content.length === 0) continue;
 

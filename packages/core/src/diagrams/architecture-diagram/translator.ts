@@ -34,6 +34,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { ArchitectureDiagram, ArchitectureNode } from './types.js';
 import { escapeXml } from '../../translator/xml-escape.js';
 import { estimateTextWidth } from '../../layout/layout.js';
@@ -43,6 +44,7 @@ import {
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, edgePoint, scalePt } from '../../translator/graph-shapes.js';
 
@@ -121,7 +123,7 @@ function nodeShape(id: number, node: ArchitectureNode, x: number, y: number, w: 
  * WordprocessingML paragraph. An empty diagram renders a visible note,
  * matching the other Family B translators' zero-content convention —
  * never a silent blank canvas. */
-export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram): string {
+export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, options: CanvasOptions = {}): string {
   if (chart.nodes.length === 0) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -146,7 +148,7 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram):
   for (const edge of chart.edges) {
     if (g.hasNode(edge.from) && g.hasNode(edge.to)) g.setEdge(edge.from, edge.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;
@@ -165,7 +167,7 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram):
   const canvasH = maxY - minY + 2 * PAD;
   const dx = -minX + PAD;
   const dy = -minY + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -214,5 +216,5 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram):
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'Architecture diagram');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'Architecture diagram', options);
 }

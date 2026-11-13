@@ -18,10 +18,10 @@
  *     renumbered here — the one place that sees the whole document.
  *
  * Security (AGENTS.md):
- *   * Rule #7 ("don't touch .docx ZIP internals") is deliberately relaxed here:
- *     this replaces exactly one entry (`word/document.xml`) in the archive
- *     Pandoc produced — it is not a reimplementation of ZIP/docx packaging. It
- *     is required for the output to be Word-conformant.
+ *   * Rule #7 (Pandoc authors the package; post-processing limited to an
+ *     allowlist): this replaces exactly one entry (`word/document.xml`) in the
+ *     archive Pandoc produced — it is not a reimplementation of ZIP/docx
+ *     packaging. It is required for the output to be Word-conformant.
  *   * No external relationship is added (rule #3) and no user-controlled text is
  *     interpolated: the edits are namespace declarations on the root tag and
  *     rewrites of numeric `id` attributes.
@@ -32,10 +32,10 @@
  *
  * A third function, {@link injectSmartArtParts}, goes further than the two
  * corrections above — it adds brand-new ZIP entries (`word/diagrams/*.xml`),
- * not just same-path replacements. Flagged and signed off on separately
+ * not just same-path replacements. Signed off separately
  * (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §8, confirmed with the maintainer
- * 2026-09-03) since it's a materially bigger relaxation of rule #7 than the
- * two corrections above. See its own doc comment for why it exists and what
+ * 2026-09-03), and listed in rule #7's allowlist since its 2026-10-07
+ * rewording. See its own doc comment for why it exists and what
  * it does; it is a no-op whenever a document has no SmartArt diagram in it.
  */
 
@@ -484,6 +484,10 @@ const SMARTART_PART_STEM = { dm: 'data', lo: 'layout', qs: 'quickStyle', cs: 'co
 /** The 4 files `md2nativedocx-core.mjs` writes per diagram id, one per relIds kind. */
 const SMARTART_SOURCE_FILE = { dm: 'data.xml', lo: 'layout.xml', qs: 'quickStyle.xml', cs: 'colors.xml' };
 
+/** The optional fifth part: the pre-rendered `dsp:drawing` Word and LibreOffice show as the diagram's cached rendering. */
+const SMARTART_DRAWING_RELTYPE = 'http://schemas.microsoft.com/office/2007/relationships/diagramDrawing';
+const SMARTART_DRAWING_CONTENTTYPE = 'application/vnd.ms-office.drawingml.diagramDrawing+xml';
+
 /** Every distinct placeholder diagram id referenced in `documentXml`, in first-seen order. */
 function findSmartArtPlaceholderIds(documentXml) {
   const ids = [];
@@ -555,12 +559,37 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
     }
 
     const n = nextPartNumber++;
+
+    // Optional 5th part (`dsp:drawing`): written by the bridge only when SmartArt drawings are on. Its
+    // relationship id lives inside the *data* part (`dsp:dataModelExt/@relId`), not in document.xml.
+    let drawingRelId = null;
+    const drawingFile = join(sourceDir, 'drawing.xml');
+    if (existsSync(drawingFile)) {
+      drawingRelId = nextFreeRelId(relsXml, `rIdSmartArt${n}DR`);
+      relsXml = relsXml.replace(
+        '</Relationships>',
+        `<Relationship Id="${drawingRelId}" Type="${SMARTART_DRAWING_RELTYPE}" Target="diagrams/drawing${n}.xml" /></Relationships>`
+      );
+      contentTypes = contentTypes.replace(
+        '</Types>',
+        `<Override PartName="/word/diagrams/drawing${n}.xml" ContentType="${SMARTART_DRAWING_CONTENTTYPE}" /></Types>`
+      );
+      newParts.push([`word/diagrams/drawing${n}.xml`, readFileSync(drawingFile, 'utf8')]);
+    }
+
     /** @type {Record<'dm'|'lo'|'qs'|'cs', string>} */
     const relIds = {};
     for (const kind of /** @type {const} */ (['dm', 'lo', 'qs', 'cs'])) {
       const partName = `${SMARTART_PART_STEM[kind]}${n}.xml`;
       const partPath = `word/diagrams/${partName}`;
-      const xml = readFileSync(join(sourceDir, SMARTART_SOURCE_FILE[kind]), 'utf8');
+      let xml = readFileSync(join(sourceDir, SMARTART_SOURCE_FILE[kind]), 'utf8');
+      if (kind === 'dm') {
+        const token = `SMARTART_PLACEHOLDER:${id}:dr`;
+        if (drawingRelId) xml = xml.split(token).join(drawingRelId);
+        else if (xml.includes(token)) {
+          throw new Error(`md2nativedocx: SmartArt diagram "${id}" references a drawing part that was not written`);
+        }
+      }
 
       const relId = nextFreeRelId(relsXml, `rIdSmartArt${n}${kind.toUpperCase()}`);
       relIds[kind] = relId;

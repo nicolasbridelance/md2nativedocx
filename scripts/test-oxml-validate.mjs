@@ -29,6 +29,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import AdmZip from 'adm-zip';
 import { writeFileSync, readFileSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
@@ -73,6 +74,25 @@ const PLAIN_FIXTURE_NAMES = [
   'requirement-diagram',
   'architecture-diagram',
   'gantt',
+  'c4',
+  'git-graph',
+  'cynefin',
+  'pie',
+  'timeline',
+  'kanban',
+  'packet',
+  'treemap',
+  'journey',
+  'tree-view',
+  'radar',
+  'ishikawa',
+  'xychart',
+  'block',
+  'sankey',
+  'wardley',
+  'eventmodeling',
+  'sequence',
+  'zenuml',
 ];
 
 function findDotnet() {
@@ -84,11 +104,16 @@ function findDotnet() {
   }
 }
 
-function buildDocx(workDir, name, mermaid, { smartArt }) {
+function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false, smartArtDrawing = false, smartArtStyle }) {
   const mdPath = join(workDir, `${name}.md`);
   writeFileSync(mdPath, `# ${name}\n\n\`\`\`mermaid\n${mermaid}\`\`\`\n`);
   const docxPath = join(workDir, `${name}.docx`);
-  const env = smartArt ? { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '1' } : process.env;
+  // SmartArt, charts and the cached drawing are on by default: each fixture states what it wants.
+  const env = { ...process.env };
+  env.MD2NATIVEDOCX_ENABLE_SMARTART = smartArt ? '1' : '0';
+  env.MD2NATIVEDOCX_NATIVE_CHARTS = nativeCharts ? '1' : '0';
+  env.MD2NATIVEDOCX_SMARTART_DRAWING = smartArtDrawing ? '1' : '0';
+  if (smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = smartArtStyle;
   execFileSync('node', [cli, mdPath, '-o', docxPath], { stdio: 'pipe', env });
   return docxPath;
 }
@@ -119,7 +144,8 @@ function validate(docxPath) {
   // entirely inside a `wpc:wpc` element and would have been silently
   // bucketed as "known Pandoc noise" by a `/word/diagrams/`-only filter —
   // exactly the class of regression this widened check exists to catch.
-  const isOwnDiagramOutput = (e) => e.Part?.startsWith('/word/diagrams/') || e.Path?.includes('wpc:wpc');
+  const isOwnDiagramOutput = (e) =>
+    e.Part?.startsWith('/word/diagrams/') || e.Part?.startsWith('/word/charts/') || e.Path?.includes('wpc:wpc');
   const diagramErrors = report.errors.filter(isOwnDiagramOutput);
   const otherErrors = report.errors.filter((e) => !isOwnDiagramOutput(e));
   return { diagramErrors, otherErrors };
@@ -154,6 +180,25 @@ function main() {
       }
     }
 
+    // SmartArt with the pre-rendered dsp:drawing (fifth part) in every look profile: the colour/style
+    // definitions and the drawing are this project's output too.
+    for (const style of ['simple', 'colorful', 'intense']) {
+      for (const { name, mermaid } of SMARTART_FIXTURES) {
+        const label = `${name}+drawing+${style}`;
+        const docxPath = buildDocx(workDir, `${name}-drawing-${style}`, mermaid, { smartArt: true, smartArtDrawing: true, smartArtStyle: style });
+        const hasDrawing = new AdmZip(docxPath).getEntries().some((e) => /^word\/diagrams\/drawing\d+\.xml$/.test(e.entryName));
+        const { diagramErrors, otherErrors } = validate(docxPath);
+        knownOtherErrorTotal += otherErrors.length;
+        if (!hasDrawing || diagramErrors.length > 0) {
+          failures++;
+          console.error(`✖ ${label}: drawing part ${hasDrawing ? 'present' : 'MISSING'}, ${diagramErrors.length} schema error(s) under word/diagrams/`);
+          for (const e of diagramErrors) console.error(`    ${e.Path}: ${e.Description}`);
+        } else {
+          console.log(`✔ ${label}: dsp:drawing present, 0 schema errors under word/diagrams/`);
+        }
+      }
+    }
+
     const availablePlainFixtures = new Set(readdirSync(visualFixturesDir).map((f) => basename(f, '.mmd')));
     for (const name of PLAIN_FIXTURE_NAMES) {
       if (!availablePlainFixtures.has(name)) continue;
@@ -167,6 +212,61 @@ function main() {
       } else {
         console.log(`✔ oxml-plain-${name}: 0 schema errors under word/diagrams/`);
       }
+    }
+
+    // Native charts (ADR 0011): the chart part is this project's output, and so is the embedded
+    // workbook — validated as its own package, where any schema error fails the run.
+    const NATIVE_CHARTS = [
+      ['pie', 'pie showData\n  title Pets\n  "Dogs" : 386\n  "Cats" : 85.5\n'],
+      ['xychart', 'xychart-beta\n  title "Sales"\n  x-axis [jan, feb, mar]\n  y-axis "Revenue" 0 --> 10\n  bar [5, 6, 7]\n  line [4, 6, 8]\n'],
+      ['radar', 'radar-beta\n  title Grades\n  axis m["Math"], s["Science"], e["English"]\n  curve a["Alice"]{85, 90, 80}\n  curve b["Bob"]{70, 75, 85}\n  max 100\n'],
+    ];
+    for (const [kind, mermaid] of NATIVE_CHARTS) {
+      const label = `oxml-native-${kind}`;
+      const docxPath = buildDocx(workDir, label, mermaid, { smartArt: false, nativeCharts: true });
+      const zip = new AdmZip(docxPath);
+      const workbook = zip.getEntries().find((e) => /^word\/embeddings\/.*\.xlsx$/.test(e.entryName));
+      const chartPart = zip.getEntry('word/charts/chart1.xml');
+      const { diagramErrors, otherErrors } = validate(docxPath);
+      knownOtherErrorTotal += otherErrors.length;
+      let workbookErrors = [];
+      if (workbook) {
+        const xlsxPath = join(workDir, `${label}-workbook.xlsx`);
+        writeFileSync(xlsxPath, workbook.getData());
+        const result = validate(xlsxPath);
+        workbookErrors = [...result.diagramErrors, ...result.otherErrors];
+      }
+      if (!chartPart || !workbook || diagramErrors.length > 0 || workbookErrors.length > 0) {
+        failures++;
+        console.error(
+          `✖ ${label}: chart part ${chartPart ? 'present' : 'MISSING'}, workbook ${workbook ? 'present' : 'MISSING'}, ` +
+            `${diagramErrors.length} chart/diagram error(s), ${workbookErrors.length} workbook error(s)`,
+        );
+        for (const e of [...diagramErrors, ...workbookErrors].slice(0, 20)) console.error(`    ${e.Path}: ${e.Description}`);
+      } else {
+        console.log(`✔ ${label}: chart part + embedded workbook, 0 schema errors`);
+      }
+    }
+
+    // packages/pptx: one deck holding every visual fixture. Unlike the .docx (where Pandoc's own
+    // writer contributes known noise), every part of the .pptx is this project's output, so ANY
+    // schema error fails the run.
+    const deckMd = [...availablePlainFixtures]
+      .sort()
+      .map((name) => `# ${name}\n\n\`\`\`mermaid\n${readFixtureSource(visualFixturesDir, name)}\n\`\`\`\n`)
+      .join('\n');
+    const deckMdPath = join(workDir, 'oxml-pptx-all.md');
+    const deckPath = join(workDir, 'oxml-pptx-all.pptx');
+    writeFileSync(deckMdPath, deckMd);
+    execFileSync('node', [cli, deckMdPath, '-o', deckPath], { stdio: 'pipe' });
+    const deck = validate(deckPath);
+    const deckErrors = [...deck.diagramErrors, ...deck.otherErrors];
+    if (deckErrors.length > 0) {
+      failures++;
+      console.error(`✖ oxml-pptx-all: ${deckErrors.length} schema error(s)`);
+      for (const e of deckErrors.slice(0, 20)) console.error(`    ${e.Part} ${e.Path}: ${e.Description}`);
+    } else {
+      console.log(`✔ oxml-pptx-all: 0 schema errors (${availablePlainFixtures.size} slides)`);
     }
   } finally {
     if (failures === 0) rmSync(workDir, { recursive: true, force: true });

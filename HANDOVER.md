@@ -1,107 +1,155 @@
-# Handover — 2026-09-06 (add-in Word : scaffold codé, bloqué sur les spikes)
+# Handover — 2026-10-08
 
-One entry point for picking this project back up. Supersedes the earlier 2026-09-06 "planning-only"
-handover (same day, follow-up session) — that session only researched and decided; this one wrote
-the actual scaffold. Check `git log`/`TODO.md` for anything newer than this file's date.
+One entry point for picking this project back up. It describes the state of the project as of this
+date; `git log` has anything newer. Earlier handovers live in this file's git history.
 
-## What happened this session
+## Where the project stands
 
-Picking up straight from ADR 0008 (ruban à 5 boutons décidé, rien codé, 3 spikes bloquants
-identifiés — full reasoning there, not repeated here), this session scaffolded the actual add-in
-project:
+- **The product works end to end.** Markdown with Mermaid becomes a `.docx` where every diagram is
+  editable in Word, or (since 2026-10-08, flowcharts only) a `.odt` where it is editable in LibreOffice, from the VS Code extension (0.7.0 on the Marketplace, tag `vscode-v0.7.0`), the
+  CLI, the Pandoc filter, or the MCP server (`packages/mcp`). The same source can also become a
+  `.pptx` deck (`packages/pptx`), which opens in PowerPoint and imports into Google Slides.
+- **All 29 Mermaid types are covered.** What each one becomes (SmartArt, Word chart or shapes), under
+  which conditions, and what was ruled out with evidence: [`docs/coverage.md`](docs/coverage.md).
+- **SmartArt and Word charts are verified in real Word** by the maintainer, round by round
+  ([`test-corpus/word-verification/CHECKLIST.md`](test-corpus/word-verification/CHECKLIST.md), rounds
+  4-20). 0.7.0 was also validated on the maintainer's corporate Windows machine (2026-10-07).
+- **Public entry points (V2, ADR 0012).** `renderDiagram()` and `planRendering()` in `core`;
+  `convert()` as the library entry point of `@md2nativedocx/cli`; size limits on every Dagre layout
+  (`DiagramTooLargeError`, a visible note instead of a failed export); the MCP server runs each call in
+  a child process killed at its deadline.
+- **Versions.** Extension **0.8.0** published to the Marketplace on 2026-10-08 (tag `vscode-v0.8.0`):
+  `.odt` export, the project's own `reference.docx`. npm: the repo is at core, pandoc-filter, cli
+  **0.2.0** and pptx **0.1.1**, but the registry still serves 0.1.0: `npm publish` asked for a one-time
+  password (the `NPM_TOKEN` in `.env` does not bypass 2FA). Publish with an OTP, or replace the token
+  with an Automation / granular token allowed to bypass 2FA, then `npm publish --access public` in
+  `packages/{core,pandoc-filter,pptx,cli}` in that order. `mcp` is not published.
 
-- **`packages/word-addin/`** — new npm workspace member, generated via `generator-office`
-  (`npm create office-addin` equivalent; TypeScript, Word host, add-in-commands project type),
-  then adapted to the ADR's decision: the generated taskpane was deleted entirely (no taskpane in
-  this design), the manifest rewritten for a dedicated ribbon group "Md2Docx" with **6 buttons**:
-  the 5 production buttons from the ADR (Charger `.md`, Enregistrer sous `.md`, Couper/Copier/
-  Coller en MD) plus one temporary dev-only button, `[Dev] Vérifier les spikes`.
-- **The 5 production buttons are stub handlers only** — each just logs "not implemented, blocked
-  on ADR 0008 spikes" and calls `event.completed()`. This is deliberate, not an oversight: ADR
-  0008 §5 says no production logic should be written on top of clipboard/`getOoxml()` behavior
-  until spikes 1-2 have run in a real Word desktop, and that hasn't happened yet.
-- **The spike harness button is real, working code** (`src/commands/commands.word.ts`'s
-  `runSpike1Clipboard`/`runSpike2Ooxml`/`collectSpikeResults`): it round-trips
-  `navigator.clipboard.writeText()`/`readText()`, calls `range.getOoxml()` on the current
-  selection via `Word.run`, and opens a dialog (`src/dialogs/spike-results.html`) rendering both
-  results plus a reminder to eyeball spike 3, with a "Copier tout (JSON)" button. Spike 3 (do the
-  5 buttons render/behave right?) isn't something code can check — the harness just prompts for a
-  manual look.
-- **The 3 autonomy tools from ADR 0008 §6 are wired in**, two of them proven working this session:
-  `office-addin-manifest validate manifest.xml` passes; `office-addin-mock`-based unit tests
-  (`test/unit/spikes.test.ts`, 4 tests, `npm test`) exercise the spike-harness logic without any
-  Office app open — including a hand-rolled `navigator.clipboard` stub, since the Clipboard API is
-  a Web API office-addin-mock doesn't cover. The third tool, the repo's existing `dotnet`
-  OOXML validator (`scripts/oxml-validator/`), is **not yet connected** — nothing in this package
-  produces OOXML yet (that starts with "Coller en MD", still blocked on spike 1).
-- **Icon**: `packages/word-addin/assets/icon.svg` is a horizontal mirror of
-  `packages/vscode-extension/icon.svg` (maintainer's suggestion, mid-session) — same split-diamond
-  graph/text mark, flipped left-right since this add-in is the reverse direction (Word → Markdown,
-  "text → graph" vs the VS Code extension's "graph → text"). Rasterized to the 5 PNG sizes the
-  manifest needs (16/32/64/80/128) plus `logo-filled.png` via `rsvg-convert`.
-- **Verified green this session**: `npm run validate` (manifest), `npm run typecheck`, `npm test`
-  (4/4), `npm run build` (webpack production), `npm run lint` (office-addin-lint — one real
-  finding fixed along the way, see below), all from `packages/word-addin/`; also confirmed the
-  whole monorepo's `npm run typecheck --workspaces`, `npm run test --workspaces`, and
-  `npm run build --workspaces` still pass with the new package included, and `npm run lint`
-  (root) still passes.
-- **Two non-obvious fixes made along the way, worth knowing about if you touch this package**:
-  - Root's `eslint .` (ESLint 8) crashed outright (`TypeError: Converting circular structure to
-    JSON`) when it tried to cascade into `packages/word-addin/.eslintrc.json`, because that
-    config's `eslint-plugin-office-addins@4.0.10` plugin is built against newer
-    `@typescript-eslint/utils` internals incompatible with ESLint 8's config validator — not just
-    noisy findings, a hard crash. Fixed by adding `"root": true` to the package's own
-    `.eslintrc.json` (stops the cascade) **and** excluding `packages/word-addin/` from the root
-    `.eslintrc.cjs` `ignorePatterns` (belt and suspenders — root's `eslint .` still walks the
-    directory tree even with the nested config's own `root: true`). Lint that package on its own
-    via `npm run lint -w packages/word-addin` (`office-addin-lint check`).
-  - `eslint-plugin-office-addins`'s `load-object-before-read` rule flags `ooxml.value` (in
-    `runSpike2Ooxml`) as needing an explicit `.load()` call first — this is a **false positive**:
-    `range.getOoxml()` returns an `OfficeExtension.ClientResult<string>`, whose `.value` is
-    populated by `context.sync()` alone (no `.load()` exists or is needed for it, per Microsoft's
-    own samples). The rule's static `getFunctions.json` list flags every Office.js method starting
-    with `get*` by name regardless of return type, so it can't distinguish a `ClientResult`-
-    returning method from a loadable `Range`/collection getter. Suppressed with a scoped
-    `eslint-disable-next-line` and an explanatory comment right above it — don't "fix" this by
-    adding a real `.load()` call, that would be wrong for the actual Office.js API.
+## Priority since 2026-10-08: LibreOffice / ODF
 
-## What's already in place from *before* this session (don't re-derive it)
+LibreOffice 26.2 and Google Docs both shipped native Markdown in 2026, and neither renders Mermaid as
+editable shapes. The maintainer made an ODF output (`.odt` with native `draw:` shapes and attached
+connectors) the project's priority, ahead of the V2 engine work. Google itself is out of reach
+(proprietary format, no shape primitive in the Docs API); Slides stays reachable through `.pptx`.
 
-- `docs/adr/0008-word-addin-ribbon-platform-spike.md` — the platform research, the ribbon decision,
-  the 3 required spikes, and the tooling plan.
-- `docs/specs/FUTURE_wordextension.md` — functional spec for the reverse direction (Word→Markdown
-  text/tables/lists, SmartArt/shapes→Mermaid), two usage modes (CLI/file, and Office.js add-in
-  clipboard).
-- `docs/specs/FUTURE_docx2mermaid_SPEC.md` — technical architecture for the OOXML→Mermaid diagram
-  reconstruction specifically.
-- The existing `scripts/oxml-validator/` (dotnet, ADR 0007) — reusable as-is once a converter
-  exists that hands fragments to `insertOoxml` (not yet the case).
+**Phase 0 (reconnaissance) is closed** by [ADR 0013](docs/adr/0013-odf-output-phase-0.md). What
+it established, each point with a spike under `docs/adr/spikes/spike-odf-*`:
 
-## Not done / where a fresh session should start
+- Pandoc writes the `.odt` and nothing touches it afterwards: a raw `{=opendocument}` block passes
+  through as is; the styles a raw block cannot declare go through one extra variable in a template
+  derived from Pandoc's `opendocument` one, filled by the Lua filter; arrow `draw:marker`s live in the
+  `reference.odt`.
+- One diagram = one `draw:g` anchored as a character. Shapes anchored one by one make the connector
+  detach on open. In the group, the connector is right on open, stays attached and follows a moved
+  shape (checked through the UNO API).
+- `draw:connector` needs its end points and an `svg:viewBox`: a required attribute LibreOffice
+  tolerates silently; the validator caught it.
+- Door B (LibreOffice renders Mermaid when it opens a `.md`) will be a **LibreOffice extension**.
+  LibreOffice's Markdown import drops the code-fence language, and upstream closed keeping it as
+  WONTFIX (bug 172530) and prefers Mermaid kept out of core (bug 172531). The extension recognises
+  Mermaid by content: `detectDiagramType()` plus a parse that must succeed.
 
-1. **Run the 3 spikes in a real Word desktop (not Word Online)** — this needs the maintainer's
-   hands, it cannot be done from this Linux sandbox (no headless Word, no Microsoft 365
-   credentials, no supported E2E automation pattern for Word). Instructions are in `TODO.md`
-   under "Comment lancer les spikes": `cd packages/word-addin && npm run start`, click
-   **[Dev] Vérifier les spikes** on the Md2Docx ribbon group, read the dialog, report the 3
-   results back into ADR 0008 (spike 1: clipboard write+read from a function command; spike 2:
-   real shape of `getOoxml()`'s output; spike 3: do the 5 buttons render/behave correctly).
-2. **Build in this order once spikes are decided** (cheapest/lowest-risk first): Coller en MD
-   (reuses the existing Markdown→OOXML engine, once bundled for a browser runtime) → Copier en MD
-   (needs the new OOXML→Markdown reverse converter, scoped by spike 2) → Couper en MD (trivial
-   extension of Copier) → Enregistrer sous/Charger un `.md` (reuse Copier/Coller at whole-document
-   scope). Remove the `[Dev] Vérifier les spikes` button once the 5 real buttons are implemented.
-3. Wire the `dotnet` `scripts/oxml-validator/` into the new OOXML-producing path (Coller en MD)
-   once it exists — it isn't connected to anything in `packages/word-addin` yet.
+**Decisions taken in ADR 0013** (delegated by the maintainer): a separate `renderDiagramOdf()` in
+`core` rather than a format option on `renderDiagram()`; the derived template ships under BSD-3-Clause
+with Pandoc's notice; the project writes its own `reference.odt`, never Pandoc's; `AGENTS.md` rules
+2, 3, 7 and the security table now cover ODF (no operation on a Pandoc-written `.odt`; no macro,
+script, external link, DDE or linked object; style values validated).
 
-## Where to look for more
+**Phase 1 (flowcharts to `.odt`) is done (2026-10-08).** `md2nativedocx doc.md -o doc.odt`, or
+`convert(source, { format: 'odt' })`: each flowchart becomes one group of native LibreOffice shapes
+with connectors bound to them (`renderDiagramOdf()` in `core`); every other type becomes a note and a
+warning. Pandoc writes the package with two project files (`packages/cli/assets/`, built by
+`scripts/build-odt-assets.mjs`): a `reference.odt` written by the project (a minimal one is not
+enough: LibreOffice does not supply its built-in look for a style a document cites without defining
+it) and Pandoc 3.1.3's `opendocument` template plus one loop (BSD-3, `THIRD_PARTY_NOTICES.md`). End
+criterion checked without a human: renders, `odfvalidator` zero errors, and through UNO
+(`scripts/odf-connector-check.py`) 221 connectors in the 32 flowcharts of the corpus attached on open
+and following a moved shape. Open points of phase 1 and what comes next: `TODO.md` §0 (edge-label
+placement, narrow preset text areas, no page options for `.odt`; then phase 2 measurement, the `.odt`
+export in the VS Code extension, door B). Released in extension 0.8.0; on npm once 0.2.0 is published (Versions above).
 
-- `docs/adr/0008-word-addin-ribbon-platform-spike.md` — the platform research and ribbon decision.
-- `TODO.md`, "Phase 4 — Add-in Word (Office.js)" — the punch list, including spike-running
-  instructions and current status per item.
-- `packages/word-addin/` — the scaffold itself; `src/commands/commands.word.ts` is the one file
-  that matters most (5 stubs + the real spike-harness logic).
-- `docs/specs/FUTURE_wordextension.md` / `FUTURE_docx2mermaid_SPEC.md` — the reverse-conversion
-  specs this plan builds on.
-- `docs/history/TODO_ARCHIVE.md` — pre-Phase-4 history condensed out of `TODO.md` in the prior
-  session (Phase 8, CI/CD, closed incidents), unrelated to this work.
+**Hold until there is something to show:** a comment on LibreOffice bug 172531 presenting the
+extension. Public communication; the maintainer agreed to wait for a first working version.
+
+V2 work comes second: only the tasks marked ▶ in `TODO.md` §2bis continue (they serve ODF too, or
+close an open security risk); the ones marked ⏸ waited for the end of ODF phase 1, which is now
+reached: their order against ODF phase 2 is to be decided.
+
+## What changed since the last handover (2026-10-06 → 08)
+
+- **2026-10-07, V2 extraction:** ADR 0012 accepted, `AGENTS.md` rule 7 reworded as an allowlist,
+  DCO adopted; `renderDiagram()` (the bridge became a ~100-line adapter, byte-identical on 255 corpus
+  sources × 5 configurations), `convert()`, size limits, the MCP server, pptx rendering in process;
+  CI runs pptx tests on Windows/macOS and a DCO check; first npm publication.
+- **2026-10-08, ODF phase 0:** spec [`05-libreoffice-odf-spec.md`](docs/specs/05-libreoffice-odf-spec.md),
+  spikes S0-S5, ADR 0013, `AGENTS.md` extended to ODF.
+- **2026-10-08, tooling:** `npm run test:odf-validate` (ODF Toolkit `odfvalidator` 0.13.0, Apache-2.0,
+  jar pinned by SHA-256, zero errors required, runs in CI); LibreOffice 26.2.6 pinned next to the apt
+  one as `soffice-26.2` (`scripts/install-libreoffice-pinned.sh`, called by `.devcontainer/setup.sh`
+  and the `visual` CI job, which also re-runs the Markdown import check). The apt LibreOffice stays
+  the visual-test renderer, so baselines did not move. 26.8 from 26.8.2 on (26.8.0 behaves the same
+  on the S3 test).
+- **2026-10-08, ODF phase 1** (above). Found on the way and fixed: nine visual fixtures without a
+  trailing newline had never been converted (their baselines showed raw Mermaid text; 11 baselines
+  replaced after review); a subgraph listing its own id crashed Dagre for both formats; the CLI's
+  path check refused every relative path on Windows.
+- **2026-10-08, `reference.docx` rewritten from scratch** (maintainer's licence decision): hand-written
+  parts in `packages/cli/reference-docx-src/`, assembled by `scripts/build-reference-docx.mjs`.
+  Pixel-identical render, no external relationship (the old one had an unused `http://example.com`),
+  no schema error of its own. The table header colour patch now writes `w:shd` in schema order.
+
+## Health (2026-10-08)
+
+- Tests: core 797, cli 150, vscode-extension 73, pptx 26, pandoc-filter 15, mcp 7, all green.
+  Typecheck and lint clean. CI green on Linux, macOS and Windows.
+- `test:visual` 100/100 (68 `.docx`/`.pptx`, 32 `.odt`). `test:oxml-validate`: 0 schema errors under
+  `word/diagrams/`; the rest from Pandoc's own `.docx` writer. `test:odf-validate`: three documents,
+  two written by the CLI, zero errors.
+- The `visual` CI job runs weekly (Monday cron), on `release/**` pushes and on demand (Actions tab;
+  the Codespace token cannot dispatch it, push a `release/` branch instead). It had never run before
+  2026-10-08 (no schedule trigger). First run green: 100/100 renders, `test:odf-connectors` 221
+  connectors, pinned LibreOffice 26.2.6 Markdown import.
+- `npm audit --omit=dev` clean; one dated audit exception (`braces`, **expires 2026-12-31**).
+
+## Open items outside ODF
+
+From `TODO.md` §1-§4: the Word add-in stays paused on branch `word-addin-scaffold`; demo video
+postponed; the manual generator into `scripts/` (and SmartArt/charts in the manual); partly translated
+extension setting descriptions; two known visual defects (`sequenceDiagram` block frame,
+`crossing-stress-bipartite` connectors); the `braces` exception date; analysed SmartArt/chart tracks
+and ideas not committed to.
+
+## Conventions worth remembering
+
+- Commit each finished unit and **push** it (a stale CI badge once came from unpushed commits).
+- "Word won't open the file": run `scripts/oxml-validator` before comparing XML by hand. Same for ODF
+  with `npm run test:odf-validate`: LibreOffice tolerates invalid files. PowerPoint is stricter than
+  the validator: bisect with real opens there.
+- Render and look at the image; unit tests on XML miss blank or broken renders.
+- **LibreOffice checks need no human.** Headless `soffice`/`soffice-26.2` renders to PDF/PNG, and the
+  system Python (`/usr/bin/python3`, `python3-uno`) drives LibreOffice through UNO: moving a shape and
+  reading connector attachment was done that way (`docs/adr/spikes/spike-odf-connector/move-b.py`).
+  Only a real mouse drag or a real Word open needs the maintainer.
+- A new SmartArt mapping is done only once the maintainer has opened a `smartart-vNN-*` file in real
+  Word (add a CHECKLIST round).
+- Licences: check before shipping any third-party file. Pandoc's templates are GPL-2+ or BSD-3, its
+  other data files (reference documents) GPL-2+ only; Word-made samples (`handmade_samples/`,
+  gitignored) are read for structure only, never committed.
+- Escalate before touching `packages/core`'s public API, adding a dependency, `.devcontainer/`,
+  `.vscode/`, `ci.yml`, a security rule or a licence question (`AGENTS.md`).
+
+## Where to look
+
+| Need | File |
+|---|---|
+| Open work | `TODO.md` (§0 = ODF phase 1) |
+| Current priority | `docs/specs/05-libreoffice-odf-spec.md`, `docs/adr/0013-odf-output-phase-0.md` |
+| ODF evidence | `docs/adr/spikes/spike-odf-{connector,styles,markdown-import,validator,libreoffice-filter}/` |
+| What each Mermaid type becomes | `docs/coverage.md` |
+| Rules, conventions, escalation | `AGENTS.md`, `TESTING.md` |
+| Product intent (French) | `docs/specs/cahier_des_charges.md` |
+| What comes after V1 | `docs/specs/01-v2-engine-spec.md`, `03-v3-…`, `04-roadmap-…`, ADR 0012 |
+| Decisions | `docs/adr/` (0006 SmartArt corruption, 0010 pptx, 0011 charts, 0012 evolution, 0013 ODF) |
+| Bundled Word template | `packages/cli/assets/README.md`, `packages/cli/reference-docx-src/` |
+| Real-Word verification log | `test-corpus/word-verification/CHECKLIST.md` |
+| Closed work, incidents, old TODO | `docs/history/` |

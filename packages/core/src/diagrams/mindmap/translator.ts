@@ -28,12 +28,13 @@ import type { MindmapChart, MindmapNode, MindmapShape } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
+  EMU_PER_PX,
   scaledExtent,
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 
 const RING_GAP = 170;
@@ -238,7 +239,7 @@ function connector(
 /** Translate a parsed mindmap into a self-contained WordprocessingML
  * paragraph. `null`-root charts render a visible note (never a silent blank
  * canvas), matching `../venn/translator.ts`'s zero-sets convention. */
-export function translateMindmapToOoxml(chart: MindmapChart): string {
+export function translateMindmapToOoxml(chart: MindmapChart, options: CanvasOptions = {}): string {
   if (!chart.root) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -269,7 +270,7 @@ export function translateMindmapToOoxml(chart: MindmapChart): string {
   const canvasH = maxY - minY + 2 * PAD;
   const dx = -minX + PAD;
   const dy = -minY + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const parts: string[] = [];
 
@@ -321,5 +322,5 @@ export function translateMindmapToOoxml(chart: MindmapChart): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.root.label || 'Mindmap');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.root.label || 'Mindmap', options);
 }

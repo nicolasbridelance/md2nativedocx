@@ -53,15 +53,17 @@ test('generates well-formed XML for all four parts', () => {
   assertWellFormedXml(out.styleXml);
 });
 
-test('layout/colors/style are the fixed, diagram-independent constants (no direction variant)', () => {
-  // Unlike chain/tree, a circle has no natural TD/LR orientation to mirror,
-  // so cycle uses a single fixed layout regardless of flowchart.direction.
+test('colors/style are fixed; the layout depends only on the node count (no direction variant)', () => {
+  // Unlike chain/tree, a circle has no natural TD/LR orientation to mirror, so cycle has no direction variant.
+  // The box width does depend on how many nodes share the ring, so the layout is per node count.
   const a = generateCycle(cycleFlowchart('graph TD\n  A --> B\n  B --> A'));
   const b = generateCycle(cycleFlowchart('graph LR\n  X --> Y\n  Y --> Z\n  Z --> X'));
-  assert.equal(a.layoutXml, CYCLE_LAYOUT_XML);
+  const c = generateCycle(cycleFlowchart('graph TD\n  X --> Y\n  Y --> Z\n  Z --> X'));
   assert.equal(a.colorsXml, CYCLE_COLORS_XML);
   assert.equal(a.styleXml, CYCLE_STYLE_XML);
-  assert.equal(a.layoutXml, b.layoutXml);
+  assert.equal(b.layoutXml, c.layoutXml, 'same node count, same layout whatever the direction');
+  assert.notEqual(a.layoutXml, b.layoutXml, 'different node count, different box size');
+  assert.equal(generateCycle(cycleFlowchart('graph TD\n  A --> B\n  B --> C\n  C --> D\n  D --> A')).layoutXml, CYCLE_LAYOUT_XML);
 });
 
 test('none of the fixed parts reference any Microsoft URN or real diagram content', () => {

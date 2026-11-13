@@ -552,7 +552,7 @@ time, not a standing constraint.)
 
 ## Round 6 (2026-09-03) — two real-Word samples close the `Labeled Hierarchy`/`Converging` questions; a same-day multi-parent test independently confirms the second
 
-Following the samples wishlist (`docs/smartart-samples-wishlist.md`), the maintainer built two real
+Following the samples wishlist (`docs/history/smartart-samples-wishlist.md`), the maintainer built two real
 Word samples and reported back (no `.docx` kept/committed, per the same licensing stance as
 `hierarchy1`/`hierarchy2` — only the structural finding matters here, not the file):
 

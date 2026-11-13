@@ -76,10 +76,54 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
   let inNoteBlock = false;
   let warnedComposite = false;
 
+  let inFrontmatter = false;
+  let inAccDescrBlock = false;
+  let sawHeader = false;
+  let warnedFrontmatter = false;
+  let warnedClassRef = false;
+
   for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
+    let line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
-    if (/^stateDiagram(?:-v2)?\b/i.test(line)) continue;
+
+    if (line === '---' && !sawHeader) {
+      inFrontmatter = !inFrontmatter;
+      if (!warnedFrontmatter) {
+        warnings.push('State diagram frontmatter/config is not supported and was ignored.');
+        warnedFrontmatter = true;
+      }
+      continue;
+    }
+    if (inFrontmatter) continue;
+    if (/^stateDiagram(?:-v2)?\b/i.test(line)) {
+      sawHeader = true;
+      continue;
+    }
+    sawHeader = true;
+
+    // Accessibility metadata (`accTitle: ...`, `accDescr: ...` or an `accDescr { ... }` block) is
+    // not drawn; it must not reach the `id : description` rule and become a state.
+    if (inAccDescrBlock) {
+      if (line.includes('}')) inAccDescrBlock = false;
+      continue;
+    }
+    if (/^accTitle\b/i.test(line)) continue;
+    if (/^accDescr\b/i.test(line)) {
+      if (line.includes('{') && !line.includes('}')) inAccDescrBlock = true;
+      continue;
+    }
+
+    // A trailing `%% comment` is not part of a label, and `:::className` suffixes on endpoints are
+    // styling (not supported) - drop both before the transition/description rules read the line.
+    const commentAt = line.indexOf('%%');
+    if (commentAt > 0) line = line.slice(0, commentAt).trim();
+    if (line.includes(':::')) {
+      line = line.replace(/:::[\w-]+/g, '').trim();
+      if (!warnedClassRef) {
+        warnings.push('State diagram :::className styling is not supported and was ignored.');
+        warnedClassRef = true;
+      }
+    }
 
     if (inNoteBlock) {
       if (/^end\s+note$/i.test(line)) inNoteBlock = false;

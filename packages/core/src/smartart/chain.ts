@@ -22,7 +22,12 @@
  */
 
 import type { Flowchart, FlowNode } from '../types.js';
-import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
+import { validateHexColor } from '../translator/xml-escape.js';
+import { buildColorsXml, buildStyleXml, type SmartArtStyle } from './styles.js';
+import { DRAWING_EXT_LST_XML, buildDiagramDrawingXml, chainShapes } from './drawing.js';
+import type { SmartArtGenerateOptions } from './generate-options.js';
+import { nodeGeom, presSpPrXml } from './node-shape.js';
+import { boxText, pointTextXml, textLines } from './text.js';
 
 /** The four OOXML diagram parts a `chain` SmartArt diagram needs. */
 export interface SmartArtChainOutput {
@@ -34,6 +39,8 @@ export interface SmartArtChainOutput {
   colorsXml: string;
   /** `word/diagrams/quickStyle{N}.xml` — `dgm:styleDef`, constant across diagrams. */
   styleXml: string;
+  /** `word/diagrams/drawing{N}.xml` — pre-rendered `dsp:drawing`, only when `options.drawing` was set. */
+  drawingXml?: string;
 }
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
@@ -430,7 +437,14 @@ function incomingLabelByNodeId(flowchart: Flowchart): Map<string, string> {
  * Word-authored data file uses to tell the layout which transition point
  * belongs to which edge.
  */
-function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: string): string {
+function buildChainDataXml(
+  flowchart: Flowchart,
+  nodes: FlowNode[],
+  layoutUrn: string,
+  withDrawing: boolean,
+  style: SmartArtStyle,
+  aspect: number,
+): { xml: string; drawingXml?: string } {
   const docId = '0';
   const nodeIds = nodes.map((_, i) => String(i + 1));
   const incomingLabel = incomingLabelByNodeId(flowchart);
@@ -452,15 +466,13 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
   const contentPts = nodes
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
-      const text = label ? `${label} : ${node.label}` : node.label;
+      const text = boxText(node, label);
       const fill = validateHexColor(node.fill, '');
       const spPr = fill
         ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
         : '<dgm:spPr/>';
       const nodePt =
-        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}` +
-        `<dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/>` +
-        `<a:t>${escapeXml(text)}</a:t></a:r></a:p></dgm:t></dgm:pt>`;
+        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text)}</dgm:pt>`;
       const parTransId = parTransIds[i];
       const sibTransId = sibTransIds[i];
       const transPts =
@@ -477,7 +489,7 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     nodeIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pMainIds.get(id)}" type="pres"><dgm:prSet presAssocID="${id}" presName="Main" presStyleLbl="node1" presStyleIdx="${i}" presStyleCnt="${nodeIds.length}"/>${presSpPrXml(nodeGeom(nodes[i] as FlowNode))}</dgm:pt>`
       )
       .join('') +
     sibTransIds
@@ -525,7 +537,7 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     })
     .join('');
 
-  return (
+  const xml = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     `<dgm:dataModel xmlns:dgm="${DGM_NS}" xmlns:a="${A_NS}">` +
     `<dgm:ptLst><dgm:pt modelId="${docId}" type="doc"><dgm:prSet ` +
@@ -535,8 +547,54 @@ function buildChainDataXml(flowchart: Flowchart, nodes: FlowNode[], layoutUrn: s
     contentPts +
     presPts +
     `</dgm:ptLst><dgm:cxnLst>${parOfCxns}${presOfCxns}${presParOfCxns}</dgm:cxnLst>` +
-    '<dgm:bg/><dgm:whole/></dgm:dataModel>'
+    `<dgm:bg/><dgm:whole/>${withDrawing ? DRAWING_EXT_LST_XML : ''}</dgm:dataModel>`
   );
+  if (!withDrawing) return { xml };
+  const drawingXml = buildDiagramDrawingXml(
+    chainShapes(
+      flowchart.direction,
+      nodes.map((node, i) => {
+        const label = incomingLabel.get(node.id);
+        const fill = validateHexColor(node.fill, '');
+        return {
+          id: pMainIds.get(nodeIds[i] as string) as string,
+          text: boxText(node, label),
+          ...(nodeGeom(node) ? { geom: nodeGeom(node) } : {}),
+          ...(fill ? { fill } : {}),
+        };
+      }),
+      pSibTransIds,
+      style,
+      aspect,
+    ),
+    style,
+  );
+  return { xml, drawingXml };
+}
+
+/** Box height / width of every chain layout above. */
+const CHAIN_BOX_ASPECT = 0.6;
+
+/**
+ * Box height / width for `nodes`: the layouts' 0.6, or taller when a box holds three or more lines (a
+ * `<br/>` label, a timeline period and its events) — 0.3 per line, at most 1.6.
+ */
+function chainBoxAspect(flowchart: Flowchart, nodes: FlowNode[]): number {
+  const incoming = incomingLabelByNodeId(flowchart);
+  const lines = Math.max(1, ...nodes.map((n) => textLines(boxText(n, incoming.get(n.id))).length));
+  return lines < 3 ? CHAIN_BOX_ASPECT : Math.min(1.6, Math.round(lines * 3) / 10);
+}
+
+/**
+ * A chain layout with taller boxes: only the box `h`/`w` constraint changes, under its own `uniqueId`
+ * (`…-h120` for 1.2) since a document keeps one definition per layout id.
+ */
+function tallChainLayout(base: { layoutXml: string; layoutUrn: string }, aspect: number): { layoutXml: string; layoutUrn: string } {
+  const layoutUrn = `${base.layoutUrn}-h${Math.round(aspect * 100)}`;
+  const layoutXml = base.layoutXml
+    .replace(`uniqueId="${base.layoutUrn}"`, `uniqueId="${layoutUrn}"`)
+    .replace(`<dgm:constr type="h" refType="w" fact="${CHAIN_BOX_ASPECT}"/>`, `<dgm:constr type="h" refType="w" fact="${aspect}"/>`);
+  return { layoutXml, layoutUrn };
 }
 
 /** Maps `flowchart.direction` to the matching layout XML/URN pair. */
@@ -563,13 +621,24 @@ const CHAIN_LAYOUT_BY_DIRECTION: Record<Flowchart['direction'], { layoutXml: str
  * the Mermaid source's own direction (see
  * `docs/markdown-mermaid-compliance-table.md`).
  */
-export function generateChain(flowchart: Flowchart): SmartArtChainOutput {
+export function generateChain(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtChainOutput {
+  const style: SmartArtStyle = options.style ?? 'simple';
   const nodes = orderedChainNodes(flowchart);
-  const { layoutXml, layoutUrn } = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
+  const aspect = chainBoxAspect(flowchart, nodes);
+  const base = CHAIN_LAYOUT_BY_DIRECTION[flowchart.direction];
+  const { layoutXml, layoutUrn } = aspect === CHAIN_BOX_ASPECT ? base : tallChainLayout(base, aspect);
+  const data = buildChainDataXml(flowchart, nodes, layoutUrn, options.drawing === true, style, aspect);
   return {
-    dataXml: buildChainDataXml(flowchart, nodes, layoutUrn),
+    dataXml: data.xml,
     layoutXml,
-    colorsXml: CHAIN_COLORS_XML,
-    styleXml: CHAIN_STYLE_XML,
+    colorsXml:
+      style === 'simple'
+        ? CHAIN_COLORS_XML
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/chain1', ['node0','node1','sibTrans']),
+    styleXml:
+      style === 'simple'
+        ? CHAIN_STYLE_XML
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/chain1', ['node0','node1','sibTrans']),
+    ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

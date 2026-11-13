@@ -109,6 +109,12 @@ test('a backtick Markdown string\'s bold/italic spans render as real w:b/w:i run
   assert.ok(xml.includes('<w:t xml:space="preserve">italic</w:t>'));
 });
 
+test('w:b/w:i precede w:color/w:sz inside a run\'s w:rPr (CT_RPr is an ordered sequence; Word rejects the reverse)', () => {
+  const xml = translate('graph TD\n  A["`**bold** and _italic_`"]');
+  assert.ok(/<w:rPr><w:b\/><w:color [^>]*\/><w:sz [^>]*\/><\/w:rPr>/.test(xml));
+  assert.ok(/<w:rPr><w:i\/><w:color [^>]*\/><w:sz [^>]*\/><\/w:rPr>/.test(xml));
+});
+
 test('a literal ** outside a backtick Markdown string never becomes a bold run', () => {
   const xml = translate('graph TD\n  A[No **markup** here]');
   assert.ok(!xml.includes('<w:b/>'));

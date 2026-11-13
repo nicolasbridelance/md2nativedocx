@@ -19,11 +19,12 @@ import type { QuadrantChart, QuadrantPoint } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml, validateHexColor } from '../../translator/xml-escape.js';
 import {
-  EMU_PER_PX,
   createIdAllocator,
+  EMU_PER_PX,
   scaledExtent,
   scaledFontSizeHalfPt,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 
 const GRID_SIZE = 480;
@@ -184,13 +185,13 @@ function scale(px: number, factor: number): number {
 
 /** Translate a parsed quadrant chart into a self-contained WordprocessingML
  * paragraph, mirroring `translateToOoxml`'s signature/contract. */
-export function translateQuadrantToOoxml(chart: QuadrantChart): string {
+export function translateQuadrantToOoxml(chart: QuadrantChart, options: CanvasOptions = {}): string {
   const nextId = createIdAllocator();
   const hasTitle = Boolean(chart.title);
   const topMargin = hasTitle ? TITLE_HEIGHT : NO_TITLE_TOP_MARGIN;
   const canvasW = MARGIN_LEFT + GRID_SIZE + MARGIN_RIGHT;
   const canvasH = topMargin + GRID_SIZE + MARGIN_BOTTOM;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const gridX0 = MARGIN_LEFT;
   const gridY0 = topMargin;
@@ -304,7 +305,7 @@ export function translateQuadrantToOoxml(chart: QuadrantChart): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Quadrant chart');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Quadrant chart', options);
 }
 
 function renderPoint(

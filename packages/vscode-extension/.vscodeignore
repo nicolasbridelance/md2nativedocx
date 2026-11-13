@@ -8,3 +8,6 @@ scripts/**
 *.map
 **/*.ts
 .gitignore
+docs/**
+!docs/demo-hover.gif
+!docs/demo-vscode.gif

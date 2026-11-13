@@ -50,6 +50,12 @@ if ! command -v libreoffice >/dev/null 2>&1 && ! command -v soffice >/dev/null 2
 fi
 libreoffice --version 2>/dev/null || soffice --version 2>/dev/null || echo "LibreOffice not found"
 
+echo "==> Installing pinned LibreOffice for the ODF target (soffice-26.2, next to the apt one)"
+# Exact version and SHA-256 live in scripts/install-libreoffice-pinned.sh, shared with ci.yml.
+# The apt LibreOffice above stays the visual-regression renderer; this one is for the ODF work
+# (docs/specs/05-libreoffice-odf-spec.md). Optional: a failure must not block the rest of setup.
+bash "$(dirname "$0")/../scripts/install-libreoffice-pinned.sh" || echo "Pinned LibreOffice not installed"
+
 echo "==> Installing .NET SDK ${DOTNET_SDK_VERSION}"
 # Optional dependency: only used by scripts/oxml-validator/ (npm run
 # test:oxml-validate, AGENTS.md → "Diagnosing 'Word won't open the file'").

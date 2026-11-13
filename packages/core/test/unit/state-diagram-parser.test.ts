@@ -92,3 +92,13 @@ test('an unclosed composite state block is warned, not silently dropped', () => 
   const { warnings } = parseStateDiagram('stateDiagram-v2\n  state Composite {\n    [*] --> One');
   assert.ok(warnings.some((w) => w.includes('not closed')));
 });
+
+test('accTitle/accDescr, frontmatter, trailing %% comments and :::class suffixes never become states or labels', () => {
+  const { ast, warnings } = parseStateDiagram(
+    '---\ntitle: Simple sample\n---\nstateDiagram-v2\n  accTitle: A title\n  accDescr: A description\n  accDescr {\n    multi line\n  }\n  [*] --> Still:::cls\n  Still --> Moving %% trailing\n  Moving:::cls --> [*] : go\n',
+  );
+  assert.deepEqual(ast.states.filter((st) => st.kind === 'normal').map((st) => st.id), ['Still', 'Moving']);
+  assert.deepEqual(ast.transitions.map((t) => t.label), [undefined, undefined, 'go']);
+  assert.equal(warnings.filter((w) => /frontmatter/.test(w)).length, 1);
+  assert.equal(warnings.filter((w) => /:::className/.test(w)).length, 1);
+});

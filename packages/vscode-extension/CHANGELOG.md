@@ -3,6 +3,100 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+## [0.8.0] — 2026-10-08
+
+### Added
+- **Export to LibreOffice (.odt)**, for a document or a single diagram (md2nativedocx menu, command
+  palette): flowcharts become native LibreOffice shapes, with connectors attached to them that follow
+  a moved box, subgraphs as containers, `classDef`/`style`/`linkStyle` colours kept. Other diagram types
+  become a note for now. Uses Pandoc like the Word export, with a page and styles written by the project.
+
+### Changed
+- The Word template bundled with the extension is now written by the project itself (it was derived from
+  Pandoc's own); documents look the same.
+
+### Fixed
+- A diagram whose subgraph listed its own name as a member was left as raw Mermaid text.
+
+## [0.7.0] — 2026-10-06
+
+### Added
+- More diagrams become SmartArt (each one confirmed in real Word): a `timeline` becomes a SmartArt time
+  line (one bar per section when it has sections), a `journey` a grouped time line, a `kanban` board a
+  grouped list, and simple `gitGraph` (one branch), `stateDiagram` (a chain or a loop) and
+  `classDiagram` (inheritance only) a process, cycle or hierarchy.
+- Each flowchart node keeps its Mermaid shape inside SmartArt (diamond, circle, cylinder, hexagon…), as
+  Word's own *Change Shape* writes it; *Reset Shape* goes back to the layout's box.
+- Line breaks (`<br/>`) and bold/italic Markdown strings are kept in SmartArt boxes.
+
+### Changed
+- The Marketplace description and README lead with the complete Markdown-to-Word conversion (headings,
+  tables, footnotes, math, table of contents), diagrams being what sets it apart.
+- Smaller README images.
+
+### Fixed
+- A word could break mid-letter inside a diamond-shaped SmartArt box.
+
+### Removed
+- Setting `md2nativedocx.smartArt.preRenderedDrawing`: the pre-rendered SmartArt drawing is always
+  embedded (it is what makes Word and other viewers show the same layout).
+
+## [0.6.0] — 2026-10-06
+
+### Changed
+- **PowerPoint from the extension.** "Export to PowerPoint" (one slide per diagram) sits next to "Export to
+  Word" everywhere. New setting `md2nativedocx.pptx.showSource` puts each diagram's Mermaid source beside it.
+- **Clearer CodeLenses.** One line at the top of the file for the whole document — Export to Word · Export
+  to PowerPoint · Settings — instead of a whole-document "Export to Word" repeated above every diagram.
+  Above each diagram, **Export this diagram…** (Word or a one-slide deck) replaces "Export this block only".
+- **Right-click menu** is now an `md2nativedocx` submenu (Explorer, editor, tab bar): Export to Word, Export
+  to PowerPoint, and — with the cursor inside a diagram — Export this diagram to Word / PowerPoint.
+  Several files selected in the Explorer are exported in one go.
+- **Settings in sections** (Output · Diagrams · Page layout · Typography · Document structure · Advanced), in
+  the Settings UI and in the side panel. The panel gains **Diagrams** (SmartArt on/look/drawing, Word charts,
+  PowerPoint source) and **Output** (output folder, company template), and now follows VS Code's language
+  (it was French only). Corporate download mirrors for Pandoc/.NET moved under Advanced.
+- **New defaults: SmartArt on, native Word charts on** (`pie`, `xychart`, `radar`) — all confirmed in real Word.
+  A value you set explicitly is kept.
+- Marketplace title: "md2nativedocx — Markdown to Word with editable diagrams (+ PowerPoint)".
+- **Know before you export.** Above each diagram, the CodeLens now says what it will become in Word —
+  "SmartArt — hierarchy, 3 levels", "Word chart", "Word shapes (no SmartArt: branches merge again at B, C)" —
+  and, when a setting would change that ("SmartArt possible"), clicking it turns the setting on. Hover the
+  ```` ```mermaid ```` line for the details (what you can do with it in Word, what is not kept). The status bar
+  tooltip tallies the document's diagrams. Same rules as the exporter (the core's `planRendering`).
+- Listing and READMEs now say what the name means: `md2nativedocx` converts **Markdown** to a complete Word
+  `.docx` (the `md` is the input format, not Mermaid) and "native" describes the Word output (OOXML shapes,
+  SmartArt, charts with an embedded workbook), Mermaid diagrams included. README openings now lead with what the
+  reader of the document gains (diagrams they can edit in Word). Title: "md2nativedocx — Markdown to Word
+  with editable diagrams"; the "mermaid to word / docx" search keywords stay.
+
+### Added
+- SmartArt trees with grandchildren (up to 10 levels, any width, all four directions) are now real SmartArt
+  instead of falling back to native shapes; each subtree gets room in proportion to its leaves. A wide
+  top-down tree switches to an org-chart layout (leaves in a column under their parent) to stay readable.
+- With SmartArt on, `mindmap` (left to right) and single-root `treeView-beta` (top-down) diagrams become
+  SmartArt hierarchies too. The SmartArt setting's description no longer calls it experimental.
+- New settings `md2nativedocx.smartArt.style` (`simple` | `colorful` — default | `intense`) and
+  `md2nativedocx.smartArt.preRenderedDrawing` (default on) for SmartArt diagrams: a different theme
+  accent per shape, optionally the theme's gradient + drop shadow, and the cached drawing Word itself
+  stores so Word and LibreOffice show the same shapes. They stay real, restylable SmartArt.
+- New setting `md2nativedocx.nativeCharts.enabled` (off by default): a Mermaid `pie`, `xychart` or
+  `radar` becomes a native Word chart with an embedded workbook — Chart Design → Edit Data changes the
+  values — instead of editable shapes. A horizontal `xychart` with a line series, or a radar with fewer
+  than three axes, stays shapes with a warning. Confirmed in real Word for `pie`; `xychart`/`radar` pending.
+
+## [0.5.6] — 2026-10-05
+
+### Changed
+- Marketplace listing rewritten around what the extension actually does: the title is now
+  "md2nativedocx — Mermaid to Word (.docx)", with the `Visualization` category and search keywords
+  ("mermaid to word", "mermaid to docx", …), so search engines and AI summaries stop describing it as a
+  generic Markdown converter.
+- README: new animated demo (Mermaid source → native Word shapes), a gallery of all 29 supported
+  diagram types, and a short FAQ.
+
 ## [0.5.5] — 2026-09-10
 
 ### Added

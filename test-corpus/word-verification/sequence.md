@@ -1,0 +1,33 @@
+# sequence
+
+```mermaid
+sequenceDiagram
+    title Checkout
+    autonumber
+    actor U as User
+    participant W as Web App
+    participant API
+    participant DB as Database
+    U->>+W: Place order
+    W->>API: POST /orders
+    activate API
+    API->>DB: INSERT order
+    DB-->>API: ok
+    API-xW: Payment declined
+    Note over API,DB: Retried 3 times
+    loop Every minute
+        W-)API: poll status
+    end
+    alt paid
+        API-->>-W: 200 OK
+    else failed
+        API--)W: 402
+        API->>API: log failure
+    end
+    Note right of W: done
+    create participant M as Mailer
+    W->>M: send receipt
+    destroy M
+    M-->>W: sent
+    W-->>-U: Confirmation
+```

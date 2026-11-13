@@ -41,6 +41,7 @@
  */
 
 import dagre from 'dagre';
+import { layoutWithinLimits } from '../../layout/graph-limits.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -49,6 +50,7 @@ import {
   scaledFontSizeHalfPt,
   scaledLineWidthEmu,
   wrapDrawingCanvas,
+  type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, edgePoint, rect, scalePt, textBoxLines, type ArrowMarker } from '../../translator/graph-shapes.js';
 
@@ -166,7 +168,7 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
  * paragraph. An empty diagram renders a visible note, matching
  * `../venn/translator.ts`'s zero-sets convention — never a silent blank
  * canvas. */
-export function translateClassDiagramToOoxml(chart: ClassDiagram): string {
+export function translateClassDiagramToOoxml(chart: ClassDiagram, options: CanvasOptions = {}): string {
   if (chart.classes.length === 0) {
     return [
       '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
@@ -191,7 +193,7 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram): string {
   for (const rel of chart.relationships) {
     if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
   }
-  dagre.layout(g);
+  layoutWithinLimits(g, options);
 
   let minX = Infinity;
   let maxX = -Infinity;
@@ -210,7 +212,7 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram): string {
   const canvasH = maxY - minY + 2 * PAD;
   const dx = -minX + PAD;
   const dy = -minY + PAD;
-  const { scale: s } = scaledExtent(canvasW, canvasH);
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
 
   const nextId = createIdAllocator();
   const parts: string[] = [];
@@ -271,5 +273,5 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram): string {
 
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'Class diagram');
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'Class diagram', options);
 }

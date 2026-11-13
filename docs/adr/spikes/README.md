@@ -1,15 +1,18 @@
-# Spikes Phase 0 — preuves archivées
+# Spikes — comptes rendus archivés
 
-Ce dossier n'est **pas** un chapitre de test à maintenir (voir `TESTING.md` à la racine pour la
-liste des chapitres réels). C'est l'archive des preuves empiriques qui ont motivé deux décisions
-d'architecture prises en Phase 0 :
+Ce dossier n'est **pas** un chapitre de test (voir `TESTING.md` pour les chapitres réels). Il garde
+le compte rendu de chaque spike qui a motivé une décision d'architecture : un `spike.md` ou un
+`README.md` par spike ou par round, lu avec l'ADR correspondant dans `docs/adr/`.
 
-- **`spike-layout.mjs`** — comparaison Dagre vs Graphviz sur un flowchart avec croisements
-  volontaires. Preuve à l'appui de `docs/adr/0001-layout-engine.md` (Dagre retenu par défaut).
-- **`spike-pandoc/`** — filtre Lua + document Markdown + `.docx` de sortie, validant que
-  `pandoc.RawBlock('openxml', ...)` transmet un fragment `wpg:wgp` complexe sans le casser.
-  Preuve à l'appui de `docs/adr/0002-pandoc-integration.md`.
+Les scripts de construction, fichiers XML intermédiaires et `.docx`/`.png` produits ont été retirés le
+2026-10-06 pour alléger le dépôt avant la v1. Ils restent dans l'historique git :
 
-Rien ici n'est exécuté par `npm test`, `npm run test:visual`, ou la CI. Ne pas y ajouter de
-nouveau spike sans une décision d'architecture (ADR) à motiver — sinon c'est un script de
-diagnostic ponctuel, pas quelque chose à archiver durablement.
+```bash
+git checkout 6a48177 -- docs/adr/spikes/
+```
+
+Seule exception conservée : `spike-gantt-parser/reference/mermaid-gantt-source/`, la source Mermaid
+vendorisée (MIT, avec sa licence) que le parseur Gantt cite comme référence de comportement.
+
+Rien ici n'est exécuté par `npm test`, `npm run test:visual` ou la CI. Ne pas y ajouter de spike sans
+une décision d'architecture (ADR) à motiver.

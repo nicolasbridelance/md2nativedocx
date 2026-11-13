@@ -1,13 +1,29 @@
-# md2nativedocx — Markdown → Word, done right
+# md2nativedocx — complete Markdown to Word conversion, with diagrams your readers can edit
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/md2nativedocx.md2nativedocx?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
 
-Exports any Markdown document into a **complete** `.docx` — text, tables, formatting, footnotes,
-LaTeX math — with one standout difference: if the document contains Mermaid diagrams, those don't
-get flattened into an image like everywhere else. They become real vector Word shapes
-(OOXML/DrawingML): every box and every arrow stays individually selectable, movable, and editable
-once the file is open in Word.
+**Write in Markdown. Hand over a Word document anyone can keep editing — diagrams included.**
+
+One click exports your Markdown to a complete `.docx`: headings, tables, lists, footnotes, code, LaTeX math, a
+table of contents, your page layout, fonts and company template, with or without diagrams. The difference is
+what happens to the Mermaid diagrams. Elsewhere they become pictures, and fixing a typo in one box means
+finding the source and re-exporting. Here they become **real Word objects** that the people you send the
+document to can edit in Word, without Markdown, Mermaid or you:
+
+- **Fix a diagram like any Word drawing:** retype a label, drag a box; the arrows stay attached.
+- **Match the company look:** recolour any shape; flowcharts and SmartArt follow the theme colours, and SmartArt restyles from Word's SmartArt Design tab.
+- **Update a chart's figures:** pie, bar/line and radar charts become native Word charts with *Edit Data*.
+- **Grow an org chart or a process:** processes, cycles, org charts, mindmaps, timelines and kanban boards become
+  SmartArt; add a step in one click.
+- **Send it with confidence:** every export is checked against Word's own file-format rules.
+
+All 29 Mermaid diagram types are supported. (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
+means Word's own editable objects, not pictures.)
+
+<img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
+
+*Mermaid source → one click → native shapes (rendered here with LibreOffice; every shape is editable in Word).*
 
 > **Deploying this in a corporate environment?** License, third-party dependency audit, IT risk
 > analysis, and a no-jargon guide for non-technical users each live in
@@ -16,42 +32,67 @@ once the file is open in Word.
 
 ## See it in action
 
-There's more than one way to trigger the same export — pick whichever fits how you work. Each
-clip below is short and loops.
+Each clip below is short and loops. They are recorded in a real VS Code window by
+`scripts/record-demos.py`, so they always show the current version.
 
-**1. From an open file, one click**
+**1. Know what each diagram becomes, then export**
 
-<img src="docs/demo-vscode.gif" width="480" alt="Clicking the Export to Word link above a Mermaid diagram in an open file, then the success notification appearing"/>
+<img src="docs/demo-vscode.gif" width="720" alt="A Markdown file with three diagrams: above each one a line says SmartArt process, Word shapes (no SmartArt: branches merge again) or Word chart; clicking Export to Word at the top, then the success notification"/>
 
-Open a Markdown file that contains a Mermaid diagram. A small **⚙ Export to Word** link appears
-right above the diagram — click it, and a few seconds later a notification appears with the
-finished `.docx`, plus buttons to open it or reveal it in the file browser.
+At the top of the file: **Export to Word**, **Export to PowerPoint** and **Settings**. Above each diagram,
+one line says what it will be in Word — a **SmartArt** graphic, a **Word chart**, or **editable Word
+shapes**, and why not SmartArt when it can't be. A few seconds after the click, a notification offers to
+open the file or reveal it in the file browser.
 
-**2. Straight from the file list — no need to open anything first**
+**2. Hover a diagram for the details**
 
-<img src="docs/demo-context-menu.gif" width="480" alt="Right-clicking a Markdown file in the Explorer file list and choosing Export document to Word from the menu"/>
+<img src="docs/demo-hover.gif" width="720" alt="Hovering the mermaid line of a diagram shows a card: Flowchart, Word shapes (no SmartArt: branches merge again at S, F), what can be done with it in Word"/>
 
-Don't want to open the file at all? Right-click it in the file list on the left (the same kind of
-right-click menu you'd use in Windows Explorer or macOS Finder) and choose
-**md2nativedocx: Export document to Word**. Same result, without ever looking at the file's
-contents.
+Hover the ```` ```mermaid ```` line: what the diagram becomes, what you will be able to do with it in Word,
+what is not kept, and a link to turn on a setting when one would change the result.
 
-**3. Works even when there's no diagram in the file**
+**3. PowerPoint: one slide per diagram**
 
-<img src="docs/demo-no-diagram.gif" width="480" alt="A plain Markdown file with a table and no Mermaid diagram, exported to Word from a single link at the top of the file"/>
+<img src="docs/demo-powerpoint.gif" width="720" alt="Clicking Export to PowerPoint at the top of the file, then the notification offering to open the deck in PowerPoint"/>
 
-This extension isn't only for diagrams — any Markdown file (plain text, tables, **bold**/*italic*
-formatting) exports to a complete `.docx` the same way. If the file has no Mermaid diagram, the
-**Export to Word** link still shows up, just once at the very top of the file instead of above
-each diagram.
+**Export to PowerPoint** makes a deck with one slide per diagram, titled with the heading above it, every
+shape editable. Text outside the diagrams is not exported.
 
-**4. A Mermaid diagram by itself, with no surrounding document**
+**4. Just one diagram**
 
-<img src="docs/demo-raw-mmd.gif" width="480" alt="A raw .mmd file containing only a Mermaid diagram, exported to Word the same way as a Markdown file"/>
+<img src="docs/demo-diagram.gif" width="720" alt="Clicking Export this diagram above one diagram, choosing PowerPoint (one slide) in the picker, then the notification"/>
 
-Sometimes all you have is the diagram itself — a `.mmd` file, with no title, no surrounding text.
-It exports exactly the same way, producing a `.docx` with that one diagram as a native, editable
-shape.
+**Export this diagram…** exports that diagram alone, into its own Word document or a one-slide deck —
+handy to paste it into an existing document or presentation.
+
+**5. Straight from the file list**
+
+<img src="docs/demo-context-menu.gif" width="720" alt="Right-clicking a Markdown file in the Explorer, opening the md2nativedocx submenu and choosing Export to Word"/>
+
+No need to open the file: right-click it in the file list, **md2nativedocx → Export to Word** (or
+**Export to PowerPoint**). Select several files first to export them all at once. In the editor,
+right-click inside a diagram to export just that diagram.
+
+**6. With no diagram at all, or a diagram on its own**
+
+<img src="docs/demo-no-diagram.gif" width="720" alt="A plain Markdown file with a table and no Mermaid diagram, exported to Word from the link at the top of the file"/>
+
+Any Markdown file (text, tables, **bold**/*italic*) exports to a complete `.docx` the same way, diagram
+or not.
+
+<img src="docs/demo-raw-mmd.gif" width="720" alt="A raw .mmd Mermaid file: the line at the top says what the diagram becomes, then Export to Word"/>
+
+A bare `.mmd` file (only the diagram, no surrounding text) works too.
+
+**7. LibreOffice: flowcharts as native shapes**
+
+<img src="docs/demo-libreoffice.png" width="300" alt="A flowchart with two subgraphs exported to .odt and opened in LibreOffice Writer: boxes, a diamond and labelled connectors, each one a separate LibreOffice shape"/>
+
+**md2nativedocx → Export to LibreOffice (.odt)** (right-click, or the command palette) writes an
+OpenDocument text: headings, tables and the rest as for Word, and each flowchart as one group of
+LibreOffice shapes whose connectors stay attached when you move a box (*F3* enters the group). Other
+diagram types are not drawn in `.odt` yet: a note says so in their place. Page and typography settings,
+SmartArt and charts apply to Word only.
 
 **The result, opened**
 
@@ -79,6 +120,32 @@ XML and still be a file real Word refuses to open; this check catches that class
 you do, and the result (a clean "0 errors", or exactly what and where otherwise) lands in the
 export's own `.log` file.
 
+## All 29 Mermaid diagram types
+
+<img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/preview.png" width="900" alt="Side-by-side gallery of all 29 supported Mermaid diagram types: Mermaid.js rendering on the left, md2nativedocx native Word shapes on the right"/>
+
+*Same Mermaid source, two outputs: **left = rendered by Mermaid.js**, **right = md2nativedocx** (native, editable Word shapes,
+rendered here with LibreOffice).*
+
+## SmartArt for processes, cycles, org charts, mindmaps, timelines and boards
+
+<img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/smartart.png" width="900" alt="Mermaid diagrams exported as native Word SmartArt: a process keeping its node shapes, a cycle, an org chart, a mindmap, a timeline, a kanban board, and one process in four looks"/>
+
+*A chain, cycle or tree-shaped flowchart, a mindmap, a timeline or a kanban board becomes a real
+SmartArt graphic (each node keeps its Mermaid shape): add a step or a branch from Word's Text Pane, switch layout or restyle from the SmartArt Design tab.
+`md2nativedocx.smartArt.style` picks the starting look; `md2nativedocx.smartArt.enabled` turns it off.*
+
+## Frequently asked
+
+**How do I convert a Mermaid diagram to an editable Word diagram?** Open the `.md` (or `.mmd`) file, click
+**Export to Word** above the diagram. The result is native Word shapes, not a PNG.
+
+**Which Mermaid diagrams are supported?** All 29 types: flowchart, sequence, class, state, ER, Gantt, pie, mindmap,
+timeline, journey, git graph, C4, and more.
+
+**Do I need Pandoc, Word or Mermaid CLI?** No Word and no Mermaid CLI. Pandoc is downloaded automatically on first
+export if missing (see *Prerequisites*).
+
 ## Usage
 
 Works on any `.md` or `.qmd` (Quarto Markdown) file — with or without a Mermaid diagram, text/
@@ -86,16 +153,16 @@ tables/formatting export either way — and on a raw `.mmd` Mermaid file too.
 
 1. Open a `.md`, `.qmd` or `.mmd` file, **or** just right-click one in the Explorer — no need to
    open it first.
-2. Click **⚙️ Export to Word** (or **Export this block only** for a single diagram, above that
-   block) — from the CodeLens, the status bar item, the right-click menu (Explorer, editor, or the
-   editor tab itself), or the Command Palette.
-3. A notification offers to open the generated `.docx` or reveal it in the file explorer.
+2. Click **Export to Word** or **Export to PowerPoint** (or **Export this diagram…** above a single
+   diagram) — from the links in the file, the status bar item, the right-click **md2nativedocx**
+   menu (Explorer, editor, or the editor tab itself), or the Command Palette.
+3. A notification offers to open the generated file or reveal it in the file explorer.
 
 No configuration required before first use. Optional settings: `md2nativedocx.outputDirectory`
 chooses where `.docx` files are written (default: the same folder as the source);
 `md2nativedocx.referenceDocument` points at a company Word template to match its fonts/colors/
-styles; `md2nativedocx.smartArt.enabled` (default: off, experimental) turns an eligible diagram
-into a native SmartArt graphic instead of the default OOXML canvas shapes;
+styles; `md2nativedocx.smartArt.enabled` (default: on) turns an eligible diagram into a native
+SmartArt graphic instead of OOXML canvas shapes;
 `md2nativedocx.wordCompatibilityCheck.enabled` (default: on) validates every export against Word's
 own schema and reports the result in its `.log` file.
 
@@ -188,6 +255,7 @@ contact IT for an exception — rather than the generic "Pandoc could not be fou
 - No Word-rendering preview before export (VS Code already shows a native Mermaid preview in its
   built-in Markdown panel since 1.121).
 - No batch conversion (whole folder) — one file at a time for now.
+- In `.odt` (LibreOffice), only flowcharts are drawn so far; the 28 other types become a note.
 
 Roadmap and full positioning details: see the
 [monorepo README](https://github.com/nicolasbridelance/md2nativedocx#readme).

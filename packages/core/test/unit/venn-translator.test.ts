@@ -13,8 +13,7 @@ const TWO_SET = `venn-beta
   title Two Sets
   set A
   set B
-  union A,B
-    text ["Overlap"]`;
+  union A,B["Overlap"]`;
 
 const THREE_SET = `venn-beta
   set A
@@ -23,8 +22,7 @@ const THREE_SET = `venn-beta
   union A,B
   union B,C
   union A,C
-  union A,B,C
-    text ["All three"]`;
+  union A,B,C["All three"]`;
 
 test('wraps the drawing canvas in the schema-required paragraph hierarchy, same envelope as flowchart/quadrant', () => {
   const xml = translate(TWO_SET);
@@ -76,7 +74,7 @@ test('a set fill override reaches its own circle', () => {
 });
 
 test('an invalid set fill falls back to a default rather than reaching the XML unvalidated', () => {
-  const chart: VennChart = { sets: [{ id: 'A', label: 'A', fill: 'not-a-color' }], unions: [] };
+  const chart: VennChart = { sets: [{ id: 'A', label: 'A', fill: 'not-a-color', items: [] }], unions: [] };
   const xml = translateVennToOoxml(chart);
   assert.ok(!xml.includes('not-a-color'));
 });
@@ -84,12 +82,12 @@ test('an invalid set fill falls back to a default rather than reaching the XML u
 test('4+ sets fall back to a non-overlapping row and append a visible degradation note', () => {
   const chart: VennChart = {
     sets: [
-      { id: 'A', label: 'A' },
-      { id: 'B', label: 'B' },
-      { id: 'C', label: 'C' },
-      { id: 'D', label: 'D' },
+      { id: 'A', label: 'A', items: [] },
+      { id: 'B', label: 'B', items: [] },
+      { id: 'C', label: 'C', items: [] },
+      { id: 'D', label: 'D', items: [] },
     ],
-    unions: [{ setIds: ['A', 'B'], label: 'AB' }],
+    unions: [{ setIds: ['A', 'B'], label: 'AB', items: [] }],
   };
   const xml = translateVennToOoxml(chart);
   const circleCount = (xml.match(/<wps:cNvSpPr\/?>/g) ?? []).length;
@@ -121,4 +119,11 @@ test('every set and union label is XML-escaped', () => {
 
 test('is a pure function: identical input produces byte-identical output', () => {
   assert.equal(translate(THREE_SET), translate(THREE_SET));
+});
+
+test('set and union text nodes are drawn alongside (not instead of) their labels', () => {
+  const xml = translateVennToOoxml(
+    parseVennChart('venn-beta\n  set A["Frontend"]\n    text A1["React"]\n  set B["Backend"]\n  union A,B["Shared"]\n    text X["OpenAPI"]').ast,
+  );
+  for (const t of ['Frontend', 'React', 'Backend', 'Shared', 'OpenAPI']) assert.ok(xml.includes(`>${t}<`), t);
 });

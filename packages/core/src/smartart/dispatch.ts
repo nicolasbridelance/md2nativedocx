@@ -16,41 +16,54 @@
  */
 
 import type { Flowchart } from '../types.js';
-import { classifyTopology, type SmartArtLayout } from './classify.js';
+import { classifyTopology, flowchartTreeDepth, type SmartArtLayout } from './classify.js';
 import { generateChain } from './chain.js';
 import { generateTree } from './tree.js';
+import { generateDeepTree } from './tree-deep.js';
 import { generateCycle } from './cycle.js';
+import type { SmartArtGenerateOptions } from './generate-options.js';
+
+/** Which SmartArt generator produced a diagram: a flowchart topology, the time line, or the grouped list (kanban). */
+export type SmartArtGeneratedLayout = SmartArtLayout | 'timeline' | 'list';
 
 /** The four OOXML diagram parts for whichever topology `flowchart` matched. */
 export interface SmartArtGenerated {
   /** Which generator produced this — lets a caller log/report the choice. */
-  layout: SmartArtLayout;
+  layout: SmartArtGeneratedLayout;
   dataXml: string;
   layoutXml: string;
   colorsXml: string;
   styleXml: string;
+  /** Pre-rendered `dsp:drawing` part; present only when `options.drawing` was set. */
+  drawingXml?: string;
+  /** Frame size (EMU) to embed the diagram in; absent = the default frame. */
+  frame?: { cx: number; cy: number };
 }
 
 /**
  * Classify `flowchart` and run its matching generator.
  *
  * Returns `null` for anything {@link classifyTopology} doesn't accept —
- * subgraphs, merge-after-branch, disconnected graphs, a tree deeper than
- * `tree.ts` supports, etc. A `null` result is the expected, common case for
+ * subgraphs, merge-after-branch, disconnected graphs, a tree larger than
+ * the tree generators support, etc. A `null` result is the expected, common case for
  * a real-world flowchart (spec §6: merge-after-branch is probably the most
  * frequent shape) and callers should silently fall back to the existing
  * `wpg:wgp` translator, not treat it as an error.
  */
-export function generateSmartArt(flowchart: Flowchart): SmartArtGenerated | null {
+export function generateSmartArt(flowchart: Flowchart, options: SmartArtGenerateOptions = {}): SmartArtGenerated | null {
   const classification = classifyTopology(flowchart);
   if (!classification.eligible) return null;
 
   switch (classification.layout) {
     case 'chain':
-      return { layout: 'chain', ...generateChain(flowchart) };
+      return { layout: 'chain', ...generateChain(flowchart, options) };
     case 'tree':
-      return { layout: 'tree', ...generateTree(flowchart) };
+      // Two levels keep the original generator; deeper trees need the size-aware multi-level one.
+      return {
+        layout: 'tree',
+        ...(flowchartTreeDepth(flowchart) > 2 ? generateDeepTree(flowchart, options) : generateTree(flowchart, options)),
+      };
     case 'cycle':
-      return { layout: 'cycle', ...generateCycle(flowchart) };
+      return { layout: 'cycle', ...generateCycle(flowchart, options) };
   }
 }

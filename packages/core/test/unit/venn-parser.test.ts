@@ -5,8 +5,7 @@ import { parseVennChart } from '../../src/diagrams/venn/parser.js';
 const TWO_SET = `venn-beta
   set A
   set B
-  union A,B
-    text ["Overlap"]`;
+  union A,B["Overlap"]`;
 
 const THREE_SET = `venn-beta
   set A
@@ -15,10 +14,9 @@ const THREE_SET = `venn-beta
   union A,B
   union B,C
   union A,C
-  union A,B,C
-    text ["All three"]`;
+  union A,B,C["All three"]`;
 
-test('parses two sets and their union, with an attached text label', () => {
+test('parses two sets and their union, with its bracket label', () => {
   const { ast, warnings } = parseVennChart(TWO_SET);
   assert.equal(ast.sets.length, 2);
   assert.deepEqual(ast.sets.map((s) => s.id), ['A', 'B']);
@@ -115,4 +113,19 @@ test('blank lines and %% comments are skipped without warnings', () => {
   const { ast, warnings } = parseVennChart('venn-beta\n\n%% a comment\n  set A\n');
   assert.equal(ast.sets.length, 1);
   assert.equal(warnings.length, 0);
+});
+
+test('text nodes attach to the preceding set/union as items and never replace its label', () => {
+  const { ast, warnings } = parseVennChart(
+    'venn-beta\n  set A["Frontend"]\n    text A1["React"]\n    text A2["Design Systems"]\n  set B["Backend"]\n    text B1["API"]\n  union A,B["Shared"]\n    text AB1["OpenAPI"]',
+  );
+  assert.deepEqual(ast.sets.map((x) => [x.label, x.items]), [['Frontend', ['React', 'Design Systems']], ['Backend', ['API']]]);
+  assert.deepEqual([ast.unions[0]?.label, ast.unions[0]?.items], ['Shared', ['OpenAPI']]);
+  assert.deepEqual(warnings, []);
+});
+
+test('a union label with a size suffix and a bare-word text id are parsed', () => {
+  const { ast, warnings } = parseVennChart('venn-beta\n  set A["Alpha"]:20\n  set B["Beta"]:12\n  union A,B["AB"]:3\n    text note');
+  assert.deepEqual([ast.unions[0]?.setIds, ast.unions[0]?.label, ast.unions[0]?.items], [['A', 'B'], 'AB', ['note']]);
+  assert.deepEqual(warnings, []);
 });

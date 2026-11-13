@@ -1,5 +1,8 @@
 # Personnalisation de l'export — spec
 
+> **Statut au 2026-10-06 :** lots 1 à 5 livrés (septembre 2026). Reste non commencé : le lot 6
+> optionnel (numérotation des titres, styles de tableau), noté dans `TODO.md` §4.
+
 > Origine : échange avec le mainteneur (2026-09-04) — deux constats de départ : (1) la plupart des
 > tableaux gagneraient à être en paysage dans Word, avec un saut de section dédié plutôt qu'une
 > page paysage globale ; (2) les émoji ✅/⚠️/❌ perdent leur couleur à l'ouverture dans Word, au

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
+import { planFor, planTally, type RenderingPlan } from './diagramPlan';
 
 /** Persistent second entry point (docs/specs/UX_SPEC.md Partie 1 — "Points d'entrée"),
  * deliberately redundant with the CodeLens: visible without scrolling to a
@@ -23,13 +24,17 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
     if (isMermaidFilePath(path)) {
       item.tooltip = vscode.l10n.t('Export this diagram as a native .docx');
     } else {
-      const blockCount = parseMermaidBlocks(editor.document.getText()).length;
+      const blocks = parseMermaidBlocks(editor.document.getText());
+      const plans = blocks.map((b) => planFor(b.source)).filter((p): p is RenderingPlan => p !== null);
+      // Tally of what the diagrams will become (lot B, §3.5); PowerPoint stays one click away in the lens line.
       item.tooltip =
-        blockCount === 0
+        blocks.length === 0
           ? vscode.l10n.t('Export this document as a native .docx')
-          : blockCount === 1
-            ? vscode.l10n.t('1 mermaid diagram detected — export the document as a native .docx')
-            : vscode.l10n.t('{0} mermaid diagrams detected — export the document as a native .docx', blockCount);
+          : plans.length === blocks.length
+            ? `${planTally(plans)}\n${vscode.l10n.t('Click to export the document to Word')}`
+            : blocks.length === 1
+              ? vscode.l10n.t('1 mermaid diagram detected — export the document as a native .docx')
+              : vscode.l10n.t('{0} mermaid diagrams detected — export the document as a native .docx', blocks.length);
     }
     item.show();
   };

@@ -188,3 +188,55 @@ test('property: output is always well-formed XML for arbitrary hostile trees', (
     { numRuns: 200 }
   );
 });
+
+// ---- parent-to-child connector lines ----
+
+test('the layout has a conn node on each child\'s parTrans point, with end points per direction', () => {
+  const pts = (xml: string) => /begPts" val="(\w+)"\/><dgm:param type="endPts" val="(\w+)"/.exec(xml)?.slice(1);
+  for (const xml of [TREE_LAYOUT_XML, TREE_LAYOUT_XML_LR, TREE_LAYOUT_XML_BT, TREE_LAYOUT_XML_RL]) {
+    assert.match(xml, /<dgm:forEach name="level2ConnForEach" axis="self" ptType="parTrans" cnt="1">/);
+    assert.match(xml, /<dgm:layoutNode name="level2Conn" styleLbl="parChTrans1D2">/);
+    assert.match(xml, /<dgm:shape [^>]*type="conn"/);
+    assertWellFormedXml(xml);
+  }
+  assert.deepEqual(pts(TREE_LAYOUT_XML), ['bCtr', 'tCtr']);
+  assert.deepEqual(pts(TREE_LAYOUT_XML_LR), ['rCtr', 'lCtr']);
+  assert.deepEqual(pts(TREE_LAYOUT_XML_BT), ['tCtr', 'bCtr']);
+  assert.deepEqual(pts(TREE_LAYOUT_XML_RL), ['lCtr', 'rCtr']);
+});
+
+test('colors and quick style define the connector label', () => {
+  const ast = treeFlowchart('graph TD\n  A --> B\n  A --> C');
+  for (const style of ['simple', 'colorful', 'intense'] as const) {
+    const out = generateTree(ast, { style });
+    assert.match(out.colorsXml, /<dgm:styleLbl name="parChTrans1D2">/);
+    assert.match(out.styleXml, /<dgm:styleLbl name="parChTrans1D2">/);
+  }
+});
+
+test('data model: one parTrans/sibTrans pair per link, each parTrans tied to its parOf cxn and presented as a conn', () => {
+  const out = generateTree(treeFlowchart('graph TD\n  A --> B\n  A --> C\n  A --> D'));
+  const xml = out.dataXml;
+  assert.equal((xml.match(/type="parTrans"/g) ?? []).length, 4); // doc->A and A->B/C/D
+  assert.equal((xml.match(/type="sibTrans"/g) ?? []).length, 4);
+  assert.equal((xml.match(/presName="level2Conn"/g) ?? []).length, 3);
+  for (const m of xml.matchAll(/<dgm:pt modelId="(\d+)" type="parTrans" cxnId="(\d+)"/g)) {
+    assert.match(xml, new RegExp(`<dgm:cxn modelId="${m[2]}" type="parOf"[^>]*parTransId="${m[1]}"`));
+  }
+  const ids = [...xml.matchAll(/modelId="(\d+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(ids).size, ids.length, 'modelIds are unique');
+});
+
+test('cached drawing: one elbow connector per child in every direction, inside the frame', () => {
+  for (const dir of ['TD', 'LR', 'BT', 'RL'] as const) {
+    const ast = treeFlowchart(`graph ${dir}\n  A --> B\n  A --> C\n  A --> D`);
+    const drawing = generateTree(ast, { drawing: true }).drawingXml ?? '';
+    assert.equal((drawing.match(/<a:custGeom>/g) ?? []).length, 3, dir);
+    assert.equal((drawing.match(/<a:prstGeom prst="roundRect"/g) ?? []).length, 4, dir);
+    for (const m of drawing.matchAll(/<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/g)) {
+      assert.ok(Number(m[1]) >= 0 && Number(m[2]) >= 0, `${dir}: origin inside frame`);
+      assert.ok(Number(m[1]) + Number(m[3]) <= 5486400 && Number(m[2]) + Number(m[4]) <= 3200400, `${dir}: extent inside frame`);
+    }
+    assert.ok(!drawing.includes('TargetMode'), 'no external relationship');
+  }
+});

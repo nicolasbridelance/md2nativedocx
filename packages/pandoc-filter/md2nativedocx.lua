@@ -4,6 +4,13 @@
 -- (wpg:wgp) via the md2nativedocx core engine, emitted as a
 -- pandoc.RawBlock('openxml', ...) (ADR 0002).
 --
+-- For an ODT output (`-o doc.odt`, ADR 0013) each block becomes a
+-- pandoc.RawBlock('opendocument', ...) instead, and the automatic styles it
+-- needs are collected into the `md2n-automatic-styles` metadata list, which
+-- the derived template (packages/cli/assets/md2nativedocx.opendocument)
+-- writes inside office:automatic-styles. Nothing touches the .odt afterwards
+-- (AGENTS.md rule 7).
+--
 -- Security (AGENTS.md):
 --   * Rule #4: the core binary is invoked with a FIXED argument array and the
 --     diagram text is piped via stdin — never interpolated into a shell string.
@@ -34,17 +41,21 @@ local is_windows = package.config:sub(1, 1) == '\\'
 -- Windows) strips the outermost pair when the string starts with a quote —
 -- needed here since `node_bin` itself can contain spaces (e.g. "...\Microsoft
 -- VS Code\Code.exe" when it's the editor's own binary).
-local function core_command(tmp)
+--
+-- `odf_prefix`, when set, is a prefix this filter generated itself
+-- ('md2n' .. a counter), never document text.
+local function core_command(tmp, odf_prefix)
+  local odf_args = odf_prefix and (' --odf ' .. odf_prefix) or ''
   if not is_windows then
-    return core_bin .. ' ' .. tmp
+    return core_bin .. ' ' .. tmp .. odf_args
   end
   local node_bin = os.getenv('MD2NATIVEDOCX_NODE_BIN') or 'node'
-  return '""' .. node_bin .. '" "' .. core_bin .. '" "' .. tmp .. '""'
+  return '""' .. node_bin .. '" "' .. core_bin .. '" "' .. tmp .. '"' .. odf_args .. '"'
 end
 
 -- File-based bridge: write the diagram to a temp file, invoke the core with a
 -- fixed argument array (no shell interpolation of the diagram), read the XML.
-local function run_core_file(mermaid_text)
+local function run_core_file(mermaid_text, odf_prefix)
   local xml, err
   -- Deliberately not os.tmpname(): a real 2026-09-08 incident found it
   -- crashing pandoc 3.9.0.2 on Windows with an access violation inside its
@@ -67,7 +78,7 @@ local function run_core_file(mermaid_text)
     -- only thing interpolated into the shell string is the trusted binary
     -- path and the temp file path (which we control), never the diagram
     -- text.
-    local p = io.popen(core_command(tmp), 'r')
+    local p = io.popen(core_command(tmp, odf_prefix), 'r')
     if not p then
       err = 'md2nativedocx: could not start core bridge'
       return
@@ -93,16 +104,48 @@ end
 -- Filter 1: ```mermaid code blocks -> native OOXML/DrawingML (unchanged
 -- behaviour from before this file returned an explicit filter list — see
 -- the doc comment on the returned table below for why it now has to be one).
+local is_odt = FORMAT == 'odt' or FORMAT == 'opendocument'
+local odf_count = 0
+local odf_styles = pandoc.List()
+
 local mermaid_filter = {
   CodeBlock = function(el)
-    if el.classes[1] == 'mermaid' then
-      local xml, err = run_core_file(el.text)
-      if not xml then
+    if el.classes[1] ~= 'mermaid' then return nil end
+    if is_odt then
+      odf_count = odf_count + 1
+      local out, err = run_core_file(el.text, 'md2n' .. odf_count)
+      if not out then
         io.stderr:write(err .. '\n')
         return nil
       end
-      return pandoc.RawBlock('openxml', xml)
+      local ok, result = pcall(pandoc.json.decode, out, false)
+      if not ok or type(result) ~= 'table' or type(result.fragment) ~= 'string' then
+        io.stderr:write('md2nativedocx: core bridge returned unreadable ODF output\n')
+        return nil
+      end
+      for _, style in ipairs(result.automaticStyles or {}) do
+        odf_styles:insert(pandoc.MetaInlines({ pandoc.RawInline('opendocument', style) }))
+      end
+      return pandoc.RawBlock('opendocument', result.fragment)
     end
+    local xml, err = run_core_file(el.text)
+    if not xml then
+      io.stderr:write(err .. '\n')
+      return nil
+    end
+    return pandoc.RawBlock('openxml', xml)
+  end,
+}
+
+-- Filter 1b: hand the diagram styles collected above to the template. A
+-- separate table, run after filter 1, for the reason given at the end of
+-- this file.
+local odf_styles_filter = {
+  Pandoc = function(doc)
+    if is_odt and #odf_styles > 0 then
+      doc.meta['md2n-automatic-styles'] = pandoc.MetaList(odf_styles)
+    end
+    return doc
   end,
 }
 
@@ -133,7 +176,7 @@ local mermaid_filter = {
 -- by Table) — a Header separated from its Table by some other block (e.g. an
 -- intervening paragraph) is deliberately not matched, same scope limitation
 -- flagged in ADR 0005 ("non couvert par ce spike").
-local landscape_enabled = os.getenv('MD2NATIVEDOCX_LANDSCAPE_TABLES') == '1'
+local landscape_enabled = os.getenv('MD2NATIVEDOCX_LANDSCAPE_TABLES') == '1' and FORMAT == 'docx'
 
 local function env_twips(name, fallback)
   local raw = os.getenv(name)
@@ -197,4 +240,4 @@ local landscape_table_filter = {
 -- present in the SAME filter table as element handlers like `CodeBlock`
 -- would make Pandoc ignore those element handlers entirely — two separate
 -- tables keep the mermaid conversion above completely unaffected.
-return { mermaid_filter, landscape_table_filter }
+return { mermaid_filter, odf_styles_filter, landscape_table_filter }

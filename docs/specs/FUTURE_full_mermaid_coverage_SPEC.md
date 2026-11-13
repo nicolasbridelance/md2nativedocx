@@ -1,5 +1,12 @@
 # FUTURE — couverture 100 % des types de diagrammes Mermaid (spec de cadrage)
 
+> **Statut au 2026-10-06 : réalisée.** Les 29 types sont livrés ; ce que devient chacun (SmartArt,
+> graphique Word ou formes) est dans `docs/coverage.md`. Ce document reste la référence historique
+> du cadrage.
+
+> **Mise à jour 2026-10-02 : les 28 types sont tous livrés (29/29 avec flowchart).** Le reste de ce
+> document est conservé comme référence historique de cadrage.
+>
 > Statut (créé 2026-09-04, mis à jour 2026-09-04 même jour, session 4) : **implémentation
 > démarrée** — le cadrage "zéro implémentation" ci-dessous décrivait l'état au moment de l'écriture
 > de ce document ; depuis, le mainteneur a demandé de repartir de l'angle SmartArt (voir

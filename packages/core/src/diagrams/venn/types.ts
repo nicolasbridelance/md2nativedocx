@@ -15,14 +15,18 @@ export interface VennSet {
   label: string;
   /** Fill color (hex, no `#`) from `style <id> fill:#RRGGBB`, if given. */
   fill?: string;
+  /** Labels of the `text` nodes attached to this set (drawn inside the circle). */
+  items: string[];
 }
 
 /** One declared `union` (an overlap region between 2+ sets). */
 export interface VennUnion {
   /** The set ids this union overlaps, in declaration order. */
   setIds: string[];
-  /** Display label from an attached `text [...]`, if any. */
+  /** Display label from the bracket syntax (`union A,B["Shared"]`), if any. */
   label?: string;
+  /** Labels of the `text` nodes attached to this union (drawn in the overlap). */
+  items: string[];
 }
 
 export interface VennChart {

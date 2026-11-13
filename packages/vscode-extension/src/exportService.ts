@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, extname } from 'node:path';
 import {
   blockAtLine,
   parseMermaidBlocks,
@@ -10,6 +10,10 @@ import {
   EXPORTABLE_EXTENSIONS,
   type MermaidBlock,
 } from './mermaidBlocks';
+
+/** SmartArt look profiles (kept in sync with `SMARTART_STYLES` in `packages/core`; the package.json enum lists the same). */
+export const SMARTART_STYLE_NAMES = ['simple', 'subtle', 'moderate', 'intense-accent', 'colorful', 'colorful-moderate', 'intense'] as const;
+export type SmartArtStyleName = (typeof SMARTART_STYLE_NAMES)[number];
 
 export interface ExportResult {
   outputPath: string;
@@ -127,18 +131,30 @@ export interface LayoutOptions {
   landscapeTables?: boolean;
 }
 
+/** Output format of an export: a Word document, a PowerPoint deck (one slide per diagram), or an
+ * OpenDocument text for LibreOffice (flowcharts as native shapes, ADR 0013). */
+export type ExportFormat = 'docx' | 'pptx' | 'odt';
+
 export interface RunCliOptions {
+  /** `docx` (default), `pptx` or `odt`. A deck needs no Pandoc and ignores every Word-only option below;
+   * a `.odt` uses Pandoc and the table of contents, not the Word-only options. */
+  format?: ExportFormat;
+  /** Mirrors `md2nativedocx.pptx.showSource`: put each diagram's Mermaid source beside it on its slide. */
+  pptxShowSource?: boolean;
   pandocBin?: string;
   /** Path to a `.docx` used as Pandoc's `--reference-doc` (mirrors the
    * `md2nativedocx.referenceDocument` setting) — a company/corporate
    * template instead of the bundled default. */
   referenceDoc?: string;
-  /** Mirrors the `md2nativedocx.smartArt.enabled` setting. `true` opts an
-   * eligible diagram into native SmartArt instead of the OOXML canvas
-   * fallback every diagram otherwise gets. Omitted/`false` changes nothing
-   * (the CLI's default, as of the 2026-09-03 flip — see
-   * `md2nativedocx.mjs`'s doc comment on `smartArtEnabled`). */
+  /** Mirrors the `md2nativedocx.smartArt.enabled` setting: `false` keeps every diagram as shapes. Omitted
+   * leaves the CLI's default (on). */
   smartArtEnabled?: boolean;
+  /** Chart types to make native Word charts with an embedded workbook (ADR 0011), from
+   * `md2nativedocx.nativeCharts.enabled` — e.g. `['pie', 'xychart', 'radar']`. Empty keeps every chart as
+   * shapes; omitted leaves the CLI's default (all three). */
+  nativeChartTypes?: readonly string[];
+  /** Mirrors `md2nativedocx.smartArt.style` (only used when SmartArt is enabled). */
+  smartArtStyle?: SmartArtStyleName;
   /** See {@link LayoutOptions}. */
   layout?: LayoutOptions;
   /** Mirrors `md2nativedocx.toc.enabled`. Unlike `layout`, this works even
@@ -203,7 +219,10 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
   env.ELECTRON_RUN_AS_NODE = '1';
   if (options.pandocBin) env.MD2NATIVEDOCX_PANDOC_BIN = options.pandocBin;
   if (options.referenceDoc) env.MD2NATIVEDOCX_REFERENCE_DOC = options.referenceDoc;
-  if (options.smartArtEnabled === true) env.MD2NATIVEDOCX_ENABLE_SMARTART = '1';
+  // SmartArt and charts are on by default in the CLI too, so a setting turned off is passed as an explicit `0`.
+  if (options.smartArtEnabled !== undefined) env.MD2NATIVEDOCX_ENABLE_SMARTART = options.smartArtEnabled ? '1' : '0';
+  if (options.nativeChartTypes !== undefined) env.MD2NATIVEDOCX_NATIVE_CHARTS = options.nativeChartTypes.length > 0 ? options.nativeChartTypes.join(',') : '0';
+  if (options.smartArtStyle) env.MD2NATIVEDOCX_SMARTART_STYLE = options.smartArtStyle;
   const layout = options.layout;
   if (layout) {
     if (layout.pageSize) env.MD2NATIVEDOCX_PAGE_SIZE = layout.pageSize;
@@ -233,7 +252,9 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (options.dotnetBin) env.MD2NATIVEDOCX_DOTNET_BIN = options.dotnetBin;
   }
   return new Promise((resolve, reject) => {
-    execFile(process.execPath, [cliBin, input, '-o', output], { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
+    const args = [cliBin, input, '-o', output];
+    if (options.format === 'pptx' && options.pptxShowSource === true) args.push('--show-source');
+    execFile(process.execPath, args, { cwd, encoding: 'utf8', env }, (err, _stdout, stderrRaw) => {
       if (!err) {
         resolve();
         return;
@@ -278,7 +299,8 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
 /** Path to the `.log` file `md2nativedocx.mjs` writes next to `output` —
  * same basename, `.log` extension, mirroring the CLI's own naming. */
 function logPathFor(output: string): string {
-  return output.toLowerCase().endsWith('.docx') ? `${output.slice(0, -'.docx'.length)}.log` : `${output}.log`;
+  const ext = extname(output).toLowerCase();
+  return ['.docx', '.pptx', '.odt'].includes(ext) ? `${output.slice(0, -ext.length)}.log` : `${output}.log`;
 }
 
 /** Read back the warning count the CLI recorded in `output`'s `.log` file
@@ -295,11 +317,11 @@ function readWarningCount(logPath: string): number {
   }
 }
 
-/** Where to write a generated `.docx`, honouring `md2nativedocx.outputDirectory`
+/** Where to write a generated `.docx` (or `.pptx`), honouring `md2nativedocx.outputDirectory`
  * (empty = same folder as the source, the zero-config default). */
-export function resolveOutputPath(sourcePath: string, outputBaseName: string, outputDirectory: string): string {
+export function resolveOutputPath(sourcePath: string, outputBaseName: string, outputDirectory: string, format: ExportFormat = 'docx'): string {
   const dir = outputDirectory.trim() || dirname(sourcePath);
-  return join(dir, `${outputBaseName}.docx`);
+  return join(dir, `${outputBaseName}.${format}`);
 }
 
 /** `sourcePath`'s filename with its extension stripped, for whichever of
@@ -319,7 +341,7 @@ export async function exportDocument(
   outputDirectory: string,
   options: RunCliOptions = {},
 ): Promise<ExportResult> {
-  const outputPath = resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory);
+  const outputPath = resolveOutputPath(sourcePath, sourceBaseName(sourcePath), outputDirectory, options.format);
   await runCli(sourcePath, outputPath, dirname(sourcePath), options);
   const logPath = logPathFor(outputPath);
   return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -349,7 +371,7 @@ export async function exportBlock(
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapBlockAsDocument(block));
     const outputBaseName = `${sourceBaseName(sourcePath)}-diagram-${blockIndex + 1}`;
-    const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory);
+    const outputPath = resolveOutputPath(sourcePath, outputBaseName, outputDirectory, options.format);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);
     return { outputPath, logPath, warningCount: readWarningCount(logPath) };
@@ -373,7 +395,7 @@ export async function exportMermaidFile(
   try {
     const tmpMd = join(tmpDir, 'diagram.md');
     writeFileSync(tmpMd, wrapMermaidSource(source, title));
-    const outputPath = resolveOutputPath(sourcePath, title, outputDirectory);
+    const outputPath = resolveOutputPath(sourcePath, title, outputDirectory, options.format);
     await runCli(tmpMd, outputPath, dirname(sourcePath), options);
     const logPath = logPathFor(outputPath);
     return { outputPath, logPath, warningCount: readWarningCount(logPath) };

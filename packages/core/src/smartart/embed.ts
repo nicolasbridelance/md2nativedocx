@@ -148,7 +148,7 @@ function fallbackMessage(classification: SmartArtIneligible): string {
     case 'disconnected':
       return 'Native shapes used (diagram has multiple disconnected parts — not supported by SmartArt export).';
     case 'tree-too-deep':
-      return `Native shapes used (hierarchy under ${formatAt(at)} is deeper than SmartArt export currently supports).`;
+      return `Native shapes used (hierarchy under ${formatAt(at)} is deeper than SmartArt export supports (at most 10 levels)).`;
     case 'irregular-topology':
       return 'Native shapes used (diagram shape not recognized by SmartArt export).';
   }

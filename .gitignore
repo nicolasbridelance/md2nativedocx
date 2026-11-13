@@ -56,7 +56,7 @@ docs/adr/spikes/spike-smartart/custom-chain1-ownercolors.*
 docs/adr/spikes/spike-smartart/custom-tree1-styled.*
 
 # Real Word-built SmartArt samples requested from the maintainer via
-# docs/smartart-samples-wishlist.md (Labeled Hierarchy, Converging Arrows,
+# docs/history/smartart-samples-wishlist.md (Labeled Hierarchy, Converging Arrows,
 # etc.) -- same rationale as above: verbatim Microsoft-authored content,
 # local research reference only, never committed.
 handmade_samples/

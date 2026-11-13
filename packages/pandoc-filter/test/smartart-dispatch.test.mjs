@@ -39,11 +39,11 @@ test('with MD2NATIVEDOCX_SMARTART_DIR set, a chain-eligible diagram dispatches t
     assert.ok(!xml.includes('<wpc:wpc'), 'must not also emit wpc:wpc shapes');
     assert.ok(xml.includes('SMARTART_PLACEHOLDER:'), 'relIds must be placeholders, not real rIds -- this script cannot mint those');
 
-    // Exactly one diagram id directory was written, with all 4 parts.
+    // Exactly one diagram id directory was written, with the 4 parts plus the pre-rendered drawing (on by default).
     const ids = readdirSync(smartArtDir);
     assert.equal(ids.length, 1, 'expected exactly one diagram directory');
     const parts = readdirSync(join(smartArtDir, ids[0])).sort();
-    assert.deepEqual(parts, ['colors.xml', 'data.xml', 'layout.xml', 'quickStyle.xml']);
+    assert.deepEqual(parts, ['colors.xml', 'data.xml', 'drawing.xml', 'layout.xml', 'quickStyle.xml']);
     const dataXml = readFileSync(join(smartArtDir, ids[0], 'data.xml'), 'utf8');
     assert.ok(dataXml.includes('<a:t>A</a:t>'), 'data.xml must contain the actual node text');
 

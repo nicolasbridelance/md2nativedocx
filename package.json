@@ -1,7 +1,7 @@
 {
   "name": "md2nativedocx",
   "version": "0.1.0",
-  "description": "Convert Markdown with Mermaid diagrams into a complete .docx with native, editable OOXML vector shapes — not flattened PNGs.",
+  "description": "Complete Markdown to Word (.docx) converter with editable diagrams — Mermaid diagrams become real Word shapes, SmartArt and charts that readers can change in Word, not flattened PNGs.",
   "license": "CC0-1.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,10 @@
     "test:visual": "node scripts/test-visual.mjs",
     "test:visual:update-baseline": "node scripts/test-visual.mjs --update-baseline",
     "test:oxml-validate": "node scripts/test-oxml-validate.mjs",
-    "verify:npm-packages": "node scripts/verify-npm-packages.mjs"
+    "test:odf-validate": "node scripts/test-odf-validate.mjs",
+    "test:odf-connectors": "node scripts/test-odf-connectors.mjs",
+    "verify:npm-packages": "node scripts/verify-npm-packages.mjs",
+    "audit:gate": "node scripts/audit-gate.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -32,9 +35,9 @@
     "node": ">=18"
   },
   "overrides": {
-    "serialize-javascript": "^7.0.7",
+    "serialize-javascript": "^7.1.4",
     "diff": "^8.0.3",
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "qs": "^6.16.0"
   }
 }

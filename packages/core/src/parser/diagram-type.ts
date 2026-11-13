@@ -78,18 +78,18 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
   { type: 'mindmap', label: 'Mindmap', pattern: /^mindmap\b/i },
   { type: 'timeline', label: 'Timeline', pattern: /^timeline\b/i },
   { type: 'zenuml', label: 'ZenUML', pattern: /^zenuml\b/i },
-  { type: 'sankey', label: 'Sankey diagram', pattern: /^sankey-beta\b/i },
-  { type: 'xychart', label: 'XY chart', pattern: /^xychart-beta\b/i },
-  { type: 'block', label: 'Block diagram', pattern: /^block-beta\b/i },
+  { type: 'sankey', label: 'Sankey diagram', pattern: /^sankey(?:-beta)?\b/i },
+  { type: 'xychart', label: 'XY chart', pattern: /^xychart(?:-beta)?\b/i },
+  { type: 'block', label: 'Block diagram', pattern: /^block(?:-beta)?\b/i },
   { type: 'packet', label: 'Packet diagram', pattern: /^packet(?:-beta)?\b/i },
   { type: 'kanban', label: 'Kanban board', pattern: /^kanban\b/i },
   { type: 'architecture', label: 'Architecture diagram', pattern: /^architecture-beta\b/i },
   { type: 'radar', label: 'Radar chart', pattern: /^radar-beta\b/i },
   { type: 'eventModeling', label: 'Event Modeling diagram', pattern: /^eventmodeling\b/i },
-  { type: 'treemap', label: 'Treemap', pattern: /^treemap-beta\b/i },
+  { type: 'treemap', label: 'Treemap', pattern: /^treemap(?:-beta)?\b/i },
   { type: 'venn', label: 'Venn diagram', pattern: /^venn-beta\b/i },
   { type: 'ishikawa', label: 'Ishikawa diagram', pattern: /^ishikawa-beta\b/i },
-  { type: 'wardley', label: 'Wardley map', pattern: /^wardley-beta\b/i },
+  { type: 'wardley', label: 'Wardley map', pattern: /^wardley(?:-beta)?\b/i },
   { type: 'cynefin', label: 'Cynefin framework', pattern: /^cynefin-beta\b/i },
   { type: 'treeView', label: 'TreeView', pattern: /^treeView-beta\b/i },
 ];
@@ -109,9 +109,21 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
  * should divert — that's the one case with a real, cheaply-detectable signal.
  */
 export function detectDiagramType(text: string): DiagramTypeInfo {
+  let inFrontmatter = false;
+  let sawContent = false;
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
+
+    // A leading `---` ... `---` YAML frontmatter block (`title:`/`config:`)
+    // precedes the header in real Mermaid; skip it. Only honoured before any
+    // other content, so a stray `---` later is not misread as frontmatter.
+    if (line === '---' && (inFrontmatter || !sawContent)) {
+      inFrontmatter = !inFrontmatter;
+      continue;
+    }
+    if (inFrontmatter) continue;
+    sawContent = true;
 
     // `swimlane-beta` is an alias header, not a distinct diagram type — see
     // its handling in parser.ts's header regex for why.

@@ -2,8 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
   pull_request:
+  # The visual job runs weekly and on demand (Actions tab, "Run workflow"), not on every push: see its
+  # comment below. Until 2026-10-08 there was no schedule at all, so that job had never run.
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 jobs:
   build-test:
@@ -17,13 +22,18 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install Pandoc + Lua
+      - name: Install Lua
         # The vscode-extension unit tests (exportService.test.ts) invoke the
         # real CLI -> Pandoc pipeline, not a mock — same requirement as the
         # visual job below, kept in sync deliberately (AGENTS.md).
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq pandoc lua5.4
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+
+      - name: Install Pandoc (pinned, same as the Windows/macOS jobs and .devcontainer)
+        # Not apt: Ubuntu's pandoc jumped from 3.1.3 to 3.7.0.2 in Nov 2026 and
+        # broke the landscape-tables tests. AGENTS.md: keep versions in sync.
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.1.3'
 
       - uses: actions/setup-dotnet@v6
         # Optional dependency: only used by scripts/oxml-validator/ (npm run
@@ -55,6 +65,11 @@ jobs:
 
       - name: Open XML schema validation
         run: npm run test:oxml-validate
+
+      - name: ODF schema validation
+        # Java ships with ubuntu-latest; the odfvalidator jar is fetched from Maven Central and
+        # checked against the SHA-256 pinned in scripts/test-odf-validate.mjs.
+        run: npm run test:odf-validate
 
       - name: Verify npm packages (clean-room install of core/pandoc-filter/cli)
         # OS-independent by nature (this is about npm's package-resolution
@@ -124,8 +139,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit + golden tests (cli, core, pandoc-filter)
-        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter
+      - name: Unit + golden tests (cli, core, pandoc-filter, pptx)
+        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter --workspace=@md2nativedocx/pptx
 
       - name: Build the packaged extension (.vsix)
         # Exercises the esbuild bundling step end to end — the vendored CLI's
@@ -171,8 +186,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit + golden tests (cli, core, pandoc-filter)
-        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter
+      - name: Unit + golden tests (cli, core, pandoc-filter, pptx)
+        run: npm run test --workspace=@md2nativedocx/cli --workspace=@md2nativedocx/core --workspace=@md2nativedocx/pandoc-filter --workspace=@md2nativedocx/pptx
 
       - name: Build the packaged extension (.vsix)
         run: npm run package --workspace=md2nativedocx
@@ -200,8 +215,39 @@ jobs:
           path: reports/npm-audit.json
           retention-days: 90
           if-no-files-found: warn
-      - name: Audit (fails the build on high/critical)
-        run: npm audit --audit-level=high
+      # Shipped dependency tree: any high/critical advisory fails the build, no exceptions.
+      - name: Audit production dependencies (fails on high/critical)
+        run: npm audit --omit=dev --audit-level=high
+      # Whole tree incl. dev tooling: fails on any high/critical advisory not covered by a dated,
+      # justified entry in audit-exceptions.json (some advisories have no patched version at all).
+      - name: Audit gate with dated exceptions
+        run: |
+          node --test scripts/audit-gate.test.mjs
+          node scripts/audit-gate.mjs
+
+  # DCO (AGENTS.md → Licensing): every commit of a PR carries a Signed-off-by trailer.
+  # Plain git, no third-party action. Merge commits are exempt.
+  dco:
+    name: DCO sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check Signed-off-by on every PR commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=0
+          for c in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            if ! git show -s --format=%B "$c" | grep -qiE '^Signed-off-by: .+ <.+>'; then
+              echo "::error::Commit $c has no Signed-off-by trailer (use git commit -s)"
+              missing=1
+            fi
+          done
+          exit $missing
 
   secret-scan:
     name: Secret scan (gitleaks)
@@ -220,19 +266,41 @@ jobs:
   visual:
     name: Visual regression (LibreOffice headless)
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/')
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/')
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
-      - name: Install Pandoc + Lua
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq pandoc lua5.4
+      - name: Install Lua
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+
+      - name: Install Pandoc (pinned, same as the Windows/macOS jobs and .devcontainer)
+        # Not apt: Ubuntu's pandoc jumped from 3.1.3 to 3.7.0.2 in Nov 2026 and
+        # broke the landscape-tables tests. AGENTS.md: keep versions in sync.
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.1.3'
       - name: Install LibreOffice headless
-        run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress
+        # python3-uno: the .odt connector check drives LibreOffice through UNO.
+        run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress python3-uno
+      # Pinned release for the ODF target, next to the apt one (which stays the visual-test
+      # renderer). Version and SHA-256 are in the script, shared with .devcontainer/setup.sh.
+      - name: Install pinned LibreOffice (ODF target)
+        run: bash scripts/install-libreoffice-pinned.sh
       - run: npm ci
+      # The CLI runs the core through the Pandoc filter, from packages/*/dist.
+      - run: npm run build
       - name: Visual tests
         run: npm run test:visual
+      - name: ODF connector attachment (UNO)
+        run: npm run test:odf-connectors
+      # Watches the behaviour spike S3 recorded: the pinned release still imports Markdown.
+      - name: ODF smoke check (Markdown import of the pinned LibreOffice)
+        run: |
+          out="$(mktemp -d)"
+          soffice-26.2 -env:UserInstallation="file://${out}/profile" --headless --convert-to fodt \
+            --outdir "${out}" docs/adr/spikes/spike-odf-markdown-import/source.md
+          grep -q '<table:table ' "${out}/source.fodt"
+          grep -q '<text:h ' "${out}/source.fodt"

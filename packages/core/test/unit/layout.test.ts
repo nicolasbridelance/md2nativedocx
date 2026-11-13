@@ -271,3 +271,12 @@ test('a graph combining many subgraph clusters with cycles among their members d
     `expected a warning about the clusters-off retry, got: ${JSON.stringify(result.warnings)}`,
   );
 });
+
+test('a subgraph listing its own id as a member does not make Dagre throw a parent cycle', () => {
+  // The parser drops node `S` (it names the subgraph) but keeps it in the member list; with one key
+  // space for nodes and subgraphs, layout() then set S as its own parent. Found by the ODF fuzz property.
+  const { ast } = parseMermaid('graph TD\n  subgraph S\n    S --> A\n  end');
+  const result = layout(ast);
+  assert.ok(result.nodes['A']);
+  assert.ok(result.subgraphs['S']);
+});

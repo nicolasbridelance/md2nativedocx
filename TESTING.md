@@ -1,7 +1,7 @@
 # Test strategy — `md2nativedocx`
 
 > This file exists because the test directory grew by successive additions rather than by
-> design, and that ended up being confusing — see `TODO.md` (2026-08-07) for the history of
+> design, and that ended up being confusing — see `docs/history/TODO_ARCHIVE.md` (2026-08-07) for the history of
 > that finding and the cleanup that followed. This document gives the missing overview: the
 > project's seven test chapters, what each one guarantees, where it lives, and how to add a case.
 
@@ -13,7 +13,7 @@
 | 2 | [Pipeline integration](#2-pipeline-integration) | `packages/cli/test`, `packages/pandoc-filter/test` | yes, on every push | the real chain Markdown → Pandoc → Lua filter → core → `.docx` |
 | 3 | [Real diagram corpus](#3-real-diagram-corpus) | `test-corpus/corpus/` | yes (regeneration + conformance) + manual Word review | real `.mmd` files from mermaid-js/mermaid go through the whole pipeline |
 | 4 | [Visual regression](#4-visual-regression) | `test-corpus/visual/`, `scripts/test-visual.mjs` | yes, on demand (LibreOffice required) | the actual render doesn't regress, not just the XML |
-| 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs` | yes, on demand (.NET SDK required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML |
+| 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs`, `scripts/test-odf-validate.mjs` | yes, on demand (.NET SDK / Java required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML; same for `.odt` against the ODF schema |
 | 6 | [Native Word comparison](#6-native-word-comparison) | `tools/word-reference/` | no, manual, Windows | OOXML structure compared against an authentic Word document |
 | 7 | [Manual Word acceptance checklist](#7-manual-word-acceptance-checklist) | `test-corpus/word-verification/` | no, manual, real Word required | spec §9 release gate: known LibreOffice-only-verified defects and a crossing-heavy adversarial case, opened and eyeballed in actual Word |
 | 8 | [Historical spikes](#8-historical-spikes) | `docs/adr/spikes/` | no, archive | evidence that motivated ADR 0001/0002 |
@@ -33,7 +33,7 @@ Each chapter answers a question none of the others can answer alone:
   or not render at all in Word/LibreOffice. Several defects in this category (namespaces not
   declared on the root, invisible arrows, overlapping subgraph title, an edge crossing through a
   node, rendering completely absent past a given width/height ratio) were found ONLY by this
-  chapter — see `TODO.md` for the detailed history of each.
+  chapter — see `docs/history/TODO_ARCHIVE.md` for the detailed history of each.
 - Chapter 5 exists because chapters 1-4 all stop at "well-formed XML" or "renders correctly under
   LibreOffice" — neither implies **schema-valid**, and Word enforces its schema strictly where
   LibreOffice does not enforce it at all. This gap cost 7 rounds of manually-compared,
@@ -88,12 +88,18 @@ tests in real Word before each release).
 adding a case in its own `test-corpus/visual/README.md`. Mechanism: `scripts/test-visual.mjs` +
 `scripts/lib/png.mjs` (in-house PNG decoder/diff, zero dependency).
 
+Three suites: every fixture as `.docx` (`baseline/`), a spread as `.pptx` (`baseline-pptx/`), and
+every flowchart as `.odt` (`baseline-odt/`, since 2026-10-08; the only type the `.odt` output draws
+so far). The `.odt` renders say nothing about connector attachment, which a static image cannot
+show: `scripts/odf-connector-check.py` checks that through UNO (every connector bound on open, and
+still on its glue point after its shape is moved).
+
 **Known blind spot, not a bug in this chapter itself**: LibreOffice never dynamically resolves a
 SmartArt `layoutDef`'s own `forEach`/`presOf` queries — it only ever displays whatever static
 presentation mirror `packages/core/src/smartart/{chain,tree,cycle}.ts` hand-authored into the data
 model (ADR 0004 "Round 5"). Real Word *does* resolve those queries live. A bug in how a `presOf`
 query is written (e.g. an `axis` that matches more nodes than intended) is therefore **completely
-invisible to this chapter** — found the hard way (TODO.md, "Incident SmartArt", 2026-09-05):
+invisible to this chapter** — found the hard way (`docs/history/TODO_ARCHIVE.md`, "Incident SmartArt", 2026-09-05):
 `tree.ts`'s root box rendered fine here while showing an extra bulleted list of every child's text
 in real Word. Only chapter 7 (real Word) can catch this class of defect; chapters 1-5 (including
 this one and schema validation) structurally cannot.
@@ -115,11 +121,22 @@ any of them.
 
 Errors are split into two buckets: those under `/word/diagrams/*` (our own SmartArt translator's
 output) must be zero and fail the test; everything else is known pre-existing schema noise
-inherited from `packages/cli/assets/reference.docx` (tracked separately in `TODO.md`, not this
-chapter's job to fix) — printed for visibility, never failed on.
+from Pandoc's own `.docx` writer (see `docs/history/TODO_ARCHIVE.md`; not this chapter's job to fix) —
+printed for visibility, never failed on. The bundled `reference.docx`, rewritten from scratch on
+2026-10-08, adds no error of its own.
 
 **Adding a case**: add an entry to `SMARTART_FIXTURES` (or `PLAIN_FIXTURE_NAMES`, reusing a
 `test-corpus/visual/fixtures/*.mmd` file) in `scripts/test-oxml-validate.mjs`.
+
+**ODF (`.odt`), since 2026-10-08.** `scripts/test-odf-validate.mjs` runs the ODF Toolkit's
+`odfvalidator` (Apache-2.0, the validator behind odfvalidator.org; jar fetched from Maven Central
+into `~/.cache/md2nativedocx/` and checked against a pinned SHA-256). Every document must have
+**zero** errors: a plain Pandoc `.odt` validates cleanly, so there is no inherited noise. Requires
+Java and Pandoc; skips with exit 0 without them. Fixtures: a plain Pandoc document, and two written
+by the real CLI (`-o doc.odt`): one using every style Pandoc's ODT writer refers to, one holding
+every flowchart of the visual corpus. Its first run (on a spike) found a required `svg:viewBox`
+missing from our `draw:connector` (`docs/adr/spikes/spike-odf-validator/`). **Adding a case**:
+extend `buildFixtures()`.
 
 ## 6. Native Word comparison
 

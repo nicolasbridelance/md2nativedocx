@@ -1,5 +1,35 @@
 # Script de démo — GIF + capture
 
+## ✅ 2026-10-06 — enregistrement scripté (revue UX, lot D)
+
+Les GIF sont désormais produits par **`scripts/record-demos.py`** (dans le dépôt, rejouable) au lieu d'une
+session manuelle à reconstruire de mémoire. Un VS Code neuf par scénario sur un écran virtuel 1280×800,
+xdotool pour la souris et le clavier, ffmpeg pour la capture, GIF à palette optimisée (960 px, 12 i/s).
+`--shots` remplace la vidéo par une capture PNG après chaque étape, pour vérifier les positions quand
+l'interface bouge. Fichier de démonstration : [`demo-workflow.md`](demo-workflow.md) (un processus → SmartArt,
+une revue avec fusion → formes avec la raison, un camembert → graphique Word).
+
+| GIF | Ce qu'il montre |
+|---|---|
+| `demo-vscode.gif` | la ligne « ce que deviendra ce diagramme » au-dessus de chaque bloc, puis Export to Word |
+| `demo-hover.gif` | le survol de la ligne ```` ```mermaid ```` |
+| `demo-powerpoint.gif` | Export to PowerPoint |
+| `demo-diagram.gif` | Export this diagram… → PowerPoint, une diapositive |
+| `demo-context-menu.gif` | clic droit dans l'explorateur → md2nativedocx → Export to Word |
+| `demo-no-diagram.gif`, `demo-raw-mmd.gif` | un Markdown sans diagramme ; un `.mmd` seul |
+
+Pièges rencontrés et contournés dans le script (détail dans son en-tête) : les variables `VSCODE_*` du
+Codespace tuent la fenêtre lancée au bout de ~15 s (lancement en `env -i`) ; le chemin du profil doit être
+court (limite de 108 octets des sockets Unix) ; ffmpeg met plusieurs secondes à livrer sa première image
+(le script attend la première image avant d'agir).
+
+Deux bugs réels trouvés en tournant, corrigés : la commande `md2nativedocx.enableSetting` n'était pas déclarée
+(erreur au démarrage de VS Code), et un `.mmd` ouvert seul n'activait pas l'extension (ouvert en texte brut ;
+l'extension déclare maintenant le langage `mermaid` pour `.mmd`).
+
+Ce qui suit est l'historique des premières prises (2026-09).
+
+
 Un GIF (côté VS Code) et une capture d'écran statique (côté Word) plutôt qu'un seul GIF combiné
 (docs/specs/cahier_des_charges.md §12.2) : la partie VS Code ne demande pas Word et a pu être enregistrée
 automatiquement dans ce Codespace (Xvfb + la vraie build VS Code déjà utilisée pour les tests

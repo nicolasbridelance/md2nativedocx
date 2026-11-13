@@ -135,7 +135,8 @@ test('corpus: every source diagram regenerates a conformant .docx (structural ch
     for (const file of files) {
       const diagram = extractDiagram(join(sourceDir, file));
       const name = basename(file, '.mmd').replace(/\.md$/, '');
-      const docx = convertTo(toMarkdown(file, diagram), dir, name);
+      // Structural checks of the shape output: SmartArt and charts (on by default) are turned off.
+      const docx = convertTo(toMarkdown(file, diagram), dir, name, { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_NATIVE_CHARTS: '0' });
       assertConformantDocx(docx, name);
     }
   } finally {
@@ -145,7 +146,11 @@ test('corpus: every source diagram regenerates a conformant .docx (structural ch
 
 test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   + 'footnote, link, bold/italic) survives alongside two mermaid diagrams', () => {
-  const source = readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8');
+  // Both of the fixture's diagrams are SmartArt-eligible since multi-level trees shipped (the second is a
+  // 4-level tree), so one merge-after-branch diagram is appended here to keep a native-shapes fallback in the mix.
+  const source =
+    readFileSync(join(sourceDir, 'mixed-content.md'), 'utf8') +
+    '\n```mermaid\ngraph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n```\n';
   // SmartArt explicitly enabled (off by default since 2026-09-03, see
   // md2nativedocx.mjs's doc comment on smartArtEnabled): this test wants the
   // mixed-dispatch scenario below, not the plain-fallback default. Written to
@@ -198,14 +203,10 @@ test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
     // corpus loop's assertConformantDocx already checks this per-file, but
     // re-asserted here since this file specifically exercises two diagrams
     // interleaved with text, the scenario most likely to produce id reuse).
-    // Only *one* wpc:wpc canvas, not two: the first diagram (Collecteur ->
-    // File d'attente -> Worker -> Base de données, a plain 4-node chain) is
-    // SmartArt-eligible and dispatches to a `dgm:relIds` diagram instead
-    // (see md2nativedocx-core.mjs's SmartArt dispatch); the second (same
-    // chain plus a branch to a dead-letter queue) is not -- classifyTopology
-    // rejects it as `tree-too-deep` -- and still renders via the wpc:wpc path.
-    assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the tree-too-deep diagram)');
-    assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 1, 'expected exactly one SmartArt diagram (the plain chain)');
+    // The fixture's two diagrams (a 4-node chain and a 4-level tree) dispatch to `dgm:relIds` SmartArt; the
+    // appended merge diagram is rejected by classifyTopology (`merge-after-branch`) and renders via wpc:wpc.
+    assert.equal((xml.match(/<wpc:wpc /g) ?? []).length, 1, 'expected exactly one wpc:wpc canvas (the merge diagram)');
+    assert.equal((xml.match(/<dgm:relIds /g) ?? []).length, 2, 'expected two SmartArt diagrams (the chain and the tree)');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -228,20 +229,24 @@ test('simple: markdown without mermaid produces a valid docx with no wpg:wgp', (
   }
 });
 
-test('diagram-type guard-rail: a gitGraph block gets a clean note, not a silently-wrong flowchart parse', () => {
+test('diagram-type dispatch: a gitGraph block renders as a real diagram, not the flowchart pipeline or the "unsupported" note', () => {
   // Regression test for the exact bug logged in the roadmap: gitGraph's bare
   // "commit"/"branch" words happen to look enough like flowchart node syntax
   // that, without the guard-rail, this would silently produce a nonsense
-  // wpg:wgp diagram instead of a clean rejection.
+  // wpg:wgp diagram. gitGraph itself shipped later (see diagrams/git-graph/)
+  // — same precedent as mindmap's now-removed version of this test: once a
+  // type is actually implemented, the regression worth keeping is "the
+  // guard-rail correctly routes to the real translator", not "still
+  // unsupported".
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
   try {
-    const markdown = '# Test\n\n```mermaid\ngitGraph\n  commit\n  commit\n```\n';
+    const markdown = '# Test\n\n```mermaid\ngitGraph\n  commit\n  commit\n  branch develop\n  commit\n```\n';
     const docx = convertTo(markdown, dir, 'gitgraph');
     execFileSync('unzip', ['-t', docx], { stdio: 'pipe' });
     const xml = readDocumentXml(docx);
-    assert.ok(!xml.includes('<wpg:wgp'), 'must not produce shapes for an unsupported diagram type');
-    assert.ok(!xml.includes('<dgm:relIds'), 'must not produce SmartArt for an unsupported diagram type');
-    assert.ok(xml.includes('GitGraph diagrams are not yet supported'), 'clean note missing');
+    assert.ok(!xml.includes('<wpg:wgp'), 'must not fall through to the flowchart pipeline');
+    assert.ok(!xml.includes('GitGraph diagrams are not yet supported'), 'must no longer hit the unsupported-type note');
+    assert.ok(xml.includes('<wpc:wpc'), 'must render as a real wpc:wpc canvas, same envelope as the other diagram families');
     assert.ok(xml.includes('Test'), 'surrounding markdown heading must still convert normally');
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -290,16 +295,20 @@ test('simple: markdown with a mermaid A --> B dispatches to SmartArt when MD2NAT
   }
 });
 
-test('simple: markdown with a mermaid A --> B does NOT dispatch to SmartArt by default', () => {
-  // Same chain-eligible fixture as the opt-in test above, run with no
-  // MD2NATIVEDOCX_ENABLE_SMARTART -- confirms the 2026-09-03 default flip
-  // itself, not just the opt-in path.
+test('simple: markdown with a mermaid A --> B dispatches to SmartArt by default, and =0 keeps shapes', () => {
+  // Same chain-eligible fixture as the test above, run with no variable (SmartArt is on by default since
+  // 2026-10-06, as in the VS Code extension) and with MD2NATIVEDOCX_ENABLE_SMARTART=0.
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-corpus-simple-'));
   try {
-    const docx = convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-default');
-    const xml = readDocumentXml(docx);
-    assert.ok(!xml.includes('<dgm:relIds'), 'SmartArt must not be used unless explicitly enabled');
-    assert.ok(xml.includes('<wpc:wpc '), 'expected the OOXML canvas fallback by default');
+    const env = { ...process.env };
+    delete env.MD2NATIVEDOCX_ENABLE_SMARTART;
+    const byDefault = readDocumentXml(convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-default', env));
+    assert.ok(byDefault.includes('<dgm:relIds'), 'SmartArt is on by default');
+    const off = readDocumentXml(
+      convertTo('# Test\n\n```mermaid\ngraph TD\n  A --> B\n```\n', dir, 'ab-off', { ...env, MD2NATIVEDOCX_ENABLE_SMARTART: '0' })
+    );
+    assert.ok(!off.includes('<dgm:relIds'), 'SmartArt must not be used when turned off');
+    assert.ok(off.includes('<wpc:wpc '), 'expected the OOXML canvas when SmartArt is off');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,5 +1,9 @@
 # Cahier des charges — Compatibilité du cœur avec Google Slides
 
+> **Statut au 2026-10-06 : réalisé.** `packages/pptx` produit un `.pptx` (une diapositive par
+> diagramme, 29 types) qui s'ouvre dans PowerPoint et s'importe dans Google Slides (confirmé par le
+> mainteneur, 2026-10-05). Plan d'implémentation : `docs/adr/0010-pptx-production-translator-plan.md`.
+
 > Statut : proposition, à valider en ADR avant implémentation.
 > Référence : complète `docs/specs/cahier_des_charges.md` (scope docx) et `docs/adr/` (moteur de layout, intégration Pandoc).
 
