@@ -107,6 +107,20 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 | R1.6 | partiel | PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm non publié** : demande un OTP, et `@md2nativedocx/cli` 0.2.1 dépend de `pandoc-filter` 0.2.0 et `pptx` 0.1.1, absents de npm (publié : 0.1.0 pour core, pandoc-filter, cli, pptx), donc publier le CLI seul donnerait un paquet non installable. À faire : publier core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1 puis cli 0.2.1 (avec OTP), faire la vérification manuelle, compléter le rapport d'incident, sortir R1 de ce fichier. |
 | R1.7 | à faire | Hors 0.8.1 : un seul classement des erreurs du validateur (CI et journal). |
 
+#### Publication npm par publication de confiance (décidé le 2026-11-13)
+
+Le jeton `NPM_TOKEN` du `.env` exige un OTP, et npm retire l'option « bypass 2FA » des jetons granulaires
+(annonce du 2026-07-08 : opérations sensibles dès août 2026, publication directe vers janvier 2027 ;
+résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la **publication de confiance
+(OIDC)** : `.github/workflows/publish.yml`, déclenchement manuel, environnement GitHub `npm-publish`
+(sans relecteur : mainteneur solo, publication automatisée ; garde-fou = règle de déploiement « branche `main` uniquement »). Aucun jeton npm nulle part.
+- [ ] Mainteneur : configurer l'éditeur de confiance sur npmjs.com pour les 4 paquets (owner
+      `nicolasbridelance`, repo `md2nativedocx`, workflow `publish.yml`, environnement `npm-publish`).
+- [ ] Mainteneur : créer l'environnement `npm-publish` (Settings → Environments), sans relecteur, avec « Selected branches and tags » = `main`.
+- [ ] Lancer le workflow en dry run, puis pour de vrai : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1.
+- [ ] Ensuite : « Require two-factor authentication and disallow bypass 2fa tokens » sur les 4 paquets, et
+      révoquer le jeton classique de `.env`.
+
 ### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
 
 - [ ] **R2.1 Fins d'instruction.** Une passe de normalisation partagée dans `packages/core/src/parser/` :

@@ -1,0 +1,86 @@
+name: Publish to npm
+
+# Manual only. Publishes the four npm packages, in dependency order, through npm trusted publishing
+# (OIDC): no npm token exists anywhere, so there is no secret to leak and no one-time password to type.
+# Each package must have this exact workflow registered as its trusted publisher on npmjs.com
+# (package Settings -> Trusted Publisher: owner nicolasbridelance, repo md2nativedocx, workflow
+# publish.yml, environment npm-publish).
+#
+# The `npm-publish` GitHub environment has no required reviewer (solo maintainer, releases are meant to be
+# automated). Its guard is the deployment rule "selected branches: main" (repo Settings -> Environments),
+# plus the `main`-only condition on the job below and the fact that only someone with write access to the
+# repository can start a workflow_dispatch run.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (npm publish --dry-run, nothing is published)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish core, pandoc-filter, pptx, cli
+    runs-on: ubuntu-latest
+    # Only from main: never publish an unreviewed branch.
+    if: github.ref == 'refs/heads/main'
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write # trusted publishing: the OIDC token npm exchanges for a short-lived publish credential
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # Trusted publishing needs npm >= 11.5.1; Node 24 ships a newer one.
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck and test before publishing
+        run: |
+          npm run typecheck
+          npm run test --workspaces
+
+      - name: npm version
+        run: npm --version
+
+      - name: Publish in dependency order
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          for pkg in core pandoc-filter pptx cli; do
+            dir="packages/$pkg"
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "::notice::$name@$version is already on npm, skipped"
+              continue
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "::group::dry run $name@$version"
+              (cd "$dir" && npm publish --access public --dry-run)
+              echo "::endgroup::"
+              continue
+            fi
+            echo "::group::publish $name@$version"
+            (cd "$dir" && npm publish --access public)
+            echo "::endgroup::"
+            # The next package depends on this one: wait until the registry serves it.
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              if [ "$(npm view "$name@$version" version 2>/dev/null)" = "$version" ]; then break; fi
+              if [ "$attempt" = 10 ]; then echo "::error::$name@$version is not visible on the registry"; exit 1; fi
+              sleep 6
+            done
+          done
