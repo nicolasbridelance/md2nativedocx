@@ -80,8 +80,8 @@ export interface ConvertResult {
 
 /** A conversion that produced no document. */
 export declare class ConversionError extends Error {
-  /** `setup`: filter or reference document · `pandoc`: Pandoc failed or is missing · `postprocess`. */
-  readonly stage: 'setup' | 'pandoc' | 'postprocess';
+  /** `setup`: filter or reference document · `pandoc`: Pandoc failed or is missing · `postprocess` · `write`: the output file could not be written (open in Word, locked). */
+  readonly stage: 'setup' | 'pandoc' | 'postprocess' | 'write';
   /** Pandoc's stderr, when it ran. */
   readonly pandocStderr: string;
 }

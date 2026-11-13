@@ -56,7 +56,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 
 ### R1 — L'incident lui-même → release 0.8.1 (branche `fix/safe-docx-write`)
 
-- [ ] **R1.1 Écriture sûre de la sortie.** Un seul utilitaire `writeOutputSafely(path, buffer)` dans
+- [x] **R1.1 Écriture sûre de la sortie.** Un seul utilitaire `writeOutputSafely(path, buffer)` dans
       `packages/cli/src/`, utilisé par `bin/md2nativedocx.mjs` (`.docx`, `.odt`, journal) et `pptxExport.mjs` :
       - refus si le fichier de verrou Word existe dans le dossier de sortie. Il y a deux formes :
         `~$` + nom complet, et `~$` + nom privé de ses 2 premiers caractères pour les noms longs ;

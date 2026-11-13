@@ -5,9 +5,11 @@
  * (see docs/adr/0010-pptx-production-translator-plan.md). Non-diagram Markdown is ignored.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import { CliError, resolveSafePath } from './cliSupport.mjs';
+import { ConversionError } from './convert.mjs';
+import { writeOutputSafely } from './writeOutputSafely.mjs';
 
 const USAGE = `Usage: md2nativedocx <input.md> -o <output.pptx> [--show-source]
 
@@ -57,7 +59,12 @@ export async function runPptxCli(argv, cwd) {
       if (err instanceof PptxConversionError) throw new CliError(`md2nativedocx: ${err.message}`, 1);
       throw err;
     }
-    writeFileSync(output, result.buffer);
+    try {
+      writeOutputSafely(output, result.buffer);
+    } catch (err) {
+      if (err instanceof ConversionError) throw new CliError(`md2nativedocx: ${err.message}`, 2);
+      throw err;
+    }
     writePptxLog(input, output, result.warnings, result.slideCount);
     if (result.warnings.length > 0) {
       process.stdout.write(`Warnings: ${result.warnings.length}\n`);
@@ -91,5 +98,5 @@ function writePptxLog(input, output, warnings, slideCount) {
     `Slides: ${slideCount}`,
     '',
   ];
-  writeFileSync(logPath, lines.join('\n'), 'utf8');
+  writeOutputSafely(logPath, lines.join('\n'));
 }

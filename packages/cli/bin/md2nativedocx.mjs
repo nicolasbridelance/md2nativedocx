@@ -24,9 +24,10 @@
 
 import { execFileSync } from 'node:child_process';
 import { basename, extname } from 'node:path';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { CliError, resolveSafePath } from '../src/cliSupport.mjs';
 import { ConversionError, convert } from '../src/convert.mjs';
+import { writeOutputSafely } from '../src/writeOutputSafely.mjs';
 import { hasLayoutOptions, readConvertOptionsFromEnv } from '../src/envOptions.mjs';
 
 // `-o something.pptx` takes the Pandoc-free deck path (packages/pptx), dispatched before anything a
@@ -150,7 +151,15 @@ async function main() {
     }
     throw err;
   }
-  writeFileSync(output, result.document);
+  try {
+    writeOutputSafely(output, result.document);
+  } catch (err) {
+    if (err instanceof ConversionError) {
+      process.stderr.write(`md2nativedocx: ${err.message}\n`);
+      process.exit(2);
+    }
+    throw err;
+  }
 
   // Surface the diagrams' non-fatal notices: never let a successful export silently hide something the
   // author should know about.
@@ -251,7 +260,7 @@ function writeExportLog({ input, output, warnings, rawStderr, wordCompatibility 
   if (rawStderr && rawStderr.trim().length > 0) {
     lines.push('--- Raw Pandoc/tool output ---', rawStderr.trimEnd(), '');
   }
-  writeFileSync(logPath, lines.join('\n'), 'utf8');
+  writeOutputSafely(logPath, lines.join('\n'));
   return logPath;
 }
 

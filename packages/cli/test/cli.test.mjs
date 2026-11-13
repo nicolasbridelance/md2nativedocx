@@ -506,3 +506,18 @@ test('Word compatibility check: reports 0 errors for a clean export when dotnet 
     rmSync(buildDir, { recursive: true, force: true });
   }
 });
+
+test('R1.1: export refuses (exit 2) while Word holds the target open, and leaves it byte-identical', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cli-lock-'));
+  try {
+    writeFileSync(join(dir, 'doc.md'), '# Hi\n');
+    writeFileSync(join(dir, 'flux_arcs.docx'), 'ORIGINAL');
+    writeFileSync(join(dir, '~$ux_arcs.docx'), '');
+    const { code, err } = runCli(['doc.md', '-o', 'flux_arcs.docx'], { cwd: dir });
+    assert.equal(code, 2);
+    assert.match(err, /flux_arcs\.docx is open in Word/);
+    assert.equal(readFileSync(join(dir, 'flux_arcs.docx'), 'utf8'), 'ORIGINAL');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

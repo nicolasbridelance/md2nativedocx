@@ -34,7 +34,7 @@ import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolve
 export class ConversionError extends Error {
   /**
    * @param {string} message
-   * @param {{ stage: 'setup' | 'pandoc' | 'postprocess', pandocStderr?: string, cause?: unknown }} details
+   * @param {{ stage: 'setup' | 'pandoc' | 'postprocess' | 'write', pandocStderr?: string, cause?: unknown }} details
    */
   constructor(message, { stage, pandocStderr = '', cause } = {}) {
     super(message, cause === undefined ? undefined : { cause });
