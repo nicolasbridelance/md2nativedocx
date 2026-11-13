@@ -95,6 +95,18 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       son poste Windows + OneDrive : export pendant que le `.docx` est ouvert dans Word → message, pas
       de plantage. Rédiger alors `docs/history/incident-flux-arcs-2026-11.md` et faire sortir R1 d'ici.
 
+#### Journal de R1 : réalisé, écarts avec le plan, reste à faire (tenu à jour au fil de l'eau)
+
+| Lot | État | Écart avec le plan / limite connue |
+|---|---|---|
+| R1.1 | fait | Test d'échec de `rename` : la cible est un dossier, donc l'échec survient au contrôle `r+` et non au `rename` ; il prouve que la cible reste intacte mais pas le nettoyage du `.tmp`. |
+| R1.2 | fait | Pas de « Exporter sous… » dans l'export multi-fichiers (un nom par fichier à choisir) : l'échec est compté et détaillé dans le canal de sortie. Dialogue non testé dans un VS Code réel (`test:extension-host` non lancé). |
+| R1.3 | fait | L'export d'un seul diagramme n'enregistre pas : il lit le tampon de l'éditeur, pas le disque. `doc.save()` non testé dans un VS Code réel. |
+| R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. |
+| R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
+| R1.6 | à faire | Release 0.8.1 + vérification manuelle du mainteneur (Windows + OneDrive) + `docs/history/incident-flux-arcs-2026-11.md`. |
+| R1.7 | à faire | Hors 0.8.1 : un seul classement des erreurs du validateur (CI et journal). |
+
 ### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
 
 - [ ] **R2.1 Fins d'instruction.** Une passe de normalisation partagée dans `packages/core/src/parser/` :
