@@ -22,13 +22,18 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install Pandoc + Lua
+      - name: Install Lua
         # The vscode-extension unit tests (exportService.test.ts) invoke the
         # real CLI -> Pandoc pipeline, not a mock — same requirement as the
         # visual job below, kept in sync deliberately (AGENTS.md).
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq pandoc lua5.4
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+
+      - name: Install Pandoc (pinned, same as the Windows/macOS jobs and .devcontainer)
+        # Not apt: Ubuntu's pandoc jumped from 3.1.3 to 3.7.0.2 in Nov 2026 and
+        # broke the landscape-tables tests. AGENTS.md: keep versions in sync.
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.1.3'
 
       - uses: actions/setup-dotnet@v4
         # Optional dependency: only used by scripts/oxml-validator/ (npm run
@@ -268,10 +273,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install Pandoc + Lua
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq pandoc lua5.4
+      - name: Install Lua
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+
+      - name: Install Pandoc (pinned, same as the Windows/macOS jobs and .devcontainer)
+        # Not apt: Ubuntu's pandoc jumped from 3.1.3 to 3.7.0.2 in Nov 2026 and
+        # broke the landscape-tables tests. AGENTS.md: keep versions in sync.
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.1.3'
       - name: Install LibreOffice headless
         # python3-uno: the .odt connector check drives LibreOffice through UNO.
         run: sudo apt-get install -y -qq libreoffice-writer libreoffice-impress python3-uno
