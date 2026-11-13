@@ -30,6 +30,7 @@
  *   extras).
  */
 
+import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import type { StateDiagram, StateNode, StateNodeKind } from './types.js';
 
 export interface StateDiagramParseResult {
@@ -82,7 +83,7 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
   let warnedFrontmatter = false;
   let warnedClassRef = false;
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const rawLine of splitLines(text).flatMap((l) => splitStatements(l))) {
     let line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
 
