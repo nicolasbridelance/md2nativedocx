@@ -29,7 +29,7 @@
   "dependencies": {
     "@md2nativedocx/cli": "0.2.0",
     "@md2nativedocx/core": "0.2.0",
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^4.6.7"
   }
 }

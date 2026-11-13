@@ -36,7 +36,7 @@ mock.module('node:child_process', {
   },
 });
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { ensurePandoc, getPlatformKey, sha256File, PANDOC_VERSION } = require('../../src/pandocProvisioner');
 
 test('a valid cached/pinned build wins over a PATH pandoc, not the other way around', async () => {

@@ -24,11 +24,12 @@
     "audit:gate": "node scripts/audit-gate.mjs"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-security": "^3.0.1",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "@typescript-eslint/eslint-plugin": "^8.72.2",
+    "@typescript-eslint/parser": "^8.72.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-security": "^4.2.1",
     "typescript": "^5.5.4"
   },
   "engines": {

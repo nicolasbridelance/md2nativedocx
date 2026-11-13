@@ -31,7 +31,7 @@ function loadPlanner(): PlanRendering | null {
   if (planRenderingFn !== undefined) return planRenderingFn;
   try {
     // Built next to extension.js by scripts/bundle-analysis.mjs; a plain require keeps it synchronous.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires -- CommonJS bundle loaded at runtime by path
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, security/detect-non-literal-require -- CommonJS bundle loaded at runtime; the path is join(__dirname, a constant), never user input
     planRenderingFn = (require(join(__dirname, 'analysis.cjs')) as { planRendering: PlanRendering }).planRendering;
   } catch {
     // Safe to swallow: the plan is an information aid; without it the CodeLens just shows the export action.

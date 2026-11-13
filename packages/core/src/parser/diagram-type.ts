@@ -110,20 +110,19 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
  */
 export function detectDiagramType(text: string): DiagramTypeInfo {
   let inFrontmatter = false;
-  let sawContent = false;
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
 
     // A leading `---` ... `---` YAML frontmatter block (`title:`/`config:`)
     // precedes the header in real Mermaid; skip it. Only honoured before any
-    // other content, so a stray `---` later is not misread as frontmatter.
-    if (line === '---' && (inFrontmatter || !sawContent)) {
+    // other content: the first non-frontmatter line always returns below, so a stray
+    // `---` later is never reached.
+    if (line === '---') {
       inFrontmatter = !inFrontmatter;
       continue;
     }
     if (inFrontmatter) continue;
-    sawContent = true;
 
     // `swimlane-beta` is an alias header, not a distinct diagram type — see
     // its handling in parser.ts's header regex for why.

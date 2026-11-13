@@ -13,6 +13,10 @@ updates:
       # Lift once typescript-eslint supports TS 7.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # vsce refuses to package when @types/vscode is newer than engines.vscode
+      # (packages/vscode-extension). Keep it aligned with the minimum supported
+      # VS Code; raising both is a product decision (drops older VS Code users).
+      - dependency-name: "@types/vscode"
 
   - package-ecosystem: github-actions
     directory: /

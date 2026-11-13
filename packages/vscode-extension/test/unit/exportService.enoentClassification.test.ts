@@ -35,7 +35,7 @@ mock.module('node:child_process', {
   },
 });
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { exportMermaidFile, PandocMissingError, PandocBlockedByPolicyError, ExportFailedError } = require('../../src/exportService');
 
 function withTempMmd(fn: (mmdPath: string) => Promise<void>): Promise<void> {
