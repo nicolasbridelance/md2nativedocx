@@ -104,7 +104,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 | R1.3 | fait | L'export d'un seul diagramme n'enregistre pas : il lit le tampon de l'éditeur, pas le disque. `doc.save()` non testé dans un VS Code réel. |
 | R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. |
 | R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
-| R1.6 | à faire | Release 0.8.1 + vérification manuelle du mainteneur (Windows + OneDrive) + `docs/history/incident-flux-arcs-2026-11.md`. |
+| R1.6 | préparé | Versions (extension 0.8.1, CLI 0.2.1, `mcp` aligné), CHANGELOG et brouillon `docs/history/incident-flux-arcs-2026-11.md` faits. **Reste au mainteneur** : vérification manuelle Windows + OneDrive (liste dans le rapport), puis merge de la PR, tag, publication npm (CLI 0.2.1) et Marketplace (0.8.1), et sortie de R1 de ce fichier. Rien n'est publié. |
 | R1.7 | à faire | Hors 0.8.1 : un seul classement des erreurs du validateur (CI et journal). |
 
 ### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)

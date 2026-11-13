@@ -5,6 +5,20 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-11-13
+
+### Fixed
+- **An export no longer overwrites a `.docx` that is open in Word.** If Word holds the file (or it cannot be
+  written), the export stops before writing anything, leaves the existing file untouched and offers
+  "Export as…". The result is otherwise written to a temporary file and swapped in, so a failed export never
+  leaves a truncated document.
+- The unsaved edits of the document are saved before an export, so the result matches what the editor shows.
+- A ```` ```mermaid ```` block that is never closed is now flagged (editor warning with a quick fix, and in the
+  export log). Before, everything from that block on was exported as plain text without any notice.
+- The Word compatibility check in the export log now says what it validated, part by part (your diagrams and
+  charts / the rest of the document, written by Pandoc), and also covers the diagrams drawn directly in the
+  document body, which it used to skip. It no longer claims that remaining notes have no effect on Word.
+
 ## [0.8.0] — 2026-10-08
 
 ### Added
