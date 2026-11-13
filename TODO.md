@@ -86,6 +86,11 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       - avertissement à l'export, et diagnostic `DiagnosticCollection` dans l'éditeur avec un Quick
         Fix « ajouter ```` ``` ```` » ;
       - côté CLI, détection équivalente avant Pandoc, avec un avertissement dans le journal.
+- [ ] **R1.7 (suite de R1.4, hors release 0.8.1) Un seul classement des erreurs du validateur.**
+      `scripts/test-oxml-validate.mjs` (`isOwnDiagramOutput`) garde son propre filtre, déjà plus large que
+      l'ancien filtre du CLI mais distinct de `classifyValidatorErrors` (`packages/cli/src/wordCheck.mjs`).
+      Le brancher dessus pour que CI et journal classent pareil, et que `test:oxml-validate` distingue aussi
+      les écarts Pandoc connus des erreurs « autres » au lieu de les compter en bloc.
 - [ ] **R1.6 Release.** Extension 0.8.1 et CLI en patch. Vérification manuelle par le mainteneur sur
       son poste Windows + OneDrive : export pendant que le `.docx` est ouvert dans Word → message, pas
       de plantage. Rédiger alors `docs/history/incident-flux-arcs-2026-11.md` et faire sortir R1 d'ici.
