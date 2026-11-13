@@ -67,9 +67,9 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
         utilisable : « X.docx est ouvert dans Word : fermez-le ou exportez sous un autre nom ».
       - Tests : verrou présent → refus et cible intacte au même octet près ; réussite → aucun `.tmp`
         laissé ; échec de `rename` simulé → cible intacte.
-- [ ] **R1.2 Extension : notification claire** quand le CLI renvoie l'erreur `write`, avec un bouton
+- [x] **R1.2 Extension : notification claire** quand le CLI renvoie l'erreur `write`, avec un bouton
       « Exporter sous… ». Aujourd'hui l'erreur ne serait visible que dans le canal de sortie.
-- [ ] **R1.3 Enregistrer avant d'exporter.** Dans l'export du document et l'export multi-fichiers, si
+- [x] **R1.3 Enregistrer avant d'exporter.** Dans l'export du document et l'export multi-fichiers, si
       un `TextDocument` ouvert correspond au fichier et `isDirty`, faire `await doc.save()` avant de
       lancer le CLI. (Choisi plutôt que d'exporter `getText()` : Pandoc résout images et chemins
       relatifs depuis le disque.)

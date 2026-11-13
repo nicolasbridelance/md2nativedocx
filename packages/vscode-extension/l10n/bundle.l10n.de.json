@@ -138,5 +138,7 @@
   "SmartArt — timeline": "SmartArt — Zeitachse",
   "Not kept as SmartArt: the title, which becomes a bold paragraph above.": "Nicht als SmartArt erhalten: der Titel, der zu einem fetten Absatz darüber wird.",
   "In SmartArt, each score is shown as stars (★★★★☆); the title becomes a bold paragraph above.": "Im SmartArt wird jede Bewertung als Sterne dargestellt (★★★★☆); der Titel wird zu einem fetten Absatz darüber.",
-  "SmartArt — grouped list": "SmartArt — gruppierte Liste"
+  "SmartArt — grouped list": "SmartArt — gruppierte Liste",
+  "{0} is open in Word (or locked): close it, or export under another name.": "{0} ist in Word geöffnet (oder gesperrt): Schließen Sie die Datei oder exportieren Sie unter einem anderen Namen.",
+  "Export as…": "Exportieren unter…"
 }
