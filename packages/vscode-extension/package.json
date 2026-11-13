@@ -586,11 +586,11 @@
     "publish": "npm run build && npm run bundle && vsce publish --no-dependencies --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/vscode": "^1.85.0",
+    "@types/node": "^26.6.6",
+    "@types/vscode": "^1.145.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
-    "@vscode/vsce": "^3.9.2",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.28.2",
     "typescript": "^5.5.4"
   },
