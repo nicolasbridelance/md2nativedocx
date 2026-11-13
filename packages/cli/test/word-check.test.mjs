@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,8 +69,15 @@ test('R1.4: a deliberately broken wpc canvas is reported as a diagram error', (t
   const buildDir = mkdtempSync(join(tmpdir(), 'wc-build-'));
   const dir = mkdtempSync(join(tmpdir(), 'wc-'));
   try {
-    execFileSync('dotnet', ['publish', join(here, '..', '..', '..', 'scripts', 'oxml-validator'), '--no-self-contained', '-c', 'Release', '-o', buildDir, '-p:UseAppHost=false'], { stdio: 'pipe' });
-    const dll = join(buildDir, 'oxmlvalidator.dll');
+    // Publish from a private copy: other test files publish this same project in parallel, and two
+    // builds sharing one obj/ folder collide.
+    const srcDir = join(buildDir, 'src');
+    mkdirSync(srcDir);
+    const validatorDir = join(here, '..', '..', '..', 'scripts', 'oxml-validator');
+    for (const f of ['oxmlvalidator.csproj', 'OpenXmlValidator.cs']) copyFileSync(join(validatorDir, f), join(srcDir, f));
+    const publish = spawnSync('dotnet', ['publish', srcDir, '--no-self-contained', '-c', 'Release', '-o', join(buildDir, 'out'), '-p:UseAppHost=false'], { encoding: 'utf8' });
+    assert.equal(publish.status, 0, `dotnet publish failed:\n${publish.stdout}\n${publish.stderr}`);
+    const dll = join(buildDir, 'out', 'oxmlvalidator.dll');
     assert.ok(existsSync(dll));
     const env = { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_OXML_VALIDATOR_DLL: dll };
     const md = join(dir, 'doc.md');
