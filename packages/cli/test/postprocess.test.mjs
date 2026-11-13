@@ -208,16 +208,16 @@ test('replaces placeholders with real rIds and adds the 4 parts/relationships/co
     const docx = join(dir, 'chain.docx');
     const documentXml =
       '<w:document><w:body><w:p><w:r><w:drawing>' +
-      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:abc:dm" r:lo="SMARTART_PLACEHOLDER:abc:lo" ' +
-      'r:qs="SMARTART_PLACEHOLDER:abc:qs" r:cs="SMARTART_PLACEHOLDER:abc:cs"/>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:11111111-1111-4111-8111-111111111111:dm" r:lo="SMARTART_PLACEHOLDER:11111111-1111-4111-8111-111111111111:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:11111111-1111-4111-8111-111111111111:qs" r:cs="SMARTART_PLACEHOLDER:11111111-1111-4111-8111-111111111111:cs"/>' +
       '</w:drawing></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
 
     const smartArtDir = join(dir, 'smartart');
-    writeSmartArtPart(smartArtDir, 'abc', 'data.xml', '<dgm:dataModel>DATA</dgm:dataModel>');
-    writeSmartArtPart(smartArtDir, 'abc', 'layout.xml', '<dgm:layoutDef>LAYOUT</dgm:layoutDef>');
-    writeSmartArtPart(smartArtDir, 'abc', 'colors.xml', '<dgm:colorsDef>COLORS</dgm:colorsDef>');
-    writeSmartArtPart(smartArtDir, 'abc', 'quickStyle.xml', '<dgm:styleDef>STYLE</dgm:styleDef>');
+    writeSmartArtPart(smartArtDir, '11111111-1111-4111-8111-111111111111', 'data.xml', '<dgm:dataModel>DATA</dgm:dataModel>');
+    writeSmartArtPart(smartArtDir, '11111111-1111-4111-8111-111111111111', 'layout.xml', '<dgm:layoutDef>LAYOUT</dgm:layoutDef>');
+    writeSmartArtPart(smartArtDir, '11111111-1111-4111-8111-111111111111', 'colors.xml', '<dgm:colorsDef>COLORS</dgm:colorsDef>');
+    writeSmartArtPart(smartArtDir, '11111111-1111-4111-8111-111111111111', 'quickStyle.xml', '<dgm:styleDef>STYLE</dgm:styleDef>');
 
     injectSmartArtParts(docx, smartArtDir);
 
@@ -257,8 +257,8 @@ test('numbers new parts past any diagram already in the archive (no collision)',
     const docx = join(dir, 'existing.docx');
     const documentXml =
       '<w:document><w:body><w:p><w:r><w:drawing>' +
-      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:xyz:dm" r:lo="SMARTART_PLACEHOLDER:xyz:lo" ' +
-      'r:qs="SMARTART_PLACEHOLDER:xyz:qs" r:cs="SMARTART_PLACEHOLDER:xyz:cs"/>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:22222222-2222-4222-8222-222222222222:dm" r:lo="SMARTART_PLACEHOLDER:22222222-2222-4222-8222-222222222222:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:22222222-2222-4222-8222-222222222222:qs" r:cs="SMARTART_PLACEHOLDER:22222222-2222-4222-8222-222222222222:cs"/>' +
       '</w:drawing></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
     // Simulate a diagram that already occupies number 1, added out of band
@@ -273,10 +273,10 @@ test('numbers new parts past any diagram already in the archive (no collision)',
     }
 
     const smartArtDir = join(dir, 'smartart');
-    writeSmartArtPart(smartArtDir, 'xyz', 'data.xml', '<dgm:dataModel>NEW</dgm:dataModel>');
-    writeSmartArtPart(smartArtDir, 'xyz', 'layout.xml', '<dgm:layoutDef/>');
-    writeSmartArtPart(smartArtDir, 'xyz', 'colors.xml', '<dgm:colorsDef/>');
-    writeSmartArtPart(smartArtDir, 'xyz', 'quickStyle.xml', '<dgm:styleDef/>');
+    writeSmartArtPart(smartArtDir, '22222222-2222-4222-8222-222222222222', 'data.xml', '<dgm:dataModel>NEW</dgm:dataModel>');
+    writeSmartArtPart(smartArtDir, '22222222-2222-4222-8222-222222222222', 'layout.xml', '<dgm:layoutDef/>');
+    writeSmartArtPart(smartArtDir, '22222222-2222-4222-8222-222222222222', 'colors.xml', '<dgm:colorsDef/>');
+    writeSmartArtPart(smartArtDir, '22222222-2222-4222-8222-222222222222', 'quickStyle.xml', '<dgm:styleDef/>');
 
     injectSmartArtParts(docx, smartArtDir);
 
@@ -288,16 +288,40 @@ test('numbers new parts past any diagram already in the archive (no collision)',
   });
 });
 
-test('throws a clear error when a placeholder has no matching directory in smartArtDir', () => {
+test('a well-formed id with no directory in smartArtDir is ignored, never an error (prose look-alike)', () => {
   withTempFiles((dir) => {
     const docx = join(dir, 'orphan.docx');
     const documentXml =
-      '<w:document><w:body><w:p><w:r><w:drawing>' +
-      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:missing:dm" r:lo="SMARTART_PLACEHOLDER:missing:lo" ' +
-      'r:qs="SMARTART_PLACEHOLDER:missing:qs" r:cs="SMARTART_PLACEHOLDER:missing:cs"/>' +
-      '</w:drawing></w:r></w:p></w:body></w:document>';
+      '<w:document><w:body><w:p><w:r><w:t>SMARTART_PLACEHOLDER:33333333-3333-4333-8333-333333333333:dm</w:t></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
-    assert.throws(() => injectSmartArtParts(docx, join(dir, 'smartart')), /no SmartArt parts found/);
+    mkdirSync(join(dir, 'smartart'), { recursive: true });
+    const before = readFileSync(docx);
+    injectSmartArtParts(docx, join(dir, 'smartart'));
+    assert.deepEqual(readFileSync(docx), before, 'the document is left untouched');
+  });
+});
+
+test('injection: prose that looks like a marker never reaches the file system', () => {
+  withTempFiles((dir) => {
+    const smartArtDir = join(dir, 'smartart');
+    mkdirSync(smartArtDir, { recursive: true });
+    // A directory outside smartArtDir that a traversal id would reach.
+    mkdirSync(join(dir, 'x'), { recursive: true });
+    for (const name of ['data.xml', 'layout.xml', 'colors.xml', 'quickStyle.xml']) {
+      writeFileSync(join(dir, 'x', name), '<stolen/>', 'utf8');
+    }
+    const hostile = [
+      'SMARTART_PLACEHOLDER:../x:dm',
+      'SMARTART_PLACEHOLDER:../../x:dm',
+      'SMARTART_PLACEHOLDER:/etc:dm',
+      'SMARTART_PLACEHOLDER:..%2Fx:dm',
+      'SMARTART_PLACEHOLDER:abc:dm',
+    ].join(' ');
+    const docx = join(dir, 'prose.docx');
+    buildMinimalDocx(docx, `<w:document><w:body><w:p><w:r><w:t>${hostile}</w:t></w:r></w:p></w:body></w:document>`);
+    const before = readFileSync(docx);
+    injectSmartArtParts(docx, smartArtDir);
+    assert.deepEqual(readFileSync(docx), before);
   });
 });
 

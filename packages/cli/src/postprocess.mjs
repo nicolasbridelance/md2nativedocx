@@ -43,6 +43,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { patchSettings } from './referenceDocBuilder.mjs';
 import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
+import { UUID_PATTERN, existingPartIds } from './partIds.mjs';
 
 /** Extended namespaces Word declares on the document root, prefix -> URI. */
 const EXTENDED_NS = {
@@ -465,7 +466,7 @@ export function postProcessDocx(docxPath, { toc = false, emojiFont = true } = {}
 // hex+dashes in practice) -- matched as "anything but the ':' delimiter"
 // rather than assuming that specific alphabet, so this isn't silently
 // fragile against a different id scheme later.
-const SMARTART_PLACEHOLDER_RE = /SMARTART_PLACEHOLDER:([^:]+):(dm|lo|qs|cs)/g;
+const SMARTART_PLACEHOLDER_RE = new RegExp(`SMARTART_PLACEHOLDER:(${UUID_PATTERN}):(dm|lo|qs|cs)`, 'g');
 
 const SMARTART_RELTYPE = {
   dm: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/diagramData',
@@ -537,14 +538,17 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
   const zip = new AdmZip(archive);
   let documentXml = readZipEntry(zip, 'word/document.xml');
 
-  const ids = findSmartArtPlaceholderIds(documentXml);
-  if (ids.length === 0) return;
+  const candidates = findSmartArtPlaceholderIds(documentXml);
+  if (candidates.length === 0) return;
 
   if (!smartArtDir) {
     throw new Error(
       'md2nativedocx: document.xml references SmartArt placeholders but no smartArtDir was given'
     );
   }
+  // Only ids the bridge really wrote: a look-alike in the document's prose is left as text.
+  const ids = existingPartIds(candidates, smartArtDir);
+  if (ids.length === 0) return;
 
   let contentTypes = readZipEntry(zip, '[Content_Types].xml');
   let relsXml = readZipEntry(zip, 'word/_rels/document.xml.rels');
@@ -554,9 +558,6 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
 
   for (const id of ids) {
     const sourceDir = join(smartArtDir, id);
-    if (!existsSync(sourceDir)) {
-      throw new Error(`md2nativedocx: no SmartArt parts found for diagram "${id}" in ${smartArtDir}`);
-    }
 
     const n = nextPartNumber++;
 
