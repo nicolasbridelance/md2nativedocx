@@ -200,17 +200,26 @@ function runSuite(sofficeBin, workDir, { label, fixtures, format, baselineDir })
     const baseline = decodePng(readFileSync(baselinePng));
     const rendered = decodePng(readFileSync(renderedPng));
     const diff = diffImages(baseline, rendered);
+    const keepFailure = () => {
+      // CI sets this so the rendered PNG of a failing fixture outlives the temp dir (uploaded as an artifact).
+      const dir = process.env.MD2NATIVEDOCX_VISUAL_FAILURE_DIR;
+      if (!dir) return;
+      mkdirSync(dir, { recursive: true });
+      copyFileSync(renderedPng, join(dir, `${tag.replace(/[^\w.-]+/g, '_')}.png`));
+    };
     if (!diff.equalDimensions) {
       console.error(
         `✖ ${tag}: dimensions changed (baseline ${baseline.width}x${baseline.height}, ` +
           `rendered ${rendered.width}x${rendered.height})`,
       );
+      keepFailure();
       failures++;
     } else if (diff.diffFraction > DIFF_THRESHOLD) {
       console.error(
         `✖ ${tag}: ${(diff.diffFraction * 100).toFixed(2)}% of pixels differ ` +
           `(threshold ${(DIFF_THRESHOLD * 100).toFixed(2)}%). Rendered: ${renderedPng}`,
       );
+      keepFailure();
       failures++;
     } else {
       console.log(`✔ ${tag}: ${(diff.diffFraction * 100).toFixed(3)}% pixels differ`);

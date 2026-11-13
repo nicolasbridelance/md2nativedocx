@@ -31,7 +31,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
 
 tarball="LibreOffice_${VERSION}_Linux_x86-64_deb.tar.gz"
-curl -fsSL "https://download.documentfoundation.org/libreoffice/stable/${VERSION}/deb/x86_64/${tarball}" \
+curl -fsSL --retry 4 --retry-delay 5 --retry-all-errors "https://download.documentfoundation.org/libreoffice/stable/${VERSION}/deb/x86_64/${tarball}" \
   -o "${work}/${tarball}"
 echo "${SHA256}  ${work}/${tarball}" | sha256sum -c -
 
