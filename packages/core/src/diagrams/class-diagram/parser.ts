@@ -33,6 +33,7 @@
  * the AST — only cosmetic extras a first version can safely leave out.
  */
 
+import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
 
 export interface ClassDiagramParseResult {
@@ -111,7 +112,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   let warnedNamespace = false;
   let warnedAnnotation = false;
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const rawLine of splitLines(text).flatMap((l) => splitStatements(l))) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
     if (/^classDiagram\b/i.test(line)) continue;

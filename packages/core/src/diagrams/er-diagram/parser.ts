@@ -22,6 +22,7 @@
  *   guessed.
  */
 
+import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import type { ErAttribute, ErCardinality, ErDiagram, ErEntity } from './types.js';
 
 export interface ErDiagramParseResult {
@@ -89,7 +90,7 @@ export function parseErDiagram(text: string): ErDiagramParseResult {
     return entity;
   }
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const rawLine of splitLines(text).flatMap((l) => splitStatements(l, { brackets: false }))) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
     if (/^erDiagram\b/i.test(line)) continue;

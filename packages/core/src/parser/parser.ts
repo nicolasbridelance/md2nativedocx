@@ -9,6 +9,7 @@
  * emits XML itself — escaping happens in the translator.
  */
 
+import { splitLines, splitStatements } from './normalize-statements.js';
 import type {
   EdgeType,
   FlowEdge,
@@ -620,7 +621,7 @@ export function parseMermaid(text: string): ParseResult {
 
   let direction: 'TD' | 'LR' | 'BT' | 'RL' = 'TD';
 
-  const lines = joinBracketContinuations(text.split(/\r?\n/));
+  const lines = joinBracketContinuations(splitLines(text)).flatMap((l) => splitStatements(l));
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
