@@ -262,11 +262,38 @@ jobs:
 
   # Visual-regression tests need LibreOffice headless and are slower; run them
   # on a schedule and on release branches rather than every PR. This trade-off
-  # is explicit: see AGENTS.md → CI/CD.
+  # is explicit: see AGENTS.md → CI/CD. Exception: a PR that touches the visual
+  # job's own infrastructure (this workflow, the runner script, the pinned
+  # LibreOffice installer, the visual corpus) runs it too, so that a change to
+  # the job is validated by the job itself instead of by a manual dispatch.
+  visual-scope:
+    name: Visual job scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          run=false
+          if [ "${EVENT}" = "pull_request" ]; then
+            if git diff --name-only "origin/${BASE_REF}...HEAD" \
+              | grep -qE '^(\.github/workflows/ci\.yml|scripts/test-visual\.mjs|scripts/lib/|scripts/install-libreoffice-pinned\.sh|test-corpus/visual/)'; then
+              run=true
+            fi
+          fi
+          echo "run=${run}" >> "$GITHUB_OUTPUT"
+
   visual:
     name: Visual regression (LibreOffice headless)
+    needs: visual-scope
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/')
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/') || needs.visual-scope.outputs.run == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
