@@ -500,7 +500,7 @@ test('Word compatibility check: reports 0 errors for a clean export when dotnet 
     });
     assert.equal(code, 0, out);
     const log = readFileSync(join(dir, 'doc.log'), 'utf8');
-    assert.match(log, /--- Word compatibility check ---\n0 error\(s\)/);
+    assert.match(log, /--- Word compatibility check ---\nDiagrams and charts \(written by md2nativedocx\): no schema error found/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(buildDir, { recursive: true, force: true });

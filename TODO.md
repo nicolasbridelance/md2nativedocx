@@ -73,7 +73,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       un `TextDocument` ouvert correspond au fichier et `isDirty`, faire `await doc.save()` avant de
       lancer le CLI. (Choisi plutôt que d'exporter `getText()` : Pandoc résout images et chemins
       relatifs depuis le disque.)
-- [ ] **R1.4 Contrôle Word honnête.** Classer chaque erreur du validateur :
+- [x] **R1.4 Contrôle Word honnête.** Classer chaque erreur du validateur :
       - **les nôtres** : `/word/diagrams/*`, `/word/charts/*`, `/word/document.xml` ;
       - **connues de Pandoc** : liste fermée de signatures relevées le 2026-11-13 (styles `*Tok` →
         `w:rPr`, `w:nsid` de `numbering.xml`, `doNotTrackMoves`), liée à la version de Pandoc ;
