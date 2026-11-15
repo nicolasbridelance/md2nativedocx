@@ -104,7 +104,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 | R1.3 | fait | L'export d'un seul diagramme n'enregistre pas : il lit le tampon de l'éditeur, pas le disque. `doc.save()` non testé dans un VS Code réel. |
 | R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. Le test `wpc` publie le validateur depuis une copie privée : le premier essai a échoué sur le runner Windows, vraisemblablement un conflit de `obj/` avec l'autre test qui publie le même projet en parallèle (cause non confirmée par les journaux ; corrigé, CI verte). |
 | R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
-| R1.6 | partiel | PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm non publié** : demande un OTP, et `@md2nativedocx/cli` 0.2.1 dépend de `pandoc-filter` 0.2.0 et `pptx` 0.1.1, absents de npm (publié : 0.1.0 pour core, pandoc-filter, cli, pptx), donc publier le CLI seul donnerait un paquet non installable. À faire : publier core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1 puis cli 0.2.1 (avec OTP), faire la vérification manuelle, compléter le rapport d'incident, sortir R1 de ce fichier. |
+| R1.6 | partiel | PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm publié le 2026-11-15** par publication de confiance (OIDC, PR #25/#26/#29) : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 (relevé par `npm view` le 2026-11-15). Reste : la vérification manuelle Windows + OneDrive (cases de `docs/history/incident-flux-arcs-2026-11.md`), puis sortir R1 de ce fichier. |
 | R1.7 | à faire | Hors 0.8.1 : un seul classement des erreurs du validateur (CI et journal). |
 
 #### Publication npm par publication de confiance (décidé le 2026-11-13)
@@ -114,10 +114,10 @@ Le jeton `NPM_TOKEN` du `.env` exige un OTP, et npm retire l'option « bypass 2F
 résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la **publication de confiance
 (OIDC)** : `.github/workflows/publish.yml`, déclenchement manuel, environnement GitHub `npm-publish`
 (sans relecteur : mainteneur solo, publication automatisée ; garde-fou = règle de déploiement « branche `main` uniquement »). Aucun jeton npm nulle part.
-- [ ] Mainteneur : configurer l'éditeur de confiance sur npmjs.com pour les 4 paquets (owner
+- [x] Mainteneur : éditeur de confiance configuré sur npmjs.com pour les 4 paquets (owner
       `nicolasbridelance`, repo `md2nativedocx`, workflow `publish.yml`, environnement `npm-publish`).
-- [ ] Mainteneur : créer l'environnement `npm-publish` (Settings → Environments), sans relecteur, avec « Selected branches and tags » = `main`.
-- [ ] Lancer le workflow en dry run, puis pour de vrai : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1.
+- [x] Mainteneur : environnement `npm-publish` créé, sans relecteur, « Selected branches and tags » = `main`.
+- [x] Workflow lancé : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 publiés (2026-11-15).
 - [ ] Ensuite : « Require two-factor authentication and disallow bypass 2fa tokens » sur les 4 paquets, et
       révoquer le jeton classique de `.env`.
 

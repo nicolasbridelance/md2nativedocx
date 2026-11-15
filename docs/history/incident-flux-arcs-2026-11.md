@@ -37,6 +37,10 @@ les « 13 erreurs du template maison » viennent toutes de Pandoc 3.1.3 ; le sty
 | R1.4 | Contrôle Word classé par partie (nos diagrammes / écarts connus de Pandoc / autres) ; le canevas `wpc` du corps du document n'est plus un angle mort ; plus d'affirmation sur l'effet dans Word. |
 | R1.5 | Bloc ```` ```mermaid ```` non fermé signalé (journal du CLI, diagnostic et Quick Fix dans l'éditeur). |
 
+Publication : extension 0.8.1 sur le Marketplace le 2026-11-13 (avant la vérification manuelle, décision du
+mainteneur) ; paquets npm core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1 et cli 0.2.1 le 2026-11-15, par
+publication de confiance (OIDC).
+
 Suites : R2 à R5 (TODO §R). Limites connues des lots R1 : journal de R1 dans TODO.md.
 
 ## Vérification
