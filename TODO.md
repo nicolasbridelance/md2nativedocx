@@ -152,7 +152,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
         projet lui-même.
       - Le manifeste hors bande proposé par les analyses change le contrat de `renderDiagram()` :
         **escalade**, pas dans ce lot.
-- [ ] **R3.2 Caractères interdits en XML 1.0** (`\x00-\x08`, `\x0B`, `\x0C`, `\x0E-\x1F`, demi-paires
+- [x] **R3.2 Caractères interdits en XML 1.0** *(fait 2026-11-15 : `escapeXml` du core, PR #35, et `esc` de `chartParts.mjs` ; les `escapeAttr` du pptx ne traitent que du XML déjà analysé, non modifiés)* (`\x00-\x08`, `\x0B`, `\x0C`, `\x0E-\x1F`, demi-paires
       UTF-16 isolées, `￾`, `￿`) remplacés par U+FFFD dans `escapeXml`. Vérifier qu'aucun
       autre point d'écriture ne contourne `escapeXml` (`esc` de `chartParts.mjs`, `pptx`, ODF).
       Ajouter à `test:fuzz` une propriété : toute chaîne JS dans une étiquette donne un XML bien

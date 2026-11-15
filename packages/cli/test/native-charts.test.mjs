@@ -68,6 +68,11 @@ test('the workbook builder escapes labels, writes numbers as numbers, and reject
   assert.throws(() => buildWorkbookXlsx({ sheetName: 'S', header: ['a', 'b'], rows: [['x', Number.NaN]] }), /finite/);
 });
 
+test('the workbook builder replaces characters forbidden in XML 1.0 with U+FFFD (R3.2)', () => {
+  const xlsx = new AdmZip(buildWorkbookXlsx({ sheetName: 'Sheet1', header: ['Category', 'Value'], rows: [['ab�c￿d	e', 1]] }));
+  assert.match(xlsx.readAsText('xl/worksheets/sheet1.xml'), /a�b�c�d	e/);
+});
+
 test('xychart and radar become native charts too; an unconvertible one falls back to shapes with a warning', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-chart-test-'));
   try {
