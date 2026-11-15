@@ -86,7 +86,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       - avertissement à l'export, et diagnostic `DiagnosticCollection` dans l'éditeur avec un Quick
         Fix « ajouter ```` ``` ```` » ;
       - côté CLI, détection équivalente avant Pandoc, avec un avertissement dans le journal.
-- [ ] **R1.7 (suite de R1.4, hors release 0.8.1) Un seul classement des erreurs du validateur.**
+- [x] **R1.7 (suite de R1.4, hors release 0.8.1) Un seul classement des erreurs du validateur.** *(fait 2026-11-15 : `test:oxml-validate` utilise `classifyValidatorErrors` ; mesuré : 0 erreur de notre fait, 0 non classée, 598 écarts Pandoc 3.1.3 connus ; les erreurs « autres » sont affichées sans faire échouer le test)*
       `scripts/test-oxml-validate.mjs` (`isOwnDiagramOutput`) garde son propre filtre, déjà plus large que
       l'ancien filtre du CLI mais distinct de `classifyValidatorErrors` (`packages/cli/src/wordCheck.mjs`).
       Le brancher dessus pour que CI et journal classent pareil, et que `test:oxml-validate` distingue aussi
@@ -105,7 +105,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 | R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. Le test `wpc` publie le validateur depuis une copie privée : le premier essai a échoué sur le runner Windows, vraisemblablement un conflit de `obj/` avec l'autre test qui publie le même projet en parallèle (cause non confirmée par les journaux ; corrigé, CI verte). |
 | R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
 | R1.6 | partiel | PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm publié le 2026-11-15** par publication de confiance (OIDC, PR #25/#26/#29) : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 (relevé par `npm view` le 2026-11-15). Reste : la vérification manuelle Windows + OneDrive (cases de `docs/history/incident-flux-arcs-2026-11.md`), puis sortir R1 de ce fichier. |
-| R1.7 | à faire | Hors 0.8.1 : un seul classement des erreurs du validateur (CI et journal). |
+| R1.7 | fait | Un seul classement (CI et journal). Les erreurs non classées ne font pas échouer `test:oxml-validate` (choix prudent, à durcir si le bruit Pandoc reste stable). |
 
 #### Publication npm par publication de confiance (décidé le 2026-11-13)
 

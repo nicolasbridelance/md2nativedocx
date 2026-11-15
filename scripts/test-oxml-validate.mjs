@@ -34,6 +34,7 @@ import { writeFileSync, readFileSync, mkdtempSync, rmSync, readdirSync } from 'n
 import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { classifyValidatorErrors, PANDOC_SIGNATURES_VERSION as PANDOC_VERSION_LABEL } from '../packages/cli/src/wordCheck.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..');
@@ -118,8 +119,8 @@ function buildDocx(workDir, name, mermaid, { smartArt, nativeCharts = false, sma
   return docxPath;
 }
 
-/** Run the validator against one `.docx`, returning `{ diagramErrors,
- * otherErrors }` (each an array of `{part, path, description}`). */
+/** Run the validator against one file, returning `{ diagramErrors, pandocErrors, otherErrors }` (each an
+ * array of `{Part, Path, Description}`). */
 function validate(docxPath) {
   let stdout;
   try {
@@ -135,20 +136,15 @@ function validate(docxPath) {
     if (!stdout) throw err;
   }
   const report = JSON.parse(stdout.trim().split('\n').pop());
-  // "This project's own diagram output" isn't only SmartArt's separate
-  // `word/diagrams/*.xml` parts — the plain (non-SmartArt) OOXML canvas
-  // (`wpc:wpc`/`wps:`/flowchart, quadrant, venn, mindmap alike) is inlined
-  // straight into `word/document.xml` instead. A real bug (2026-09-06:
-  // quadrant/venn/mindmap writing DrawingML-shorthand alignment codes into
-  // a WordprocessingML `w:jc`, corrupting the file for real Word) lived
-  // entirely inside a `wpc:wpc` element and would have been silently
-  // bucketed as "known Pandoc noise" by a `/word/diagrams/`-only filter —
-  // exactly the class of regression this widened check exists to catch.
-  const isOwnDiagramOutput = (e) =>
-    e.Part?.startsWith('/word/diagrams/') || e.Part?.startsWith('/word/charts/') || e.Path?.includes('wpc:wpc');
-  const diagramErrors = report.errors.filter(isOwnDiagramOutput);
-  const otherErrors = report.errors.filter((e) => !isOwnDiagramOutput(e));
-  return { diagramErrors, otherErrors };
+  // One classifier for CI and for the CLI's Word check (packages/cli/src/wordCheck.mjs, R1.7): own output
+  // (diagram, chart and workbook parts, and the drawing elements inside document.xml: a bug there, such
+  // as the 2026-09-06 `w:jc` shorthand codes, must never be bucketed as Pandoc noise), the closed list of
+  // known Pandoc 3.1.3 gaps, and everything else.
+  const { own, pandoc, other } = classifyValidatorErrors(report.errors);
+  const diagramErrors = own;
+  const pandocErrors = pandoc;
+  const otherErrors = other;
+  return { diagramErrors, pandocErrors, otherErrors };
 }
 
 function main() {
@@ -162,13 +158,15 @@ function main() {
 
   const workDir = mkdtempSync(join(tmpdir(), 'md2nativedocx-oxml-'));
   let failures = 0;
-  let knownOtherErrorTotal = 0;
+  let knownOtherErrorTotal = 0; // Pandoc's known gaps, tolerated
+  const unclassified = []; // neither ours nor a known Pandoc gap: reported, not failed on
 
   try {
     for (const { name, mermaid } of SMARTART_FIXTURES) {
       const docxPath = buildDocx(workDir, name, mermaid, { smartArt: true });
-      const { diagramErrors, otherErrors } = validate(docxPath);
-      knownOtherErrorTotal += otherErrors.length;
+      const { diagramErrors, pandocErrors, otherErrors } = validate(docxPath);
+      knownOtherErrorTotal += pandocErrors.length;
+      unclassified.push(...otherErrors.map((e) => ({ file: basename(docxPath), ...e })));
       if (diagramErrors.length > 0) {
         failures++;
         console.error(`✖ ${name}: ${diagramErrors.length} schema error(s) under word/diagrams/`);
@@ -176,7 +174,7 @@ function main() {
           console.error(`    ${e.Path}: ${e.Description}`);
         }
       } else {
-        console.log(`✔ ${name}: 0 schema errors under word/diagrams/ (${otherErrors.length} pre-existing, tracked separately)`);
+        console.log(`✔ ${name}: 0 schema errors under word/diagrams/ (${pandocErrors.length} known Pandoc, ${otherErrors.length} unclassified)`);
       }
     }
 
@@ -187,8 +185,9 @@ function main() {
         const label = `${name}+drawing+${style}`;
         const docxPath = buildDocx(workDir, `${name}-drawing-${style}`, mermaid, { smartArt: true, smartArtDrawing: true, smartArtStyle: style });
         const hasDrawing = new AdmZip(docxPath).getEntries().some((e) => /^word\/diagrams\/drawing\d+\.xml$/.test(e.entryName));
-        const { diagramErrors, otherErrors } = validate(docxPath);
-        knownOtherErrorTotal += otherErrors.length;
+        const { diagramErrors, pandocErrors, otherErrors } = validate(docxPath);
+        knownOtherErrorTotal += pandocErrors.length;
+        unclassified.push(...otherErrors.map((e) => ({ file: basename(docxPath), ...e })));
         if (!hasDrawing || diagramErrors.length > 0) {
           failures++;
           console.error(`✖ ${label}: drawing part ${hasDrawing ? 'present' : 'MISSING'}, ${diagramErrors.length} schema error(s) under word/diagrams/`);
@@ -204,8 +203,9 @@ function main() {
       if (!availablePlainFixtures.has(name)) continue;
       const mermaid = readFixtureSource(visualFixturesDir, name);
       const docxPath = buildDocx(workDir, `oxml-plain-${name}`, mermaid, { smartArt: false });
-      const { diagramErrors, otherErrors } = validate(docxPath);
-      knownOtherErrorTotal += otherErrors.length;
+      const { diagramErrors, pandocErrors, otherErrors } = validate(docxPath);
+      knownOtherErrorTotal += pandocErrors.length;
+      unclassified.push(...otherErrors.map((e) => ({ file: basename(docxPath), ...e })));
       if (diagramErrors.length > 0) {
         failures++;
         console.error(`✖ oxml-plain-${name}: ${diagramErrors.length} schema error(s) under word/diagrams/`);
@@ -227,14 +227,15 @@ function main() {
       const zip = new AdmZip(docxPath);
       const workbook = zip.getEntries().find((e) => /^word\/embeddings\/.*\.xlsx$/.test(e.entryName));
       const chartPart = zip.getEntry('word/charts/chart1.xml');
-      const { diagramErrors, otherErrors } = validate(docxPath);
-      knownOtherErrorTotal += otherErrors.length;
+      const { diagramErrors, pandocErrors, otherErrors } = validate(docxPath);
+      knownOtherErrorTotal += pandocErrors.length;
+      unclassified.push(...otherErrors.map((e) => ({ file: basename(docxPath), ...e })));
       let workbookErrors = [];
       if (workbook) {
         const xlsxPath = join(workDir, `${label}-workbook.xlsx`);
         writeFileSync(xlsxPath, workbook.getData());
         const result = validate(xlsxPath);
-        workbookErrors = [...result.diagramErrors, ...result.otherErrors];
+        workbookErrors = [...result.diagramErrors, ...result.pandocErrors, ...result.otherErrors];
       }
       if (!chartPart || !workbook || diagramErrors.length > 0 || workbookErrors.length > 0) {
         failures++;
@@ -260,7 +261,7 @@ function main() {
     writeFileSync(deckMdPath, deckMd);
     execFileSync('node', [cli, deckMdPath, '-o', deckPath], { stdio: 'pipe' });
     const deck = validate(deckPath);
-    const deckErrors = [...deck.diagramErrors, ...deck.otherErrors];
+    const deckErrors = [...deck.diagramErrors, ...deck.pandocErrors, ...deck.otherErrors];
     if (deckErrors.length > 0) {
       failures++;
       console.error(`✖ oxml-pptx-all: ${deckErrors.length} schema error(s)`);
@@ -275,9 +276,13 @@ function main() {
 
   if (knownOtherErrorTotal > 0) {
     console.log(
-      `test:oxml-validate: ${knownOtherErrorTotal} pre-existing schema error(s) outside word/diagrams/ ` +
-        `(Pandoc's own .docx writer, not this project — see TODO.md).`,
+      `test:oxml-validate: ${knownOtherErrorTotal} known Pandoc ${PANDOC_VERSION_LABEL} schema error(s) ` +
+        `(its own .docx writer, not this project; closed list in packages/cli/src/wordCheck.mjs).`,
     );
+  }
+  if (unclassified.length > 0) {
+    console.log(`test:oxml-validate: ${unclassified.length} error(s) neither ours nor a known Pandoc gap (not failing):`);
+    for (const e of unclassified.slice(0, 15)) console.log(`    ${e.file} ${e.Part} ${e.Path}: ${e.Description}`);
   }
 
   if (failures > 0) {
