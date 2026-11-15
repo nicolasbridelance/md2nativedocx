@@ -12,8 +12,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
+import { UUID_SOURCE, resolvePartDir } from './placeholderIds.mjs';
 
-const PLACEHOLDER_RE = /CHART_PLACEHOLDER:([A-Za-z0-9-]+)/g;
+const PLACEHOLDER_RE = new RegExp(`CHART_PLACEHOLDER:(${UUID_SOURCE})`, 'g');
 const REL_BASE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const CHART_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml';
 const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -137,8 +138,8 @@ export function injectChartParts(docxPath, chartDir) {
   const newParts = [];
 
   for (const id of ids) {
-    const dir = join(chartDir, id);
-    if (!existsSync(dir)) throw new Error(`md2nativedocx: no chart parts found for "${id}" in ${chartDir}`);
+    const dir = resolvePartDir(chartDir, id);
+    if (dir === null || !existsSync(dir)) throw new Error(`md2nativedocx: no chart parts found for "${id}" in ${chartDir}`);
     const chartXml = readFileSync(join(dir, 'chart.xml'), 'utf8');
     const meta = JSON.parse(readFileSync(join(dir, 'meta.json'), 'utf8'));
     const chartPath = `word/charts/chart${n}.xml`;

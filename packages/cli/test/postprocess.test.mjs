@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import AdmZip from 'adm-zip';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   injectNamespaces,
   renumberDrawingIds,
@@ -208,16 +208,16 @@ test('replaces placeholders with real rIds and adds the 4 parts/relationships/co
     const docx = join(dir, 'chain.docx');
     const documentXml =
       '<w:document><w:body><w:p><w:r><w:drawing>' +
-      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:abc:dm" r:lo="SMARTART_PLACEHOLDER:abc:lo" ' +
-      'r:qs="SMARTART_PLACEHOLDER:abc:qs" r:cs="SMARTART_PLACEHOLDER:abc:cs"/>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:dm" r:lo="SMARTART_PLACEHOLDER:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:qs" r:cs="SMARTART_PLACEHOLDER:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:cs"/>' +
       '</w:drawing></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
 
     const smartArtDir = join(dir, 'smartart');
-    writeSmartArtPart(smartArtDir, 'abc', 'data.xml', '<dgm:dataModel>DATA</dgm:dataModel>');
-    writeSmartArtPart(smartArtDir, 'abc', 'layout.xml', '<dgm:layoutDef>LAYOUT</dgm:layoutDef>');
-    writeSmartArtPart(smartArtDir, 'abc', 'colors.xml', '<dgm:colorsDef>COLORS</dgm:colorsDef>');
-    writeSmartArtPart(smartArtDir, 'abc', 'quickStyle.xml', '<dgm:styleDef>STYLE</dgm:styleDef>');
+    writeSmartArtPart(smartArtDir, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'data.xml', '<dgm:dataModel>DATA</dgm:dataModel>');
+    writeSmartArtPart(smartArtDir, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'layout.xml', '<dgm:layoutDef>LAYOUT</dgm:layoutDef>');
+    writeSmartArtPart(smartArtDir, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'colors.xml', '<dgm:colorsDef>COLORS</dgm:colorsDef>');
+    writeSmartArtPart(smartArtDir, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'quickStyle.xml', '<dgm:styleDef>STYLE</dgm:styleDef>');
 
     injectSmartArtParts(docx, smartArtDir);
 
@@ -257,8 +257,8 @@ test('numbers new parts past any diagram already in the archive (no collision)',
     const docx = join(dir, 'existing.docx');
     const documentXml =
       '<w:document><w:body><w:p><w:r><w:drawing>' +
-      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:xyz:dm" r:lo="SMARTART_PLACEHOLDER:xyz:lo" ' +
-      'r:qs="SMARTART_PLACEHOLDER:xyz:qs" r:cs="SMARTART_PLACEHOLDER:xyz:cs"/>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:dm" r:lo="SMARTART_PLACEHOLDER:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:qs" r:cs="SMARTART_PLACEHOLDER:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:cs"/>' +
       '</w:drawing></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
     // Simulate a diagram that already occupies number 1, added out of band
@@ -273,10 +273,10 @@ test('numbers new parts past any diagram already in the archive (no collision)',
     }
 
     const smartArtDir = join(dir, 'smartart');
-    writeSmartArtPart(smartArtDir, 'xyz', 'data.xml', '<dgm:dataModel>NEW</dgm:dataModel>');
-    writeSmartArtPart(smartArtDir, 'xyz', 'layout.xml', '<dgm:layoutDef/>');
-    writeSmartArtPart(smartArtDir, 'xyz', 'colors.xml', '<dgm:colorsDef/>');
-    writeSmartArtPart(smartArtDir, 'xyz', 'quickStyle.xml', '<dgm:styleDef/>');
+    writeSmartArtPart(smartArtDir, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'data.xml', '<dgm:dataModel>NEW</dgm:dataModel>');
+    writeSmartArtPart(smartArtDir, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'layout.xml', '<dgm:layoutDef/>');
+    writeSmartArtPart(smartArtDir, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'colors.xml', '<dgm:colorsDef/>');
+    writeSmartArtPart(smartArtDir, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'quickStyle.xml', '<dgm:styleDef/>');
 
     injectSmartArtParts(docx, smartArtDir);
 
@@ -293,12 +293,42 @@ test('throws a clear error when a placeholder has no matching directory in smart
     const docx = join(dir, 'orphan.docx');
     const documentXml =
       '<w:document><w:body><w:p><w:r><w:drawing>' +
-      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:missing:dm" r:lo="SMARTART_PLACEHOLDER:missing:lo" ' +
-      'r:qs="SMARTART_PLACEHOLDER:missing:qs" r:cs="SMARTART_PLACEHOLDER:missing:cs"/>' +
+      '<dgm:relIds r:dm="SMARTART_PLACEHOLDER:cccccccc-cccc-4ccc-8ccc-cccccccccccc:dm" r:lo="SMARTART_PLACEHOLDER:cccccccc-cccc-4ccc-8ccc-cccccccccccc:lo" ' +
+      'r:qs="SMARTART_PLACEHOLDER:cccccccc-cccc-4ccc-8ccc-cccccccccccc:qs" r:cs="SMARTART_PLACEHOLDER:cccccccc-cccc-4ccc-8ccc-cccccccccccc:cs"/>' +
       '</w:drawing></w:r></w:p></w:body></w:document>';
     buildMinimalDocx(docx, documentXml);
     assert.throws(() => injectSmartArtParts(docx, join(dir, 'smartart')), /no SmartArt parts found/);
   });
+});
+
+// --- R3.1: placeholder ids from prose are never trusted ---
+
+test('prose that merely mentions a placeholder with a path or a non-UUID id is left alone', () => {
+  withTempFiles((dir) => {
+    const docx = join(dir, 'prose.docx');
+    const documentXml =
+      '<w:document><w:body><w:p><w:r><w:t>' +
+      'SMARTART_PLACEHOLDER:../../secret:dm SMARTART_PLACEHOLDER:..\\..\\x:lo' +
+      'SMARTART_PLACEHOLDER:&lt;id&gt;:qs SMARTART_PLACEHOLDER:abc:cs ' +
+      'SMARTART_PLACEHOLDER:AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA:dm' +
+      '</w:t></w:r></w:p></w:body></w:document>';
+    buildMinimalDocx(docx, documentXml);
+    // A decoy that a traversal would reach: <dir>/secret holds parts, <dir>/smartart does not exist.
+    writeSmartArtPart(dir, 'secret', 'data.xml', '<dgm:dataModel>LEAK</dgm:dataModel>');
+    const before = readFileSync(docx);
+    injectSmartArtParts(docx, join(dir, 'smartart'));
+    assert.deepEqual(readFileSync(docx), before, 'the archive must be untouched');
+  });
+});
+
+test('resolvePartDir accepts a generated UUID and refuses anything that could leave the directory', async () => {
+  const { resolvePartDir } = await import('../src/placeholderIds.mjs');
+  const root = resolve('parts');
+  const uuid = '0f8fad5b-d9cb-469f-a165-70867728950e';
+  assert.equal(resolvePartDir(root, uuid), join(root, uuid));
+  for (const bad of ['..', '../x', '..\\x', '/etc/passwd', 'C:\\x', 'abc', uuid.toUpperCase(), `${uuid}/..`, `${uuid}\n`, '']) {
+    assert.equal(resolvePartDir(root, bad), null, JSON.stringify(bad));
+  }
 });
 
 // --- repositionTocAfterTitle (spec §1.10/§2.2, "Lot 3") ---
