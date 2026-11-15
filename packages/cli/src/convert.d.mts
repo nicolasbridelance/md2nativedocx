@@ -64,6 +64,12 @@ export interface ConvertOptions {
   maxDrawingCy?: number;
   /** Pandoc executable. Default `pandoc`, looked up on `PATH`. */
   pandocBin?: string;
+  /**
+   * Longest time Pandoc may run, in milliseconds. On expiry Pandoc is killed and `convert()` rejects with a
+   * `ConversionError` (`stage: 'pandoc'`). Default: no limit (the CLI sets 10 minutes, see
+   * `MD2NATIVEDOCX_TIMEOUT_MS`).
+   */
+  timeoutMs?: number;
   /** Node executable the Lua filter runs the diagram bridge with. Default: `process.execPath`. */
   nodeBin?: string;
 }
