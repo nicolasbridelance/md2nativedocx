@@ -82,6 +82,7 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   if (options.maxDrawingCy !== undefined) canvas.maxDrawingCy = options.maxDrawingCy;
   if (options.maxNodes !== undefined) canvas.maxNodes = options.maxNodes;
   if (options.maxEdges !== undefined) canvas.maxEdges = options.maxEdges;
+  if (options.maxWork !== undefined) canvas.maxWork = options.maxWork;
   const result = layout(parsed.ast, canvas);
   warnings.push(...result.warnings);
   const drawing = translateToOdf(parsed.ast, result, { ...canvas, idPrefix });

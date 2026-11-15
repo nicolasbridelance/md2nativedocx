@@ -121,7 +121,7 @@ export { translateCynefinToOoxml } from './diagrams/cynefin/translator.js';
 // shapes choice, parts returned as data (ADR 0012, docs/specs/01-v2-engine-spec.md §4). The supported
 // entry point for integrations; the per-type exports below stay for existing callers.
 export { renderDiagram, DEFAULT_MAX_SOURCE_LENGTH } from './render-diagram.js';
-export { DiagramTooLargeError, DEFAULT_MAX_NODES, DEFAULT_MAX_EDGES } from './layout/graph-limits.js';
+export { DiagramTooLargeError, DEFAULT_MAX_NODES, DEFAULT_MAX_EDGES, DEFAULT_MAX_WORK } from './layout/graph-limits.js';
 export type { DiagramLimit } from './layout/graph-limits.js';
 export type { RenderOptions, RenderResult, RenderMetadata, RenderedPart, SmartArtPart, ChartPart, NativeChartType } from './render-diagram.js';
 export type { ChartWorkbook } from './translator/native-chart.js';

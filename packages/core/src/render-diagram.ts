@@ -136,7 +136,7 @@ export interface RenderOptions extends CanvasOptions {
   /**
    * Longest accepted Mermaid source, in characters (default {@link DEFAULT_MAX_SOURCE_LENGTH}). Longer
    * input throws {@link DiagramTooLargeError} before anything is parsed. The graph caps `maxNodes` and
-   * `maxEdges` (inherited, defaults 500 and 800) apply to every type laid out with Dagre.
+   * `maxEdges` and `maxWork` (inherited, defaults 500, 800 and 1 500 000 estimated work units) apply to every type laid out with Dagre.
    */
   maxSourceLength?: number;
 }
@@ -497,6 +497,7 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
   if (options.maxDrawingCy !== undefined) canvas.maxDrawingCy = options.maxDrawingCy;
   if (options.maxNodes !== undefined) canvas.maxNodes = options.maxNodes;
   if (options.maxEdges !== undefined) canvas.maxEdges = options.maxEdges;
+  if (options.maxWork !== undefined) canvas.maxWork = options.maxWork;
 
   const ctx: RenderContext = {
     options,

@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderDiagram } from '../../src/render-diagram.js';
-import { DiagramTooLargeError, DEFAULT_MAX_EDGES, DEFAULT_MAX_NODES } from '../../src/layout/graph-limits.js';
+import dagre from 'dagre';
+import {
+  DiagramTooLargeError,
+  DEFAULT_MAX_EDGES,
+  DEFAULT_MAX_NODES,
+  estimateLayoutWork,
+} from '../../src/layout/graph-limits.js';
 import { buildDiagramTooLargeNoteXml } from '../../src/translator/unsupported-diagram-note.js';
 
 const chain = (header: string, nodes: number, edge: (a: number, b: number) => string): string => {
@@ -55,11 +61,42 @@ test('an oversized source is refused before parsing', () => {
 
 test('a dense graph under the caps still lays out in a bounded time', () => {
   let src = 'flowchart LR\n';
-  const n = 250; // 500 edges, under the default cap of 800
+  const n = 200; // 400 edges, under the default cap of 800; estimated work about 670 000, under the default budget
   for (let i = 0; i < n; i++) src += `M${i} --> M${(i * 7 + 3) % n}\nM${i} --> M${(i * 13 + 5) % n}\n`;
   const started = Date.now();
   renderDiagram(src);
   assert.ok(Date.now() - started < 30_000, 'worst case under the defaults stays well below a minute');
+});
+
+test('a deep graph of long edges is refused before the layout, quickly (work budget)', () => {
+  let src = 'flowchart LR\n';
+  const n = 400; // 800 edges, at the edge cap: the node and edge caps alone would let this run for about a minute
+  for (let i = 0; i < n; i++) src += `M${i} --> M${(i * 7 + 3) % n}\nM${i} --> M${(i * 13 + 5) % n}\n`;
+  const started = Date.now();
+  assert.throws(
+    () => renderDiagram(src),
+    (err: unknown) => err instanceof DiagramTooLargeError && err.limit === 'work' && err.actual > err.max,
+  );
+  assert.ok(Date.now() - started < 2_000, 'the estimate is linear, the refusal does not wait for Dagre');
+});
+
+test('the work budget is configurable and a long chain costs nothing', () => {
+  const longChain = 'flowchart TD\n' + Array.from({ length: 300 }, (_, i) => `N${i} --> N${i + 1}`).join('\n');
+  assert.doesNotThrow(() => renderDiagram(longChain));
+  assert.throws(() => renderDiagram('flowchart LR\nA-->B\nB-->C\nA-->C', { maxWork: 1 }), DiagramTooLargeError);
+});
+
+test('estimateLayoutWork: cycles and self loops terminate, spans are counted', () => {
+  const g = new dagre.graphlib.Graph();
+  for (const v of ['a', 'b', 'c', 'd']) g.setNode(v, {});
+  g.setEdge('a', 'b');
+  g.setEdge('b', 'c');
+  g.setEdge('c', 'd');
+  g.setEdge('a', 'd'); // spans 3 ranks: 2 dummies
+  g.setEdge('d', 'a'); // back edge, ignored
+  g.setEdge('b', 'b'); // self loop, ignored
+  // ranks = 4, dummies = 2: 4 * 2 + 4 nodes + 2 dummies
+  assert.equal(estimateLayoutWork(g), 14);
 });
 
 test('the too-large note is a well-formed escaped paragraph', () => {
