@@ -157,7 +157,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       autre point d'écriture ne contourne `escapeXml` (`esc` de `chartParts.mjs`, `pptx`, ODF).
       Ajouter à `test:fuzz` une propriété : toute chaîne JS dans une étiquette donne un XML bien
       formé.
-- [ ] **R3.3 Intégrité après renumérotation.** Test sur un document avec plusieurs diagrammes,
+- [x] **R3.3 Intégrité après renumérotation.** *(fait 2026-11-15 : test de bout en bout dans `corpus.test.mjs` — 3 diagrammes avec sous-graphes + 3 images ; ids uniques, chaque `stCxn`/`endCxn` désigne un id du même canevas ; `renumberDrawingIds` n'a pas eu besoin de correction)* Test sur un document avec plusieurs diagrammes,
       des images Markdown et des zones de texte : chaque `stCxn` / `endCxn` désigne un `cNvPr id`
       existant dans le même canevas, et les ids sont uniques dans tout le document. Vérifie les
       regex de `renumberDrawingIds()`.
