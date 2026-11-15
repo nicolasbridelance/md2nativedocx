@@ -20,9 +20,15 @@ const CHART_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.drawin
 const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 
-/** Strict XML escaping of user-controlled text (AGENTS.md rule #2). */
+/**
+ * Strict XML escaping of user-controlled text (AGENTS.md rule #2). Characters XML 1.0 forbids
+ * outright (C0 controls but TAB/LF/CR, U+FFFE/U+FFFF, lone surrogates) become U+FFFD, as in core's
+ * `escapeXml`: no entity can express them.
+ */
 function esc(text) {
   return String(text)
+    // eslint-disable-next-line no-control-regex -- matching control characters is the whole point
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '�')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
