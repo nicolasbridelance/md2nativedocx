@@ -14,7 +14,9 @@ import { renderDiagramOdf } from '../../src/render-diagram-odf.js';
 
 // Arbitrary "hostile" text: any printable ASCII, including XML-significant
 // characters, quotes, angle brackets, and control-ish separators.
-const hostileText = fc.string({ maxLength: 40 });
+// `unit: 'binary'` also yields C0 controls, U+FFFE/U+FFFF and lone surrogates,
+// which XML 1.0 forbids even as character references.
+const hostileText = fc.oneof(fc.string({ maxLength: 40 }), fc.string({ unit: 'binary', maxLength: 40 }));
 
 // Arbitrary node ids (must be alphanumeric/underscore/dash to be valid).
 const nodeId = fc.stringMatching(/^[A-Za-z0-9_-]{1,12}$/);
@@ -23,6 +25,11 @@ const nodeId = fc.stringMatching(/^[A-Za-z0-9_-]{1,12}$/);
 function assertWellFormedXml(xml: string): void {
   // Minimal well-formedness check: balanced tags and no raw `<`/`>` in text.
   // We rely on the translator's escaping (rule #2) to guarantee this.
+  assert.ok(
+    // eslint-disable-next-line no-control-regex -- matching control characters is the whole point
+    !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(xml),
+    'character forbidden in XML 1.0',
+  );
   const stack: string[] = [];
   const re = /<(\/?)([A-Za-z0-9:_-]+)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>|([^<]+)/g;
   let m: RegExpExecArray | null;
