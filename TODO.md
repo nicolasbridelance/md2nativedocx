@@ -123,7 +123,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
 
 ### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
 
-- [ ] **R2.1 Fins d'instruction.** Une passe de normalisation partagée dans `packages/core/src/parser/` :
+- [~] **R2.1 Fins d'instruction.** *Fait 2026-11-13 : `parser/normalize-statements.ts` branché sur flowchart, class, state, er (BOM, CRLF/CR, `;` final et multiple, `%%` en fin de ligne ; table de test dans `normalize-statements.test.ts`). Reste : `sequence` (son parseur garde `;` dans le texte d'un message, et un test existant l'exige : à trancher avec le mainteneur, car Mermaid y traite `;` comme fin d'instruction) ; les autres types gardent `;` comme texte, ce que fait aussi Mermaid.* Une passe de normalisation partagée dans `packages/core/src/parser/` :
       - CRLF ;
       - `;` final ;
       - plusieurs instructions sur une ligne séparées par `;` (`A-->B; B-->C`) ;
