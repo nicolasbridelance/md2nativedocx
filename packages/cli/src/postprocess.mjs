@@ -43,6 +43,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { patchSettings } from './referenceDocBuilder.mjs';
 import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
+import { UUID_SOURCE, resolvePartDir } from './placeholderIds.mjs';
 
 /** Extended namespaces Word declares on the document root, prefix -> URI. */
 const EXTENDED_NS = {
@@ -465,7 +466,7 @@ export function postProcessDocx(docxPath, { toc = false, emojiFont = true } = {}
 // hex+dashes in practice) -- matched as "anything but the ':' delimiter"
 // rather than assuming that specific alphabet, so this isn't silently
 // fragile against a different id scheme later.
-const SMARTART_PLACEHOLDER_RE = /SMARTART_PLACEHOLDER:([^:]+):(dm|lo|qs|cs)/g;
+const SMARTART_PLACEHOLDER_RE = new RegExp(`SMARTART_PLACEHOLDER:(${UUID_SOURCE}):(dm|lo|qs|cs)`, 'g');
 
 const SMARTART_RELTYPE = {
   dm: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/diagramData',
@@ -553,8 +554,8 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
   const newParts = [];
 
   for (const id of ids) {
-    const sourceDir = join(smartArtDir, id);
-    if (!existsSync(sourceDir)) {
+    const sourceDir = resolvePartDir(smartArtDir, id);
+    if (sourceDir === null || !existsSync(sourceDir)) {
       throw new Error(`md2nativedocx: no SmartArt parts found for diagram "${id}" in ${smartArtDir}`);
     }
 

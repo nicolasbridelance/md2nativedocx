@@ -143,7 +143,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
 
 ### R3 — Sécurité (branche `security/untrusted-text-hardening`)
 
-- [ ] **R3.1 Marqueurs SmartArt et graphiques.**
+- [x] **R3.1 Marqueurs SmartArt et graphiques.** *(fait 2026-11-15 : `placeholderIds.mjs`, UUID strict + confinement du chemin ; un UUID valide mais inconnu reste une erreur, seul le texte qui n'a pas la forme d'un id généré est ignoré)*
       - Identifiant limité au format UUID (`[0-9a-f]{8}-…`, ce que génère `randomUUID()`), pour
         `SMARTART_PLACEHOLDER` comme pour `CHART_PLACEHOLDER` ;
       - contrôle que `resolve(dir, id)` reste bien dans `dir` ;
