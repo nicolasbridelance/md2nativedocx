@@ -134,7 +134,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       accepte les `;` finaux ». Les golden ne doivent pas bouger.
 - [x] **R2.2 `color:` dans `classDef` / `style`** *(fait 2026-11-15 pour flowchart en OOXML et ODF ; SmartArt et les autres types de diagramme gardent leur couleur automatique)* → couleur du texte du nœud, passée par
       `validateHexColor`, en OOXML **et** en ODF. Sinon, le calcul automatique actuel reste.
-- [ ] **R2.3 Diagramme réduit au point d'être illisible.** Avertissement (journal et extension) quand
+- [x] **R2.3 Diagramme réduit au point d'être illisible.** *(fait 2026-11-15 pour les flowcharts en formes : avertissement dans `metadata.warnings`, donc dans le journal du pont ; pas de SmartArt ni d'autres types ; l'affichage dans l'éditeur dépend de la reprise de ces avertissements par l'extension, non vérifié)* Avertissement (journal et extension) quand
       la police effective tombe sous 7 pt, avec une suggestion : `TB` ou page en paysage. Un plancher
       de police imposé obligerait à agrandir les boîtes, donc à toucher le layout : à rattacher à
       l'idée « Gros diagrammes » du §4, pas ici.

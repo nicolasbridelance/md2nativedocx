@@ -433,10 +433,7 @@ export function translateToOoxml(
   const fill = hexColor(options.fill, DEFAULT_FILL);
   const line = hexColor(options.line, DEFAULT_LINE);
   const nextId = createIdAllocator();
-  const maxExtent = {
-    cx: options.maxDrawingCx ?? MAX_DRAWING_CX,
-    cy: options.maxDrawingCy ?? MAX_DRAWING_CY,
-  };
+  const maxExtent = maxExtentOf(options);
 
   // `wp:docPr` shares its id space with the shapes below it, so it draws from
   // the same allocator and must be taken before the group is rendered.
@@ -448,6 +445,19 @@ export function translateToOoxml(
   const { scale } = scaledExtent(bb, maxExtent);
   const content = renderContent(flowchart, layout, fill, line, nextId, scale);
   return wrapInParagraph(content, bb, docPrId, maxExtent);
+}
+
+function maxExtentOf(options: TranslateOptions): { cx: number; cy: number } {
+  return { cx: options.maxDrawingCx ?? MAX_DRAWING_CX, cy: options.maxDrawingCy ?? MAX_DRAWING_CY };
+}
+
+/**
+ * Size, in points, of the node labels as written in the `.docx`: the base 12 pt scaled down by the factor
+ * that fits the diagram on the page. Used to warn when a diagram became too small to read (TODO R2.3).
+ */
+export function effectiveNodeFontPt(layout: LayoutResult, options: TranslateOptions = {}): number {
+  const { scale } = scaledExtent(computeBoundingBox(layout), maxExtentOf(options));
+  return (scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)) / 2;
 }
 
 /**
