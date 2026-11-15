@@ -309,7 +309,11 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
         `svg:stroke-color="#${nodeLine}" svg:stroke-width="${pt(linePt(LINE_PT))}" ` +
         `draw:auto-grow-height="false" draw:auto-grow-width="false" draw:textarea-vertical-align="middle" ${padding(scale)}/>`,
     );
-    const textStyle = shapeText(sheet, textColorFor(nodeFill), fontPt(NODE_FONT_PT));
+    const textStyle = shapeText(
+      sheet,
+      node.textColor === undefined ? textColorFor(nodeFill) : validateHexColor(node.textColor, textColorFor(nodeFill)),
+      fontPt(NODE_FONT_PT),
+    );
     const mirrorAttr = MIRRORED_SHAPES.has(node.shape) ? ' draw:mirror-horizontal="true"' : '';
     const geometry =
       node.shape === 'trapezoid'

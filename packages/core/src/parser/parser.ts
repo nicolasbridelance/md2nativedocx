@@ -485,9 +485,10 @@ function parseHexColor(value: string): string | null {
 interface NodeStylePatch {
   fill?: string;
   stroke?: string;
+  color?: string;
 }
 
-/** Extract `fill`/`stroke` from a parsed property map, dropping anything not
+/** Extract `fill`/`stroke`/`color` from a parsed property map, dropping anything not
  * a recognized hex color (see {@link parseHexColor}). */
 function extractNodeStyle(props: Map<string, string>): NodeStylePatch {
   const patch: NodeStylePatch = {};
@@ -500,6 +501,11 @@ function extractNodeStyle(props: Map<string, string>): NodeStylePatch {
   if (strokeValue) {
     const hex = parseHexColor(strokeValue);
     if (hex) patch.stroke = hex;
+  }
+  const colorValue = props.get('color');
+  if (colorValue) {
+    const hex = parseHexColor(colorValue);
+    if (hex) patch.color = hex;
   }
   return patch;
 }
@@ -518,16 +524,18 @@ function applyNodeStyle(
   nodeId: string,
   patch: NodeStylePatch,
 ): void {
-  if (patch.fill === undefined && patch.stroke === undefined) return;
+  if (patch.fill === undefined && patch.stroke === undefined && patch.color === undefined) return;
   const existing = nodes.get(nodeId);
   if (existing) {
     if (patch.fill !== undefined) existing.fill = patch.fill;
     if (patch.stroke !== undefined) existing.stroke = patch.stroke;
+    if (patch.color !== undefined) existing.textColor = patch.color;
     return;
   }
   const pending = pendingStyles.get(nodeId) ?? {};
   if (patch.fill !== undefined) pending.fill = patch.fill;
   if (patch.stroke !== undefined) pending.stroke = patch.stroke;
+  if (patch.color !== undefined) pending.color = patch.color;
   pendingStyles.set(nodeId, pending);
 }
 
@@ -828,6 +836,7 @@ export function parseMermaid(text: string): ParseResult {
     if (existing) {
       if (patch.fill !== undefined) existing.fill = patch.fill;
       if (patch.stroke !== undefined) existing.stroke = patch.stroke;
+      if (patch.color !== undefined) existing.textColor = patch.color;
     }
   }
 

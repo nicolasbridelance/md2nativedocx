@@ -504,6 +504,7 @@ function renderContent(
     // global default (spec §6.3).
     const nodeFill = hexColor(node.fill, fill);
     const nodeLine = hexColor(node.stroke, line);
+    const nodeText = node.textColor === undefined ? undefined : hexColor(node.textColor, textColorFor(nodeFill));
     parts.push(
       renderNode(
         nodeIds.get(node.id)!,
@@ -515,6 +516,7 @@ function renderContent(
         nodeFill,
         nodeLine,
         scale,
+        nodeText,
       ),
     );
   }
@@ -781,6 +783,7 @@ function renderNode(
   fill: string,
   line: string,
   scale: number,
+  textColorOverride?: string,
 ): string {
   const x = Math.round(box.x * EMU_PER_PX * scale);
   const y = Math.round(box.y * EMU_PER_PX * scale);
@@ -791,7 +794,7 @@ function renderNode(
   const flipAttr = flip === 'flipH' ? ' flipH="1"' : flip === 'flipV' ? ' flipV="1"' : '';
   const safeLabel = escapeXml(label);
   const safeMermaidId = escapeXml(mermaidId);
-  const textColor = textColorFor(fill);
+  const textColor = textColorOverride ?? textColorFor(fill);
 
   return [
     '  <wps:wsp>',

@@ -106,6 +106,8 @@ export interface FlowNode {
   fill?: string;
   /** Border color (hex, no `#`) from `classDef`/`style`/`:::` `stroke:#XXXXXX` (spec §6.3). */
   stroke?: string;
+  /** Label text color (hex, no `#`) from `classDef`/`style`/`:::` `color:#XXXXXX`; overrides the automatic black/white choice. */
+  textColor?: string;
 }
 
 /** A single directed edge between two nodes. */
