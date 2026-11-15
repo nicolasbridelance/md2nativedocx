@@ -16,7 +16,7 @@
 import { detectDiagramType, type DiagramType } from './parser/diagram-type.js';
 import { parseMermaid } from './parser/index.js';
 import { layout } from './layout/layout.js';
-import { translateToOoxml } from './translator/ooxml-translator.js';
+import { effectiveNodeFontPt, translateToOoxml } from './translator/ooxml-translator.js';
 import type { CanvasOptions } from './translator/canvas.js';
 import { DiagramTooLargeError } from './layout/graph-limits.js';
 import { escapeXml } from './translator/xml-escape.js';
@@ -343,6 +343,9 @@ function smartArtTitleXml(title: string | undefined): string {
     : '';
 }
 
+/** Node text below this size (points) after the diagram is scaled to the page triggers a warning. */
+const MIN_READABLE_FONT_PT = 7;
+
 /** Flowchart (and text with no recognized header): SmartArt when its topology allows, else Dagre + shapes. */
 const renderFlowchart: TypeRenderer = (source, ctx) => {
   const ast = parsed(ctx, parseMermaid(source));
@@ -351,6 +354,13 @@ const renderFlowchart: TypeRenderer = (source, ctx) => {
   const result = layout(ast, ctx.canvas);
   ctx.warnings.push(...result.warnings);
   let fragment = translateToOoxml(ast, result, ctx.canvas);
+  const fontPt = effectiveNodeFontPt(result, ctx.canvas);
+  if (fontPt < MIN_READABLE_FONT_PT) {
+    ctx.warnings.push(
+      `diagram scaled down to fit the page: node text is ${fontPt} pt (below ${MIN_READABLE_FONT_PT} pt, hard to read). ` +
+        'Try a vertical direction (TB), split the diagram, or use fewer nodes per level.',
+    );
+  }
   // Say why only when SmartArt was attempted and rejected for a structural reason (spec §10.3); never
   // when SmartArt is off, and never for a generation error (already a warning).
   if (ctx.options.smartArt) {
