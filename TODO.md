@@ -132,7 +132,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       Les `;` à l'intérieur d'une étiquette entre guillemets ou crochets sont préservés.
       Brancher d'abord le flowchart, puis chaque parseur, avec un test en table : « chaque type
       accepte les `;` finaux ». Les golden ne doivent pas bouger.
-- [ ] **R2.2 `color:` dans `classDef` / `style`** → couleur du texte du nœud, passée par
+- [x] **R2.2 `color:` dans `classDef` / `style`** *(fait 2026-11-15 pour flowchart en OOXML et ODF ; SmartArt et les autres types de diagramme gardent leur couleur automatique)* → couleur du texte du nœud, passée par
       `validateHexColor`, en OOXML **et** en ODF. Sinon, le calcul automatique actuel reste.
 - [ ] **R2.3 Diagramme réduit au point d'être illisible.** Avertissement (journal et extension) quand
       la police effective tombe sous 7 pt, avec une suggestion : `TB` ou page en paysage. Un plancher
