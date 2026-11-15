@@ -7,7 +7,8 @@
  * non-negotiable: the input may be AI-generated on someone else's behalf and
  * cannot be assumed well-formed.
  *
- * Escapes the five XML-significant characters: `& < > " '`.
+ * Escapes the five XML-significant characters: `& < > " '`, and replaces the
+ * characters XML 1.0 forbids outright with U+FFFD.
  */
 
 const XML_ESCAPES: Readonly<Record<string, string>> = {
@@ -26,8 +27,19 @@ const XML_ESCAPES: Readonly<Record<string, string>> = {
  * @returns The string with all XML-significant characters replaced by entities.
  */
 export function escapeXml(input: string): string {
-  return input.replace(/[&<>"']/g, (ch) => XML_ESCAPES[ch] ?? ch);
+  return input.replace(XML_ILLEGAL_CHARS, '�').replace(/[&<>"']/g, (ch) => XML_ESCAPES[ch] ?? ch);
 }
+
+/**
+ * Characters that XML 1.0 forbids even as character references: C0 controls
+ * other than TAB/LF/CR, U+FFFE/U+FFFF, and lone surrogates. Entity escaping
+ * cannot fix them (`&#1;` is just as illegal), so a label carrying one would
+ * make the whole part ill-formed and Word would refuse the file. They are
+ * replaced by U+FFFD instead.
+ */
+const XML_ILLEGAL_CHARS =
+  // eslint-disable-next-line no-control-regex -- matching control characters is the whole point
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 
 /**
  * Validate a hex color string before it reaches an `a:srgbClr val="..."`

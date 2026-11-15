@@ -179,6 +179,14 @@ test('escapeXml escapes all five characters', () => {
   assert.equal(escapeXml('plain text'), 'plain text');
 });
 
+test('escapeXml replaces characters forbidden in XML 1.0 with U+FFFD', () => {
+  assert.equal(escapeXml('a\u0000b\u0001c\u000Bd\uFFFEe\uFFFFf'), 'a�b�c�d�e�f');
+  assert.equal(escapeXml('x\uD800y'), 'x�y'); // lone high surrogate
+  assert.equal(escapeXml('x\uDC00y'), 'x�y'); // lone low surrogate
+  // Legal characters survive: TAB, LF, CR, and a valid surrogate pair.
+  assert.equal(escapeXml('a\tb\nc\rd\u{1F600}'), 'a\tb\nc\rd\u{1F600}');
+});
+
 // --- Regression tests for the Word-conformance defects fixed in this change ---
 // Each of these passed silently while the generated .docx was unusable in Word.
 
