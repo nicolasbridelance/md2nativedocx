@@ -34,9 +34,9 @@ graph LR
 
 ```mermaid
 graph TD
-  X --> A
   subgraph S[Direction ignorée]
     direction LR
     A --> B
   end
+  X --> A
 ```
