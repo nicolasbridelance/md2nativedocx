@@ -280,3 +280,53 @@ test('a subgraph listing its own id as a member does not make Dagre throw a pare
   assert.ok(result.nodes['A']);
   assert.ok(result.subgraphs['S']);
 });
+
+test('subgraph direction LR inside a TD flowchart lays its members out left to right', () => {
+  const { ast } = parseMermaid(
+    'graph TD\n  X --> Y\n  subgraph S\n    direction LR\n    A --> B --> C\n  end',
+  );
+  const r = layout(ast);
+  assert.ok(r.nodes.A!.x < r.nodes.B!.x && r.nodes.B!.x < r.nodes.C!.x, 'A, B, C run left to right');
+  assert.equal(r.nodes.A!.y, r.nodes.B!.y);
+  const box = r.subgraphs.S!;
+  for (const id of ['A', 'B', 'C']) {
+    const n = r.nodes[id]!;
+    assert.ok(n.x >= box.x && n.x + n.width <= box.x + box.width, `${id} inside S horizontally`);
+    assert.ok(n.y >= box.y + SUBGRAPH_TITLE_HEIGHT && n.y + n.height <= box.y + box.height, `${id} inside S vertically`);
+  }
+  assert.equal(r.edges.length, ast.edges.length);
+  assert.ok(r.edges.every((e) => e.length >= 2), 'every edge keeps a route');
+  assert.deepEqual(r.warnings, []);
+  assert.equal(Math.min(...Object.values(r.nodes).map((n) => n.x)), 0);
+});
+
+test('subgraph direction is ignored with a warning when a node inside is linked from outside (as Mermaid)', () => {
+  const { ast } = parseMermaid('graph TD\n  X --> A\n  subgraph S\n    direction LR\n    A --> B\n  end');
+  const r = layout(ast);
+  assert.ok(r.nodes.A!.y < r.nodes.B!.y, 'still top-down');
+  assert.ok(r.warnings.some((w) => w.includes('"S"') && w.includes('ignored')));
+});
+
+test('nested subgraph directions and sibling isolated subgraphs keep every node and edge', () => {
+  const src =
+    'graph LR\n  subgraph P\n    direction TB\n    a --> b\n    subgraph Q\n      direction LR\n      c --> d\n    end\n  end\n  subgraph R\n    direction TB\n    e --> f\n  end\n  g --> h';
+  const { ast } = parseMermaid(src);
+  const r = layout(ast);
+  for (const n of ast.nodes) assert.ok(r.nodes[n.id], `box for ${n.id}`);
+  for (const id of ['P', 'Q', 'R']) assert.ok(r.subgraphs[id], `box for ${id}`);
+  assert.ok(r.nodes.a!.y < r.nodes.b!.y, 'P is top-down');
+  assert.ok(r.nodes.c!.x < r.nodes.d!.x, 'Q is left to right again');
+  assert.ok(r.nodes.e!.y < r.nodes.f!.y, 'R is top-down');
+  assert.equal(r.edges.length, ast.edges.length);
+  assert.ok(r.edges.every((e) => e.length >= 2));
+  // Q sits inside P.
+  const p = r.subgraphs.P!;
+  const q = r.subgraphs.Q!;
+  assert.ok(q.x >= p.x && q.y >= p.y && q.x + q.width <= p.x + p.width && q.y + q.height <= p.y + p.height);
+});
+
+test('a subgraph direction equal to its flowchart changes nothing', () => {
+  const plain = layout(parseMermaid('graph TD\n  subgraph S\n    A --> B\n  end').ast);
+  const same = layout(parseMermaid('graph TD\n  subgraph S\n    direction TB\n    A --> B\n  end').ast);
+  assert.deepEqual(same, plain);
+});

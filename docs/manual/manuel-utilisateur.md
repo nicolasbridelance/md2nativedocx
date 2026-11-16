@@ -271,7 +271,7 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 
 **Limites**
 
-- `direction` à l’intérieur d’un `subgraph` : lue mais ignorée (Dagre n’a qu’une direction globale), avertissement émis
+- `direction` à l’intérieur d’un `subgraph` : appliquée (mise en page propre au sous-graphe) tant qu’aucun lien ne relie l’intérieur à l’extérieur ; sinon ignorée avec un avertissement, comme Mermaid
 - Pas de `click`, d’animation d’arête, de formes icône/image ni de sous-graphe repliable
 - `classDef default` n’est pas appliqué ; SmartArt : option expérimentale, désactivée par défaut
 
