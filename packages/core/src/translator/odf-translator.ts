@@ -80,6 +80,8 @@ const MAX_DRAWING_CY = 8229600;
 
 /** Base text sizes in points, as in the `.docx` output (12pt nodes and titles, 8pt edge labels). */
 const NODE_FONT_PT = 12;
+/** Subgraph title size, 10pt: same as the .docx output (R4.4). */
+const SUBGRAPH_TITLE_FONT_PT = 10;
 const EDGE_LABEL_FONT_PT = 8;
 const MIN_FONT_PT = 2;
 /** Base stroke widths in points (1pt, 2pt for `==>`), floor 0.25pt, as in the `.docx` output. */
@@ -291,7 +293,7 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     const title = escapeXml(sg.title);
     parts.push(
       `<draw:custom-shape draw:style-name="${style}" draw:name="${title}" ${frame(box)}>` +
-        `<text:p text:style-name="${shapeText(sheet, '000000', fontPt(NODE_FONT_PT))}">${title}</text:p><draw:enhanced-geometry draw:type="rectangle"/></draw:custom-shape>`,
+        `<text:p text:style-name="${shapeText(sheet, '000000', fontPt(SUBGRAPH_TITLE_FONT_PT))}">${title}</text:p><draw:enhanced-geometry draw:type="rectangle"/></draw:custom-shape>`,
     );
   }
 
