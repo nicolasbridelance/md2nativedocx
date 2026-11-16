@@ -5,6 +5,25 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-11-16
+
+### Added
+- **A `direction` inside a `subgraph` is now applied** (flowcharts): the subgraph is laid out in its own direction, then
+  placed as one block in the diagram. Like Mermaid, it is ignored, with a warning, when a node inside is linked to
+  a node outside.
+- A flowchart node's `color:` in `classDef` / `style` now sets its text colour (Word and LibreOffice).
+- A warning (export log) when a flowchart is scaled down until its text is under 7 pt, with a suggestion.
+
+### Fixed
+- **Nested subgraphs keep their nesting.** A subgraph listed before the one it contains used to come out squashed
+  (zero width) or with its levels stacked side by side instead of inside each other.
+- Subgraph titles no longer touch or get cut by the box border on diagrams shown at full size (10 pt, was 12 pt).
+- Text coming from a diagram can no longer break the file: characters that XML forbids are replaced, in the
+  diagrams and in chart parts. SmartArt and chart markers are only accepted in the exact form this tool writes.
+- Exports now stop after 10 minutes (`MD2NATIVEDOCX_TIMEOUT_MS`) instead of waiting forever on a stuck Pandoc, and
+  a very dense diagram is refused up front with a clear message instead of freezing the editor.
+- Word compatibility check: the error classification is the same in the export log and in CI.
+
 ## [0.8.1] — 2026-11-13
 
 ### Fixed

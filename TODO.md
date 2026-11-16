@@ -91,7 +91,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
       l'ancien filtre du CLI mais distinct de `classifyValidatorErrors` (`packages/cli/src/wordCheck.mjs`).
       Le brancher dessus pour que CI et journal classent pareil, et que `test:oxml-validate` distingue aussi
       les écarts Pandoc connus des erreurs « autres » au lieu de les compter en bloc.
-- [ ] **R1.6 Release.** Extension 0.8.1 et CLI en patch. Vérification manuelle par le mainteneur sur
+- [x] **R1.6 Release.** *(0.8.1 publiée le 2026-11-13 ; vérifié 2026-11-16 : message d'erreur et Word intact en CLI dans un dossier OneDrive, par Claude ; le mainteneur a décidé de ne pas bloquer sur le test manuel de l'extension. Suivi : 0.8.2 le 2026-11-16.)* Extension 0.8.1 et CLI en patch. Vérification manuelle par le mainteneur sur
       son poste Windows + OneDrive : export pendant que le `.docx` est ouvert dans Word → message, pas
       de plantage. Rédiger alors `docs/history/incident-flux-arcs-2026-11.md` et faire sortir R1 d'ici.
 
