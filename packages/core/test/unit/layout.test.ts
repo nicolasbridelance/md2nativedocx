@@ -330,3 +330,25 @@ test('a subgraph direction equal to its flowchart changes nothing', () => {
   const same = layout(parseMermaid('graph TD\n  subgraph S\n    direction TB\n    A --> B\n  end').ast);
   assert.deepEqual(same, plain);
 });
+
+test('a subgraph listed before the subgraph it contains still encloses it (nesting regression, found in Word)', () => {
+  for (const src of [
+    'graph TD\n  subgraph Ext\n    subgraph Int\n      x --> y\n    end\n  end',
+    'graph TD\n  subgraph Ext\n    z\n    subgraph Int\n      x --> y\n    end\n  end',
+    'graph TD\n  subgraph L1\n    subgraph L2\n      subgraph L3\n        a --> b\n      end\n    end\n  end',
+  ]) {
+    const { ast } = parseMermaid(src);
+    const r = layout(ast);
+    for (const sg of ast.subgraphs) {
+      const outer = r.subgraphs[sg.id]!;
+      assert.ok(outer.width > 0, `${sg.id} has a width`);
+      for (const childId of sg.subgraphIds) {
+        const c = r.subgraphs[childId]!;
+        assert.ok(
+          c.x >= outer.x && c.y >= outer.y && c.x + c.width <= outer.x + outer.width && c.y + c.height <= outer.y + outer.height,
+          `${childId} inside ${sg.id}`,
+        );
+      }
+    }
+  }
+});

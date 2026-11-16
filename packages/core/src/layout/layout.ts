@@ -357,8 +357,13 @@ function layoutBase(
 
     if (useClusters) {
       // Register subgraphs as Dagre clusters and assign their nodes to them.
+      // Every cluster must exist before any parent link is made: an outer subgraph is listed before the
+      // subgraphs it contains, and `hasNode` was false for a child registered later, so the nesting was
+      // silently dropped (an outer box with no direct node came out 0 wide; found in Word, 2026-11-16).
       for (const sg of flowchart.subgraphs) {
         g.setNode(clusterKey(sg.id), { width: 0, height: 0, cluster: true });
+      }
+      for (const sg of flowchart.subgraphs) {
         for (const nodeId of sg.nodeIds) {
           if (g.hasNode(nodeId)) g.setParent(nodeId, clusterKey(sg.id));
         }

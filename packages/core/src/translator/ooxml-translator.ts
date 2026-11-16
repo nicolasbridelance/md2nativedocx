@@ -90,6 +90,11 @@ const SUBGRAPH_BORDER_WIDTH_EMU = 9525;
  * scaledFontSizeHalfPt}) to reproduce that same proportion explicitly.
  */
 const NODE_FONT_SIZE_HALFPT = 24;
+/**
+ * Subgraph title size (10pt). The title bar is `SUBGRAPH_TITLE_HEIGHT` px (18pt) tall, too tight for
+ * 12pt text plus insets at scale 1 (seen in real Word, 2026-11-16, R4.4); a diagram scaled to ~50% hid it.
+ */
+const SUBGRAPH_TITLE_FONT_SIZE_HALFPT = 20;
 /** Never scale a run below this — a diagram scaled small enough to hit this
  * floor already has other legibility problems (see TODO.md's "lisibilité
  * des gros diagrammes" entry); this only prevents an invalid/zero `w:sz`. */
@@ -701,7 +706,6 @@ function renderSubgraph(
   const h = Math.max(1, Math.round(box.height * EMU_PER_PX * scale));
   const safeTitle = escapeXml(sg.title);
   const insX = Math.round(NODE_TEXT_INSET_X * scale);
-  const insY = Math.round(NODE_TEXT_INSET_Y * scale);
 
   const parts: string[] = [];
 
@@ -751,7 +755,7 @@ function renderSubgraph(
   parts.push('          <w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>');
   parts.push('          <w:r>');
   parts.push(
-    `            <w:rPr><w:color w:val="000000"/><w:sz w:val="${scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)}"/></w:rPr>`,
+    `            <w:rPr><w:color w:val="000000"/><w:sz w:val="${scaledFontSizeHalfPt(SUBGRAPH_TITLE_FONT_SIZE_HALFPT, scale)}"/></w:rPr>`,
   );
   parts.push(`            <w:t xml:space="preserve">${safeTitle}</w:t>`);
   parts.push('          </w:r>');
@@ -759,7 +763,7 @@ function renderSubgraph(
   parts.push('      </w:txbxContent>');
   parts.push('    </wps:txbx>');
   parts.push(
-    `    <wps:bodyPr lIns="${insX}" tIns="${insY}" rIns="${insX}" bIns="${insY}" anchor="ctr" anchorCtr="0"/>`,
+    `    <wps:bodyPr lIns="${insX}" tIns="0" rIns="${insX}" bIns="0" anchor="ctr" anchorCtr="0"/>`,
   );
   parts.push('  </wps:wsp>');
 
