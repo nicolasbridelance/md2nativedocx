@@ -23,12 +23,12 @@ Mêmes diagrammes, deux fichiers : `titre-sousgraphe-avant.docx` (code actuel de
 
 - [ ] Dans `apres`, aucun titre ne touche ni ne dépasse la bordure haute du cadre (3 diagrammes, dont les imbriqués).
 - [ ] Le titre reste lisible (10 pt) et centré dans sa barre.
-- [ ] `nested-3-levels.docx` (À REGÉNÉRER : il était ouvert dans Word ; fermer puis `node packages/cli/bin/md2nativedocx.mjs test-corpus/word-verification/nested-3-levels.md -o test-corpus/word-verification/nested-3-levels.docx`) : Niveau 3 dans Niveau 2 dans Niveau 1 ; avant, les cadres étaient empilés au lieu d'être imbriqués (bug de layout corrigé au passage).
+- [ ] `nested-3-levels.docx` (regénéré 2026-11-16) : Niveau 3 dans Niveau 2 dans Niveau 1 ; avant, les cadres étaient empilés au lieu d'être imbriqués (bug de layout corrigé au passage).
 - [ ] `swimlane.docx` : titres de couloirs toujours lisibles (non regénéré).
 
 Si 10 pt est encore trop serré : repli = barre de titre plus haute (`SUBGRAPH_TITLE_HEIGHT`).
 
-## 2. R1.6 : export pendant que le `.docx` est ouvert (poste Windows + OneDrive)
+## 2. R1.6 (CLI testé par Claude le 2026-11-16 dans le dossier OneDrive synchronisé : message clair, Word intact, ré-export OK après fermeture ; reste le chemin de l'extension VS Code) : export pendant que le `.docx` est ouvert (poste Windows + OneDrive)
 
 Pas de fichier à ouvrir : un fichier de ton choix (par ex. `minimal.docx`) copié dans un dossier OneDrive.
 
