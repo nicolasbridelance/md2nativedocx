@@ -138,8 +138,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       la police effective tombe sous 7 pt, avec une suggestion : `TB` ou page en paysage. Un plancher
       de police imposé obligerait à agrandir les boîtes, donc à toucher le layout : à rattacher à
       l'idée « Gros diagrammes » du §4, pas ici.
-- [ ] **R2.4 `direction` dans un `subgraph`** (déjà signalé par un avertissement) : layout récursif
-      par sous-graphe. C'est une vraie fonctionnalité, pas un correctif ; à chiffrer après R1-R3.
+- [x] **R2.4 `direction` dans un `subgraph`** *(fait 2026-11-16 : `layoutWithSubgraphDirections` dans `layout.ts`, passe récursive par sous-graphe isolé puis bloc de taille fixe dans le parent ; ignorée avec avertissement si un lien traverse la frontière, comme Mermaid ; SmartArt inchangé, tout `subgraph` le disqualifie déjà ; à vérifier visuellement dans Word)*
 
 ### R3 — Sécurité (branche `security/untrusted-text-hardening`)
 

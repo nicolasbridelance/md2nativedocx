@@ -585,7 +585,7 @@ test('a subgraph\'s own nested direction statement is parsed into Subgraph.direc
   const sg = ast.subgraphs.find((s) => s.id === 'S1')!;
   assert.equal(sg.direction, 'LR');
   assert.ok(!warnings.some((w) => w.includes('Unsupported line ignored')));
-  assert.ok(warnings.some((w) => w.includes('S1') && w.includes('LR')));
+  assert.ok(!warnings.some((w) => w.includes('not yet applied')));
 });
 
 test('a subgraph direction of TB normalizes to TD, same alias as the top-level header', () => {

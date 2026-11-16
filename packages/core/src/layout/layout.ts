@@ -15,6 +15,7 @@ import dagre from 'dagre';
 import { assertWithinLimits, type GraphLimits } from './graph-limits.js';
 import type {
   Flowchart,
+  FlowNode,
   Layout,
   LayoutBox,
   LayoutPoint,
@@ -287,6 +288,18 @@ const SLANTED_WIDTH_MARGIN = 1.35;
  * Returns a {@link LayoutResult} with node boxes and subgraph container boxes.
  */
 export function layout(flowchart: Flowchart, options: LayoutOptions = {}): LayoutResult {
+  return layoutWithSubgraphDirections(flowchart, options);
+}
+
+/** Fixed box sizes for synthetic placeholder nodes (see {@link layoutWithSubgraphDirections}). */
+type SizeOverrides = ReadonlyMap<string, { width: number; height: number }>;
+
+/** One Dagre pass over `flowchart` under a single global `rankdir`. */
+function layoutBase(
+  flowchart: Flowchart,
+  options: LayoutOptions,
+  overrides: SizeOverrides = new Map(),
+): LayoutResult {
   // Explicit nodeWidth/nodeHeight forces every node to that fixed size, as
   // before (an escape hatch, e.g. for a caller comparing layouts head-to-head
   // without label-length noise). Omitted (the normal case): each node is
@@ -333,7 +346,7 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
     g.setDefaultEdgeLabel(() => ({}));
 
     for (const node of flowchart.nodes) {
-      const { width, height } = fixedSize ?? nodeDimensions(node.labelRuns, node.shape);
+      const { width, height } = overrides.get(node.id) ?? fixedSize ?? nodeDimensions(node.labelRuns, node.shape);
       g.setNode(node.id, { width, height });
     }
     for (const edge of flowchart.edges) {
@@ -465,6 +478,150 @@ export function layout(flowchart: Flowchart, options: LayoutOptions = {}): Layou
   reserveSubgraphTitleSpace(flowchart, normalizedNodes, normalizedSubgraphs);
 
   return { nodes: normalizedNodes, subgraphs: normalizedSubgraphs, edges: normalizedEdges, warnings };
+}
+
+/** Prefix of the synthetic node standing in for an isolated subgraph in its parent's pass. NUL cannot appear in an id. */
+const PLACEHOLDER_PREFIX = '\u0000direction:';
+
+/**
+ * Lay out a flowchart, honouring a subgraph's own `direction` statement.
+ *
+ * Dagre ranks a whole graph under one `rankdir`, so a subgraph with a different direction is laid out
+ * on its own (recursively, in its own direction), then placed in the parent's pass as one fixed-size
+ * block. Same rule as Mermaid: this only applies when no edge crosses the subgraph's boundary; when a
+ * node inside is linked to one outside, the direction is ignored and a warning says so.
+ */
+function layoutWithSubgraphDirections(flowchart: Flowchart, options: LayoutOptions): LayoutResult {
+  const warnings: string[] = [];
+  const candidates = flowchart.subgraphs.filter(
+    (sg) => sg.direction !== undefined && sg.direction !== flowchart.direction,
+  );
+  if (candidates.length === 0) return layoutBase(flowchart, options);
+
+  const candidateIds = new Set(candidates.map((sg) => sg.id));
+  // A candidate inside another candidate is handled by the recursive pass of that ancestor.
+  const isNested = (sg: Subgraph): boolean =>
+    flowchart.subgraphs.some(
+      (other) =>
+        other !== sg && candidateIds.has(other.id) && descendantSubgraphIds(other, flowchart).includes(sg.id),
+    );
+
+  interface Isolated {
+    sg: Subgraph;
+    placeholderId: string;
+    inner: LayoutResult;
+    innerEdgeIndexes: number[];
+    box: SubgraphBox;
+  }
+  const isolated: Isolated[] = [];
+
+  for (const sg of candidates) {
+    if (isNested(sg)) continue;
+    const inside = new Set(descendantNodeIds(sg, flowchart));
+    if (flowchart.edges.some((e) => inside.has(e.from) !== inside.has(e.to))) {
+      warnings.push(
+        `Subgraph "${sg.id}" direction (${sg.direction}) is ignored: a node inside is linked to a node outside, so it follows the flowchart's direction (same as Mermaid).`,
+      );
+      continue;
+    }
+    const innerEdgeIndexes: number[] = [];
+    flowchart.edges.forEach((e, i) => {
+      if (inside.has(e.from) && inside.has(e.to)) innerEdgeIndexes.push(i);
+    });
+    const subIds = new Set([sg.id, ...descendantSubgraphIds(sg, flowchart)]);
+    const innerChart: Flowchart = {
+      direction: sg.direction!,
+      nodes: flowchart.nodes.filter((n) => inside.has(n.id)),
+      edges: innerEdgeIndexes.map((i) => flowchart.edges[i]!),
+      // The subgraph itself stays in the inner chart so its box and title bar come out of the inner pass.
+      subgraphs: flowchart.subgraphs
+        .filter((s) => subIds.has(s.id))
+        .map((s) => (s.id === sg.id ? { ...s, direction: undefined } : s)),
+    };
+    const inner = layoutWithSubgraphDirections(innerChart, options);
+    const box = inner.subgraphs[sg.id];
+    if (!box) {
+      warnings.push(
+        `Subgraph "${sg.id}" direction (${sg.direction}) could not be applied (its container failed to lay out).`,
+      );
+      continue;
+    }
+    isolated.push({ sg, placeholderId: `${PLACEHOLDER_PREFIX}${sg.id}`, inner, innerEdgeIndexes, box });
+  }
+
+  if (isolated.length === 0) {
+    const base = layoutBase(flowchart, options);
+    return { ...base, warnings: [...warnings, ...base.warnings] };
+  }
+
+  // Parent pass: each isolated subgraph (and everything in it) becomes one fixed-size node.
+  const removedNodes = new Set<string>();
+  const removedSubgraphs = new Set<string>();
+  const removedEdges = new Set<number>();
+  for (const iso of isolated) {
+    for (const id of descendantNodeIds(iso.sg, flowchart)) removedNodes.add(id);
+    removedSubgraphs.add(iso.sg.id);
+    for (const id of descendantSubgraphIds(iso.sg, flowchart)) removedSubgraphs.add(id);
+    for (const i of iso.innerEdgeIndexes) removedEdges.add(i);
+  }
+  const placeholdersByParent = new Map<string, string[]>();
+  for (const iso of isolated) {
+    const parent = flowchart.subgraphs.find((s) => s.subgraphIds.includes(iso.sg.id));
+    if (parent && !removedSubgraphs.has(parent.id)) {
+      placeholdersByParent.set(parent.id, [...(placeholdersByParent.get(parent.id) ?? []), iso.placeholderId]);
+    }
+  }
+
+  const keptEdgeIndexes: number[] = [];
+  flowchart.edges.forEach((_, i) => {
+    if (!removedEdges.has(i)) keptEdgeIndexes.push(i);
+  });
+  const reduced: Flowchart = {
+    direction: flowchart.direction,
+    nodes: [
+      ...flowchart.nodes.filter((n) => !removedNodes.has(n.id)),
+      ...isolated.map((iso): FlowNode => ({ id: iso.placeholderId, label: '', labelRuns: [], shape: 'rect' })),
+    ],
+    edges: keptEdgeIndexes.map((i) => flowchart.edges[i]!),
+    subgraphs: flowchart.subgraphs
+      .filter((s) => !removedSubgraphs.has(s.id))
+      .map((s) => ({
+        ...s,
+        nodeIds: [...s.nodeIds.filter((id) => !removedNodes.has(id)), ...(placeholdersByParent.get(s.id) ?? [])],
+        subgraphIds: s.subgraphIds.filter((id) => !removedSubgraphs.has(id)),
+      })),
+  };
+  const overrides: SizeOverrides = new Map(
+    isolated.map((iso) => [iso.placeholderId, { width: iso.box.width, height: iso.box.height }]),
+  );
+  const outer = layoutBase(reduced, options, overrides);
+
+  // Merge: put each inner layout at its placeholder's final position.
+  const nodes: Layout = Object.create(null) as Layout;
+  for (const [id, box] of Object.entries(outer.nodes)) {
+    if (!id.startsWith(PLACEHOLDER_PREFIX)) nodes[id] = box;
+  }
+  const subgraphs = Object.assign(Object.create(null) as Record<string, SubgraphBox>, outer.subgraphs);
+  const edges: LayoutPoint[][] = Array.from({ length: flowchart.edges.length }, () => []);
+  keptEdgeIndexes.forEach((original, k) => {
+    edges[original] = outer.edges[k] ?? [];
+  });
+  const mergedWarnings = [...warnings, ...outer.warnings];
+  for (const iso of isolated) {
+    const p = outer.nodes[iso.placeholderId];
+    if (!p) continue;
+    const dx = p.x - iso.box.x;
+    const dy = p.y - iso.box.y;
+    for (const [id, box] of Object.entries(iso.inner.nodes)) nodes[id] = { ...box, x: box.x + dx, y: box.y + dy };
+    for (const [id, box] of Object.entries(iso.inner.subgraphs)) {
+      subgraphs[id] = { ...box, x: box.x + dx, y: box.y + dy };
+    }
+    iso.innerEdgeIndexes.forEach((original, k) => {
+      edges[original] = (iso.inner.edges[k] ?? []).map((pt) => ({ x: pt.x + dx, y: pt.y + dy }));
+    });
+    mergedWarnings.push(...iso.inner.warnings);
+  }
+  return { nodes, subgraphs, edges, warnings: mergedWarnings };
 }
 
 /**

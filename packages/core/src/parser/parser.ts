@@ -764,9 +764,6 @@ export function parseMermaid(text: string): ParseResult {
         const requested = subgraphDirection[1]!.toUpperCase();
         const current = subgraphStack[subgraphStack.length - 1]!;
         current.direction = requested === 'TB' ? 'TD' : (requested as 'TD' | 'LR' | 'BT' | 'RL');
-        warnings.push(
-          `Subgraph "${current.id}" direction (${current.direction}) is not yet applied to its layout (V1 limitation) -- it renders using the flowchart's own direction instead.`,
-        );
         continue;
       }
     }
