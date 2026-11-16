@@ -17,13 +17,14 @@ suivent quand on déplace une forme, aucun texte ne déborde, le titre du sous-g
 Source : `subgraph-direction.md`. Régénérer :
 `node packages/cli/bin/md2nativedocx.mjs test-corpus/word-verification/subgraph-direction.md -o test-corpus/word-verification/subgraph-direction.docx`
 
-## 1bis. R4.4, titre de sous-graphe (branche `fix/subgraph-title-font`, pas encore sur main)
+## 1bis. R4.4, titre de sous-graphe et imbrication (vérifié par rendu Word le 2026-11-16, ton œil reste la référence)
 
 Mêmes diagrammes, deux fichiers : `titre-sousgraphe-avant.docx` (code actuel de main) et `titre-sousgraphe-apres.docx` (titre 10 pt, marges verticales du titre à 0).
 
 - [ ] Dans `apres`, aucun titre ne touche ni ne dépasse la bordure haute du cadre (3 diagrammes, dont les imbriqués).
 - [ ] Le titre reste lisible (10 pt) et centré dans sa barre.
-- [ ] Contrôle : `nested-3-levels.docx` et `swimlane.docx` sont à regénérer et à ouvrir, leurs titres ne doivent pas être devenus trop petits.
+- [ ] `nested-3-levels.docx` (regénéré) : Niveau 3 dans Niveau 2 dans Niveau 1 ; avant, les cadres étaient empilés au lieu d'être imbriqués (bug de layout corrigé au passage).
+- [ ] `swimlane.docx` : titres de couloirs toujours lisibles (non regénéré).
 
 Si 10 pt est encore trop serré : repli = barre de titre plus haute (`SUBGRAPH_TITLE_HEIGHT`).
 
