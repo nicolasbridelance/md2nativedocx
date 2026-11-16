@@ -144,6 +144,46 @@ test('corpus: every source diagram regenerates a conformant .docx (structural ch
   }
 });
 
+test('R3.3: several diagrams, images and subgraphs keep unique ids and every connector inside its own canvas', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-r33-'));
+  try {
+    // 1x1 PNG, so Pandoc emits a real pic:cNvPr next to the diagram shapes.
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    const pixel = join(dir, 'pixel.png').replaceAll('\\', '/');
+    writeFileSync(pixel, png);
+    const flow = (n) =>
+      `\`\`\`mermaid\nflowchart TD\n  A${n}[Début] --> B${n}{Choix}\n  B${n} -->|oui| C${n}[Fin]\n` +
+      `  B${n} -->|non| D${n}[Reprise]\n  D${n} --> A${n}\n  subgraph S${n}[Groupe ${n}]\n    C${n}\n  end\n\`\`\`\n`;
+    const markdown =
+      `# Test\n\n![un](${pixel})\n\n${flow(1)}\n![deux](${pixel})\n\n${flow(2)}\n${flow(3)}\n![trois](${pixel})\n`;
+    const docx = convertTo(markdown, dir, 'r33', { ...process.env, MD2NATIVEDOCX_ENABLE_SMARTART: '0', MD2NATIVEDOCX_NATIVE_CHARTS: '0' });
+    const xml = readDocumentXml(docx);
+
+    const defining = /<(?:wp:docPr|wpg:cNvPr|wps:cNvPr|pic:cNvPr)\s+id="(\d+)"/g;
+    const ids = [...xml.matchAll(defining)].map((m) => m[1]);
+    assert.ok(ids.length > 30, `expected many drawing objects, got ${ids.length}`);
+    assert.equal(new Set(ids).size, ids.length, 'drawing ids must be unique in the whole document');
+    assert.ok((xml.match(/<pic:cNvPr\s/g) ?? []).length >= 3, 'the three images must be present');
+
+    const blocks = xml.match(/<w:drawing>[\s\S]*?<\/w:drawing>/g) ?? [];
+    assert.ok(blocks.length >= 6, `expected 3 diagrams + 3 images, got ${blocks.length} drawings`);
+    let connectors = 0;
+    for (const block of blocks) {
+      const defined = new Set([...block.matchAll(defining)].map((m) => m[1]));
+      for (const [, ref] of block.matchAll(/<a:(?:stCxn|endCxn)\s+id="(\d+)"/g)) {
+        connectors++;
+        assert.ok(defined.has(ref), `connector references id ${ref}, not defined in its own drawing`);
+      }
+    }
+    assert.ok(connectors >= 12, `expected connectors in 3 diagrams, got ${connectors}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('corpus mixed-content: rich Markdown (headings, table, list, blockquote, '
   + 'footnote, link, bold/italic) survives alongside two mermaid diagrams', () => {
   // Both of the fixture's diagrams are SmartArt-eligible since multi-level trees shipped (the second is a

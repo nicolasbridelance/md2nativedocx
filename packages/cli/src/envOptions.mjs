@@ -83,6 +83,9 @@ export function readConvertOptionsFromEnv(env) {
   const maxDrawingCy = positiveInt('MD2NATIVEDOCX_MAX_DRAWING_CY');
   if (maxDrawingCx !== undefined) options.maxDrawingCx = maxDrawingCx;
   if (maxDrawingCy !== undefined) options.maxDrawingCy = maxDrawingCy;
+  // The CLI bounds Pandoc to 10 minutes by default; `0` removes the limit.
+  const timeoutMs = positiveInt('MD2NATIVEDOCX_TIMEOUT_MS');
+  options.timeoutMs = timeoutMs ?? (env.MD2NATIVEDOCX_TIMEOUT_MS === '0' ? 0 : 600000);
   if (env.MD2NATIVEDOCX_PANDOC_BIN) options.pandocBin = env.MD2NATIVEDOCX_PANDOC_BIN;
   return options;
 }

@@ -157,19 +157,20 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       autre point d'écriture ne contourne `escapeXml` (`esc` de `chartParts.mjs`, `pptx`, ODF).
       Ajouter à `test:fuzz` une propriété : toute chaîne JS dans une étiquette donne un XML bien
       formé.
-- [ ] **R3.3 Intégrité après renumérotation.** Test sur un document avec plusieurs diagrammes,
+- [x] **R3.3 Intégrité après renumérotation.** *(fait 2026-11-15 : test de bout en bout dans `corpus.test.mjs` — 3 diagrammes avec sous-graphes + 3 images ; ids uniques, chaque `stCxn`/`endCxn` désigne un id du même canevas ; `renumberDrawingIds` n'a pas eu besoin de correction)* Test sur un document avec plusieurs diagrammes,
       des images Markdown et des zones de texte : chaque `stCxn` / `endCxn` désigne un `cNvPr id`
       existant dans le même canevas, et les ids sont uniques dans tout le document. Vérifie les
       regex de `renumberDrawingIds()`.
 - [ ] **R3.4 Temps de réponse sur entrées pathologiques.**
-      - *Fait 2026-11-15 (PR « budget de travail ») : `estimateLayoutWork` + `maxWork` (défaut 1 500 000, ≈ 15 s sur la machine du mainteneur) refusent avant Dagre les graphes denses à arêtes longues ; le test `dense` passe de 31 s à 7,6 s. Reste : `planFor` à chaque frappe, ligne de 100 Ko, crochets non fermés, délai CLI.*
-      - Budget pour `planFor` (appelé à chaque frappe dans l'extension), sur une ligne de 100 Ko, des
+      - *Fait 2026-11-15 (PR « budget de travail ») : `estimateLayoutWork` + `maxWork` (défaut 1 500 000, ≈ 15 s sur la machine du mainteneur) refusent avant Dagre les graphes denses à arêtes longues ; le test `dense` passe de 31 s à 7,6 s. Fait aussi 2026-11-15 : `planRendering` (donc `planFor`) mesuré à moins de 250 ms sur ligne de 100 Ko, crochets/parenthèses/guillemets non fermés ×50 000, K40, séquence/gantt/pie/xychart géants ; verrouillé par `planning-budget.test.ts` (borne 3 s). Délai Pandoc : option `timeoutMs` de `convert()` (défaut : aucune limite ; le CLI pose 10 min, `MD2NATIVEDOCX_TIMEOUT_MS`), décidée avec le mainteneur le 2026-11-15. Reste : `recheck` écarté (rien ne le justifie dans les mesures).*
+      - [x] Budget pour `planFor` (appelé à chaque frappe dans l'extension), sur une ligne de 100 Ko, des
         crochets jamais fermés ×50 000 et un graphe complet K40 ;
-      - délai pour le CLI et le pont, qui reste à faire (voir « Limites de ressources », §2bis) ;
+      - [x] délai pour le CLI (fait) ; le pont du filtre reste borné par celui de Pandoc (voir « Limites de ressources », §2bis) ;
       - `eslint-plugin-regexp` / `recheck` contre les ReDoS : nouvelle dépendance, **escalade**.
 - [ ] **R3.5 Images `\\serveur\partage` et `file://` lues par Pandoc** (fuite de hash NTLM sous
       Windows). Même sujet que l'item MCP du §2bis : une option de `convert()` est nécessaire
-      (**escalade**). En attendant, documenter le risque dans le README de l'extension.
+      (**escalade**), à concevoir avec la publication du MCP. Risque documenté dans le README du CLI
+      (2026-11-15) ; reste à le reporter dans celui de l'extension.
 
 ### R4 — Gabarit et compatibilité Word : vérifier dans Word avant de changer (branche `fix/reference-docx-parity`)
 

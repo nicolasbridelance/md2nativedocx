@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import AdmZip from 'adm-zip';
@@ -124,4 +124,30 @@ test('readConvertOptionsFromEnv(): each variable lands in its option', () => {
   // A template that does not exist is ignored, as the CLI always did.
   assert.equal(options.referenceDoc, undefined);
   assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_NATIVE_CHARTS: '0' }).nativeCharts, false);
+});
+
+// R3.4: a Pandoc run that never ends must not hang the caller.
+// POSIX only: Windows `execFile` cannot launch a script stub, and a real `.exe` stub would need a build step.
+test('convert(): timeoutMs kills a Pandoc that does not finish and rejects with a ConversionError', { skip: process.platform === 'win32' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-timeout-'));
+  try {
+    // A stand-in "pandoc" that sleeps far past the limit.
+    const stub = join(dir, process.platform === 'win32' ? 'slow-pandoc.cmd' : 'slow-pandoc.sh');
+    writeFileSync(stub, process.platform === 'win32' ? '@echo off\r\nping -n 30 127.0.0.1 >nul\r\n' : '#!/bin/sh\nsleep 30\n', { mode: 0o755 });
+    const start = Date.now();
+    await assert.rejects(
+      convert(CHAIN, { pandocBin: stub, timeoutMs: 500 }),
+      (err) => err instanceof ConversionError && err.stage === 'pandoc' && /timed out after 500 ms/.test(err.message),
+    );
+    assert.ok(Date.now() - start < 15000, 'must return soon after the limit, not when the stub ends');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('MD2NATIVEDOCX_TIMEOUT_MS: 10 minutes by default for the CLI, overridable, 0 removes the limit', () => {
+  assert.equal(readConvertOptionsFromEnv({}).timeoutMs, 600000);
+  assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_TIMEOUT_MS: '1500' }).timeoutMs, 1500);
+  assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_TIMEOUT_MS: '0' }).timeoutMs, 0);
+  assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_TIMEOUT_MS: 'abc' }).timeoutMs, 600000);
 });

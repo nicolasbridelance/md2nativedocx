@@ -111,10 +111,17 @@ function pandocEnvironment(options, { smartArtDir, chartDir, maxDrawingExtentEmu
   return env;
 }
 
-function runPandoc(bin, args, { cwd, env }) {
+function runPandoc(bin, args, { cwd, env, timeoutMs }) {
   return new Promise((resolvePromise, reject) => {
-    execFile(bin, args, { cwd, env, maxBuffer: 64 * 1024 * 1024 }, (err, _stdout, stderr) => {
+    // `timeout: 0` (the default) means no limit. On expiry Node kills Pandoc; a bridge process the filter
+    // spawned ends on its own once its stdin closes.
+    const execOptions = { cwd, env, maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs ?? 0 };
+    execFile(bin, args, execOptions, (err, _stdout, stderr) => {
       if (err) {
+        if (err.killed && timeoutMs) {
+          reject(new ConversionError(`Pandoc timed out after ${timeoutMs} ms`, { stage: 'pandoc', pandocStderr: stderr ?? '', cause: err }));
+          return;
+        }
         reject(new ConversionError(`Pandoc failed (exit ${err.code ?? '?'})`, { stage: 'pandoc', pandocStderr: stderr ?? '', cause: err }));
       } else {
         resolvePromise(stderr ?? '');
@@ -191,7 +198,7 @@ async function convertOdt(source, options) {
       { ...options, smartArtStyle: undefined, smartArtDrawing: undefined },
       { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: { cx: page.cx, cy: Math.min(page.cy, ODT_MAX_DRAWING_CY) }, landscapeGeometry: null },
     );
-    const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env });
+    const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env, timeoutMs: options.timeoutMs });
     return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr)], pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
@@ -255,7 +262,7 @@ export async function convert(source, options = {}) {
         : null,
     });
 
-    const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env });
+    const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env, timeoutMs: options.timeoutMs });
 
     try {
       // Namespaces and drawing ids first: the SmartArt and chart injection read the fixed document.xml.
