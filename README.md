@@ -36,7 +36,7 @@ click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc f
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
 there: soon). Public domain (CC0).
 
-![A Mermaid sankey, mindmap, Venn, timeline and treemap being exported to native Word shapes](docs/showcase/wow.gif)
+![In real Word: a flowchart exported by md2nativedocx is edited (text retyped, a box moved, its arrows follow), then a SmartArt cycle is restyled with a new palette and a 3D style](docs/showcase/wow.gif)
 
 *Mermaid source → one click → Word shapes you can edit. Rendered here with LibreOffice; same result in Word.*
 

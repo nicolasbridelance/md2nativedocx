@@ -6,7 +6,7 @@ param([Parameter(Mandatory)][ValidateSet('A', 'B', 'C', 'D', 'probe')][string]$s
 . "$PSScriptRoot\mouse.ps1"
 $ErrorActionPreference = 'Stop'
 $raw = Join-Path $PSScriptRoot 'raw'; New-Item -ItemType Directory -Force $raw | Out-Null
-$src = @{ A = 'douleur.docx'; B = 'formes.docx'; C = 'smartart.docx'; D = 'smartart.pptx'; probe = $env:PROBE_FILE }[$shot]
+$src = @{ A = 'douleur.docx'; B = 'formes.docx'; C = 'smartart.docx'; D = 'formes.pptx'; probe = $env:PROBE_FILE }[$shot]
 $take = Join-Path $env:TEMP ("take-" + $src)
 Copy-Item (Join-Path $PSScriptRoot "out\$src") $take -Force
 
@@ -23,11 +23,21 @@ function Open-Word {
   Focus-Window $h
   @($w, $d, $h)
 }
+function Open-PowerPoint {
+  $p = New-Object -ComObject PowerPoint.Application
+  $p.Visible = -1
+  $pr = $p.Presentations.Open($take)
+  $p.WindowState = 3
+  Start-Sleep -Seconds 3
+  $h = (Get-Process POWERPNT | Where-Object { $_.MainWindowTitle -like '*take-*' } | Select-Object -First 1).MainWindowHandle
+  Focus-Window $h
+  @($p, $pr, $h)
+}
 function Title($proc) { (Get-Process $proc | Where-Object MainWindowTitle | Select-Object -First 1).MainWindowTitle }
 
 Move-To 960 820 200
 switch ($shot) {
-  'probe' { $w, $d, $h = Open-Word; ffmpeg -loglevel error -y -f gdigrab -i desktop -frames:v 1 $env:PROBE_OUT; Start-Sleep 1 }
+  'probe' { if ($src -like '*.pptx') { $p, $pr, $h = Open-PowerPoint } else { $w, $d, $h = Open-Word }; ffmpeg -loglevel error -y -f gdigrab -i desktop -frames:v 1 $env:PROBE_OUT; Start-Sleep 1 }
   'C' {
     $w, $d, $h = Open-Word
     $rec = Start-Rec '' "$raw\C-smartart.mp4" 19
@@ -42,13 +52,24 @@ switch ($shot) {
     Click 1600 120 700; Start-Sleep -Milliseconds 800            # a 3D style
     Click 1500 860 800; Start-Sleep -Milliseconds 1800           # click away (page margin): the restyled cycle
   }
+  'D' {
+    $p, $pr, $h = Open-PowerPoint
+    $rec = Start-Rec '' "$raw\D-pptx.mp4" 11
+    Start-Sleep -Milliseconds 1200
+    Click 966 590 900; Start-Sleep -Milliseconds 500             # select the decision diamond
+    Move-To 966 590 100; DoubleClick; Start-Sleep -Milliseconds 600 # select the word "Relecture"
+    Type-Text 'Revue sécurité'; Start-Sleep -Milliseconds 800
+    Key '{ESC}'; Key '{ESC}'; Start-Sleep -Milliseconds 400
+    Click 1500 450 800; Start-Sleep -Milliseconds 1500
+  }
   'A' {
     $w, $d, $h = Open-Word
-    $rec = Start-Rec (Title 'WINWORD') "$raw\A-douleur.mp4" 9
+    $rec = Start-Rec '' "$raw\A-douleur.mp4" 10
     Start-Sleep -Milliseconds 1200
-    Click 741 482 900; Start-Sleep -Milliseconds 900          # the whole picture gets selected
-    Move-To 741 482 100; DoubleClick; Start-Sleep -Milliseconds 1500   # picture tools, no text cursor
-    Move-To 760 486 300; DoubleClick; Start-Sleep -Milliseconds 1500
+    Click 796 644 900; Start-Sleep -Milliseconds 1000            # click "Relecture": the whole picture is selected
+    Move-To 796 644 100; DoubleClick; Start-Sleep -Milliseconds 1500  # picture format tab, no text cursor
+    Click 884 786 700; Start-Sleep -Milliseconds 300              # try "Deck PowerPoint": same picture
+    Move-To 884 786 100; DoubleClick; Start-Sleep -Milliseconds 2000
   }
   'B' {
     $w, $d, $h = Open-Word
@@ -66,4 +87,5 @@ switch ($shot) {
 if ($rec) { $rec.WaitForExit() }
 Start-Sleep -Milliseconds 300
 if ($d) { $d.Close([ref]0) ; $w.Quit() }
+if ($pr) { $pr.Saved = -1; $pr.Close(); $p.Quit() }
 "recorded $shot"

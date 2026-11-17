@@ -1,41 +1,32 @@
-# Tournage du « wow »
+# Vidéo de démonstration (« wow »)
 
-Quatre plans courts, filmés dans le vrai Word et le vrai PowerPoint. Le montage (accroche, cartons,
-zooms, écran de fin, export MP4 4:5 et GIF) est fait ensuite en local par `build-wow.py`.
+Tournée dans le **vrai** Word et le **vrai** PowerPoint, sans intervention : un script ouvre une copie
+neuve du fichier de démo, déplace le vrai curseur, tape au clavier, et ffmpeg filme l'écran. Le montage
+est fait en local (Pillow + ffmpeg).
 
-## Avant de commencer
+## Sorties
 
-- Word maximisé, zoom 150 %, ruban affiché, volet de navigation fermé, aucune notification.
-- Mouvements de souris lents et francs : chaque geste doit se lire sans le son, sur un téléphone.
-- Une prise ratée ? On relance la même commande, elle écrase la précédente.
-- Lancer chaque commande depuis un terminal Git Bash **à côté** de Word (seule la fenêtre Word est filmée).
+- `out/wow-fr.mp4` : 1080×1350 (4:5), ≈ 40 s, pour LinkedIn.
+- `out/wow-en.mp4` et `../wow.gif` : version anglaise courte (formes + SmartArt), pour le README.
 
-## Plan A — la douleur (≈ 6 s)
+## Refaire une prise
 
-Ouvrir `out/douleur.docx`, puis : `bash record.sh A-douleur word 8`
+Prérequis : Windows, écran 1920×1080, Word et PowerPoint installés, ffmpeg dans le `PATH`.
+**Ne pas toucher la souris ni le clavier pendant une prise** (≈ 20 s).
 
-1. Cliquer sur la boîte « Analyse » : c'est toute l'image qui se sélectionne.
-2. Double-cliquer dessus : l'onglet *Format de l'image* s'ouvre, aucun texte n'est modifiable.
+```powershell
+powershell -ExecutionPolicy Bypass -File shoot.ps1 -shot A   # avant : le schéma collé en PNG
+powershell -ExecutionPolicy Bypass -File shoot.ps1 -shot B   # formes natives : texte retapé, boîte déplacée
+powershell -ExecutionPolicy Bypass -File shoot.ps1 -shot C   # SmartArt : palette + style 3D
+powershell -ExecutionPolicy Bypass -File shoot.ps1 -shot D   # le même schéma dans PowerPoint
+python build-wow.py fr; python build-wow.py en
+```
 
-## Plan B — la preuve (≈ 12 s)
+Les coordonnées des gestes sont en dur dans `shoot.ps1` (Word maximisé, zoom 100 %) ; `probe.ps1` et
+`probe-ribbon.ps1` servent à les retrouver si la démo ou le ruban change. Les prises brutes vont dans
+`raw/` (non versionné).
 
-Fermer, ouvrir `out/formes.docx`, puis : `bash record.sh B-formes word 15`
+## Fichiers de démo
 
-1. Cliquer dans la boîte « Analyse », sélectionner le mot, taper « Revue sécurité ».
-2. Attraper la boîte « Déploiement » par son bord et la descendre doucement : la flèche suit.
-
-## Plan C — la magie (≈ 10 s)
-
-Fermer, ouvrir `out/smartart.docx`, puis : `bash record.sh C-smartart word 15`
-
-1. Cliquer sur le cycle : l'onglet *Création SmartArt* apparaît.
-2. *Modifier les couleurs* → survoler 2-3 palettes, en choisir une.
-3. Dans les *Styles SmartArt*, survoler puis choisir un style 3D.
-
-## Plan D — l'ampleur (≈ 6 s)
-
-Ouvrir `out/smartart.pptx` dans PowerPoint, puis : `bash record.sh D-pptx powerpoint 8`
-
-1. Cliquer sur « Vérifier » et taper « Mesurer ».
-
-Ensuite, me dire « tourné » : je fais le montage.
+`formes.md` et `smartart.md`, exportés dans `out/` : `formes.docx` (SmartArt désactivé),
+`smartart.docx`, `formes.pptx`, et `douleur.docx` (le même schéma collé en image, pour le « avant »).
