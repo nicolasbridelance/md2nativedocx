@@ -28,7 +28,7 @@ const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 export const TIMELINE_LAYOUT_URN_PREFIX = 'urn:md2nativedocx/smartart-layout/timeline1';
 const COLORS_URN = 'urn:md2nativedocx/smartart-colors/timeline1';
 const STYLE_URN = 'urn:md2nativedocx/smartart-quickstyle/timeline1';
-const LABELS: StyleLabel[] = ['node1', 'sibTrans'];
+const LABELS: StyleLabel[] = ['node1', 'sibTrans2D1'];
 
 /** Diagram width (EMU): the same 6-inch frame as the other generators. */
 export const FRAME_CX = 5486400;
@@ -122,7 +122,7 @@ export function timelineLayoutXml(n: number): string {
     '<dgm:constr type="h" for="ch" forName="periods" refType="h"/>' +
     '</dgm:constrLst>' +
     // The axis: drawn first, so the dots and boxes sit on top of it. Presents the `doc` point (no text).
-    '<dgm:layoutNode name="axis" styleLbl="sibTrans">' +
+    '<dgm:layoutNode name="axis" styleLbl="sibTrans2D1">' +
     '<dgm:alg type="sp"/><dgm:shape type="rightArrow"><dgm:adjLst/></dgm:shape>' +
     '<dgm:presOf/>' +
     '</dgm:layoutNode>' +
@@ -230,7 +230,7 @@ export function generateTimeline(chart: TimelineChart, options: SmartArtGenerate
     `<dgm:pt modelId="${id}" type="pres"><dgm:prSet presAssocID="${assoc}" presName="${name}"${extra}/><dgm:spPr/></dgm:pt>`;
   const presPts =
     pres(pRoot, docId, 'root', ' presStyleCnt="0"') +
-    pres(pAxis, docId, 'axis', ' presStyleLbl="sibTrans" presStyleIdx="0" presStyleCnt="1"') +
+    pres(pAxis, docId, 'axis', ' presStyleLbl="sibTrans2D1" presStyleIdx="0" presStyleCnt="1"') +
     pres(pPeriods, docId, 'periods', ' presStyleCnt="0"') +
     texts
       .map(
@@ -305,7 +305,7 @@ function timelineShapes(
       cx: W,
       cy: Math.round(AXIS_H * H),
       prst: 'rightArrow',
-      accent: accentOf(style, 'sibTrans', 0),
+      accent: accentOf(style, 'sibTrans2D1', 0),
       tintPercent: 60,
     },
   ];

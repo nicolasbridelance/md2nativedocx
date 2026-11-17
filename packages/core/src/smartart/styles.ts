@@ -55,7 +55,7 @@ export function profileOf(style: SmartArtStyle): StyleProfile {
 }
 
 /** Style labels this project's layouts use. */
-export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans' | 'parChTrans1D2' | 'card';
+export type StyleLabel = 'node0' | 'node1' | 'node2' | 'sibTrans2D1' | 'parChTrans1D2' | 'card';
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
@@ -126,7 +126,7 @@ export function buildColorsXml(style: SmartArtStyle, uniqueId: string, labels: S
     .map((label) => {
       if (label === 'parChTrans1D2') return connColorsDef(style);
       if (label === 'card') return CARD_COLORS_DEF;
-      const isTrans = label === 'sibTrans';
+      const isTrans = label === 'sibTrans2D1';
       const accents = accentList(style, label);
       const fill = accents.map((a) => clr(a, isTrans ? 60 : undefined)).join('');
       return (
@@ -161,7 +161,7 @@ export function buildStyleXml(style: SmartArtStyle, uniqueId: string, labels: St
     .map((label) => {
       if (label === 'parChTrans1D2') return CONN_STYLE_DEF;
       if (label === 'card') return CARD_STYLE_DEF;
-      const isTrans = label === 'sibTrans';
+      const isTrans = label === 'sibTrans2D1';
       const ln = isTrans ? 0 : lnIdx;
       const fill = isTrans ? 1 : fillIdx;
       const effect = isTrans ? 0 : effectIdx;

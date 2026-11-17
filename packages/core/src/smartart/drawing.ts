@@ -301,7 +301,7 @@ export function chainShapes(
         cx: Math.round(horizontal ? len : thick),
         cy: Math.round(horizontal ? thick : len),
         prst: arrowPrst,
-        accent: accentOf(style, 'sibTrans', i),
+        accent: accentOf(style, 'sibTrans2D1', i),
         tintPercent: 60,
       });
     }
@@ -666,7 +666,7 @@ export function cycleShapes(nodes: Labelled[], transIds: string[], style: SmartA
         cy: Math.round(thick),
         prst: 'rightArrow',
         rotation: (mid * 180) / Math.PI,
-        accent: accentOf(style, 'sibTrans', i),
+        accent: accentOf(style, 'sibTrans2D1', i),
         tintPercent: 60,
       });
     }

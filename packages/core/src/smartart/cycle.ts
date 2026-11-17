@@ -111,7 +111,7 @@ export function cycleLayoutXml(n: number): string {
   // loop: Word's own cycle layout sets it to 0, and without it the closing arrow is never drawn (found
   // in real Word: every cycle lacked the last-to-first arrow, with and without the cached drawing).
   '<dgm:forEach name="sibTransForEach" axis="followSib" ptType="sibTrans" hideLastTrans="0" cnt="1">' +
-  '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans">' +
+  '<dgm:layoutNode name="sibTrans" styleLbl="sibTrans2D1">' +
   '<dgm:alg type="conn">' +
   '<dgm:param type="begPts" val="auto"/>' +
   '<dgm:param type="endPts" val="auto"/>' +
@@ -153,7 +153,7 @@ export const CYCLE_COLORS_XML =
   '<dgm:txFillClrLst><a:schemeClr val="bg1"/></dgm:txFillClrLst>' +
   '<dgm:txEffectClrLst/>' +
   '</dgm:styleLbl>' +
-  '<dgm:styleLbl name="sibTrans">' +
+  '<dgm:styleLbl name="sibTrans2D1">' +
   '<dgm:fillClrLst><a:schemeClr val="accent1"><a:shade val="75000"/></a:schemeClr></dgm:fillClrLst>' +
   '<dgm:linClrLst/>' +
   '<dgm:effectClrLst/><dgm:txLinClrLst/><dgm:txFillClrLst/><dgm:txEffectClrLst/>' +
@@ -177,7 +177,7 @@ export const CYCLE_STYLE_XML =
   '<a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef>' +
   '</dgm:style>' +
   '</dgm:styleLbl>' +
-  '<dgm:styleLbl name="sibTrans">' +
+  '<dgm:styleLbl name="sibTrans2D1">' +
   '<dgm:style>' +
   '<a:lnRef idx="0"><a:schemeClr val="accent1"/></a:lnRef>' +
   '<a:fillRef idx="1"><a:schemeClr val="accent1"/></a:fillRef>' +
@@ -297,7 +297,7 @@ function buildCycleDataXml(
     sibTransIds
       .map(
         (id, i) =>
-          `<dgm:pt modelId="${pSibTransIds[i]}" type="pres"><dgm:prSet presAssocID="${id}" presName="sibTrans" presStyleLbl="sibTrans" presStyleIdx="${i}" presStyleCnt="${sibTransIds.length}"/><dgm:spPr/></dgm:pt>`
+          `<dgm:pt modelId="${pSibTransIds[i]}" type="pres"><dgm:prSet presAssocID="${id}" presName="sibTrans" presStyleLbl="sibTrans2D1" presStyleIdx="${i}" presStyleCnt="${sibTransIds.length}"/><dgm:spPr/></dgm:pt>`
       )
       .join('');
 
@@ -386,11 +386,11 @@ export function generateCycle(flowchart: Flowchart, options: SmartArtGenerateOpt
     colorsXml:
       style === 'simple'
         ? CYCLE_COLORS_XML
-        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/cycle1', ['node1', 'sibTrans']),
+        : buildColorsXml(style, 'urn:md2nativedocx/smartart-colors/cycle1', ['node1', 'sibTrans2D1']),
     styleXml:
       style === 'simple'
         ? CYCLE_STYLE_XML
-        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/cycle1', ['node1', 'sibTrans']),
+        : buildStyleXml(style, 'urn:md2nativedocx/smartart-quickstyle/cycle1', ['node1', 'sibTrans2D1']),
     ...(data.drawingXml !== undefined ? { drawingXml: data.drawingXml } : {}),
   };
 }

@@ -5,6 +5,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+### Fixed
+- SmartArt arrows (process, cycle, timeline axis) turned black when you picked another palette or style in Word's
+  SmartArt Design tab. They now follow the chosen colours, like Word's own SmartArt.
+
 ### Changed
 - When a flowchart cannot become SmartArt (a merge, a self-loop, a nested subgraph…), the reason is now a warning
   in the export log ("View warnings"), no longer an English sentence written under the diagram in the document,
