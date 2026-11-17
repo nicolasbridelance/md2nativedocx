@@ -405,6 +405,13 @@ automatiquement, peut contenir des erreurs" (n'aide personne à agir) :
 > *Formes natives utilisées (fusion détectée entre "B" et "E" — non supporté par l'export
 > SmartArt).*
 
+**Amendement du 2026-11-17 (décision du mainteneur)** : la phrase ne va plus dans le document.
+Le message part dans les avertissements de l'export (`.log` à côté du fichier, bouton « View
+warnings » de l'extension VS Code). Ces canaux n'existaient pas quand §10.3 a été tranché ;
+l'argument « le clic droit ne passe pas par VS Code » ne tient donc plus. En pratique, la note
+atteignait chaque lecteur du document (et son PDF), toujours en anglais, sans moyen de la couper,
+alors qu'elle ne sert qu'à l'auteur. `buildSmartArtFallbackNoteXml` reste exporté (déprécié).
+
 ### 10.4 Autres points de praticité identifiés
 
 - **Perte au ré-export** : toute édition manuelle du SmartArt dans Word (renommer une branche,

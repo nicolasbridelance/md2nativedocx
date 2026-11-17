@@ -5,6 +5,11 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+### Changed
+- When a flowchart cannot become SmartArt (a merge, a self-loop, a nested subgraph…), the reason is now a warning
+  in the export log ("View warnings"), no longer an English sentence written under the diagram in the document,
+  where every reader saw it.
+
 ## [0.8.2] — 2026-11-16
 
 ### Added

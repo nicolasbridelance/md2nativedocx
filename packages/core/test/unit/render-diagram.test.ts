@@ -47,13 +47,15 @@ test('an unknown SmartArt style falls back to the default instead of failing', (
   assert.deepEqual(bogus, colorful);
 });
 
-test('a merge stays shapes with SmartArt on, with the fallback note under it; no note when SmartArt is off', () => {
+test('a merge stays shapes with SmartArt on; the reason is a warning, never a note in the document', () => {
   const src = 'graph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D';
   const on = renderDiagram(src, ON);
   assert.equal(on.kind, 'shapes');
   assert.deepEqual(on.parts, []);
   const off = renderDiagram(src);
-  assert.ok(on.fragment.startsWith(off.fragment + '\n<w:p'), 'shapes, then the note paragraph');
+  assert.equal(on.fragment, off.fragment, 'same shapes as with SmartArt off, nothing appended');
+  assert.ok(on.metadata.warnings.some((w) => w.includes('merge detected between "B" and "C"')));
+  assert.ok(!off.metadata.warnings.some((w) => w.includes('merge detected')), 'no reason when SmartArt is off');
 });
 
 test('timeline as SmartArt: the title goes in a paragraph above, escaped', () => {

@@ -99,6 +99,9 @@ export function buildSmartArtDrawingXml(relIds: SmartArtRelIds, options: SmartAr
 }
 
 /**
+ * @deprecated Since 2026-11-17 the pipeline no longer writes this note into the document; the same
+ * reason is reported as a warning ({@link smartArtFallbackMessage}). Kept exported for API stability.
+ *
  * Build the fallback-note `<w:p>` placed directly under a diagram that was
  * attempted for SmartArt but rejected by {@link classifyTopology}
  * (`docs/specs/FUTURE_mmd2smartart_SPEC.md` §10.3 — "phrase sous le graphe" was chosen
@@ -116,7 +119,7 @@ export function buildSmartArtDrawingXml(relIds: SmartArtRelIds, options: SmartAr
  * final distribution.
  */
 export function buildSmartArtFallbackNoteXml(classification: SmartArtIneligible): string {
-  const message = escapeXml(fallbackMessage(classification));
+  const message = escapeXml(smartArtFallbackMessage(classification));
   return [
     '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
     '  <w:pPr>',
@@ -134,9 +137,12 @@ export function buildSmartArtFallbackNoteXml(classification: SmartArtIneligible)
   ].join('\n');
 }
 
-/** Specific, actionable text per {@link SmartArtIneligibleReason} (spec
- * §10.3: never a generic "auto-generated, may contain errors" disclaimer). */
-function fallbackMessage(classification: SmartArtIneligible): string {
+/**
+ * Specific, actionable text per {@link SmartArtIneligibleReason} (spec §10.3: never a generic
+ * "auto-generated, may contain errors" disclaimer). `renderDiagram()` reports it as a warning
+ * (export log, VS Code "View warnings") since 2026-11-17, instead of writing it into the document.
+ */
+export function smartArtFallbackMessage(classification: SmartArtIneligible): string {
   const { reason, at } = classification;
   switch (reason) {
     case 'merge-after-branch':

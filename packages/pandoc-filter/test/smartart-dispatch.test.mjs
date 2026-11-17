@@ -58,20 +58,26 @@ test('with MD2NATIVEDOCX_SMARTART_DIR set, a chain-eligible diagram dispatches t
 
 test('with MD2NATIVEDOCX_SMARTART_DIR set, a merge-after-branch diagram still falls back to wpc:wpc', () => {
   const smartArtDir = mkdtempSync(join(tmpdir(), 'md2nativedocx-smartart-'));
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-core-'));
   try {
-    const xml = runCore(
-      'graph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n',
-      { MD2NATIVEDOCX_SMARTART_DIR: smartArtDir },
-    );
+    const mmd = join(dir, 'diagram.mmd');
+    writeFileSync(mmd, 'graph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D\n');
+    const result = spawnSync('node', [coreBin, mmd], {
+      encoding: 'utf8',
+      env: { ...process.env, MD2NATIVEDOCX_SMARTART_DIR: smartArtDir },
+    });
+    assert.equal(result.status, 0);
+    const xml = result.stdout;
     assert.ok(xml.includes('<wpc:wpc'));
     assert.ok(!xml.includes('dgm:relIds'));
     assert.deepEqual(readdirSync(smartArtDir), [], 'nothing should be written for a diagram that falls back');
-    // spec §10.3: a diagram that was actually attempted for SmartArt and
-    // rejected gets a small note explaining why, right after the shapes.
-    assert.ok(xml.includes('merge detected between'), 'expected the spec §10.3 fallback note');
-    assert.ok(xml.includes('<w:i/>'), 'note must be italic (spec §10.3 discreet style)');
+    // spec §10.3, amended 2026-11-17: the reason goes to the author as a warning (export log),
+    // never into the document that every reader sees.
+    assert.ok(!xml.includes('merge detected between'), 'the reason must not be written into the document');
+    assert.match(result.stderr, /^md2nativedocx: warning: .*merge detected between/m);
   } finally {
     rmSync(smartArtDir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 

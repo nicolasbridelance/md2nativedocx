@@ -24,7 +24,7 @@ import type { ChartWorkbook, NativeChart, NativeChartOptions } from './translato
 import { MAX_TREE_DEPTH, classifyTopology, flowchartTreeDepth, type SmartArtIneligible } from './smartart/classify.js';
 import { generateSmartArt, type SmartArtGenerated, type SmartArtGeneratedLayout } from './smartart/dispatch.js';
 import { DRAWING_REL_TOKEN } from './smartart/drawing.js';
-import { buildSmartArtDrawingXml, buildSmartArtFallbackNoteXml } from './smartart/embed.js';
+import { buildSmartArtDrawingXml, smartArtFallbackMessage } from './smartart/embed.js';
 import type { SmartArtGenerateOptions } from './smartart/generate-options.js';
 import { SMARTART_STYLES, type SmartArtStyle } from './smartart/styles.js';
 import { generateMindmapSmartArt, generateTreeViewSmartArt, mindmapToFlowchart, treeViewToFlowchart } from './smartart/from-tree.js';
@@ -353,7 +353,7 @@ const renderFlowchart: TypeRenderer = (source, ctx) => {
   if (smartArt) return smartArt;
   const result = layout(ast, ctx.canvas);
   ctx.warnings.push(...result.warnings);
-  let fragment = translateToOoxml(ast, result, ctx.canvas);
+  const fragment = translateToOoxml(ast, result, ctx.canvas);
   const fontPt = effectiveNodeFontPt(result, ctx.canvas);
   if (fontPt < MIN_READABLE_FONT_PT) {
     ctx.warnings.push(
@@ -362,10 +362,12 @@ const renderFlowchart: TypeRenderer = (source, ctx) => {
     );
   }
   // Say why only when SmartArt was attempted and rejected for a structural reason (spec §10.3); never
-  // when SmartArt is off, and never for a generation error (already a warning).
+  // when SmartArt is off, and never for a generation error (already a warning). Since 2026-11-17 the
+  // reason is a warning (export log, VS Code "View warnings"), no longer a paragraph in the document:
+  // it is meant for the author, and in the document it reached every reader, in English.
   if (ctx.options.smartArt) {
     const classification = classifyTopology(ast);
-    if (!classification.eligible) fragment += '\n' + buildSmartArtFallbackNoteXml(classification);
+    if (!classification.eligible) ctx.warnings.push(smartArtFallbackMessage(classification));
   }
   return shapes(fragment);
 };
