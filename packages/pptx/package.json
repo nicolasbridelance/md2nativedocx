@@ -1,7 +1,19 @@
 {
   "name": "@md2nativedocx/pptx",
   "version": "0.1.2",
-  "description": "Rewrites the DrawingML shapes produced by @md2nativedocx/core into a .pptx deck (one slide per Mermaid block) \u2014 no new per-diagram translators.",
+  "description": "Rewrites the DrawingML shapes produced by @md2nativedocx/core into a .pptx deck (one slide per Mermaid block) — no new per-diagram translators.",
+  "keywords": [
+    "pptx",
+    "powerpoint",
+    "mermaid",
+    "mermaid-to-pptx",
+    "markdown-to-pptx",
+    "slides",
+    "ooxml",
+    "drawingml",
+    "editable",
+    "diagram"
+  ],
   "license": "CC0-1.0",
   "repository": {
     "type": "git",

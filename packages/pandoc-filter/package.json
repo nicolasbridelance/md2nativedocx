@@ -2,6 +2,19 @@
   "name": "@md2nativedocx/pandoc-filter",
   "version": "0.2.1",
   "description": "Pandoc Lua filter for md2nativedocx (Markdown to native Word): converts ```mermaid code blocks in a Markdown-to-docx conversion into editable OOXML shapes.",
+  "keywords": [
+    "pandoc",
+    "pandoc-filter",
+    "lua-filter",
+    "mermaid",
+    "mermaid-to-docx",
+    "markdown-to-docx",
+    "docx",
+    "word",
+    "ooxml",
+    "editable",
+    "diagram"
+  ],
   "license": "CC0-1.0",
   "repository": {
     "type": "git",
