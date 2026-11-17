@@ -3,6 +3,7 @@
 [![CI](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml/badge.svg)](https://github.com/nicolasbridelance/md2nativedocx/actions/workflows/codeql.yml)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
+[![Open VSX](https://img.shields.io/open-vsx/v/md2nativedocx/md2nativedocx?label=Open%20VSX&logo=eclipseide)](https://open-vsx.org/extension/md2nativedocx/md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](LICENSE)
 
 **A complete Markdown-to-Word converter. The whole document becomes a proper `.docx`, and its Mermaid diagrams
@@ -30,7 +31,7 @@ so the people who own the document after you can change it in Word, without Mark
 
 All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
 graph, …). A document without any diagram converts just as well. Use it from the
-[VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (one
+[VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (also on [Open VSX](https://open-vsx.org/extension/md2nativedocx/md2nativedocx) for VSCodium, Cursor, Windsurf…; one
 click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc filter. It can also write a
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
 there: soon). Public domain (CC0).

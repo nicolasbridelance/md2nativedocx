@@ -583,6 +583,7 @@
     "bundle": "node scripts/bundle-cli.mjs && node scripts/bundle-oxml-validator.mjs",
     "prepackage": "npm run build && npm run bundle",
     "package": "vsce package --no-dependencies -o md2nativedocx.vsix --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/",
+    "publish:ovsx": "npm run package && npx --yes ovsx@1.4.0 publish md2nativedocx.vsix",
     "publish": "npm run build && npm run bundle && vsce publish --no-dependencies --baseContentUrl https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/ --baseImagesUrl https://github.com/nicolasbridelance/md2nativedocx/raw/main/packages/vscode-extension/"
   },
   "devDependencies": {

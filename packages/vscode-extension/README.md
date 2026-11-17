@@ -1,6 +1,7 @@
 # md2nativedocx — complete Markdown to Word conversion, with diagrams your readers can edit
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx)
+[![Open VSX](https://img.shields.io/open-vsx/v/md2nativedocx/md2nativedocx?label=Open%20VSX&logo=eclipseide)](https://open-vsx.org/extension/md2nativedocx/md2nativedocx)
 [![License: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-lightgrey)](https://github.com/nicolasbridelance/md2nativedocx/blob/main/packages/vscode-extension/LICENSE)
 
 **Write in Markdown. Hand over a Word document anyone can keep editing — diagrams included.**
