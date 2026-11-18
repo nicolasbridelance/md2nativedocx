@@ -135,3 +135,13 @@ test('findUnclosedMermaidFences: suggests the end of the file when nothing follo
   assert.deepEqual(findUnclosedMermaidFences('```mermaid\ngraph TD\n```\n'), []);
   assert.deepEqual(findUnclosedMermaidFences('```js\nlet a\n\n```mermaid\ngraph TD\n'), []);
 });
+
+test('plantuml/puml fences are diagram blocks; a missing @startuml header is added, the fence language kept', () => {
+  const blocks = parseMermaidBlocks('# Seq\n\n```plantuml\nAlice -> Bob: hi\n```\n\n```puml\n@startuml\nA -> B\n@enduml\n```\n');
+  assert.equal(blocks.length, 2);
+  assert.equal(blocks[0]?.lang, 'plantuml');
+  assert.equal(blocks[0]?.source, '@startuml\nAlice -> Bob: hi\n@enduml');
+  assert.equal(blocks[1]?.lang, 'puml');
+  assert.equal(blocks[1]?.source, '@startuml\nA -> B\n@enduml');
+  assert.ok(blocks[0] && wrapBlockAsDocument(blocks[0]).startsWith('# Seq\n\n```plantuml\n@startuml\n'));
+});

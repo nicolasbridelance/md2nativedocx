@@ -14,14 +14,27 @@ export interface MermaidBlock {
   fenceLine: number;
   /** 0-based line of the closing ` ``` ` fence. */
   closingFenceLine: number;
-  /** Raw diagram source, fences excluded. */
+  /** Diagram source, fences excluded. A PlantUML block missing its `@startuml`/`@enduml` lines gets them
+   * added (as the Pandoc filter does), since the core recognises PlantUML by that header. */
   source: string;
+  /** Fence language, lowercase: `mermaid`, `plantuml` or `puml`. */
+  lang: DiagramFenceLang;
   /** Nearest preceding ATX heading (`# ...`) text, or null if none. */
   precedingHeading: string | null;
 }
 
+/** Fence languages converted to a diagram (same list as the Pandoc filter). */
+export type DiagramFenceLang = 'mermaid' | 'plantuml' | 'puml';
+
 const ANY_FENCE = /^(`{3,}|~{3,})/;
-const OPEN_FENCE = /^(`{3,})\s*mermaid\s*$/i;
+const OPEN_FENCE = /^(`{3,})\s*(mermaid|plantuml|puml)\s*$/i;
+
+/** `source` as the core must see it: a PlantUML block may leave out `@startuml`/`@enduml` (GitLab and Kroki
+ * accept that). Mirrors `packages/pandoc-filter/md2nativedocx.lua`. */
+function normalizeSource(source: string, lang: DiagramFenceLang): string {
+  if (lang === 'mermaid' || /^\s*@start/.test(source)) return source;
+  return `@startuml\n${source}\n@enduml`;
+}
 const HEADING = /^#{1,6}\s+(.+?)\s*#*$/;
 
 export function parseMermaidBlocks(text: string): MermaidBlock[] {
@@ -70,11 +83,13 @@ export function parseMermaidBlocks(text: string): MermaidBlock[] {
     // the document as inside the code block. Skip it rather than guess.
     if (closingFenceLine === -1) break;
 
+    const lang = (openMatch[2] ?? 'mermaid').toLowerCase() as DiagramFenceLang;
     blocks.push({
       index: index++,
       fenceLine: i,
       closingFenceLine,
-      source: lines.slice(i + 1, closingFenceLine).join('\n'),
+      source: normalizeSource(lines.slice(i + 1, closingFenceLine).join('\n'), lang),
+      lang,
       precedingHeading: currentHeading,
     });
     i = closingFenceLine;
@@ -129,14 +144,14 @@ export function blockAtLine(blocks: MermaidBlock[], line: number): MermaidBlock 
  * generator (scripts/generate-corpus.mjs). Pandoc/the Lua filter only ever
  * see a ` ```mermaid ` fenced block inside Markdown, so this is also how a
  * raw `.mmd` file (which has no fences of its own) becomes exportable. */
-export function wrapMermaidSource(source: string, title: string): string {
-  return `# ${title}\n\n\`\`\`mermaid\n${source}\n\`\`\`\n`;
+export function wrapMermaidSource(source: string, title: string, lang: DiagramFenceLang = 'mermaid'): string {
+  return `# ${title}\n\n\`\`\`${lang}\n${source}\n\`\`\`\n`;
 }
 
 /** Wrap a single diagram's source in a minimal, standalone Markdown document
  * — reused here for "export this block only". */
 export function wrapBlockAsDocument(block: MermaidBlock): string {
-  return wrapMermaidSource(block.source, block.precedingHeading ?? 'Diagramme');
+  return wrapMermaidSource(block.source, block.precedingHeading ?? 'Diagramme', block.lang);
 }
 
 /** File extensions this extension can export, lowercase, with the leading

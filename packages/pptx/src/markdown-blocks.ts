@@ -1,5 +1,5 @@
 /**
- * Finds the ```mermaid blocks of a Markdown document and the heading that introduces each one.
+ * Finds the ```mermaid (and ```plantuml / ```puml) blocks of a Markdown document and the heading that introduces each one.
  *
  * Deliberately tiny: slide structure is "one slide per Mermaid block, titled with the nearest
  * preceding heading". All other Markdown (prose, lists, tables) is out of scope for the pptx
@@ -50,8 +50,12 @@ export function extractMermaidBlocks(markdown: string): MermaidBlock[] {
         i++;
       }
       i++; // closing fence (or end of input for an unterminated block)
-      if (lang === 'mermaid') {
-        blocks.push(title === undefined ? { text: body.join('\n') } : { text: body.join('\n'), title });
+      if (lang === 'mermaid' || lang === 'plantuml' || lang === 'puml') {
+        let text = body.join('\n');
+        // A PlantUML block may leave out @startuml/@enduml; the core recognises PlantUML by that header
+        // (same rule as packages/pandoc-filter/md2nativedocx.lua).
+        if (lang !== 'mermaid' && !/^\s*@start/.test(text)) text = `@startuml\n${text}\n@enduml`;
+        blocks.push(title === undefined ? { text } : { text, title });
       }
       continue;
     }

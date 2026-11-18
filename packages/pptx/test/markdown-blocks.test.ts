@@ -31,3 +31,10 @@ test('an unterminated block runs to the end of the document', () => {
 test('returns nothing when there is no mermaid block', () => {
   assert.deepEqual(extractMermaidBlocks('# Just prose\n\ntext'), []);
 });
+
+test('plantuml/puml blocks become slides; a missing @startuml header is added', () => {
+  assert.deepEqual(extractMermaidBlocks('# S\n\n```plantuml\nA -> B\n```\n\n```puml\n@startuml\nC -> D\n@enduml\n```\n'), [
+    { text: '@startuml\nA -> B\n@enduml', title: 'S' },
+    { text: '@startuml\nC -> D\n@enduml', title: 'S' },
+  ]);
+});
