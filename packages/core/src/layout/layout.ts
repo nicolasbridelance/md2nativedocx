@@ -158,6 +158,43 @@ export function estimateTextWidth(text: string, fontSizePx: number = FONT_SIZE_P
   return em * fontSizePx;
 }
 
+/** Point size of edge-label text (8pt, `w:sz` 16 in `ooxml-translator.ts`), in px at 96 DPI. */
+const EDGE_LABEL_FONT_SIZE_PX = (8 * 96) / 72;
+/** Height of one line of an edge label's box, in px (0.25in). */
+const EDGE_LABEL_LINE_HEIGHT_PX = 24;
+/**
+ * Horizontal padding (px, each side) between an edge label's text and its box
+ * edge. The translator uses half of it as the box's `lIns`/`rIns`, so an error
+ * in `estimateTextWidth` (an approximation, no real font metrics) still leaves
+ * the text clear of the edge instead of exactly touching it.
+ */
+export const EDGE_LABEL_PAD_X_PX = 8;
+/**
+ * Safety multiplier applied to `estimateTextWidth` for an edge label. Found
+ * empirically (2026-09-02): the em table is calibrated at `FONT_SIZE_PX`
+ * (16px); scaled down to an 8pt caption it undershot by about 1.7x (bisected
+ * in LibreOffice on "Non"), since small glyphs don't shrink as fast as their
+ * point size.
+ */
+const EDGE_LABEL_TEXT_SAFETY_MARGIN = 1.8;
+/** Floor under an edge label's width, so a one-character label stays readable. */
+const MIN_EDGE_LABEL_WIDTH_PX = 44;
+
+/**
+ * An edge label's box size in px, sized to its own text: its widest line (a
+ * `<br/>` splits lines) by one 0.25in line per line. Exported (not part of the
+ * public barrel) for two users that must agree: Dagre, which reserves this room
+ * between ranks (without it a label wider than the rank gap overhung the target
+ * node and its white box cut a notch out of it, seen in PowerPoint 2026-11-18),
+ * and the translator, which draws the box.
+ */
+export function edgeLabelSize(labelRuns: LabelToken[]): { width: number; height: number } {
+  const lines = labelLines(labelRuns);
+  const widestLinePx = Math.max(0, ...lines.map((line) => estimateTextWidth(line, EDGE_LABEL_FONT_SIZE_PX)));
+  const width = Math.max(MIN_EDGE_LABEL_WIDTH_PX, widestLinePx * EDGE_LABEL_TEXT_SAFETY_MARGIN + 2 * EDGE_LABEL_PAD_X_PX);
+  return { width, height: EDGE_LABEL_LINE_HEIGHT_PX * Math.max(1, lines.length) };
+}
+
 /**
  * How many lines a label wraps to, and the resulting box's inner (text)
  * width, simulating a real greedy word-wrap (pack words onto a line until
@@ -351,7 +388,11 @@ function layoutBase(
     }
     for (const edge of flowchart.edges) {
       if (g.hasNode(edge.from) && g.hasNode(edge.to)) {
-        g.setEdge(edge.from, edge.to);
+        // A labelled edge tells Dagre its label's size, so the gap between the two ranks makes room for
+        // it (Dagre puts the label on its own intermediate rank, labelpos 'c').
+        const runs = edge.labelRuns;
+        const hasLabel = runs !== null && labelLines(runs).some((l) => l.trim().length > 0);
+        g.setEdge(edge.from, edge.to, hasLabel ? { ...edgeLabelSize(runs), labelpos: 'c' } : {});
       }
     }
 

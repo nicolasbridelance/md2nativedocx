@@ -496,13 +496,29 @@ test('an edge label sits on the connector segment midpoint, not the node-center 
   assert.ok(label);
   const y = Number(label[2]);
   // A[A] is 75px tall (see the connector-perimeter test above), so its
-  // bottom is at y=75px; B[B] is at the next Dagre rank, LEVEL_GAP(80px)
-  // below that, so its top is at y=155px. Midpoint y=115px. The old
-  // node-center-to-node-center midpoint would have been a different value —
-  // what matters here is the connector's real segment midpoint, not a
-  // specific historical number.
-  const midpointEmu = 115 * 9525;
+  // bottom is at y=75px. B[B] sits LEVEL_GAP (80px) plus the label's own
+  // height (24px) lower, at y=179px: Dagre is told each label's size and
+  // reserves room for it between ranks (a label larger than the bare gap used
+  // to overhang the target box, 2026-11-18). Midpoint y=127px. What matters
+  // is the connector's real segment midpoint, not the node-center midpoint.
+  const midpointEmu = 127 * 9525;
   assert.ok(Math.abs(y + 228600 / 2 - midpointEmu) < 9525, `label y=${y} not on the connector midpoint`);
+});
+
+test('an edge label wider than the rank gap does not overhang either end box (LR)', () => {
+  // Regression (2026-11-18, seen in PowerPoint): Dagre did not know label sizes, so a caption wider
+  // than the 80px gap overhung the target box and its white fill cut a notch out of it.
+  const xml = translate('flowchart LR\n  A[Pare-feu] -->|Autorisé après contrôle| B[Répartiteur]');
+  const span = (re: RegExp) => {
+    const m = re.exec(xml);
+    assert.ok(m);
+    return { left: Number(m[1]), right: Number(m[1]) + Number(m[2]) };
+  };
+  const label = span(/name="EdgeLabel"\/>[\s\S]*?<a:off x="(-?\d+)" y="-?\d+"\/>\s*<a:ext cx="(\d+)"/);
+  const a = span(/descr="A"\/>[\s\S]*?<a:off x="(-?\d+)" y="-?\d+"\/>\s*<a:ext cx="(\d+)"/);
+  const b = span(/descr="B"\/>[\s\S]*?<a:off x="(-?\d+)" y="-?\d+"\/>\s*<a:ext cx="(\d+)"/);
+  assert.ok(label.left >= a.right, `label starts at ${label.left}, inside A (ends ${a.right})`);
+  assert.ok(label.right <= b.left, `label ends at ${label.right}, inside B (starts ${b.left})`);
 });
 
 // --- Future-proofing (docs/specs/FUTURE_docx2mermaid_SPEC.md §4): retain the original
@@ -549,13 +565,13 @@ test('an adjacent-rank edge still renders as a plain straight line (no regressio
 
 test('a rank-skipping edge is routed around the intermediate node, not through it', () => {
   const xml = translate(
-    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action]\n  B -->|non| D[Fin]\n  C --> D',
+    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action longue a faire]\n  B -->|non| D[Fin]\n  C --> D',
   );
   // The B->D connector ("non") must use a custom path, not a straight line.
   assert.ok(xml.includes('<a:custGeom>'), 'expected the skip-rank edge to use a:custGeom');
 
   // None of that path's points should fall inside Action's (C's) box.
-  const actionBox = /<wps:cNvPr id="(\d+)" name="Action" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
+  const actionBox = /<wps:cNvPr id="(\d+)" name="Action longue a faire" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
     xml,
   );
   assert.ok(actionBox, 'expected to find Action\'s own box');
@@ -581,9 +597,9 @@ test('a rank-skipping edge is routed around the intermediate node, not through i
 
 test('a label on a routed edge sits on the real path, not inside the node it routes around', () => {
   const xml = translate(
-    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action]\n  B -->|non| D[Fin]\n  C --> D',
+    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action longue a faire]\n  B -->|non| D[Fin]\n  C --> D',
   );
-  const actionBox = /<wps:cNvPr id="(\d+)" name="Action" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
+  const actionBox = /<wps:cNvPr id="(\d+)" name="Action longue a faire" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
     xml,
   );
   assert.ok(actionBox);
@@ -600,7 +616,7 @@ test('a label on a routed edge sits on the real path, not inside the node it rou
 
 test('a routed connector still declares stCxn/endCxn for magnetic attachment', () => {
   const xml = translate(
-    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action]\n  B -->|non| D[Fin]\n  C --> D',
+    'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action longue a faire]\n  B -->|non| D[Fin]\n  C --> D',
   );
   const custGeomBlock = /<wps:cNvCnPr>[\s\S]*?<\/wps:cNvCnPr>[\s\S]*?<a:custGeom>/.exec(xml);
   assert.ok(custGeomBlock, 'expected a custGeom connector to still declare wps:cNvCnPr first');

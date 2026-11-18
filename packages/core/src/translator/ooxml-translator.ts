@@ -40,7 +40,7 @@
  *   fully self-contained, with all namespaces declared inline.
  */
 
-import { SUBGRAPH_TITLE_HEIGHT, estimateTextWidth } from '../layout/layout.js';
+import { EDGE_LABEL_PAD_X_PX, SUBGRAPH_TITLE_HEIGHT, edgeLabelSize } from '../layout/layout.js';
 import type {
   EdgeType,
   Flowchart,
@@ -51,7 +51,6 @@ import type {
   NodeShape,
   Subgraph,
 } from '../types.js';
-import { labelLines } from '../label-runs.js';
 import { escapeXml } from './xml-escape.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -1288,70 +1287,15 @@ function renderEdge(
   ].join('\n');
 }
 
-/** Height in EMU of the transparent box holding an edge label (0.25in). */
-const EDGE_LABEL_CY = 228600;
-/** Point size of edge-label text (`w:sz`, half-points, so 16 = 8pt), in px
- * at 96 DPI — needed to size the box to its own text (see `edgeLabelWidth`),
- * distinct from `FONT_SIZE_PX` (node/subgraph-title text's larger effective
- * size, `layout.ts`). */
-const EDGE_LABEL_FONT_SIZE_PX = (8 * 96) / 72;
-/** Horizontal padding (px, each side) between an edge label's text and its
- * box edge — mirrors `bodyPr`'s `lIns`/`rIns` below, applied twice (once
- * baked into the box width, once as the inset) so a same-size rendering
- * error in `estimateTextWidth` (an approximation, no real font metrics —
- * see `layout.ts`'s `nodeDimensions` doc comment for why) still leaves the
- * text clear of the edge instead of exactly touching it. */
-const EDGE_LABEL_PAD_X_PX = 8;
 /**
- * Safety multiplier applied to `estimateTextWidth`'s raw estimate before
- * sizing an edge-label box. Found empirically (2026-09-02): `layout.ts`'s
- * per-character em table was calibrated against `FONT_SIZE_PX` (16px, node
- * text); scaled linearly down to `EDGE_LABEL_FONT_SIZE_PX` (~10.7px, an 8pt
- * edge-label caption), it undershot badly — bisecting the real
- * non-wrapping width for "Non" in LibreOffice landed around 42px total box
- * width (34px of interior text room after insets), while the unscaled
- * estimate for the same word predicted only ~20px. Small serif glyphs don't
- * shrink as fast as their point size at this scale, an effect the
- * single-size-calibrated table doesn't capture. 1.8x tracks the ~1.7x gap
- * observed, with a little room to spare.
+ * An edge label's box size in EMU. The size itself (sized to the label's own
+ * text, one 0.25in line per `<br/>`-separated line) is computed in px by
+ * `layout.ts`'s `edgeLabelSize`, so Dagre reserves exactly this room between
+ * ranks and the box never overhangs the node it points to.
  */
-const EDGE_LABEL_TEXT_SAFETY_MARGIN = 1.8;
-/** Floor under a computed edge-label width, so a one-character label (e.g.
- * a bare "?") doesn't get a box narrower than is comfortable to read. */
-const MIN_EDGE_LABEL_WIDTH_PX = 44;
-
-/**
- * An edge label's box width in EMU, sized to its own text instead of a fixed
- * constant — a fixed-width box (previously 0.75in for every label
- * regardless of content) was both too narrow for long captions, which then
- * overflowed past its edges (`wrap="none"`, no horizontal insets), and too
- * *wide* for short ones ("Oui", "Non"): centering an oversized box on a
- * diagonal connector's midpoint only sits the true center pixel on the
- * line, not the text itself, since the diagonal only crosses the box's
- * vertical middle at one point along its width — the wider the box, the more
- * the visible text departs from that single point, reading as the label not
- * being centered on the arrow even though the box's geometric center is
- * exact. Right-sizing the box makes that gap negligible.
- */
-function edgeLabelWidthEmu(labelRuns: LabelToken[]): number {
-  // A `<br/>` (rare in an edge label, but not disallowed) sizes the box to
-  // its widest line, not the sum of all lines — same per-line-then-combine
-  // shape as layout.ts's nodeDimensions, mirrored here since edge labels are
-  // sized independently of that function.
-  const widestLinePx = Math.max(
-    ...labelLines(labelRuns).map((line) => estimateTextWidth(line, EDGE_LABEL_FONT_SIZE_PX)),
-  );
-  const textWidthPx = widestLinePx * EDGE_LABEL_TEXT_SAFETY_MARGIN;
-  const widthPx = Math.max(MIN_EDGE_LABEL_WIDTH_PX, textWidthPx + 2 * EDGE_LABEL_PAD_X_PX);
-  return Math.round(widthPx * EMU_PER_PX);
-}
-
-/** An edge label's box height in EMU: `EDGE_LABEL_CY` per line, growing for
- * a `<br/>`-forced multi-line label instead of clipping every line past the
- * first (the box was previously a single fixed height regardless of content,
- * back when no label could ever have more than one line). */
-function edgeLabelHeightEmu(labelRuns: LabelToken[]): number {
-  return EDGE_LABEL_CY * labelLines(labelRuns).length;
+function edgeLabelSizeEmu(labelRuns: LabelToken[]): { cx: number; cy: number } {
+  const { width, height } = edgeLabelSize(labelRuns);
+  return { cx: Math.round(width * EMU_PER_PX), cy: Math.round(height * EMU_PER_PX) };
 }
 
 /**
@@ -1377,8 +1321,9 @@ function renderEdgeLabel(
   // straight line between the two ends — for a routed edge, that straight
   // line is exactly the segment the routing was drawn to avoid.
   const mid = pointAlongPath(points, 0.5);
-  const cx = Math.round(edgeLabelWidthEmu(labelRuns) * scale);
-  const cy = Math.round(edgeLabelHeightEmu(labelRuns) * scale);
+  const size = edgeLabelSizeEmu(labelRuns);
+  const cx = Math.round(size.cx * scale);
+  const cy = Math.round(size.cy * scale);
   const x = Math.round(mid.x * EMU_PER_PX * scale - cx / 2);
   const y = Math.round(mid.y * EMU_PER_PX * scale - cy / 2);
   const insetEmu = Math.round((EDGE_LABEL_PAD_X_PX / 2) * EMU_PER_PX * scale);
