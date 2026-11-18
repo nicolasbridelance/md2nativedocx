@@ -3,9 +3,14 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.8.3] — 2026-11-18
 
 ### Fixed
+- **A labelled arrow no longer cuts a white notch out of the box it points to.** A label wider than the gap between
+  two columns of boxes overhung the box at the arrow's end (seen in PowerPoint, also present in Word). The layout
+  now makes room for each label.
+- Sequence diagrams: a `loop` / `alt` / `opt` frame now widens to hold the text of a message a participant sends to
+  itself, and the second line of a two-line message is no longer cut off at the bottom.
 - SmartArt arrows (process, cycle, timeline axis) turned black when you picked another palette or style in Word's
   SmartArt Design tab. They now follow the chosen colours, like Word's own SmartArt.
 
@@ -13,6 +18,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 - When a flowchart cannot become SmartArt (a merge, a self-loop, a nested subgraph…), the reason is now a warning
   in the export log ("View warnings"), no longer an English sentence written under the diagram in the document,
   where every reader saw it.
+- Every setting is now described in French, German, Spanish, Russian and Chinese (43 descriptions were still shown
+  in English: page layout, typography, table of contents, mirrors for locked-down networks).
+- The README warns that Pandoc reads images on network shares (`\\server\share`) and URLs: avoid exporting
+  Markdown you do not trust on a machine where that matters.
 
 ## [0.8.2] — 2026-11-16
 

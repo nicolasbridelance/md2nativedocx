@@ -244,9 +244,7 @@ Ensuite, dans l'ordre :
       défauts de l'extension : à ajouter en même temps (s'appuyer sur `docs/coverage.md`).
       Le `.md` dit depuis le 2026-10-07 les plafonds, la note grise et le serveur MCP (Principes) ; le
       `.docx` n'a pas été régénéré (script hors dépôt, sommaire écrit à la main).
-- [ ] **Deux défauts visuels connus** :
-      - `sequenceDiagram` : un cadre de bloc (`loop`, `alt`…) ne s'élargit pas pour contenir le texte
-        d'un auto-message ;
+- [ ] **Défaut visuel connu** :
       - `crossing-stress-bipartite` : deux connecteurs (A1→B3, A3→B2) ne suivent pas leurs boîtes quand
         on les déplace dans Word. Fixture volontairement adversariale ; probablement un indice de site
         de connexion mal choisi dans un graphe très dense.
