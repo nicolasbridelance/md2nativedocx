@@ -3,6 +3,15 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.0] — 2026-11-18
+
+### Added
+- **PlantUML sequence diagrams become editable Word shapes.** A ```` ```plantuml ```` or ```` ```puml ```` block
+  (with or without `@startuml` / `@enduml`) holding a sequence diagram is drawn like a Mermaid one: participants,
+  arrows, activations, notes, `alt` / `loop` / `par` / `group` frames, `autonumber`. It works in `.docx` and
+  `.pptx`, with the CodeLens, the hover and "Export this diagram" above the block. Other PlantUML diagram types
+  (class, activity, state…) get a note in the document and a warning. `!include` is never followed.
+
 ## [0.8.3] — 2026-11-18
 
 ### Fixed

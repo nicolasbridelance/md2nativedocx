@@ -63,6 +63,16 @@ SmartArt and charts are `.docx`-only.
 | `cynefin-beta` | Shapes | — | Five fixed domains with items. |
 | `eventmodeling` | Shapes | — | Lanes and frames. |
 
+### PlantUML
+
+A ```` ```plantuml ```` or ```` ```puml ```` block (or any source starting with `@startuml`) is recognised too;
+`@startuml` / `@enduml` may be left out inside such a fence.
+
+| PlantUML type | Becomes | Notes |
+|---|---|---|
+| Sequence diagram | Shapes, drawn like a Mermaid `sequenceDiagram` | Participants (actor, database, queue… drawn as boxes, with a warning), aliases, every common arrow, activations (`++` `--`, `activate`), `create` / `destroy`, notes, `ref over`, `alt` / `else` / `opt` / `loop` / `par` / `break` / `critical` / `group`, separators, `autonumber`, title. Confirmed in Word (2026-11-18). `skinparam`, `!theme` and `box` are ignored with a warning; `!include` is never followed (it would read a file or a URL). |
+| Class, activity, state, use case, component, mindmap… | A visible note in the document and a warning | Not converted yet. |
+
 ## What was ruled out, and the evidence
 
 These were each tried or examined against real Word files before being dropped. Reopen only with new
