@@ -1,22 +1,28 @@
-# Du brouillon au comité
+# Boutique en ligne
 
 ```mermaid
-flowchart TB
-  idee([Idée]) --> md[Rédaction en Markdown]
-  md --> revue{Relecture}
-  revue -->|Validé| word[Rapport Word]
-  revue -->|Validé| deck[Deck PowerPoint]
-  word --> comite([Comité de direction])
-  deck --> comite
-  classDef start fill:#7C3AED,stroke:#5B21B6,color:#FFFFFF
-  classDef step fill:#EDE9FE,stroke:#7C3AED,color:#2E1065
-  classDef decision fill:#F59E0B,stroke:#B45309,color:#FFFFFF
-  classDef out fill:#10B981,stroke:#047857,color:#FFFFFF
-  classDef goal fill:#1E1B2E,stroke:#7C3AED,color:#FFFFFF
-  class idee start
-  class md step
-  class revue decision
-  class word,deck out
-  class comite goal
-  linkStyle default stroke:#7C3AED,stroke-width:2px
+flowchart LR
+  user([Clients]) --> fw{Pare-feu}
+  fw -->|Bloqué| log[Journal sécurité]
+  fw -->|Autorisé| lb[Répartiteur]
+  subgraph cloud [Cloud privé]
+    app1[Serveur web 1]
+    app2[Serveur web 2]
+    db[(Base clients)]
+  end
+  lb --> app1
+  lb --> app2
+  app1 --> db
+  app2 --> db
+  classDef edge fill:#0EA5E9,stroke:#0369A1,color:#FFFFFF
+  classDef guard fill:#F43F5E,stroke:#BE123C,color:#FFFFFF
+  classDef srv fill:#E0F2FE,stroke:#0284C7,color:#0C4A6E
+  classDef data fill:#10B981,stroke:#047857,color:#FFFFFF
+  classDef warn fill:#FEF3C7,stroke:#D97706,color:#78350F
+  class user,lb edge
+  class fw guard
+  class app1,app2 srv
+  class db data
+  class log warn
+  linkStyle default stroke:#0369A1,stroke-width:2px
 ```

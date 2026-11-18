@@ -58,8 +58,69 @@ function Focus-Window([IntPtr]$h) {
   for ($i = 0; $i -lt 5; $i++) {
     [In]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [In]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
     [In]::ShowWindow($h, 3) | Out-Null; [In]::SetForegroundWindow($h) | Out-Null
-    Start-Sleep -Milliseconds 400
-    if ([In]::GetForegroundWindow() -eq $h) { return }
+    for ($j = 0; $j -lt 10; $j++) {             # Electron (VS Code) can take a couple of seconds
+      Start-Sleep -Milliseconds 300
+      if ([In]::GetForegroundWindow() -eq $h) { return }
+    }
   }
   throw "Could not bring the window to the front; take aborted."
+}
+
+# Find a top-level window whose title contains $part (UI Automation; works across Electron windows
+# that share one process, unlike Get-Process MainWindowHandle).
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+function Find-Window([string]$part, [int]$timeoutMs = 20000) {
+  $root = [System.Windows.Automation.AutomationElement]::RootElement
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+    foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)) {
+      if ($w.Current.Name -like "*$part*") { return [IntPtr]$w.Current.NativeWindowHandle }
+    }
+    Start-Sleep -Milliseconds 300
+  }
+  throw "No window titled *$part* appeared."
+}
+Add-Type @'
+using System; using System.Runtime.InteropServices;
+public static class Win2 { [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l); }
+'@
+# VS Code ignores a posted WM_CLOSE: bring the window up and press Alt+F4 instead.
+function Close-Window([IntPtr]$h) { Focus-Window $h; Key '%{F4}'; Start-Sleep -Seconds 1 }
+
+# Click a control found by its accessible name inside a window (positions of toasts and buttons vary);
+# polls until it shows up. Returns $false if it never does.
+function Click-ByName([IntPtr]$h, [string[]]$names, [int]$timeoutMs = 8000, [int]$ms = 800) {
+  $win = [System.Windows.Automation.AutomationElement]::FromHandle($h)
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+    foreach ($n in $names) {
+      $c = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $n)
+      $e = $win.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $c)
+      if ($e) { $r = $e.Current.BoundingRectangle; Click ([int]($r.X + $r.Width / 2)) ([int]($r.Y + $r.Height / 2)) $ms; return $true }
+    }
+    Start-Sleep -Milliseconds 250
+  }
+  $false
+}
+
+# Wait for a VS Code notification toast and return the centre of its primary (blue, #0078D4) button,
+# found in a screen capture of the bottom-right corner; $null if none shows up in time.
+Add-Type -AssemblyName System.Drawing
+function Find-ToastButton([int]$timeoutMs = 10000) {
+  $x0 = 1300; $y0 = 700; $w = 620; $h = 330
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+    $bmp = New-Object System.Drawing.Bitmap($w, $h)
+    $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($x0, $y0, 0, 0, $bmp.Size); $g.Dispose()
+    $minX = 9999; $maxX = -1; $minY = 9999; $maxY = -1
+    for ($y = 0; $y -lt $h; $y += 2) { for ($x = 0; $x -lt $w; $x += 2) {
+      $c = $bmp.GetPixel($x, $y)
+      if ($c.R -lt 15 -and [Math]::Abs($c.G - 120) -lt 12 -and [Math]::Abs($c.B - 212) -lt 12) {
+        if ($x -lt $minX) { $minX = $x }; if ($x -gt $maxX) { $maxX = $x }; if ($y -lt $minY) { $minY = $y }; if ($y -gt $maxY) { $maxY = $y }
+      } } }
+    $bmp.Dispose()
+    if ($maxX -gt $minX + 40) { return @([int]($x0 + ($minX + $maxX) / 2), [int]($y0 + ($minY + $maxY) / 2)) }
+    Start-Sleep -Milliseconds 200
+  }
+  $null
 }

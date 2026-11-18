@@ -36,9 +36,9 @@ click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc f
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
 there: soon). Public domain (CC0).
 
-![In real Word: a flowchart exported by md2nativedocx is edited (text retyped, a box moved, its arrows follow), then a SmartArt cycle is restyled with a new palette and a 3D style](docs/showcase/wow.gif)
+![In real Word: a network diagram exported by md2nativedocx is edited (a label retyped, a box moved, its arrow follows), a SmartArt cycle is restyled with a new palette and a 3D style, then a carousel of other diagram types, each tagged SmartArt, Word chart or Word shapes](docs/showcase/wow.gif)
 
-*Mermaid source → one click → Word shapes you can edit. Rendered here with LibreOffice; same result in Word.*
+*Mermaid source → one click → Word shapes, SmartArt and charts you can edit. Filmed in real Word.*
 
 | What the person receiving the document can do in Word | Diagram pasted as an image (existing tools) | **md2nativedocx** |
 |---|---|---|
