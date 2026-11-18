@@ -43,3 +43,19 @@ test('no external relationships; empty diagram yields a note; many items stay we
   const many = Array.from({ length: 40 }, (_, i) => `A->>B: m${i}`).join('\n');
   assert.ok(tr(`sequenceDiagram\n${many}`).includes('m39'));
 });
+
+test('a block frame widens to hold the text of a self-message inside it', () => {
+  // Known visual defect closed 2026-11-18: the frame stopped 36px right of the lifeline while the
+  // self-message's text starts there, so a long text ran out of its loop box.
+  const xml = tr('sequenceDiagram\n  participant A\n  participant B\n  loop Every minute\n    A->>A: Check the pending order queue again\n  end\n  A->>B: Send');
+  const frame = /name="Block loop"\/>[\s\S]*?<a:off x="(\d+)" y="\d+"\/><a:ext cx="(\d+)"/.exec(xml);
+  assert.ok(frame);
+  const frameRight = Number(frame[1]) + Number(frame[2]);
+  const textAt = xml.indexOf('Check the pending');
+  assert.ok(textAt > 0);
+  const boxes = [...xml.slice(0, textAt).matchAll(/<a:off x="(\d+)" y="\d+"\/><a:ext cx="(\d+)"/g)];
+  const last = boxes[boxes.length - 1];
+  assert.ok(last);
+  const textRight = Number(last[1]) + Number(last[2]);
+  assert.ok(textRight <= frameRight, `text ends at ${textRight}, past the frame (${frameRight})`);
+});

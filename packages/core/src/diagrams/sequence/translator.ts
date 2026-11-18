@@ -31,7 +31,7 @@ import { connector, ellipse, rect } from '../../translator/graph-shapes.js';
 const PAD = 20;
 const FONT = 11;
 const SMALL = 10;
-const LINE_H = 13;
+const LINE_H = 15;
 const NOTE_W = 130;
 const BAR_W = 10;
 const GAP_MIN = 140;
@@ -47,6 +47,8 @@ interface Frame {
   depth: number;
   color?: string;
   dividers: Array<{ y: number; label: string }>;
+  /** Rightmost x its content reaches beyond the lifelines (a self-message's text, an inner frame). */
+  right: number;
 }
 
 const widest = (lines: string[], fontPx: number): number => Math.max(0, ...lines.map((l) => estimateTextWidth(l, fontPx)));
@@ -177,8 +179,10 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   const closeFrame = (): void => {
     const f = frames.pop() as Frame;
     const x0 = (cx[f.lo] as number) - 36 + f.depth * 6;
-    const x1 = (cx[f.hi] as number) + 36 - f.depth * 6;
+    const x1 = Math.max((cx[f.hi] as number) + 36 - f.depth * 6, f.right);
     const h = y - f.startY;
+    const parent = frames[frames.length - 1];
+    if (parent) parent.right = Math.max(parent.right, x1 + 6);
     if (f.kind === 'rect') {
       box(bg, x0, f.startY, x1 - x0, h, f.color ? tint(f.color, 0.55) : 'EFEFEF', undefined, 'Background');
       return;
@@ -222,7 +226,7 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
       case 'blockStart': {
         const sp = spans.get(k) as { lo: number; hi: number };
         const empty = sp.hi < 0;
-        frames.push({ kind: item.kind, label: item.label, startY: y, lo: empty ? 0 : sp.lo, hi: empty ? n - 1 : sp.hi, depth: frames.length, color: item.color, dividers: [] });
+        frames.push({ kind: item.kind, label: item.label, startY: y, lo: empty ? 0 : sp.lo, hi: empty ? n - 1 : sp.hi, depth: frames.length, color: item.color, dividers: [], right: -Infinity });
         y += item.kind === 'rect' ? 8 : 26;
         break;
       }
@@ -261,7 +265,12 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
           line(msgs, x0 + 30, arrowY, x0 + 30, arrowY + 20, { dash });
           line(msgs, x0 + 30, arrowY + 20, x0, arrowY + 20, { dash, tail: headKind, tailSize: headSize });
           if (item.head === 'cross') cross(msgs, x0 + 4, arrowY + 20, 4);
-          if (lines.length > 0) text(msgs, x0 + 36, y, Math.max(...lines.map((l) => estimateTextWidth(l, FONT))) + 4, lines, { align: 'left' });
+          if (lines.length > 0) {
+            const textW = Math.max(...lines.map((l) => estimateTextWidth(l, FONT))) + 4;
+            text(msgs, x0 + 36, y, textW, lines, { align: 'left' });
+            // The enclosing frames widen to hold the text, which sits right of the loop.
+            for (const f of frames) f.right = Math.max(f.right, x0 + 36 + textW + 8);
+          }
         } else {
           line(msgs, xFrom, arrowY, xTo, arrowY, { dash, tail: headKind, tailSize: headSize, head: item.both ? 'triangle' : 'none', headSize });
           if (item.head === 'cross') cross(msgs, xTo - dir * 5, arrowY, 4);
