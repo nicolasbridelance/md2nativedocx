@@ -142,8 +142,8 @@ switch ($shot) {
     $p, $pr, $h = Open-PowerPoint
     $rec = Start-Rec '' "$raw\D-pptx.mp4" 11
     Start-Sleep -Milliseconds 1200
-    Click 802 550 900; Start-Sleep -Milliseconds 400             # select the "Pare-feu" diamond
-    Click 830 550 200; Start-Sleep -Milliseconds 300             # text cursor in its label
+    Click 760 553 900; Start-Sleep -Milliseconds 400             # select the "Pare-feu" diamond
+    Click 795 553 200; Start-Sleep -Milliseconds 300             # text cursor in its label
     Key '{END}'; Type-Text ' WAF'; Start-Sleep -Milliseconds 800
     Key '{ESC}'; Key '{ESC}'; Start-Sleep -Milliseconds 400
     Click 700 860 800; Start-Sleep -Milliseconds 1500
