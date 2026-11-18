@@ -168,8 +168,8 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       - `eslint-plugin-regexp` / `recheck` contre les ReDoS : nouvelle dépendance, **escalade**.
 - [ ] **R3.5 Images `\\serveur\partage` et `file://` lues par Pandoc** (fuite de hash NTLM sous
       Windows). Même sujet que l'item MCP du §2bis : une option de `convert()` est nécessaire
-      (**escalade**), à concevoir avec la publication du MCP. Risque documenté dans le README du CLI
-      (2026-11-15) ; reste à le reporter dans celui de l'extension.
+      (**escalade**), à concevoir avec la publication du MCP. Risque documenté dans les README du CLI
+      (2026-11-15) et de l'extension (2026-11-18).
 
 ### R4 — Gabarit et compatibilité Word : vérifier dans Word avant de changer (branche `fix/reference-docx-parity`)
 
@@ -238,17 +238,12 @@ Ensuite, dans l'ordre :
 
 ## 2. Faisable par l'agent
 
-- [ ] **Démo vidéo dans un vrai Word, 40 secondes** (spec 04, priorité 1). Reportée par le mainteneur
-      (2026-10-07) : le GIF animé existant suffit pour l'instant, d'autres pourront suivre. L'agent prépare
-      le `.docx` de démo et le découpage plan par plan quand le mainteneur voudra enregistrer.
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
       produit par un script resté hors dépôt. Aujourd'hui le `.md` est la source à éditer à la main.
       Le manuel ne dit encore rien des SmartArt ni des graphiques Word, qui sont pourtant devenus les
       défauts de l'extension : à ajouter en même temps (s'appuyer sur `docs/coverage.md`).
       Le `.md` dit depuis le 2026-10-07 les plafonds, la note grise et le serveur MCP (Principes) ; le
       `.docx` n'a pas été régénéré (script hors dépôt, sommaire écrit à la main).
-- [ ] **Descriptions de réglages partiellement traduites** (`packages/vscode-extension/package.nls.*.json`) ;
-      le panneau, lui, suit la langue de VS Code depuis la 0.6.0.
 - [ ] **Deux défauts visuels connus** :
       - `sequenceDiagram` : un cadre de bloc (`loop`, `alt`…) ne s'élargit pas pour contenir le texte
         d'un auto-message ;

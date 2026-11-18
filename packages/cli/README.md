@@ -15,7 +15,7 @@ Full project: <https://github.com/nicolasbridelance/md2nativedocx>
   binary). Unlike the VS Code extension, this standalone CLI does not auto-download Pandoc for you.
 - Pandoc is stopped after 10 minutes (`MD2NATIVEDOCX_TIMEOUT_MS`, in milliseconds; `0` removes the
   limit). The library's `convert()` has no limit unless you pass `timeoutMs`.
-- Pandoc reads the images a document points at, including network shares (`\server\share`),
+- Pandoc reads the images a document points at, including network shares (`\\server\share\…`),
   `file://` and `http(s)` URLs. On Windows a share path can leak the user's NTLM hash to that server.
   Do not convert Markdown you do not trust on a machine where that matters.
 

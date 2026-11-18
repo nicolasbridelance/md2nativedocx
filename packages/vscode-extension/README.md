@@ -244,7 +244,12 @@ The `downloadUrl` and `sha256`/`sha512` fields of each pair must be set **togeth
 override is ignored and the official source is used). The hash is still mandatory — these settings
 only relocate *where* the archive is fetched from, they never turn off the integrity check.
 
-**Security-policy blocking on the machine.** On a restriced workstation (AppLocker / Windows
+**Images in Markdown you did not write.** Pandoc reads every image a document points at, including
+network shares (`\\server\share\…`), `file://` and `http(s)` URLs. On Windows, a share path can make
+the machine send the user's NTLM hash to that server. Don't export Markdown from an untrusted source
+on a machine where that matters.
+
+**Security-policy blocking on the machine.** On a restricted workstation (AppLocker / Windows
 Defender Application Control / strict SmartScreen), a downloaded binary may exist but be blocked
 from running. The extension detects this case and shows a distinct message telling the user to
 contact IT for an exception — rather than the generic "Pandoc could not be found" error — with a
