@@ -146,3 +146,12 @@ test('landscape tables: mermaid code blocks still convert normally when the feat
   assert.ok(xml.includes('<wpc:wpc'), 'mermaid conversion (filter 1) must still run');
   assert.ok(xml.includes('<w:sectPr>'), 'landscape table detection (filter 2) must still run');
 });
+
+test('pandoc filter converts a ```plantuml sequence block, with or without @startuml', () => {
+  for (const body of ['@startuml\nAlice -> Bob : Hello\n@enduml', 'Alice -> Bob : Hello']) {
+    const xml = runPandoc('```plantuml\n' + body + '\n```\n');
+    assert.ok(xml.includes('<wps:wsp>'), body);
+    assert.ok(xml.includes('Hello'), body);
+    assert.ok(!xml.includes('Alice -&gt; Bob'), 'the source is not left as a code block');
+  }
+});

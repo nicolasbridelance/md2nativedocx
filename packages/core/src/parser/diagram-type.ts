@@ -49,7 +49,11 @@ export type DiagramType =
   | 'ishikawa'
   | 'wardley'
   | 'cynefin'
-  | 'treeView';
+  | 'treeView'
+  /** PlantUML (`@startuml`) sequence diagram: same AST and drawing as `sequence`. */
+  | 'plantumlSequence'
+  /** Any other PlantUML diagram (class, activity, mindmap...): not converted yet, shown as a note. */
+  | 'plantuml';
 
 export interface DiagramTypeInfo {
   type: DiagramType;
@@ -113,6 +117,7 @@ export function detectDiagramType(text: string): DiagramTypeInfo {
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
+    if (/^@start\w+/i.test(line)) return detectPlantUmlType(line, text);
 
     // A leading `---` ... `---` YAML frontmatter block (`title:`/`config:`)
     // precedes the header in real Mermaid; skip it. Only honoured before any
@@ -135,4 +140,33 @@ export function detectDiagramType(text: string): DiagramTypeInfo {
     return UNKNOWN;
   }
   return UNKNOWN;
+}
+
+/**
+ * Lines that only a non-sequence PlantUML diagram has (PlantUML itself decides the kind of an `@startuml`
+ * block from its content). Checked before concluding "sequence".
+ */
+const PLANTUML_KINDS: ReadonlyArray<{ kind: string; pattern: RegExp }> = [
+  { kind: 'activity', pattern: /^(?:start|stop|endif|endwhile|fork|end fork|detach|kill)$|^:.*[;|<>\]}/]$|^if\s*\(|^while\s*\(|^repeat\b|^\|[^|]+\|/i },
+  { kind: 'class', pattern: /^(?:abstract\s+class|class|interface|enum|annotation|struct)\s+\S/i },
+  { kind: 'state', pattern: /^state\s+\S|\[\*\]/i },
+  { kind: 'use case', pattern: /^usecase\s+\S|^\([^)]+\)/i },
+  { kind: 'object', pattern: /^(?:object|map|json)\s+\S/i },
+  { kind: 'component', pattern: /^(?:component|node|artifact|cloud|frame|folder|package|card|file|storage|rectangle|interface)\s+\S|^\[[^\]-]+\]/i },
+];
+
+/** Which PlantUML diagram `text` is, from its `@start...` header and, for `@startuml`, its lines. */
+function detectPlantUmlType(header: string, text: string): DiagramTypeInfo {
+  const start = /^@start(\w+)/i.exec(header)?.[1]?.toLowerCase() ?? '';
+  if (start !== 'uml') return { type: 'plantuml', label: `PlantUML ${start}` };
+  let sequenceLike = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.length === 0 || line.startsWith("'") || line.startsWith('@')) continue;
+    for (const { kind, pattern } of PLANTUML_KINDS) {
+      if (pattern.test(line)) return { type: 'plantuml', label: `PlantUML ${kind}` };
+    }
+    if (/^(?:participant|actor|boundary|control|entity|database|collections|queue)\s/i.test(line) || /-+>|<-+/.test(line)) sequenceLike = true;
+  }
+  return sequenceLike ? { type: 'plantumlSequence', label: 'PlantUML sequence diagram' } : { type: 'plantuml', label: 'PlantUML' };
 }

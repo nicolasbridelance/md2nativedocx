@@ -140,3 +140,21 @@ test('property: ODF output is always well-formed XML, with no hostile markup (AG
     { numRuns: 200 },
   );
 });
+
+test('property: PlantUML sequence input never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  const plantLine = fc.oneof(
+    hostileText,
+    fc.tuple(nodeId, fc.constantFrom('->', '-->', '->>', '->x', '<-', '<->', '-/', '-[#red]>'), nodeId, hostileText).map(([a, arrow, b, t]) => `${a} ${arrow} ${b} : ${t}`),
+    fc.tuple(fc.constantFrom('participant', 'actor', 'database', 'queue'), hostileText, nodeId).map(([k, label, id]) => `${k} "${label}" as ${id}`),
+    fc.tuple(fc.constantFrom('note over A :', 'alt', 'else', 'group', 'loop', 'ref over A :', '== ', 'title'), hostileText).map(([k, t]) => `${k} ${t}`),
+    fc.constantFrom('end', 'return', 'activate A', 'deactivate A', 'end note', '@enduml', 'A -> B ++ : x', 'B -> C ** : y'),
+  );
+  fc.assert(
+    fc.property(fc.array(plantLine, { minLength: 0, maxLength: 25 }), (lines) => {
+      const result = renderDiagram(`@startuml\n${lines.join('\n')}\n@enduml`);
+      assertWellFormedXml(result.fragment);
+    }),
+    { numRuns: 300 },
+  );
+});

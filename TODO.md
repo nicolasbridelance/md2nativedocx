@@ -231,6 +231,13 @@ Ensuite, dans l'ordre :
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
   *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :
   `docs/adr/0008-word-addin-ribbon-platform-spike.md` et la section Phase 4 de l'archive.
+- **PlantUML, essai sur la branche `feat/plantuml-sequence` (2026-11-18)** : les diagrammes de séquence
+  PlantUML (```` ```plantuml ```` ou `@startuml`) passent par un parseur dédié
+  (`core/src/diagrams/plantuml/sequence-parser.ts`) vers l'AST et le traducteur des séquences Mermaid ;
+  les autres types PlantUML deviennent une note et un avertissement. Vérifié dans Word. Change l'API
+  publique de `core` (deux valeurs de `DiagramType`, `group` dans `SequenceBlockKind`) : fusion à
+  décider par le mainteneur. Restent ensuite : CodeLens de l'extension, `.pptx`, `docs/coverage.md`,
+  puis les autres types (classes, états, activité).
 
 ## 2. Faisable par l'agent
 

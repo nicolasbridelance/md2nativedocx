@@ -100,6 +100,8 @@ import { translateWardleyToOoxml } from './diagrams/wardley/translator.js';
 import { parseEventModeling } from './diagrams/event-modeling/parser.js';
 import { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
 import { parseSequence } from './diagrams/sequence/parser.js';
+import { parsePlantUmlSequence } from './diagrams/plantuml/sequence-parser.js';
+import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
 import type { Flowchart } from './types.js';
@@ -452,6 +454,16 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   sequence: shapesOnly(parseSequence, translateSequenceToOoxml),
   // Same AST and translator as sequenceDiagram; only the parser differs.
   zenuml: shapesOnly(parseZenuml, translateSequenceToOoxml),
+  plantumlSequence: shapesOnly(parsePlantUmlSequence, translateSequenceToOoxml),
+  // Other PlantUML diagrams: a visible note in place of the diagram, and a warning, until they are drawn.
+  plantuml: {
+    render: (source, ctx) => {
+      const info = detectDiagramType(source);
+      ctx.warnings.push(`${info.label} diagrams are not converted yet; a note stands in their place.`);
+      return shapes(buildUnsupportedDiagramTypeNoteXml(info));
+    },
+    plan: () => SHAPES,
+  },
 };
 
 /** Whether a `nativeCharts` setting (here or in `RenderingSettings`) turns charts on for `type`. */

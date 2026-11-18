@@ -110,10 +110,17 @@ local odf_styles = pandoc.List()
 
 local mermaid_filter = {
   CodeBlock = function(el)
-    if el.classes[1] ~= 'mermaid' then return nil end
+    local lang = el.classes[1]
+    if lang ~= 'mermaid' and lang ~= 'plantuml' and lang ~= 'puml' then return nil end
+    local source = el.text
+    -- A ```plantuml block may leave out @startuml/@enduml (GitLab, Kroki accept that); core recognises
+    -- PlantUML by that header, so add it.
+    if lang ~= 'mermaid' and not source:match('^%s*@start') then
+      source = '@startuml\n' .. source .. '\n@enduml'
+    end
     if is_odt then
       odf_count = odf_count + 1
-      local out, err = run_core_file(el.text, 'md2n' .. odf_count)
+      local out, err = run_core_file(source, 'md2n' .. odf_count)
       if not out then
         io.stderr:write(err .. '\n')
         return nil
@@ -128,7 +135,7 @@ local mermaid_filter = {
       end
       return pandoc.RawBlock('opendocument', result.fragment)
     end
-    local xml, err = run_core_file(el.text)
+    local xml, err = run_core_file(source)
     if not xml then
       io.stderr:write(err .. '\n')
       return nil

@@ -17,7 +17,8 @@ export interface SequenceParticipant {
   actor: boolean;
 }
 
-export type SequenceBlockKind = 'loop' | 'alt' | 'opt' | 'par' | 'critical' | 'break' | 'rect';
+/** `group` comes from PlantUML: a labelled frame with no meaning of its own. */
+export type SequenceBlockKind = 'loop' | 'alt' | 'opt' | 'par' | 'critical' | 'break' | 'rect' | 'group';
 
 export type SequenceItem =
   | {
