@@ -166,10 +166,6 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
         crochets jamais fermés ×50 000 et un graphe complet K40 ;
       - [x] délai pour le CLI (fait) ; le pont du filtre reste borné par celui de Pandoc (voir « Limites de ressources », §2bis) ;
       - `eslint-plugin-regexp` / `recheck` contre les ReDoS : nouvelle dépendance, **escalade**.
-- [ ] **R3.5 Images `\\serveur\partage` et `file://` lues par Pandoc** (fuite de hash NTLM sous
-      Windows). Même sujet que l'item MCP du §2bis : une option de `convert()` est nécessaire
-      (**escalade**), à concevoir avec la publication du MCP. Risque documenté dans les README du CLI
-      (2026-11-15) et de l'extension (2026-11-18).
 
 ### R4 — Gabarit et compatibilité Word : vérifier dans Word avant de changer (branche `fix/reference-docx-parity`)
 
@@ -274,10 +270,6 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       bornent le pire cas sans le rendre bon marché (~35 s mesurés pour 400 nœuds / 800 arêtes), d'où le
       délai ; le CLI et le pont n'ont toujours pas le leur. Taille du paquet : `packages/mcp` refuse d'écrire
       un `.docx` de plus de 100 Mo ; `convert()` n'a pas de plafond (l'ajouter = option d'API, escalade).
-- [ ] ▶ **MCP : Pandoc lit et télécharge les images du Markdown** (chemins relatifs à la racine, URL
-      `http(s)`) : fuite de fichier ou SSRF possible si le serveur reçoit du Markdown non fiable.
-      Documenté dans `packages/mcp/README.md`. Une vraie réponse demande une option de `convert()` (donc
-      l'API du CLI : escalade), pas un contournement dans l'adaptateur.
 - [ ] ⏸ **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
       dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
 - [ ] ⏸ **Corpus Word vérifié** : la `CHECKLIST.md` existe (rounds 4-20) ; y ajouter version et build de

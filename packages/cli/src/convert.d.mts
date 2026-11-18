@@ -70,6 +70,13 @@ export interface ConvertOptions {
    * `MD2NATIVEDOCX_TIMEOUT_MS`).
    */
   timeoutMs?: number;
+  /**
+   * Run Pandoc with `--sandbox`: it reads only the input and the reference document, never an image, a local
+   * file, a URL or a network share named in the Markdown. Images are left out, each with a warning. Use it for
+   * Markdown you did not write: a network-share image can leak the Windows user's NTLM hash, a local path can
+   * copy a file into the document, a URL makes the machine fetch it. Default `false`.
+   */
+  sandbox?: boolean;
   /** Node executable the Lua filter runs the diagram bridge with. Default: `process.execPath`. */
   nodeBin?: string;
 }

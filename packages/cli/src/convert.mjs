@@ -19,6 +19,8 @@
  *
  * Security (AGENTS.md): Pandoc runs through `execFile` with an argument array (rule 4); every file is written
  * in a fresh temporary directory removed afterwards; the post-processing is the rule 7 allowlist.
+ * For Markdown from an untrusted source, `sandbox` stops Pandoc from reading images, local files, URLs and
+ * network shares (a network-share image can leak the Windows user's NTLM hash; TODO R3.5).
  */
 
 import { execFile } from 'node:child_process';
@@ -170,7 +172,24 @@ function commonPandocArgs(inputPath, options) {
   if (extname(inputPath).toLowerCase() === '.qmd') args.push('--from', 'markdown');
   const tocDepth = Math.min(4, Math.max(2, Math.round(options.tocDepth ?? 3)));
   if (options.toc) args.push('--toc', `--toc-depth=${tocDepth}`);
+  // Pandoc reads only the files named on its command line (input, reference document, template): no image,
+  // no URL, no network share. Filters are not restricted by it; this project's filter reads no file.
+  if (options.sandbox) args.push('--sandbox');
   return args;
+}
+
+/**
+ * Under `sandbox`, one warning per image Pandoc left out, so the user knows why it is missing. Pandoc says
+ * `[WARNING] Could not fetch resource <path>: ...`; the path comes from the Markdown and is only echoed.
+ */
+function sandboxWarnings(stderrText, options) {
+  if (!options.sandbox) return [];
+  const seen = new Set();
+  for (const line of stderrText.split(/\r?\n/)) {
+    const m = /^\[WARNING\] Could not fetch resource (.+?): /.exec(line);
+    if (m && m[1]) seen.add(m[1]);
+  }
+  return [...seen].map((src) => `image not embedded (sandbox mode reads no image, file or URL): ${src}`);
 }
 
 /** The `.odt` path: Pandoc writes the whole package, nothing is done to it afterwards (rule 7). */
@@ -199,7 +218,7 @@ async function convertOdt(source, options) {
       { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: { cx: page.cx, cy: Math.min(page.cy, ODT_MAX_DRAWING_CY) }, landscapeGeometry: null },
     );
     const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env, timeoutMs: options.timeoutMs });
-    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr)], pandocStderr };
+    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr), ...sandboxWarnings(pandocStderr, options)], pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
@@ -273,7 +292,7 @@ export async function convert(source, options = {}) {
       throw new ConversionError(`post-processing failed: ${errorMessage(err)}`, { stage: 'postprocess', pandocStderr, cause: err });
     }
 
-    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr)], pandocStderr };
+    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr), ...sandboxWarnings(pandocStderr, options)], pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
     if (generatedReferenceDoc) rmSync(generatedReferenceDoc.dir, { recursive: true, force: true });

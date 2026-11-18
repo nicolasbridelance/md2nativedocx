@@ -17,7 +17,9 @@ Full project: <https://github.com/nicolasbridelance/md2nativedocx>
   limit). The library's `convert()` has no limit unless you pass `timeoutMs`.
 - Pandoc reads the images a document points at, including network shares (`\\server\share\…`),
   `file://` and `http(s)` URLs. On Windows a share path can leak the user's NTLM hash to that server.
-  Do not convert Markdown you do not trust on a machine where that matters.
+  For Markdown you did not write, pass `--sandbox` (or `MD2NATIVEDOCX_SANDBOX=1`, or `convert()`'s
+  `sandbox: true`): Pandoc then reads no image, local file, URL or network share, and each image left
+  out is reported as a warning.
 
 ## Install
 

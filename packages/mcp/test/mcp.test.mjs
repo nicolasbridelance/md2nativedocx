@@ -100,3 +100,16 @@ test('convert_document writes a .docx under the root and never overwrites', { sk
   assert.equal(second.isError, true);
   await writeFile(join(root, 'keep.txt'), 'x');
 });
+
+test('convert_document is always sandboxed: an image under the root is not read', { skip: !hasPandoc }, async () => {
+  const root = await tmpRoot();
+  // A 1x1 PNG: without the sandbox, Pandoc would embed it.
+  await writeFile(join(root, 'secret.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  const client = await connect({ root });
+  const args = { markdown: '# T\n\n![x](secret.png)\n', outputPath: 'img.docx' };
+  const res = await client.callTool({ name: 'convert_document', arguments: args });
+  assert.notEqual(res.isError, true, res.content[0].text);
+  const info = JSON.parse(res.content[0].text);
+  assert.ok(info.warnings.some((w) => w.includes('image not embedded (sandbox')), info.warnings.join('\n'));
+  assert.ok(!(await readFile(info.outputPath)).includes(Buffer.from('word/media/')));
+});

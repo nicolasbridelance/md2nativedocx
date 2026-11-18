@@ -24,7 +24,9 @@ const TOOLS = {
 
   async convert_document({ markdown, outputPath, cwd, options }) {
     const { convert } = await import('@md2nativedocx/cli');
-    const result = await convert(markdown, { ...options, cwd });
+    // Always sandboxed, set last so no request option can turn it off: the Markdown comes from a model or
+    // whoever feeds it, and Pandoc would otherwise read any image path, URL or network share it names.
+    const result = await convert(markdown, { ...options, cwd, sandbox: true });
     if (result.document.length > MAX_DOCUMENT_BYTES) {
       throw new Error(`the document is ${result.document.length} bytes, over the ${MAX_DOCUMENT_BYTES} byte limit`);
     }

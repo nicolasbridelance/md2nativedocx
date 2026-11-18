@@ -27,8 +27,10 @@ MCP server (stdio) over md2nativedocx. Two tools, no document logic of its own:
 | `MD2NATIVEDOCX_MCP_RENDER_TIMEOUT_MS` | `30000` |
 | `MD2NATIVEDOCX_MCP_CONVERT_TIMEOUT_MS` | `120000` |
 
-## Known limit
+## Images are not read
 
-Pandoc resolves image references in the Markdown relative to the root, and fetches `http(s)` ones. Run the
-server only on Markdown you would let Pandoc read on that machine, or in a container without network or
-secrets in the root. Tracked in `TODO.md`.
+`convert_document` always runs Pandoc in its sandbox mode (`convert()`'s `sandbox` option): Pandoc reads no
+image, local file, URL or network share named in the Markdown, so a request cannot copy a file of the
+machine into the document, make the server fetch a URL, or leak the Windows user's NTLM hash through a
+`\\server\share` path. Images are left out of the `.docx`, each with a warning in the result. A request
+cannot turn this off.

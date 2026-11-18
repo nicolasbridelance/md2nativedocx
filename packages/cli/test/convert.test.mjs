@@ -151,3 +151,56 @@ test('MD2NATIVEDOCX_TIMEOUT_MS: 10 minutes by default for the CLI, overridable, 
   assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_TIMEOUT_MS: '0' }).timeoutMs, 0);
   assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_TIMEOUT_MS: 'abc' }).timeoutMs, 600000);
 });
+
+// --- sandbox (TODO R3.5): Pandoc reads no image, file, URL or network share named in the Markdown. ---
+
+/** A 1x1 PNG, enough for Pandoc to embed. */
+const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+const WITH_IMAGE = `${CHAIN}\n![local](pic.png)\n`;
+
+function mediaOf(document) {
+  return entries(document).filter((name) => name.startsWith('word/media/'));
+}
+
+test('without sandbox, a local image is embedded (unchanged behaviour)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-sbx-'));
+  try {
+    writeFileSync(join(dir, 'pic.png'), PNG_1X1);
+    const { document, warnings } = await convert(WITH_IMAGE, { cwd: dir });
+    assert.equal(mediaOf(document).length, 1);
+    assert.ok(!warnings.some((w) => w.includes('sandbox')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('sandbox leaves a local image out, says so, and still draws the diagram', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-sbx-'));
+  try {
+    writeFileSync(join(dir, 'pic.png'), PNG_1X1);
+    const { document, warnings } = await convert(WITH_IMAGE, { cwd: dir, sandbox: true, smartArt: false });
+    assert.deepEqual(mediaOf(document), []);
+    assert.ok(warnings.some((w) => w.includes('image not embedded (sandbox') && w.endsWith('pic.png')), warnings.join('\n'));
+    assert.ok(documentXml(document).includes('<wps:wsp'), 'the diagram is still drawn as shapes');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('sandbox applies to .odt too', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-sbx-'));
+  try {
+    writeFileSync(join(dir, 'pic.png'), PNG_1X1);
+    const { document, warnings } = await convert(WITH_IMAGE, { cwd: dir, sandbox: true, format: 'odt' });
+    assert.deepEqual(entries(document).filter((n) => n.startsWith('Pictures/')), []);
+    assert.ok(warnings.some((w) => w.includes('image not embedded (sandbox')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('MD2NATIVEDOCX_SANDBOX=1 turns sandbox on; anything else leaves it off', () => {
+  assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_SANDBOX: '1' }).sandbox, true);
+  assert.equal(readConvertOptionsFromEnv({}).sandbox, undefined);
+  assert.equal(readConvertOptionsFromEnv({ MD2NATIVEDOCX_SANDBOX: '0' }).sandbox, undefined);
+});

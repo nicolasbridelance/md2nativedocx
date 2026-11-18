@@ -52,6 +52,9 @@ preceding heading (text outside diagrams is not exported).
 Options:
   -o, --output <file>   Output .docx, .odt or .pptx path (required)
   --show-source         .pptx only: show each diagram's Mermaid source beside it
+  --sandbox             For Markdown you did not write: Pandoc reads no image, local file,
+                        URL or network share (images are left out, with a warning).
+                        Same as MD2NATIVEDOCX_SANDBOX=1
   -h, --help            Show this help
 `;
 
@@ -61,6 +64,8 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '-h' || a === '--help') {
       args.help = true;
+    } else if (a === '--sandbox') {
+      args.sandbox = true;
     } else if (a === '-o' || a === '--output') {
       args.output = argv[++i];
       if (!args.output) throw new CliError('Missing value for --output', 2);
@@ -97,6 +102,7 @@ async function main() {
     }
     throw err;
   }
+  if (args.sandbox) options.sandbox = true;
 
   if (args.help) {
     process.stdout.write(USAGE);

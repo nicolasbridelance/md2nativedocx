@@ -87,5 +87,6 @@ export function readConvertOptionsFromEnv(env) {
   const timeoutMs = positiveInt('MD2NATIVEDOCX_TIMEOUT_MS');
   options.timeoutMs = timeoutMs ?? (env.MD2NATIVEDOCX_TIMEOUT_MS === '0' ? 0 : 600000);
   if (env.MD2NATIVEDOCX_PANDOC_BIN) options.pandocBin = env.MD2NATIVEDOCX_PANDOC_BIN;
+  if (env.MD2NATIVEDOCX_SANDBOX === '1') options.sandbox = true;
   return options;
 }

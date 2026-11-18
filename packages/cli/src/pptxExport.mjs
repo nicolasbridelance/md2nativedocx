@@ -25,6 +25,8 @@ function parsePptxArgs(argv) {
       if (!args.output) throw new CliError('Missing value for --output', 2);
     } else if (a === '--show-source') {
       args.showSource = true;
+    } else if (a === '--sandbox') {
+      // Accepted like for .docx/.odt, and nothing to do: a deck is built without Pandoc and reads no image.
     } else if (a === '-h' || a === '--help') {
       args.help = true;
     } else if (a.startsWith('-')) {
