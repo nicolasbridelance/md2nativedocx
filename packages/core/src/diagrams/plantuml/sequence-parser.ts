@@ -10,10 +10,13 @@
  * shorthands; `return`; `activate` / `deactivate` / `create` / `destroy`; notes (`note left of|right of|over`,
  * `note left|right` on the last message, `note across`, `hnote` / `rnote`, single-line and `end note`
  * blocks); `ref over`; `alt` / `else` / `opt` / `loop` / `par` / `break` / `critical` / `group` ... `end`;
- * `== separators ==` (a note across the diagram); `title`; `autonumber`. Ignored with a warning: `box`,
- * `skinparam`, `!theme`, `!include` (never followed: it would read a file or a URL), other preprocessor
- * lines, `newpage`, incoming / outgoing messages (`[->`, `->]`, `?->`). Delays (`...`) and spaces (`|||`)
- * are skipped. Capped like the Mermaid parser (hostile input): 50 participants, 500 items, 20 nested blocks.
+ * `== separators ==` (a note across the diagram); `title`; `autonumber`; `autoactivate on`; `partition`
+ * (a group); multi-line participant names (`participant X [ ... ]`); an inline `A -> "Name" as B`; a colour
+ * after the receiver (`B #red : text`, ignored). Drawn with a warning: slanted arrows `->(10)` (flat),
+ * teoz parallel `&` messages (one after the other), `{anchor}` prefixes (kept, durations dropped), `/ note`
+ * (as a plain note). Ignored with a warning: `box`, `skinparam`, `<style>`, `!theme`, `!include` (never
+ * followed: it would read a file or a URL), other preprocessor lines, `newpage`, incoming / outgoing
+ * messages (`[->`, `->]`, `?->`). Delays (`...`) and spaces (`|||`) are skipped. Capped like the Mermaid parser (hostile input): 50 participants, 500 items, 20 nested blocks.
  */
 
 import { cleanText } from '../sequence/parser.js';
@@ -29,7 +32,8 @@ const MAX_ITEMS = 500;
 const MAX_DEPTH = 20;
 const MAX_LINE = 2000;
 
-const PARTICIPANT_KINDS = /^(participant|actor|boundary|control|entity|database|collections|queue)\s+(.+)$/i;
+/** A declaration; not `Participant -> Bob`, a message from a participant that happens to be named like a keyword. */
+const PARTICIPANT_KINDS = /^(participant|actor|boundary|control|entity|database|collections|queue)\s+(?![xo]?(?:<|\\|\/)*-)(.+)$/i;
 const GROUPS: ReadonlyMap<string, SequenceBlockKind> = new Map([
   ['alt', 'alt'],
   ['opt', 'opt'],
@@ -38,6 +42,7 @@ const GROUPS: ReadonlyMap<string, SequenceBlockKind> = new Map([
   ['break', 'break'],
   ['critical', 'critical'],
   ['group', 'group'],
+  ['partition', 'group'],
 ]);
 
 /** A participant reference: a quoted name, or a run of characters that cannot start an arrow. */
@@ -45,8 +50,24 @@ const NAME = String.raw`"[^"]+"|[^\s"<>:\-\[\]?]+`;
 /** Arrow: optional left head, a shaft of dashes with an optional `[#colour]`, optional right head. */
 const ARROW = String.raw`([xo]?(?:<<?|\\\\?|\/\/?)?)(-+(?:\[[^\]]*\])?-*)((?:>>?|\\\\?|\/\/?)?[xo]?)`;
 const MESSAGE = new RegExp(
-  String.raw`^(?<from>${NAME}|\[|\?)?\s*${ARROW}\s*(?<to>${NAME}|\]|\?)?\s*(?<mods>(?:\+\+|--|\*\*|!!)(?:\s*(?:\+\+|--|\*\*|!!))*)?\s*(?::(?<text>.*))?$`,
+  String.raw`^(?<from>${NAME}|\[|\?)?\s*${ARROW}\s*(?<to>${NAME}|\]|\?)?(?:\s+as\s+(?<alias>${NAME}))?\s*(?<color1>#\w+)?\s*(?<mods>(?:\+\+|--|\*\*|!!)(?:\s*(?:\+\+|--|\*\*|!!))*)?\s*(?<color2>#\w+)?\s*(?::(?<text>.*))?$`,
 );
+/** `participant Id [` opening a multi-line display name, closed by a lone `]`. */
+const MULTILINE_PARTICIPANT = new RegExp(String.raw`^(participant|actor|boundary|control|entity|database|collections|queue)\s+(${NAME})\s*\[$`, 'i');
+
+/** The `Id as Label` / `"Label" as Id` pair: which side is the id, which the label. */
+function idAndLabel(first: string, second: string | undefined): [string, string | undefined] {
+  if (second === undefined) return [unquote(first), undefined];
+  return first.startsWith('"') && !second.startsWith('"') ? [second, unquote(first)] : [unquote(first), unquote(second)];
+}
+
+/** A multi-line participant name: `=Title` heading markers, `----` rules and `""monospace""` marks dropped. */
+const multilineName = (body: string): string =>
+  body
+    .split('\n')
+    .map((l) => l.trim().replace(/^=+\s*/, '').replace(/""/g, ''))
+    .filter((l) => l !== '' && !/^[-=.]{2,}$/.test(l))
+    .join('\\n');
 
 const unquote = (s: string): string => s.trim().replace(/^"(.*)"$/, '$1');
 
@@ -67,6 +88,8 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
   /** An open multi-line block (`note ... end note`, `ref ... end ref`, `legend ... endlegend`, skinparam `{}`). */
   let multi: { end: RegExp; lines: string[]; emit?: (body: string) => void } | undefined;
   let inBlockComment = false;
+  /** `autoactivate on`: a solid message activates its receiver, a dashed reply from the callee ends it. */
+  let autoActivate = false;
 
   const warnOnce = (key: string, message: string): void => {
     if (warned.has(key)) return;
@@ -108,11 +131,8 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       warnings.push(`Participant ignored: ${rest}`);
       return undefined;
     }
-    const first = m[1] as string;
-    const second = m[2];
     // `"Long name" as Id`: the quoted side is the label. `Id as "Long name"` / `Id as Label`: the first is the id.
-    const [id, label] =
-      second === undefined ? [unquote(first), undefined] : first.startsWith('"') && !second.startsWith('"') ? [second, unquote(first)] : [unquote(first), unquote(second)];
+    const [id, label] = idAndLabel(m[1] as string, m[2]);
     return declare(id, label === undefined ? undefined : text(label), kind.toLowerCase() === 'actor') ? id : undefined;
   };
 
@@ -137,8 +157,9 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
 
   const notePlaced = (spec: string, body: string): boolean => {
     let m: RegExpExecArray | null;
-    if ((m = /^(left|right)\s+of\s+(.+)$/i.exec(spec))) {
-      const id = unquote((m[2] as string).split(',')[0] as string);
+    if ((m = /^(left|right)\s+(.+)$/i.exec(spec))) {
+      // `note left of A` and the shorter `note left A`.
+      const id = unquote(((m[2] as string).replace(/^of\s+/i, '').split(',')[0] as string));
       if (declare(id)) push({ type: 'note', placement: (m[1] as string).toLowerCase() as 'left' | 'right', actors: [id], text: text(body) });
     } else if ((m = /^over\s+(.+)$/i.exec(spec))) {
       noteOver((m[1] as string).split(',').map(unquote), body);
@@ -155,7 +176,7 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
   };
 
   for (const rawLine of source.split(/\r?\n/)) {
-    const line = rawLine.trim().slice(0, MAX_LINE);
+    let line = rawLine.trim().slice(0, MAX_LINE);
 
     if (inBlockComment) {
       if (line.includes("'/")) inBlockComment = false;
@@ -176,7 +197,33 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       continue;
     }
 
+    // Prefixes that only change placement in PlantUML's own renderer; the line itself is kept.
+    if (line.startsWith('&')) {
+      // teoz: this message runs at the same time as the previous one.
+      warnOnce('parallel', 'Parallel messages (`&`) are drawn one after the other.');
+      line = line.slice(1).trim();
+    }
+    if (/^\/\s*[hr]?note\b/i.test(line)) line = line.slice(1).trim(); // a note aligned with the previous one
     let m: RegExpMatchArray | null;
+    if (/^\{[^}]*\}\s*<?-+>?\s*\{[^}]*\}/.test(line)) {
+      warnOnce('anchor', 'Duration anchors (`{start}` ... `{end}`) are not drawn.');
+      continue;
+    }
+    if ((m = /^\{[^}]*\}\s*/.exec(line))) {
+      warnOnce('anchor', 'Duration anchors (`{start}` ... `{end}`) are not drawn.');
+      line = line.slice(m[0].length);
+    }
+    {
+      // Slanted arrows `->(10)` / `(10)<-`: drawn flat. Only the part before the message text is touched.
+      const colon = line.indexOf(':');
+      const head = colon === -1 ? line : line.slice(0, colon);
+      const flat = head.replace(/(-+>{1,2})\(\d+\)/, '$1').replace(/\(\d+\)(<{1,2}-+)/, '$1');
+      if (flat !== head) {
+        warnOnce('slanted', 'Slanted arrows (`->(10)`) are drawn flat.');
+        line = flat + (colon === -1 ? '' : line.slice(colon));
+      }
+    }
+
     if (/^@(start|end)uml\b/i.test(line)) {
       continue;
     } else if (/^!include/i.test(line)) {
@@ -186,7 +233,12 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
     } else if (/^skinparam\b/i.test(line)) {
       warnOnce('skinparam', '`skinparam` styling is ignored; the diagram uses the default look.');
       if (line.endsWith('{')) multi = { end: /^\}$/, lines: [] };
-    } else if (/^(hide|show|scale|mainframe|header|footer|caption|newpage|left to right|top to bottom)\b/i.test(line)) {
+    } else if (/^<style>/i.test(line)) {
+      warnOnce('style', '`<style>` blocks are ignored; the diagram uses the default look.');
+      if (!/<\/style>\s*$/i.test(line)) multi = { end: /^<\/style>$/i, lines: [] };
+    } else if ((m = line.match(/^autoactivate\s+(on|off)$/i))) {
+      autoActivate = (m[1] as string).toLowerCase() === 'on';
+    } else if (/^(hide|show|scale|mainframe|header|footer|caption|newpage|ignore\s+newpage|left to right|top to bottom)\b/i.test(line)) {
       warnOnce('display', 'Page and display commands (`hide`, `header`, `footer`, `newpage`, ...) are ignored.');
     } else if (/^legend\b/i.test(line)) {
       warnOnce('legend', '`legend` blocks are ignored.');
@@ -202,6 +254,9 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
         const nums = arg.split(/\s+/).filter((t) => /^\d+$/.test(t)).map(Number);
         auto = { next: nums[0] ?? 1, step: nums[1] ?? 1 };
       }
+    } else if ((m = line.match(MULTILINE_PARTICIPANT))) {
+      const id = declareFrom(m[1] as string, m[2] as string);
+      multi = { end: /^\]$/, lines: [], emit: (b) => id !== undefined && declare(id, text(multilineName(b))) };
     } else if ((m = line.match(PARTICIPANT_KINDS))) {
       declareFrom(m[1] as string, m[2] as string);
     } else if ((m = line.match(/^create\s+(.+)$/i))) {
@@ -277,7 +332,9 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       const leftHead = m[2] ?? '';
       const shaft = m[3] as string;
       const rightHead = m[4] ?? '';
-      if (/\[/.test(shaft)) warnOnce('arrowcolor', 'Arrow colours and styles (`-[#red]>`) are ignored.');
+      if (/\[/.test(shaft) || m.groups?.color1 !== undefined || m.groups?.color2 !== undefined) {
+        warnOnce('arrowcolor', 'Arrow colours and styles (`-[#red]>`, `#red`) are ignored.');
+      }
       // The receiving end is the side with a head; with heads on both sides (`<->`) the message goes left
       // to right and is drawn two-way.
       const reversed = leftHead !== '' && rightHead === '';
@@ -286,7 +343,10 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       if (/o/.test(leftHead + rightHead)) warnOnce('circle', 'Circle arrow ends (`->o`, `o->`) are drawn as plain arrows.');
       const head: SequenceHead = /x/.test(receivingHead) ? 'cross' : /<<|>>|[\\/]/.test(receivingHead) ? 'open' : 'arrow';
       const a = unquote(fromRaw);
-      const b = unquote(toRaw);
+      // `A -> "Long name" as L` declares the receiver inline, like `participant "Long name" as L`.
+      const [b, bLabel] = idAndLabel(toRaw, m.groups?.alias);
+      // Left-hand name first, so the columns keep source order.
+      if (bLabel !== undefined && (!declare(a) || !declare(b, text(bLabel)))) continue;
       const from = reversed ? b : a;
       const to = reversed ? a : b;
       const mods = m.groups?.mods ?? '';
@@ -294,8 +354,11 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       if (mods.includes('**')) {
         if (declare(to)) push({ type: 'create', actor: to });
       }
-      const activate = mods.includes('++');
-      const deactivate = mods.includes('--');
+      const top = calls[calls.length - 1];
+      const autoReply = autoActivate && mods === '' && dashed && top?.callee === from && top.caller === to;
+      // `**` (create) still activates under autoactivate; `!!` (destroy) does not.
+      const activate = mods.includes('++') || (autoActivate && !/\+\+|--|!!/.test(mods) && !dashed && from !== to);
+      const deactivate = mods.includes('--') || autoReply;
       message(from, to, m.groups?.text ?? '', dashed, head, both, activate, deactivate);
       if (activate) calls.push({ caller: from, callee: to });
       if (deactivate) {

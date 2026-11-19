@@ -140,3 +140,38 @@ test('never throws on malformed input, and caps hostile sizes', () => {
   assert.equal(ast.participants.length, 50);
   assert.ok(warnings.some((w) => w.includes('limited to 50 participants')));
 });
+
+// Syntax from the official reference page (plantuml.com/sequence-diagram), run end to end on 2026-11-19.
+test('official-page syntax: a participant named Participant, multi-line names, inline alias in a message', () => {
+  const multi = parsePlantUmlSequence(uml('participant Participant [\n  =Title\n  ----\n  ""SubTitle""\n]\nparticipant Bob\nParticipant -> Bob'));
+  assert.deepEqual(multi.warnings, []);
+  // Heading marker, rule and monospace quotes dropped; the two lines kept as two lines.
+  assert.match(multi.ast.participants[0]?.label ?? '', /^Title\s*(?:<br\/>|\n)\s*SubTitle$/);
+  assert.equal(messages(multi.ast.items).length, 1);
+  const alias = parsePlantUmlSequence(uml('"Bob()" -> "This is very\\nlong" as Long\nLong --> "Bob()" : ok'));
+  assert.deepEqual(alias.warnings, []);
+  assert.deepEqual(alias.ast.participants.map((p) => p.id), ['Bob()', 'Long']);
+  assert.equal(messages(alias.ast.items).length, 2);
+});
+
+test('official-page syntax: colour after the receiver, --++, autoactivate with return', () => {
+  const { ast, warnings } = parsePlantUmlSequence(
+    uml('autoactivate on\nalice -> bob : hello\nbob -> bob : self call\nbill -> bob #005500 : hello from thread 2\nbob -> george ** : create\nreturn done in thread 2\nreturn rc\nbob -> george !! : delete\nreturn success\nalice -> bob --++ #gold: again'),
+  );
+  assert.ok(!warnings.some((w) => /ignored:/.test(w)), warnings.join(' | '));
+  const msgs = messages(ast.items);
+  assert.equal(msgs.length, 9);
+  assert.deepEqual(msgs.slice(4, 7).map((x) => [x.from, x.to]), [['george', 'bob'], ['bob', 'bill'], ['bob', 'george']]);
+  assert.deepEqual([msgs[7]?.from, msgs[7]?.to], ['bob', 'alice']);
+});
+
+test('official-page syntax: slanted arrows, teoz &, anchors, / note, partition and <style> are kept or skipped cleanly', () => {
+  const { ast, warnings } = parsePlantUmlSequence(
+    uml('<style>\nlifeLine {\n LineStyle 0\n}\n</style>\n{start} A ->(10) B : go\n& B -> C : hi\nA (10)<- B : back\n{start} <-> {end} : some time\nnote over A : a\n/ note over B : b\nnote left B: c\npartition p1\nA -> B\nend'),
+  );
+  assert.ok(!warnings.some((w) => /ignored:/.test(w)), warnings.join(' | '));
+  assert.equal(messages(ast.items).length, 4);
+  assert.equal(ast.items.filter((i) => i.type === 'note').length, 3);
+  assert.equal(ast.items.filter((i) => i.type === 'blockStart').length, 1);
+  for (const w of ['Slanted arrows', 'Parallel messages', 'Duration anchors', '`<style>`']) assert.ok(warnings.some((x) => x.includes(w)), w);
+});

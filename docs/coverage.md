@@ -70,7 +70,7 @@ A ```` ```plantuml ```` or ```` ```puml ```` block (or any source starting with 
 
 | PlantUML type | Becomes | Notes |
 |---|---|---|
-| Sequence diagram | Shapes, drawn like a Mermaid `sequenceDiagram` | Participants (actor, database, queue… drawn as boxes, with a warning), aliases, every common arrow, activations (`++` `--`, `activate`), `create` / `destroy`, notes, `ref over`, `alt` / `else` / `opt` / `loop` / `par` / `break` / `critical` / `group`, separators, `autonumber`, title. Confirmed in Word (2026-11-18). `skinparam`, `!theme` and `box` are ignored with a warning; `!include` is never followed (it would read a file or a URL). |
+| Sequence diagram | Shapes, drawn like a Mermaid `sequenceDiagram` | Participants (actor, database, queue… drawn as boxes, with a warning), aliases, multi-line names, every common arrow, activations (`++` `--`, `activate`, `autoactivate on`), `create` / `destroy`, notes, `ref over`, `alt` / `else` / `opt` / `loop` / `par` / `break` / `critical` / `group` / `partition`, separators, `autonumber`, title. Confirmed in Word (2026-11-18). All 89 examples of the official reference page (plantuml.com/sequence-diagram, read 2026-11-19) convert with no line lost; approximations come with a warning (slanted arrows drawn flat, teoz `&` messages one after the other, incoming/outgoing `[->` `->]` messages not drawn). `skinparam`, `!theme` and `box` are ignored with a warning; `!include` is never followed (it would read a file or a URL). |
 | Class, activity, state, use case, component, mindmap… | A visible note in the document and a warning | Not converted yet. |
 
 ## What was ruled out, and the evidence
