@@ -19,11 +19,23 @@ Full project: <https://github.com/nicolasbridelance/md2nativedocx>
   `file://` and `http(s)` URLs. On Windows a share path can leak the user's NTLM hash to that server.
   For Markdown you did not write, pass `--sandbox` (or `MD2NATIVEDOCX_SANDBOX=1`, or `convert()`'s
   `sandbox: true`): Pandoc then reads no image, local file, URL or network share, and each image left
-  out is reported as a warning.
+  out is reported as a warning. `--sandbox` only stops Pandoc from fetching resources the Markdown
+  points at: it does not isolate the process and does not restrict the `-o` path.
 
 ## Install
 
+The package is `@md2nativedocx/cli` (scoped); the command it installs is `md2nativedocx`. There is no
+unscoped `md2nativedocx` package on npm, so a bare `npx md2nativedocx` only works where the CLI is already
+installed.
+
 ```sh
+# One-off run, nothing installed
+npm exec --yes --package=@md2nativedocx/cli -- md2nativedocx report.md -o report.docx
+
+# In a project (pin the version; `npm ci` in the pipeline then installs exactly that one)
+npm install --save-dev --save-exact @md2nativedocx/cli
+
+# Globally
 npm install -g @md2nativedocx/cli
 ```
 
@@ -31,6 +43,7 @@ npm install -g @md2nativedocx/cli
 
 ```sh
 md2nativedocx report.md -o report.docx
+md2nativedocx report.md -o report.docx --reference-doc corporate.docx --toc
 ```
 
 ```
@@ -39,8 +52,37 @@ Usage: md2nativedocx <input.md> -o <output.docx|output.odt|output.pptx> [options
 Options:
   -o, --output <file>   Output .docx, .odt or .pptx path (required)
   --show-source         .pptx only: show each diagram's Mermaid source beside it
+  --reference-doc <file>
+                        Word template (.docx) whose styles, page and headers the export uses
+                        (a .odt template for a .odt output). The export fails if it is missing.
+                        Overrides MD2NATIVEDOCX_REFERENCE_DOC
+  --toc                 Add a table of contents. Same as MD2NATIVEDOCX_TOC=1
+  --sandbox             For Markdown you did not write (see Requirements)
+  --version             Print the CLI version
   -h, --help            Show this help
 ```
+
+### In scripts and CI
+
+| Exit code | Meaning |
+|---|---|
+| `0` | The document was written. Warnings, if any, are on stderr and in `<output>.log` |
+| `1` | Conversion failed (Pandoc error, unreadable input); no document written |
+| `2` | Usage error: unknown option, unsupported output extension, `-o` naming the input, missing `--reference-doc`, output locked by Word |
+
+What exit `0` does **not** tell you:
+
+- **Warnings.** A diagram that could not be converted becomes a note in the document and is counted as a
+  warning (`Warnings: N` on stdout, the `Warnings: N` line of the `.log`). Fail the job on it yourself if
+  that matters to you.
+- **Schema validity.** The `.log`'s *Word compatibility check* says `Not checked` unless the Open XML
+  validator is configured (`MD2NATIVEDOCX_OXML_VALIDATOR_DLL`). Even when it passes, schema validity does
+  not prove how Word renders the document or recomputes its fields.
+- **The template.** `MD2NATIVEDOCX_REFERENCE_DOC` pointing at a missing file falls back to the bundled
+  template with a warning; use `--reference-doc` for a hard failure.
+
+Keep the document and its `.log` as job artifacts. If only the `.log` cannot be written, the document is
+kept, the problem is reported on stderr, and the exit code stays `0`.
 
 Every ` ```mermaid ` code block in the Markdown becomes native, editable Word objects, never an embedded
 image: a SmartArt graphic when the diagram fits one (processes, cycles, org charts, mindmaps, timelines,

@@ -4,7 +4,7 @@ The `.pptx` side of `md2nativedocx` (Markdown → native Word/PowerPoint, Mermai
 individually editable PowerPoint/Google Slides shapes (no pictures).
 
 ```bash
-npx md2nativedocx deck.md -o deck.pptx
+md2nativedocx deck.md -o deck.pptx   # CLI from npm: @md2nativedocx/cli
 ```
 
 - A slide is titled with the nearest preceding Markdown heading.

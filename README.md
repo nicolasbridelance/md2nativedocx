@@ -32,7 +32,7 @@ so the people who own the document after you can change it in Word, without Mark
 All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
 graph, …), plus PlantUML sequence, class, state and activity diagrams. A document without any diagram converts just as well. Use it from the
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (also on [Open VSX](https://open-vsx.org/extension/md2nativedocx/md2nativedocx) for VSCodium, Cursor, Windsurf…; one
-click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc filter. It can also write a
+click), the CLI (`md2nativedocx report.md -o report.docx`, npm package `@md2nativedocx/cli`), or as a Pandoc filter. It can also write a
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
 there: soon). Public domain (CC0).
 
@@ -132,24 +132,31 @@ Prerequisites: **Node.js ≥ 18** and **Pandoc ≥ 3.1.3** on `PATH` (Pandoc run
 Code extension downloads Pandoc for you; the CLI does not.
 
 ```bash
-npm install
-npm run build
+npm install -g @md2nativedocx/cli          # or: npm install --save-dev --save-exact @md2nativedocx/cli
 ```
+
+To build from a clone of this repository instead: `npm install && npm run build`.
 
 ## Usage (CLI)
 
 ```bash
-npx md2nativedocx report.md -o report.docx
+md2nativedocx report.md -o report.docx
+md2nativedocx report.md -o report.docx --reference-doc corporate.docx --toc
 ```
+
+Without installing anything: `npm exec --yes --package=@md2nativedocx/cli -- md2nativedocx report.md -o report.docx`
+(the npm package is scoped; a bare `npx md2nativedocx` only works where the CLI is already installed). Exit
+codes, warnings and what a successful exit does and does not guarantee in CI:
+[`packages/cli/README.md`](packages/cli/README.md#in-scripts-and-ci).
 
 Every ```` ```mermaid ```` block in the document is converted into a native Word drawing
 (individually selectable/editable vector shapes, dynamic connectors, native text — or a SmartArt
 graphic or a Word chart when enabled) — see "Supported diagram types" above.
 
-Want slides instead? `npx md2nativedocx deck.md -o deck.pptx` writes one 16:9 slide per Mermaid block, again
+Want slides instead? `md2nativedocx deck.md -o deck.pptx` writes one 16:9 slide per Mermaid block, again
 with editable shapes (see [`packages/pptx`](packages/pptx/README.md)).
 
-Working in LibreOffice? `npx md2nativedocx report.md -o report.odt` writes an OpenDocument text where each
+Working in LibreOffice? `md2nativedocx report.md -o report.odt` writes an OpenDocument text where each
 flowchart is a group of native LibreOffice shapes, connectors attached to them (other diagram types become a
 note in `.odt` for now; see [`docs/specs/05-libreoffice-odf-spec.md`](docs/specs/05-libreoffice-odf-spec.md)).
 
