@@ -195,7 +195,7 @@ export function parsePlantUmlState(source: string): PlantUmlStateParseResult {
       } else if (rest !== '') {
         warnings.push(`Unsupported part of a state declaration ignored: ${line}`);
       }
-    } else if ((m = line.match(/^(json|map|object)\s+\S+.*\{$/i))) {
+    } else if (/^(?:json|map|object)\s+\S+.*\{$/i.test(line)) {
       warnOnce('objects', 'JSON, map and object blocks in a state diagram are not drawn.');
       blocks.push('skip');
     } else if ((m = line.match(/^(frame|folder|rectangle|package|node|cloud|together)\b.*\{$/i))) {
