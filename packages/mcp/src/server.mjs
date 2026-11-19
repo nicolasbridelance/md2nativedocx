@@ -78,7 +78,7 @@ export function createServer({
     'render_diagram',
     {
       description:
-        'Render one Mermaid diagram (or a PlantUML sequence, class or state diagram starting with @startuml) as editable Word shapes, SmartArt or a native chart, and report what was ' +
+        'Render one Mermaid diagram (or a PlantUML sequence, class, state or activity diagram starting with @startuml) as editable Word shapes, SmartArt or a native chart, and report what was ' +
         'detected, any warnings, and (on request) the WordprocessingML fragment. Use it to check that a diagram ' +
         'converts before putting it in a document. Refuses diagrams over 500 nodes or 800 edges.',
       inputSchema: {
@@ -110,7 +110,7 @@ export function createServer({
     'convert_document',
     {
       description:
-        'Convert a Markdown document to a .docx where every ```mermaid (or ```plantuml sequence, class or state) block is an editable Word diagram. ' +
+        'Convert a Markdown document to a .docx where every ```mermaid (or ```plantuml sequence, class, state or activity) block is an editable Word diagram. ' +
         'Writes the file under the server root (never overwrites) and returns its path. Needs Pandoc on the server.',
       inputSchema: {
         markdown: z.string().min(1).max(MAX_MARKDOWN_LENGTH).describe('The Markdown document'),

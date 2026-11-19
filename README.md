@@ -30,7 +30,7 @@ so the people who own the document after you can change it in Word, without Mark
 - **Send it with confidence:** every file is checked against Word's own file-format rules before you get it.
 
 All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
-graph, …), plus PlantUML sequence, class and state diagrams. A document without any diagram converts just as well. Use it from the
+graph, …), plus PlantUML sequence, class, state and activity diagrams. A document without any diagram converts just as well. Use it from the
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (also on [Open VSX](https://open-vsx.org/extension/md2nativedocx/md2nativedocx) for VSCodium, Cursor, Windsurf…; one
 click), the CLI (`npx md2nativedocx report.md -o report.docx`), or as a Pandoc filter. It can also write a
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
@@ -88,8 +88,8 @@ C4, sankey, xychart, block, packet, kanban, architecture, radar, treemap, venn, 
 treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-document note, never a silently wrong guess.
 (Fidelity detail is deepest for flowcharts; see below.)
 
-**PlantUML sequence, class and state diagrams too.** A ```` ```plantuml ```` (or ```` ```puml ````) block holding a
-sequence, class or state diagram becomes the same editable Word shapes (or SmartArt, for an inheritance tree or a simple chain of states) as a Mermaid
+**PlantUML sequence, class, state and activity diagrams too.** A ```` ```plantuml ```` (or ```` ```puml ````) block holding a
+sequence, class, state or activity diagram becomes the same editable Word shapes (or SmartArt, for an inheritance tree, a simple chain of states or a straight sequence of actions) as a Mermaid
 one, in `.docx` and `.pptx`. Other PlantUML diagram types get an in-document note for now.
 
 ![All 29 supported Mermaid diagram types, each exported to native Word shapes](docs/showcase/preview.png)

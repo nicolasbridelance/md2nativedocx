@@ -285,6 +285,8 @@ function nodeDimensions(labelRuns: LabelToken[], shape: NodeShape): { width: num
   const rectWidth = textWidth + 2 * PAD_X;
   const rectHeight = (textHeight + 2 * PAD_Y) * SCALE_SAFETY_MARGIN;
 
+  // A circle with no text (an activity's start / stop / end point, a junction) is a small marker, not a box.
+  if (lines === 0 && CIRCLE_SHAPES.has(shape)) return { width: MARKER_SIZE_PX, height: MARKER_SIZE_PX };
   if (shape === 'diamond') {
     return {
       width: Math.max(NODE_WIDTH, 2 * rectWidth),
@@ -307,6 +309,11 @@ function nodeDimensions(labelRuns: LabelToken[], shape: NodeShape): { width: num
     height: Math.max(NODE_HEIGHT, rectHeight),
   };
 }
+
+/** Round shapes drawn as a small marker when they carry no text. */
+const CIRCLE_SHAPES: ReadonlySet<NodeShape> = new Set(['ellipse', 'doubleCircle', 'crossedCircle', 'filledCircle']);
+/** Side of a text-less circle marker, in logical pixels. */
+const MARKER_SIZE_PX = 26;
 
 /** Node shapes whose sides slant inward, needing extra width so a label clears the corners. */
 const SLANTED_SHAPES: ReadonlySet<NodeShape> = new Set([

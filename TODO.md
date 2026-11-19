@@ -238,7 +238,7 @@ Ensuite, dans l'ordre :
   **Classes (2026-11-19)** : `core/src/diagrams/plantuml/class-parser.ts` vers l'AST des classes Mermaid ;
   les 86 exemples officiels passent (0.10.0). **États (2026-11-19)** : `plantuml/state-parser.ts` vers l'AST
   des états Mermaid, avec lignes de description (nouveau champ `description`) ; les 45 exemples passent.
-  Reste : tester sur de vrais diagrammes du mainteneur ; activité (vers l'AST flowchart) ; états composites
+  **Activité (2026-11-19)** : `plantuml/activity-parser.ts` vers l'AST flowchart ; les 75 exemples passent. Reste : tester sur de vrais diagrammes du mainteneur ; barres fork/join ; états composites
   en boîtes imbriquées (Mermaid aussi).
 
 ## 2. Faisable par l'agent

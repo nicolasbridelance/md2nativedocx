@@ -103,6 +103,7 @@ import { parseSequence } from './diagrams/sequence/parser.js';
 import { parsePlantUmlSequence } from './diagrams/plantuml/sequence-parser.js';
 import { parsePlantUmlClass } from './diagrams/plantuml/class-parser.js';
 import { parsePlantUmlState } from './diagrams/plantuml/state-parser.js';
+import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
 import type { ClassDiagram } from './diagrams/class-diagram/types.js';
 import type { StateDiagram } from './diagrams/state-diagram/types.js';
 import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
@@ -371,8 +372,8 @@ function smartArtTitleXml(title: string | undefined): string {
 const MIN_READABLE_FONT_PT = 7;
 
 /** Flowchart (and text with no recognized header): SmartArt when its topology allows, else Dagre + shapes. */
-const renderFlowchart: TypeRenderer = (source, ctx) => {
-  const ast = parsed(ctx, parseMermaid(source));
+const renderFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnings: string[] }): TypeRenderer => (source, ctx) => {
+  const ast = parsed(ctx, parse(source));
   const smartArt = ctx.smartArt((options) => generateSmartArt(ast, options));
   if (smartArt) return smartArt;
   const result = layout(ast, ctx.canvas);
@@ -396,15 +397,19 @@ const renderFlowchart: TypeRenderer = (source, ctx) => {
   return shapes(fragment);
 };
 
-const planFlowchart = (source: string): Capability => {
-  const { ast } = parseMermaid(source);
+const planFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnings: string[] }) => (source: string): Capability => {
+  const { ast } = parse(source);
   const classification = classifyTopology(ast);
   if (!classification.eligible) return { kind: 'shapes', smartArtRejected: classification };
   const { layout: family } = classification;
   return { kind: 'smartart', smartArt: family === 'tree' ? { layout: family, depth: flowchartTreeDepth(ast) } : { layout: family } };
 };
 
-const flowchart: TypeHandler = { render: renderFlowchart, plan: planFlowchart };
+const flowchartHandler = (parse: (source: string) => { ast: Flowchart; warnings: string[] }): TypeHandler => ({
+  render: renderFlowchartWith(parse),
+  plan: planFlowchartWith(parse),
+});
+const flowchart: TypeHandler = flowchartHandler(parseMermaid);
 
 /**
  * One handler per detected type, the single place where a type's rendering is decided, for the export
@@ -421,6 +426,8 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   class: classRenderer(parseClassDiagram),
   // Same AST, SmartArt rule and drawing as classDiagram; only the parser differs.
   plantumlClass: classRenderer(parsePlantUmlClass),
+  // An activity diagram becomes a flowchart: same layout, shapes and SmartArt rule.
+  plantumlActivity: flowchartHandler(parsePlantUmlActivity),
   // A state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
   state: smartArtOrShapes(parseStateDiagram, (ast) => shapeOf(stateDiagramSmartArtLayout(ast)), generateStateDiagramSmartArt, translateStateDiagramToOoxml),
   // Same AST and drawing as stateDiagram. States with description lines stay shapes: SmartArt would drop them.

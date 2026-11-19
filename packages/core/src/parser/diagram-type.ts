@@ -56,6 +56,8 @@ export type DiagramType =
   | 'plantumlClass'
   /** PlantUML (`@startuml`) state diagram: same AST and drawing as `state`. */
   | 'plantumlState'
+  /** PlantUML (`@startuml`) activity diagram (current syntax): drawn as a flowchart. */
+  | 'plantumlActivity'
   /** Any other PlantUML diagram (class, activity, mindmap...): not converted yet, shown as a note. */
   | 'plantuml';
 
@@ -150,8 +152,11 @@ export function detectDiagramType(text: string): DiagramTypeInfo {
  * Lines that only a non-sequence PlantUML diagram has (PlantUML itself decides the kind of an `@startuml`
  * block from its content). Checked before concluding "sequence".
  */
+/** Lines only an activity diagram has. */
+const ACTIVITY = /^(?:start|stop|endif|endwhile|fork|end fork|detach|kill)$|^:.*[;|<>\]}/]$|^if\s*\(|^while\s*\(|^repeat\b|^\|[^|]+\|/i;
+
 const PLANTUML_KINDS: ReadonlyArray<{ kind: string; pattern: RegExp }> = [
-  { kind: 'activity', pattern: /^(?:start|stop|endif|endwhile|fork|end fork|detach|kill)$|^:.*[;|<>\]}/]$|^if\s*\(|^while\s*\(|^repeat\b|^\|[^|]+\|/i },
+  { kind: 'activity', pattern: ACTIVITY },
   // Before class: a state transition may carry a direction hint (`[*] -up-> First`) that class diagrams share.
   { kind: 'state', pattern: /^state\s+\S|\[\*\]/i },
   // A declaration, or a relation only class diagrams have (`<|--`, `*--`, `o--`, `..|>`...).
@@ -170,9 +175,21 @@ function detectPlantUmlType(header: string, text: string): DiagramTypeInfo {
   const start = /^@start(\w+)/i.exec(header)?.[1]?.toLowerCase() ?? '';
   if (start !== 'uml') return { type: 'plantuml', label: `PlantUML ${start}` };
   let sequenceLike = false;
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  // Activity keywords and actions are unambiguous wherever they appear; a connector `(1)` before them would
+  // otherwise read as a use case. An action is any line starting with `:` (no other diagram does).
+  if (lines.some((l) => ACTIVITY.test(l) || /^:\S/.test(l))) return { type: 'plantumlActivity', label: 'PlantUML activity diagram' };
+  let listOnly = true;
+  let inStyle = false;
+  for (const line of lines) {
     if (line.length === 0 || line.startsWith("'") || line.startsWith('@')) continue;
+    // A `<style>` block is styling for any kind of diagram: it says nothing about which one this is.
+    if (/^<style>/i.test(line)) inStyle = !/<\/style>\s*$/i.test(line);
+    if (inStyle || /^<\/?style>/i.test(line)) {
+      if (/^<\/style>/i.test(line)) inStyle = false;
+      continue;
+    }
+    if (!/^[-*]{1,3}\s+\S/.test(line)) listOnly = false;
     // Groupings exist in several diagram kinds (`package`, `namespace`, `together`, or a `frame` / `folder`...
     // opening a block): their content decides.
     if (/^(?:package|namespace|together)\b/i.test(line) || /^(?:frame|folder|rectangle|node|cloud)\b.*\{$/i.test(line)) continue;
@@ -181,9 +198,13 @@ function detectPlantUmlType(header: string, text: string): DiagramTypeInfo {
       if (!pattern.test(kind === 'class' ? line.replace(/(?<!:):(?!:).*$/, '') : line)) continue;
       if (kind === 'class') return { type: 'plantumlClass', label: 'PlantUML class diagram' };
       if (kind === 'state') return { type: 'plantumlState', label: 'PlantUML state diagram' };
+      if (kind === 'activity') return { type: 'plantumlActivity', label: 'PlantUML activity diagram' };
       return { type: 'plantuml', label: `PlantUML ${kind}` };
     }
     if (/^(?:participant|actor|boundary|control|entity|database|collections|queue)\s/i.test(line) || /-+>|<-+/.test(line)) sequenceLike = true;
   }
-  return sequenceLike ? { type: 'plantumlSequence', label: 'PlantUML sequence diagram' } : { type: 'plantuml', label: 'PlantUML' };
+  if (sequenceLike) return { type: 'plantumlSequence', label: 'PlantUML sequence diagram' };
+  // Nothing but `- Action` / `* Action` lines: PlantUML's list form of an activity diagram.
+  if (listOnly && lines.some((l) => /^[-*]{1,3}\s+\S/.test(l))) return { type: 'plantumlActivity', label: 'PlantUML activity diagram' };
+  return { type: 'plantuml', label: 'PlantUML' };
 }

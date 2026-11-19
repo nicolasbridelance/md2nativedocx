@@ -159,6 +159,26 @@ test('property: PlantUML sequence input never throws and always gives well-forme
   );
 });
 
+test('property: PlantUML activity input never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  const activityLine = fc.oneof(
+    hostileText.map((t) => `:${t};`),
+    hostileText.map((t) => `:${t}`),
+    hostileText.map((t) => `-> ${t};`),
+    fc.tuple(fc.constantFrom('if (', 'elseif (', 'while (', 'switch (', 'case (', 'repeat while ('), hostileText, fc.constantFrom(') then (yes)', ')', ') is (x)')).map(([a, t, b]) => `${a}${t}${b}`),
+    hostileText.map((t) => `partition "${t}" {`),
+    hostileText.map((t) => `|${t}|`),
+    fc.constantFrom('start', 'stop', 'end', 'else', 'endif', 'endwhile', 'endswitch', 'repeat', 'break', 'fork', 'fork again', 'end fork', '}', 'kill', 'label l', 'goto l', '-[hidden]->', 'note right', 'end note', '@enduml'),
+  );
+  fc.assert(
+    fc.property(fc.array(activityLine, { minLength: 0, maxLength: 25 }), (lines) => {
+      const result = renderDiagram(`@startuml\n${lines.join('\n')}\n@enduml`);
+      assertWellFormedXml(result.fragment);
+    }),
+    { numRuns: 300 },
+  );
+});
+
 test('property: PlantUML state input never throws and always gives well-formed, escaped XML', async () => {
   const { renderDiagram } = await import('../../src/render-diagram.js');
   const stateLine = fc.oneof(
