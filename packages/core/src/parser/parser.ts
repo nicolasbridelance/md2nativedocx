@@ -10,6 +10,7 @@
  */
 
 import { splitLines, splitStatements } from './normalize-statements.js';
+import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from './interactive.js';
 import type {
   EdgeType,
   FlowEdge,
@@ -554,13 +555,19 @@ function joinBracketContinuations(lines: string[]): string[] {
   const result: string[] = [];
   let buffer: string[] = [];
   let depth = 0;
+  // Carried across lines: a quoted label may span several (`a["`Line1` / `Line 2`"]`), and its closing
+  // quote must not be read as an opening one.
+  let inQuotes = false;
   for (const line of lines) {
     buffer.push(line.trim());
-    depth += bracketDelta(line);
+    const scan = bracketDelta(line, inQuotes);
+    depth += scan.delta;
+    inQuotes = scan.inQuotes;
     if (depth <= 0) {
       result.push(buffer.join(' '));
       buffer = [];
       depth = 0;
+      inQuotes = false;
     }
   }
   if (buffer.length > 0) {
@@ -570,13 +577,41 @@ function joinBracketContinuations(lines: string[]): string[] {
 }
 
 /**
+ * Remove edge ids (`A e1@--> B`, `A e1@==> B`) from a statement, adding each to `edgeIds`. Only outside
+ * quotes and brackets, and only where `@` is directly followed by an edge operator, so a node's own
+ * `@{ shape: … }` and label text are untouched.
+ */
+function stripEdgeIds(line: string, edgeIds: Set<string>): string {
+  let out = '';
+  let depth = 0;
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!;
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (!inQuotes && (ch === '[' || ch === '(' || ch === '{')) depth++;
+    else if (!inQuotes && (ch === ']' || ch === ')' || ch === '}') && depth > 0) depth--;
+    else if (!inQuotes && depth === 0 && /\s/.test(ch)) {
+      const m = /^\s+([A-Za-z_][\w-]*)@(?=--|==|-\.|<-|<=|~~~|[ox](?:--|==|-\.))/.exec(line.slice(i));
+      if (m) {
+        edgeIds.add(m[1]!);
+        out += ' ';
+        i += m[0].length - 1;
+        continue;
+      }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/**
  * Net count of `[`/`(`/`{` minus `]`/`)`/`}` in a line, ignoring anything
  * inside a double-quoted label (a literal bracket character in quoted text,
  * e.g. `n["["]`, must not be mistaken for an unterminated statement).
  */
-function bracketDelta(line: string): number {
+function bracketDelta(line: string, startInQuotes = false): { delta: number; inQuotes: boolean } {
   let delta = 0;
-  let inQuotes = false;
+  let inQuotes = startInQuotes;
   for (const ch of line) {
     if (ch === '"') {
       inQuotes = !inQuotes;
@@ -586,7 +621,7 @@ function bracketDelta(line: string): number {
     if (ch === '[' || ch === '(' || ch === '{') delta++;
     else if (ch === ']' || ch === ')' || ch === '}') delta--;
   }
-  return delta;
+  return { delta, inQuotes };
 }
 
 export interface ParseResult {
@@ -629,11 +664,23 @@ export function parseMermaid(text: string): ParseResult {
 
   let direction: 'TD' | 'LR' | 'BT' | 'RL' = 'TD';
 
-  const lines = joinBracketContinuations(splitLines(text)).flatMap((l) => splitStatements(l));
+  const rawLines = joinBracketContinuations(splitLines(text)).flatMap((l) => splitStatements(l));
+  // Edge ids (`A e1@--> B`, Mermaid 11.6+): removed from the edge, kept so that statements about the
+  // edge (`e1@{ animate: true }`, `class e1 animate`) are not taken for nodes.
+  const edgeIds = new Set<string>();
+  const lines = rawLines.map((l) => stripEdgeIds(l, edgeIds));
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (line.length === 0) continue;
+    // Edge metadata (`e1@{ animate: true, curve: linear }`): animation and per-edge curve have no
+    // counterpart in a static Word drawing.
+    const edgeMeta = /^([A-Za-z_][\w-]*)@\{.*\}$/.exec(line);
+    if (edgeMeta && edgeIds.has(edgeMeta[1]!)) continue;
+    if (isInteractiveDirective(line, ['click'])) {
+      if (!warnings.includes(INTERACTIVE_DIRECTIVES_IGNORED)) warnings.push(INTERACTIVE_DIRECTIVES_IGNORED);
+      continue;
+    }
 
     // Header line: graph TD / flowchart LR/BT/RL / swimlane-beta LR. `TB` is
     // Mermaid's own documented alias for `TD` (top-to-bottom either way) and
@@ -680,7 +727,9 @@ export function parseMermaid(text: string): ParseResult {
       const ids = classAssign[1]!
         .split(',')
         .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+        // A class on an edge id (`class e1 animate`) styles an edge animation, not a node.
+        .filter((s) => s.length > 0 && !edgeIds.has(s));
+      if (ids.length === 0) continue;
       const patch = classDefs.get(className);
       if (patch) {
         for (const id of ids) applyNodeStyle(nodes, pendingStyles, id, patch);

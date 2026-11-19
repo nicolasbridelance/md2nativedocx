@@ -34,6 +34,7 @@
  */
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
+import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from '../../parser/interactive.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
 
 export interface ClassDiagramParseResult {
@@ -118,6 +119,11 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
     if (/^classDiagram\b/i.test(line)) continue;
 
     const top = stack[stack.length - 1];
+
+    if (top?.kind !== 'class' && isInteractiveDirective(line, ['click', 'link', 'callback'])) {
+      if (!warnings.includes(INTERACTIVE_DIRECTIVES_IGNORED)) warnings.push(INTERACTIVE_DIRECTIVES_IGNORED);
+      continue;
+    }
 
     if (line === '}') {
       if (stack.length > 0) stack.pop();

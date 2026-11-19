@@ -322,10 +322,10 @@ test('ignores comments', () => {
   assert.equal(warnings.length, 0);
 });
 
-test('warns on unsupported constructs but keeps going', () => {
+test('drops an interactive `click` on purpose, with a warning, and keeps going', () => {
   const { ast, warnings } = parseMermaid('graph TD\n  A --> B\n  click A "https://example.com"');
   assert.equal(ast.nodes.length, 2);
-  assert.ok(warnings.some((w) => w.includes('Unsupported')));
+  assert.ok(warnings.some((w) => w.includes('never links outside itself')));
 });
 
 test('parses classDef fill and applies it inline (spec §6.3)', () => {

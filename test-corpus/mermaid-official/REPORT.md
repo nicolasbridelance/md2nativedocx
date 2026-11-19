@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 365 sans avertissement (67 %), 126 avec avertissement, 50 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 379 sans avertissement (70 %), 112 avec avertissement, 50 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -12,11 +12,11 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | architecture | 6 | 1 | 5 | 0 | 0 | 0 |
 | block | 30 | 29 | 1 | 0 | 0 | 0 |
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
-| classDiagram | 38 | 9 | 29 | 0 | 0 | 0 |
+| classDiagram | 38 | 12 | 26 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
 | entityRelationshipDiagram | 25 | 6 | 19 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
-| flowchart | 116 | 99 | 17 | 0 | 0 | 0 |
+| flowchart | 116 | 110 | 6 | 0 | 0 | 0 |
 | gantt | 11 | 4 | 7 | 0 | 0 | 0 |
 | gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
 | ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
@@ -103,9 +103,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 - #26 warned: Class annotations (e.g. <<Interface>>) are not yet rendered, ignored.
 - #27 warned: Relationship cardinalities are not yet supported, ignored: Student "1" --o "1" IdCard : carries \| Relationship cardinalities are not yet supported, ignored: Student "1" --o "1" Bike : rides
 - #28 warned: Notes are not yet supported for class diagrams, ignored: note "This is a general note" \| Notes are not yet supported for class diagrams, ignored: note for MyClass "This is a note for a class"
-- #29 warned: Unsupported line ignored: link Shape "https://www.github.com" "This is a tooltip for a link" \| Unsupported line ignored: click Shape2 href "https://www.github.com" "This is a tooltip for a link"
-- #30 warned: Unsupported line ignored: callback Shape "callbackFunction" "This is a tooltip for a callback" \| Unsupported line ignored: click Shape2 call callbackFunction() "This is a tooltip for a callback"
-- #31 warned: Unsupported line ignored: callback Class01 "callbackFunction" "Callback tooltip" \| Unsupported line ignored: link Class02 "https://www.github.com" "This is a link" \| Unsupported line ignored: click Class03 call callbackFunction() "Callback tooltip" \| Unsupported line ignored: click Class04 href "https://www.github.com" "This is a link"
 - #32 warned: Styling directives are not yet supported for class diagrams, ignored: style Animal fill:#f9f,stroke:#333,stroke-width:4px \| Styling directives are not yet supported for class diagrams, ignored: style Mineral fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
 - #33 warned: Unsupported line ignored: class Animal:::someclass \| Styling directives are not yet supported for class diagrams, ignored: classDef someclass fill:#f96
 - #34 warned: Unsupported line ignored: class Animal:::someclass { \| Unsupported line ignored: -int sizeInFeet \| Unsupported line ignored: -canEat() \| Unexpected "}" without a matching block opener: } \| Styling directives are not yet supported for class diagrams, ignored: classDef someclass fill:#f96
@@ -138,21 +135,10 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 - #0 warned: The frontmatter title "Node" is not drawn for this diagram type.
 - #1 warned: The frontmatter title "Node with text" is not drawn for this diagram type.
-- #3 warned: Unsupported line ignored: newLines["`Line1 Line 2 Line 3`"] markdown --> newLines
-- #85 warned: Unsupported line ignored: A e1@--> B
-- #86 warned: Unsupported line ignored: A e1@==> B
-- #87 warned: Unsupported line ignored: A e1@--> B
-- #88 warned: Unsupported line ignored: A e1@--> B
-- #89 warned: Unsupported line ignored: Client e1@--> API \| Unsupported line ignored: API e2@--> Cache \| Unsupported line ignored: Cache e3@-->\|miss\| DB \| Unsupported line ignored: DB e4@--> API \| Unsupported line ignored: API e5@--> Client
-- #90 warned: Unsupported line ignored: Client e1@--> API \| Unsupported line ignored: API e2@--> Client
 - #100 warned: Subgraph "one" was also used as a node; node ignored. \| Subgraph "two" was also used as a node; node ignored. \| Subgraph "three" was also used as a node; node ignored. \| Edge one -> two references a subgraph; ignored (V1). \| Edge three -> two references a subgraph; ignored (V1). \| Edge two -> c2 references a subgraph; ignored (V1).
 - #101 warned: Subgraph "TOP" was also used as a node; node ignored. \| Subgraph "B1" was also used as a node; node ignored. \| Subgraph "B2" was also used as a node; node ignored. \| Edge A -> TOP references a subgraph; ignored (V1). \| Edge TOP -> B references a subgraph; ignored (V1). \| Edge B1 -> B2 references a subgraph; ignored (V1).
 - #102 warned: Subgraph "subgraph1" was also used as a node; node ignored. \| Edge outside -> subgraph1 references a subgraph; ignored (V1). \| Subgraph "subgraph2" direction (TD) is ignored: a node inside is linked to a node outside, so it follows the flowchart's direction (same as Mermaid).
 - #103 warned: Subgraph "one" was also used as a node; node ignored. \| Edge Start -> one references a subgraph; ignored (V1). \| Edge one -> End references a subgraph; ignored (V1).
-- #104 warned: Unsupported line ignored: a("`The **cat** in the hat`") -- "edge label" --> b{{"`The **dog** in the hog`"}} end subgraph "`**Two**`" c("`The **cat** in the hat`") -- "`Bold **edge label**`" --> d("The dog in the hog") end \| Unclosed `subgraph` block.
-- #105 warned: Unsupported line ignored: click A callback "Tooltip for a callback" \| Unsupported line ignored: click B "https://www.github.com" "This is a tooltip for a link" \| Unsupported line ignored: click C call callback() "Tooltip for a callback" \| Unsupported line ignored: click D href "https://www.github.com" "This is a tooltip for a link"
-- #106 warned: Unsupported line ignored: click A "https://www.github.com" _blank \| Unsupported line ignored: click B "https://www.github.com" "Open this in a new tab" _blank \| Unsupported line ignored: click C href "https://www.github.com" _blank \| Unsupported line ignored: click D href "https://www.github.com" "Open this in a new tab" _blank
-- #108 warned: Unsupported line ignored: A e1@==> B \| Unsupported line ignored: A e2@--> C
 
 ### gantt
 
