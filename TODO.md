@@ -140,10 +140,26 @@ Ensuite, dans l'ordre :
 - [ ] **Conformité Mermaid, objectif 1:1** (décidé le 2026-11-19 ; proposé dès 2026-09 par
       `docs/adr/spikes/spike-gantt-parser/spike.md`, jamais fait). Le bug du `;` en séquence a été trouvé
       par un utilisateur, pas par un test : c'est ce que ce chantier doit rendre impossible.
-      - [ ] **Étage 1 — exemples officiels**, comme pour PlantUML : chaque bloc d'exemple des pages de
-            syntaxe de la doc Mermaid (29 types, licence MIT, gardés dans le dépôt avec leur mention et la
-            version de Mermaid), passé dans le moteur ; rapport par type (sans avertissement / construction
-            ignorée / échec) ; écarts corrigés un par un ; résultat verrouillé par un test en CI.
+      - [~] **Étage 1 — exemples officiels** (`test-corpus/mermaid-official/`, `mermaid@12.3.0`, 541 exemples ;
+            `node scripts/mermaid-conformance.mjs --report` ; verrou CI : `mermaid-official.test.ts`). Au
+            2026-11-19 : **379 propres (70 %)**, 112 avec avertissement, 50 de types pas encore dessinés (note),
+            0 mal typé, 0 échec (départ : 304, et 50 dessinés comme des organigrammes). Faits : en-tête YAML
+            central, types agentflow/railroad/usecase reconnus (note), `;` en séquence, organigrammes (ids de
+            lien `e1@-->`, libellés entre guillemets sur plusieurs lignes, `click` écarté exprès).
+            Reste, par ordre de rendement (détail : `REPORT.md`) :
+            - **ER (19)** : relations en toutes lettres (`1 to zero or more`, `only one to`, `many(0) optionally
+              to 0+`), alias d'entité `a["Customer Account"] { … }`, `direction`, `subgraph`, `:::classe`,
+              relation sans espaces (`id1||--||id2`), noms d'entité entre guillemets ;
+            - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, sucettes `()--`/`--()`, annotations
+              `<<interface>>` (en ligne ou seules), `class X:::style` (avec ou sans corps), cardinalités, notes,
+              `namespace`, styles ;
+            - **états (13)** : états composites en boîtes imbriquées, notes, styles ;
+            - **organigrammes (8)** : liens vers un sous-graphe, titre d'en-tête à dessiner ;
+            - **séquence (11)**, **C4 (6)**, **architecture (5)**, **Gantt (7)**, **mindmap (4)**, **requirement (4)**,
+              **treeView (4)**, divers (8) ;
+            - **types à dessiner** : agentflow, railroad, usecase (50 exemples, une note aujourd'hui).
+            - Limite de l'étage 1 : il ne voit que les avertissements. Un faux nœud créé sans avertissement
+              (comme `e1@{ … }` avant correction) n'est visible qu'à l'étage 2.
       - [ ] **Étage 2 — différentiel contre `mermaid`** (dépendances de dev `mermaid` + `jsdom` accordées
             par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime) : pour chaque exemple,
             comparer ce que Mermaid comprend (nœuds, liens, messages, blocs) à notre AST. Recette jsdom :
