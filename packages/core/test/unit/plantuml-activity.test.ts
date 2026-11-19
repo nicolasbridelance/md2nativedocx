@@ -129,3 +129,12 @@ test('never throws on malformed input, and caps hostile sizes', () => {
   assert.equal(ast.nodes.length, 400);
   assert.ok(warnings.some((w) => w.includes('limited to 400')));
 });
+
+test('.odt: an activity diagram is drawn as LibreOffice shapes, like a flowchart', async () => {
+  const { renderDiagramOdf } = await import('../../src/render-diagram-odf.js');
+  const { fragment, metadata } = renderDiagramOdf(uml('start\n:Step <one>;\nif (ok?) then (yes)\n:Done;\nendif\nstop'));
+  assert.equal(metadata.diagramType, 'plantumlActivity');
+  assert.ok(fragment.includes('draw:'), 'native shapes');
+  assert.ok(fragment.includes('Step &lt;one&gt;'));
+  assert.ok(!/xlink:href|draw:a\b|text:a\b|office:script/.test(fragment));
+});

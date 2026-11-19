@@ -11,6 +11,7 @@
 
 import { detectDiagramType } from './parser/diagram-type.js';
 import { parseMermaid } from './parser/index.js';
+import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
 import { layout } from './layout/layout.js';
 import { DiagramTooLargeError } from './layout/graph-limits.js';
 import type { CanvasOptions } from './translator/canvas.js';
@@ -69,13 +70,14 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   const { type, label } = detectDiagramType(source);
   const warnings: string[] = [];
 
-  if (type !== 'flowchart' && type !== 'unknown') {
-    const message = `${label} not converted: .odt output draws flowcharts only for now.`;
+  // A PlantUML activity diagram is a flowchart once parsed, so it is drawn here too.
+  if (type !== 'flowchart' && type !== 'unknown' && type !== 'plantumlActivity') {
+    const message = `${label} not converted: .odt output draws flowcharts (and PlantUML activity diagrams) only for now.`;
     warnings.push(message);
     return { ...buildOdfNote(message, idPrefix), metadata: { diagramType: type, label, warnings } };
   }
 
-  const parsed = parseMermaid(source);
+  const parsed = type === 'plantumlActivity' ? parsePlantUmlActivity(source) : parseMermaid(source);
   warnings.push(...parsed.warnings);
   const canvas: CanvasOptions = {};
   if (options.maxDrawingCx !== undefined) canvas.maxDrawingCx = options.maxDrawingCx;
