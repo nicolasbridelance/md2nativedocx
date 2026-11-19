@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, existsSync, rmSync, readFileSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, readFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import AdmZip from 'adm-zip';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cli = join(here, '..', 'bin', 'md2nativedocx.mjs');
@@ -520,4 +521,138 @@ test('R1.1: export refuses (exit 2) while Word holds the target open, and leaves
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --- Script/CI contract (2026-11-19): fail early and loudly instead of a misleading success. ---
+
+function withDir(fn) {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  try {
+    return fn(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+const SIMPLE_MD = '# T\n\n```mermaid\ngraph TD\n  A --> B\n```\n';
+
+test('cli --version prints the CLI package version', () => {
+  const pkg = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8'));
+  const { code, out } = runCli(['--version']);
+  assert.equal(code, 0);
+  assert.equal(out.trim(), pkg.version);
+});
+
+test('cli refuses an unsupported output extension before converting, and writes nothing', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    writeFileSync(md, SIMPLE_MD);
+    for (const name of ['report.pdf', 'report']) {
+      const { code, err } = runCli([md, '-o', join(dir, name)]);
+      assert.equal(code, 2, err);
+      assert.match(err, /Unsupported output extension/);
+      assert.ok(!existsSync(join(dir, name)));
+      assert.ok(!existsSync(join(dir, 'report.log')));
+    }
+  });
+});
+
+test('cli accepts an upper-case .DOCX output', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    writeFileSync(md, SIMPLE_MD);
+    const { code, err } = runCli([md, '-o', join(dir, 'OUT.DOCX')]);
+    assert.equal(code, 0, err);
+  });
+});
+
+test('cli refuses an output that is the input file, however it is spelled', () => {
+  withDir((dir) => {
+    const src = join(dir, 'same.docx');
+    writeFileSync(src, SIMPLE_MD);
+    const { code, err } = runCli(['same.docx', '-o', './same.docx'], { cwd: dir });
+    assert.equal(code, 2, err);
+    assert.match(err, /overwrite the input/);
+    assert.equal(readFileSync(src, 'utf8'), SIMPLE_MD);
+  });
+});
+
+test('cli --reference-doc that does not exist fails without writing a document', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    writeFileSync(md, SIMPLE_MD);
+    const { code, err } = runCli([md, '-o', join(dir, 'doc.docx'), '--reference-doc', join(dir, 'missing.docx')]);
+    assert.equal(code, 2, err);
+    assert.match(err, /Reference document not found/);
+    assert.ok(!existsSync(join(dir, 'doc.docx')));
+  });
+});
+
+test('cli --reference-doc of the wrong kind for the output fails', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    const tpl = join(dir, 'tpl.odt');
+    writeFileSync(md, SIMPLE_MD);
+    writeFileSync(tpl, 'x');
+    const { code, err } = runCli([md, '-o', join(dir, 'doc.docx'), '--reference-doc', tpl]);
+    assert.equal(code, 2, err);
+    assert.match(err, /must be a \.docx file/);
+  });
+});
+
+test('cli --reference-doc is applied: a style only the template has reaches the output', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    const tpl = join(dir, 'corporate.docx');
+    const docx = join(dir, 'doc.docx');
+    writeFileSync(md, SIMPLE_MD);
+    // The bundled template plus one style no other template has: it must reach the output.
+    const zip = new AdmZip(join(here, '..', 'assets', 'reference.docx'));
+    const styles = zip.readAsText('word/styles.xml').replace(
+      '</w:styles>',
+      '<w:style w:type="paragraph" w:customStyle="1" w:styleId="CorporateMarker"><w:name w:val="Corporate Marker"/></w:style></w:styles>',
+    );
+    zip.updateFile('word/styles.xml', Buffer.from(styles, 'utf8'));
+    zip.writeZip(tpl);
+    const { code, err } = runCli([md, '-o', docx, '--reference-doc', tpl]);
+    assert.equal(code, 0, err);
+    assert.match(new AdmZip(docx).readAsText('word/styles.xml'), /w:styleId="CorporateMarker"/);
+  });
+});
+
+test('cli warns (log + count) when MD2NATIVEDOCX_REFERENCE_DOC points nowhere, and still exports', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    writeFileSync(md, SIMPLE_MD);
+    const env = { ...process.env, MD2NATIVEDOCX_REFERENCE_DOC: join(dir, 'gone.docx') };
+    const { code, err } = runCli([md, '-o', join(dir, 'doc.docx')], { env });
+    assert.equal(code, 0, err);
+    assert.match(err, /reference document not found/);
+    assert.match(readFileSync(join(dir, 'doc.log'), 'utf8'), /^Warnings: [1-9]/m);
+  });
+});
+
+test('cli --toc adds a table of contents field', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    const docx = join(dir, 'doc.docx');
+    writeFileSync(md, SIMPLE_MD);
+    const { code, err } = runCli([md, '-o', docx, '--toc']);
+    assert.equal(code, 0, err);
+    const xml = execFileSync('unzip', ['-p', docx, 'word/document.xml'], { encoding: 'utf8' });
+    assert.ok(xml.includes('docPartGallery'), 'expected a TOC field');
+    assert.match(xml, /TOC \\o/);
+  });
+});
+
+test('cli keeps the document and exits 0 when only the log cannot be written', () => {
+  withDir((dir) => {
+    const md = join(dir, 'doc.md');
+    const docx = join(dir, 'doc.docx');
+    writeFileSync(md, SIMPLE_MD);
+    mkdirSync(join(dir, 'doc.log'));
+    const { code, err } = runCli([md, '-o', docx]);
+    assert.equal(code, 0, err);
+    assert.match(err, /export log could not be written/);
+    assert.ok(existsSync(docx));
+  });
 });

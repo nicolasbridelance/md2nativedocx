@@ -3,6 +3,7 @@
  * the .pptx path in `pptxExport.mjs`).
  */
 
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve, isAbsolute, relative, sep } from 'node:path';
 
 /** Typed error for CLI-level failures. */
@@ -27,4 +28,35 @@ export function resolveSafePath(rawPath, cwd) {
     }
   }
   return abs;
+}
+
+/**
+ * Refuse an output that names the input file itself, however the two paths are spelled (`./a.md` and
+ * `a.md`, a different case on Windows/macOS, a symlink): the export would replace the source.
+ */
+export function assertNotSameFile(input, output) {
+  const canonical = (p) => {
+    let full = resolve(p);
+    if (existsSync(full)) {
+      try {
+        full = realpathSync.native(full);
+      } catch {
+        // Unreadable link or permission issue: compare the resolved path as is.
+      }
+    }
+    return process.platform === 'win32' || process.platform === 'darwin' ? full.toLowerCase() : full;
+  };
+  if (canonical(input) === canonical(output)) {
+    throw new CliError(`The output would overwrite the input file: ${output}`, 2);
+  }
+}
+
+/** This CLI's own version (not the VS Code extension's), from the package.json next to `bin/`. */
+export function cliVersion() {
+  try {
+    return JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version ?? 'unknown';
+  } catch {
+    // A bundled copy without its package.json: still answer --version rather than crash.
+    return 'unknown';
+  }
 }

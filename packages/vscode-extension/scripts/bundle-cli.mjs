@@ -21,7 +21,7 @@
  * changes to packages/cli or packages/pandoc-filter.
  */
 import { build } from 'esbuild';
-import { existsSync, mkdirSync, copyFileSync, rmSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, rmSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -88,6 +88,14 @@ await build({
   format: 'esm',
   target: 'node18',
 });
+
+// `md2nativedocx --version` reads `../package.json` relative to the bundled bin: give it the CLI's own
+// name and version (not the extension's), nothing else.
+{
+  const cliPkg = JSON.parse(readFileSync(join(repoRoot, 'packages', 'cli', 'package.json'), 'utf8'));
+  writeFileSync(join(vendorDir, 'package.json'), `${JSON.stringify({ name: cliPkg.name, version: cliPkg.version, private: true }, null, 2)}
+`);
+}
 
 mkdirSync(pandocFilterDir, { recursive: true });
 copyFileSync(luaFilter, luaOut);

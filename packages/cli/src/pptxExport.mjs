@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
-import { CliError, resolveSafePath } from './cliSupport.mjs';
+import { CliError, assertNotSameFile, resolveSafePath } from './cliSupport.mjs';
 import { ConversionError } from './convert.mjs';
 import { writeOutputSafely } from './writeOutputSafely.mjs';
 
@@ -52,6 +52,7 @@ export async function runPptxCli(argv, cwd) {
     const input = resolveSafePath(args.input, cwd);
     const output = resolveSafePath(args.output, cwd);
     if (!existsSync(input)) throw new CliError(`Input file not found: ${args.input}`, 1);
+    assertNotSameFile(input, output);
 
     const { exportPptx, PptxConversionError } = await import('@md2nativedocx/pptx');
     let result;
