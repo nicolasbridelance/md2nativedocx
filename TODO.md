@@ -358,6 +358,29 @@ LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans 
   en version ; celui de la cible ODF l'est (`scripts/install-libreoffice-pinned.sh`). Pas urgent : la dérive observée venait des polices, réglée par
   `test-corpus/visual/fontconfig/fonts.conf`.
 
+### Pistes de distribution (revue externe du 2026-11-19, rien d'engagé)
+
+Les correctifs CLI de la même revue sont faits (b65f055, 863f586 : extension inconnue refusée, entrée
+protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README npm). Restent, à trancher :
+
+- **`--fail-on-warning`** : faire échouer une CI quand un diagramme devient une note. Seulement au
+  premier pipeline qui le demande ; distinct de la validation Open XML.
+- **`--json`** (`output`, `warnings`, `validation: passed|failed|not_run`) : pas sans consommateur
+  identifié.
+- **MCP distant** (Streamable HTTP, un outil `export_word(markdown, filename)` qui renvoie un lien HTTPS
+  temporaire) pour claude.ai et ChatGPT : demande un service hébergé (isolation des conversions, quotas,
+  pas de journal du Markdown). Décision mainteneur : c'est un service à opérer, pas du code. Le flux local
+  (`@md2nativedocx/mcp` en stdio, `.mcpb` pour Claude Desktop) reste prioritaire et ne coûte rien.
+- **Convertisseur 100 % navigateur sur GitHub Pages** (Pandoc WebAssembly + `core` en Web Worker, pont
+  Lua → Node remplacé par un appel JS) : alternative au MCP distant sans serveur ni envoi du texte.
+  Spike d'abord : Pandoc wasm sait-il appeler un filtre JS, et `convert()`/postprocess (adm-zip, `node:fs`)
+  se portent-ils sans toucher la règle 7 ? Premier test : un flowchart, réseau coupé après chargement.
+- **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
+  (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
+- **draw.io** : sortie `.drawio` par diagramme d'abord (depuis le modèle positionné, avant DrawingML),
+  import `.drawio` → formes Word ensuite (lit un fichier extérieur : périmètre et sécurité à revoir).
+  SVG par diagramme en complément. VSDX seulement sur demande. Touche le périmètre (règle 1) : escalade.
+
 Écartées après discussion (2026-09-08), à rouvrir seulement sur un besoin concret : binaire compilé
 par OS (coût récurrent de signature macOS/Windows), réécriture du moteur en Python (doublon sans
 bénéfice ; le CLI npm donne déjà le découplage).
