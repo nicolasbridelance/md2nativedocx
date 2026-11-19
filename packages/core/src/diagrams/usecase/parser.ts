@@ -9,7 +9,7 @@
  *   case, an ellipse, also created by an arrow that names it;
  * - `systemBoundary Name` / `systemBoundary id["Title"]` ... `end` is a frame around its use cases;
  * - `A --> B`, `A -- text --> B`, `A ..> : include B`, `A --|> B`, `A <-- B`, `A --o B`... are arrows; the
- *   text after `:` (`include`, `extend`) labels the dotted arrow; a hollow arrowhead is drawn as a plain one;
+ *   text after `:` (`include`, `extend`) labels the dotted arrow; `--|>` / `..|>` end in a hollow triangle;
  * - `note for X "text"` is a note joined to X by a dotted line; `json Name@{ ... }` is a data card (its
  *   content is not drawn); `classDef`, `class` and `style` colours on nodes are applied.
  * Not drawn: icons, `business`/`type` actor looks, animations, `accTitle` / `accDescr`.
@@ -17,8 +17,7 @@
  */
 
 import type { Flowchart } from '../../types.js';
-import { parseMermaid } from '../../parser/parser.js';
-import { FLOW_LIMITS, FlowSourceBuilder, isLabelOpener, isOperator, mapOperator, joinQuotedLines, tokenize, unquote } from '../flowchart-source.js';
+import { buildFlowchart, FLOW_LIMITS, FlowSourceBuilder, isLabelOpener, isOperator, mapOperator, joinQuotedLines, tokenize, unquote } from '../flowchart-source.js';
 
 export interface UseCaseParseResult {
   ast: Flowchart;
@@ -122,8 +121,7 @@ export function parseUseCase(source: string): UseCaseParseResult {
   }
   if (b.inContainer) b.warnings.push('A `systemBoundary` was never closed with `end`.');
   applyStyles(pendingStyle, b);
-  const parsed = parseMermaid(b.toSource());
-  return { ast: parsed.ast, warnings: [...b.warnings, ...parsed.warnings] };
+  return buildFlowchart(b);
 }
 
 /**
@@ -159,7 +157,7 @@ function readEdges(line: string, b: FlowSourceBuilder, names: RegExp, key: (toke
   // An edge id (`opens@-->`) names the arrow for `class` / `style`; arrows are not styled here, so drop it.
   const tokens = tokenize(line.replace(/\s[\p{L}_][\p{L}\p{N}_]*@(?=-|\.|=)/u, ' '));
   if (tokens.length < 3 || !tokens.some(isOperator)) return false;
-  const steps: Array<{ from: string; to: string; op: string; swap: boolean; label?: string; reduced: boolean }> = [];
+  const steps: Array<{ from: string; to: string; op: string; swap: boolean; label?: string; reduced: boolean; hollow?: 'generalization' | 'realization' }> = [];
   let i = 0;
   let from = tokens[i++] as string;
   if (!names.test(from)) return false;
@@ -188,16 +186,16 @@ function readEdges(line: string, b: FlowSourceBuilder, names: RegExp, key: (toke
       to = tokens[i++];
     }
     if (to === undefined || !names.test(to)) return false;
-    steps.push({ from, to, op: mapped.op, swap: mapped.swap, reduced: mapped.reduced, ...(label !== undefined ? { label } : {}) });
+    steps.push({ from, to, op: mapped.op, swap: mapped.swap, reduced: mapped.reduced, ...(mapped.hollow ? { hollow: mapped.hollow } : {}), ...(label !== undefined ? { label } : {}) });
     from = to;
   }
   for (const s of steps) {
     const a = key(s.from);
     const z = key(s.to);
     for (const name of [a, z]) if (!b.has(name) && !b.isContainer(name)) b.node(name, name, 'ellipse');
-    if (s.reduced) b.warnOnce('arrowhead', 'Hollow arrowheads (`--|>`) are drawn as plain arrows.');
-    if (s.swap) b.edge(z, a, s.op, s.label);
-    else b.edge(a, z, s.op, s.label);
+    if (s.reduced) b.warnOnce('arrowhead', 'An arrowhead with no equivalent in the drawing is drawn as a plain arrow.');
+    if (s.swap) b.edge(z, a, s.op, s.label, s.hollow);
+    else b.edge(a, z, s.op, s.label, s.hollow);
   }
   return true;
 }

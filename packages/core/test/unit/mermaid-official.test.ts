@@ -17,7 +17,7 @@ const data = JSON.parse(readFileSync(join(corpus, 'examples.json'), 'utf8')) as 
 const baseline = new Set((JSON.parse(readFileSync(join(corpus, 'expected-clean.json'), 'utf8')) as { clean: string[] }).clean);
 
 /** Rendering notices, not syntax gaps (same list as scripts/mermaid-conformance.mjs). */
-const NOTICES = [/^Native shapes used \(/, /^Actor icons and /, /^Hollow arrowheads/,/^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
+const NOTICES = [/^Native shapes used \(/, /^Actor icons and /, /^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
 
 test(`Mermaid official examples (${data.tag}): none throws, none is drawn as a flowchart by mistake, the clean ones stay clean`, () => {
   const regressions: string[] = [];

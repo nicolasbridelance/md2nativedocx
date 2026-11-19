@@ -194,6 +194,9 @@ const LINE_BY_EDGE: Readonly<Record<EdgeType, { dash: boolean; widthPt: number; 
   circleBoth: { dash: false, widthPt: LINE_PT, start: 'circle', end: 'circle' },
   crossBoth: { dash: false, widthPt: LINE_PT, start: 'cross', end: 'cross' },
   invisible: { dash: false, widthPt: LINE_PT, start: 'none', end: 'none', invisible: true },
+  // Hollow arrowheads cannot be drawn by an ODF marker (it is filled with the line colour): a plain arrow stands in.
+  generalization: { dash: false, widthPt: LINE_PT, start: 'none', end: 'arrow' },
+  realization: { dash: true, widthPt: LINE_PT, start: 'none', end: 'arrow' },
 };
 
 /** LibreOffice's four default glue points of every shape. Not the OOXML numbering. */

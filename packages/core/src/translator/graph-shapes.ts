@@ -263,6 +263,12 @@ export function connector(
 /** Hollow end markers DrawingML's line ends cannot draw (they are always filled with the line colour). */
 export type HollowMarker = 'triangle' | 'diamond';
 
+/** Hollow marker size in px (`length` along the line, `width` across it): UML's open triangle and open diamond. */
+export const HOLLOW_SIZE_PX: Readonly<Record<HollowMarker, { length: number; width: number }>> = {
+  triangle: { length: 16, width: 14 },
+  diamond: { length: 20, width: 12 },
+};
+
 /**
  * A hollow end marker (UML generalization / realization triangle, aggregation diamond): a closed polygon,
  * white inside, outlined in the line colour, with its tip on `tip` and its body running back along the line

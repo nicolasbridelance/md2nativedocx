@@ -47,7 +47,7 @@ import {
   wrapDrawingCanvas,
   type CanvasOptions,
 } from '../../translator/canvas.js';
-import { connector, edgePoint, hollowMarker, rect, scalePt, textBoxLines, type ArrowMarker, type HollowMarker } from '../../translator/graph-shapes.js';
+import { connector, edgePoint, HOLLOW_SIZE_PX, hollowMarker, rect, scalePt, textBoxLines, type ArrowMarker, type HollowMarker } from '../../translator/graph-shapes.js';
 
 const LINE_COLOR = '2F5496';
 const TITLE_FILL = 'D9E2F3';
@@ -68,12 +68,6 @@ const RANKDIR: Readonly<Record<ClassDiagram['direction'], 'TB' | 'BT' | 'LR' | '
   BT: 'BT',
   LR: 'LR',
   RL: 'RL',
-};
-
-/** Hollow marker size in px (along the line x across it): UML's open triangle and open diamond. */
-const HOLLOW_SIZE_PX: Readonly<Record<HollowMarker, { length: number; width: number }>> = {
-  triangle: { length: 16, width: 14 },
-  diamond: { length: 20, width: 12 },
 };
 
 const STYLE_BY_TYPE: Readonly<Record<ClassRelationType, { dash: 'solid' | 'dash'; marker: ArrowMarker; size: 'sm' | 'lg'; hollow?: HollowMarker }>> = {

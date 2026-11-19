@@ -95,6 +95,9 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   warnings.push(...prepared.warnings);
   const parsed = (FLOWCHART_PARSERS[type] ?? parseMermaid)(prepared.source);
   warnings.push(...parsed.warnings);
+  if (parsed.ast.edges.some((e) => e.type === 'generalization' || e.type === 'realization')) {
+    warnings.push('Hollow triangles (`--|>`, `..|>`) are drawn as plain arrows in a .odt.');
+  }
   const canvas: CanvasOptions = {};
   if (options.maxDrawingCx !== undefined) canvas.maxDrawingCx = options.maxDrawingCx;
   if (options.maxDrawingCy !== undefined) canvas.maxDrawingCy = options.maxDrawingCy;

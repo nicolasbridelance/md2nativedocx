@@ -52,6 +52,7 @@ import type {
   Subgraph,
 } from '../types.js';
 import { escapeXml } from './xml-escape.js';
+import { HOLLOW_SIZE_PX, hollowMarker } from './graph-shapes.js';
 import { actorConnectBox, actorFigure, type FigurePoint } from './actor-figure.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
@@ -295,6 +296,9 @@ const LINE_STYLE_BY_EDGE: Readonly<
   circleBoth: { dash: 'solid', width: 12700, headEnd: 'oval', tailEnd: 'oval' },
   crossBoth: { dash: 'solid', width: 12700, headEnd: 'diamond', tailEnd: 'diamond' },
   invisible: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'none', invisible: true },
+  // The hollow triangle is a separate polygon laid over the end of the line (see renderEdge).
+  generalization: { dash: 'solid', width: 12700, headEnd: 'none', tailEnd: 'none' },
+  realization: { dash: 'dash', width: 12700, headEnd: 'none', tailEnd: 'none' },
 };
 
 /** Namespaces declared inline on the root `wpg:wgp` (self-contained, rule #3). */
@@ -1322,7 +1326,7 @@ function renderEdge(
         '    </wps:cNvCnPr>',
       ].join('\n');
 
-  return [
+  const connectorXml = [
     '  <wps:wsp>',
     `    <wps:cNvPr id="${nextId()}" name="${safeName}"/>`,
     connectionProps,
@@ -1342,6 +1346,24 @@ function renderEdge(
     '    <wps:bodyPr/>',
     '  </wps:wsp>',
   ].join('\n');
+  if (type !== 'generalization' && type !== 'realization') return connectorXml;
+  // UML's open triangle at the target: a line end is always filled, so it is its own white polygon over the end
+  // of the line (the connector stays attached to its two shapes; the triangle does not follow if one is moved).
+  const tip = emuPoints[emuPoints.length - 1]!;
+  const before = emuPoints[emuPoints.length - 2] ?? tip;
+  const size = HOLLOW_SIZE_PX.triangle;
+  const unit = EMU_PER_PX * scale;
+  const triangle = hollowMarker(
+    nextId(),
+    'triangle',
+    tip,
+    before,
+    Math.round(size.length * unit),
+    Math.round(size.width * unit),
+    line,
+    scaledLineWidth(baseWidthEmu, scale),
+  );
+  return `${connectorXml}\n${triangle}`;
 }
 
 /**

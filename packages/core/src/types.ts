@@ -72,7 +72,11 @@ export type EdgeType =
   | 'cross'
   | 'circleBoth'
   | 'crossBoth'
-  | 'invisible';
+  | 'invisible'
+  /** UML generalization (`--|>`): a line ending in a hollow triangle at `to`. */
+  | 'generalization'
+  /** UML realization (`..|>`): a dashed line ending in a hollow triangle at `to`. */
+  | 'realization';
 
 /**
  * One inline-styled text segment within a node/edge label's rich-text body

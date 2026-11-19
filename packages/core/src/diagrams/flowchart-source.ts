@@ -10,7 +10,8 @@
  * Capped (hostile input): see {@link FLOW_LIMITS}.
  */
 
-import type { NodeShape } from '../types.js';
+import type { Flowchart, NodeShape } from '../types.js';
+import { parseMermaid } from '../parser/parser.js';
 
 /** Limits on what one diagram may declare; the rest is ignored with a warning. */
 export const FLOW_LIMITS = { nodes: 400, edges: 800, depth: 30, line: 2000 } as const;
@@ -38,6 +39,8 @@ interface SourceEdge {
   to: string;
   op: string;
   label?: string;
+  /** UML generalization / realization: the flowchart text carries a plain arrow, the type is set on the AST. */
+  hollow?: 'generalization' | 'realization';
 }
 
 /** Flowchart operator to write for one source operator, and whether its endpoints are swapped. */
@@ -48,6 +51,8 @@ export interface EdgeOperator {
   swap: boolean;
   /** An arrowhead the flowchart has no equivalent for was reduced to a plain arrow. */
   reduced: boolean;
+  /** A hollow triangle (`--|>`, `..|>`, `<|--`): written as an arrow, typed on the AST afterwards. */
+  hollow?: 'generalization' | 'realization';
 }
 
 /**
@@ -83,7 +88,7 @@ export function tokenize(line: string): string[] {
   return line.match(/"[^"]*"|`[^`]*`|\S+/g) ?? [];
 }
 
-const OPERATOR = /^(<|o|x)?(-{2,}|={2,}|-\.+-?|\.\.+)(\|>|>|o|x)?$/;
+const OPERATOR = /^(<\||<|o|x)?(-{2,}|={2,}|-\.+-?|\.\.+)(\|>|>|o|x)?$/;
 
 /** Whether `token` is an edge operator (`-->`, `-.->`, `..>`, `--x`, `o--`, `--|>`, `==>`...). */
 export function isOperator(token: string): boolean {
@@ -99,23 +104,23 @@ export function mapOperator(token: string): EdgeOperator | undefined {
   if (!m) return undefined;
   const left = m[1] ?? '';
   const body = m[2] as string;
-  let right = m[3] ?? '';
-  let reduced = false;
-  if (right === '|>') {
-    right = '>';
-    reduced = true;
-  }
+  const right = m[3] ?? '';
   const dotted = body.includes('.');
   const thick = body.startsWith('=');
   const line = dotted ? '-.-' : thick ? '===' : '---';
   const arrow = dotted ? '-.->' : thick ? '==>' : '-->';
-  if (left === '' && right === '') return { op: line, swap: false, reduced };
-  if (left === '' && right === '>') return { op: arrow, swap: false, reduced };
-  if (left === '' && (right === 'o' || right === 'x')) return { op: `--${right}`, swap: false, reduced };
-  if (right === '' && left === '<') return { op: arrow, swap: true, reduced };
-  if (right === '' && (left === 'o' || left === 'x')) return { op: `--${left}`, swap: true, reduced };
-  if (left === '<' && right === '>') return { op: dotted || thick ? arrow : '<-->', swap: false, reduced };
-  if (left === right && (left === 'o' || left === 'x')) return { op: `${left}--${left}`, swap: false, reduced };
+  // A hollow triangle (`--|>`, `..|>`, `<|--`, `<|..`): written as an arrow towards the triangle, typed on the AST later.
+  if (left === '<|' || right === '|>') {
+    const hollow = dotted ? 'realization' : 'generalization';
+    return { op: arrow, swap: left === '<|' && right === '', reduced: false, hollow };
+  }
+  if (left === '' && right === '') return { op: line, swap: false, reduced: false };
+  if (left === '' && right === '>') return { op: arrow, swap: false, reduced: false };
+  if (left === '' && (right === 'o' || right === 'x')) return { op: `--${right}`, swap: false, reduced: false };
+  if (right === '' && left === '<') return { op: arrow, swap: true, reduced: false };
+  if (right === '' && (left === 'o' || left === 'x')) return { op: `--${left}`, swap: true, reduced: false };
+  if (left === '<' && right === '>') return { op: dotted || thick ? arrow : '<-->', swap: false, reduced: false };
+  if (left === right && (left === 'o' || left === 'x')) return { op: `${left}--${left}`, swap: false, reduced: false };
   return { op: right === '>' ? arrow : line, swap: false, reduced: true };
 }
 
@@ -142,6 +147,10 @@ export class FlowSourceBuilder {
   /** `classDef` / `style` lines to write after the graph, already rewritten to generated ids. */
   readonly styleLines: string[] = [];
   readonly warnings: string[] = [];
+  /** Edges (by position among those written out) that end in a hollow triangle; filled by {@link toSource}. */
+  /** Number of edge statements the last {@link toSource} wrote. */
+  emittedEdgeCount = 0;
+  readonly hollowEdges = new Map<number, 'generalization' | 'realization'>();
   private readonly warned = new Set<string>();
   direction = 'TB';
 
@@ -212,12 +221,12 @@ export class FlowSourceBuilder {
   }
 
   /** Connect two names (nodes or containers; a container stands for its first / last node). */
-  edge(from: string, to: string, op: string, label?: string): void {
+  edge(from: string, to: string, op: string, label?: string, hollow?: 'generalization' | 'realization'): void {
     if (this.edges.length >= FLOW_LIMITS.edges) {
       this.warnOnce('edges', `Diagram limited to ${FLOW_LIMITS.edges} arrows; the rest were ignored.`);
       return;
     }
-    this.edges.push({ from, to, op, ...(label !== undefined && label !== '' ? { label } : {}) });
+    this.edges.push({ from, to, op, ...(label !== undefined && label !== '' ? { label } : {}), ...(hollow !== undefined ? { hollow } : {}) });
   }
 
   /** Generated id of node `name`, for `class` / `style` lines. */
@@ -258,6 +267,8 @@ export class FlowSourceBuilder {
     const rootNodes = [...this.nodes.keys()].filter((name) => !this.nodeContainer.has(name));
     rootNodes.forEach(writeNode);
     this.roots.forEach(writeContainer);
+    this.hollowEdges.clear();
+    let emitted = 0;
     for (const e of this.edges) {
       const from = this.endpoint(e.from, 'last');
       const to = this.endpoint(e.to, 'first');
@@ -266,8 +277,11 @@ export class FlowSourceBuilder {
         continue;
       }
       lines.push(e.label === undefined ? `${from} ${e.op} ${to}` : `${from} ${e.op}|${quoteLabel(e.label)}| ${to}`);
+      if (e.hollow !== undefined) this.hollowEdges.set(emitted, e.hollow);
+      emitted++;
     }
     lines.push(...this.styleLines);
+    this.emittedEdgeCount = emitted;
     return lines.join('\n');
   }
 }
@@ -290,4 +304,18 @@ function shapeKeyword(shape: NodeShape): string {
     case 'actor': return 'actor';
     default: return 'rect';
   }
+}
+
+/** Write the collected diagram as flowchart text, parse it, and type the hollow-triangle edges on the AST. */
+export function buildFlowchart(b: FlowSourceBuilder): { ast: Flowchart; warnings: string[] } {
+  const parsed = parseMermaid(b.toSource());
+  // One edge per written statement, in order; if the parser dropped or added one, the positions no longer
+  // line up and the types are left as plain arrows rather than put on the wrong edge.
+  if (parsed.ast.edges.length === b.emittedEdgeCount) {
+    for (const [index, type] of b.hollowEdges) {
+      const edge = parsed.ast.edges[index];
+      if (edge) edge.type = type;
+    }
+  }
+  return { ast: parsed.ast, warnings: [...b.warnings, ...parsed.warnings] };
 }

@@ -103,12 +103,12 @@ Pay`);
     'Buyer -arrow-> Browse catalogue',
     'Buyer -[starts checkout]arrow-> Checkout',
     'Checkout -[include]dotted-> Browse catalogue',
-    'Browse catalogue -arrow-> Checkout',
+    'Browse catalogue -generalization-> Checkout',
     'Support -arrow-> Browse catalogue',
     'Support -circle-> Checkout',
     'Support -circle-> Checkout',
   ]);
-  assert.ok(warnings.some((w) => /Hollow arrowheads/.test(w)));
+  assert.deepEqual(warnings.filter((w) => /rrowhead/.test(w)), [], "`--|>` is a hollow triangle now, no warning");
 });
 
 test('usecase: stereotype, multi-line and entity labels, notes, json cards, colours on nodes', () => {
@@ -171,4 +171,21 @@ test('actor: one custom-geometry shape per format, label area below the figure, 
   const odf = renderDiagramOdf(source);
   assert.match(odf.fragment, /draw:name="Buyer"[\s\S]*?draw:enhanced-path="M \d+ \d+ C/);
   assert.match(odf.fragment, /draw:text-areas="0 \d+ \d+ \d+"/);
+});
+
+test('generalization and realization: typed on the edge, hollow triangle in .docx, plain arrow in .odt', () => {
+  const { ast, warnings } = parseUseCase('usecase-beta\nactor Admin\nactor Person\nAdmin --|> Person\nCoupon ..|> Checkout\nPerson <|-- Staff\nAdmin --> Checkout');
+  const name = new Map(ast.nodes.map((n) => [n.id, n.label]));
+  assert.deepEqual(
+    ast.edges.map((e) => `${name.get(e.from)} -${e.type}-> ${name.get(e.to)}`),
+    ['Admin -generalization-> Person', 'Coupon -realization-> Checkout', 'Staff -generalization-> Person', 'Admin -arrow-> Checkout'],
+  );
+  assert.deepEqual(warnings.filter((w) => /rrowhead/.test(w)), []);
+  const source = 'usecase-beta\nactor Admin\nactor Person\nAdmin --|> Person';
+  const docx = renderDiagram(source);
+  // The line has no end marker; the triangle is a white closed polygon right after the connector.
+  assert.doesNotMatch(docx.fragment, /<a:(?:head|tail)End /);
+  assert.match(docx.fragment, /<wps:cNvCnPr>[\s\S]*?<\/wps:wsp>\s*<wps:wsp>[\s\S]*?<a:close\/>[\s\S]*?<a:srgbClr val="FFFFFF">/);
+  const odf = renderDiagramOdf(source);
+  assert.ok(odf.metadata.warnings.some((w) => /Hollow triangles/.test(w)));
 });

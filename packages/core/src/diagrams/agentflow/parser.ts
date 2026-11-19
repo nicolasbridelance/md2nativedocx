@@ -13,8 +13,7 @@
  */
 
 import type { Flowchart, NodeShape } from '../../types.js';
-import { parseMermaid } from '../../parser/parser.js';
-import { FLOW_LIMITS, FlowSourceBuilder, isLabelOpener, isOperator, joinQuotedLines, mapOperator, tokenize, unquote } from '../flowchart-source.js';
+import { buildFlowchart, FLOW_LIMITS, FlowSourceBuilder, isLabelOpener, isOperator, joinQuotedLines, mapOperator, tokenize, unquote } from '../flowchart-source.js';
 
 export interface AgentflowParseResult {
   ast: Flowchart;
@@ -105,8 +104,7 @@ export function parseAgentflow(source: string): AgentflowParseResult {
     }
   }
   if (blocks.length > 0) b.warnings.push('One or more `flow` blocks were never closed with `end`.');
-  const parsed = parseMermaid(b.toSource());
-  return { ast: parsed.ast, warnings: [...b.warnings, ...parsed.warnings] };
+  return buildFlowchart(b);
 }
 
 /** Read `a --> b -- text --> c ...`; false (nothing consumed) when `line` is not an arrow chain. */
@@ -117,7 +115,7 @@ function readEdges(line: string, b: FlowSourceBuilder, declare: (name: string, l
   const tokens = tokenize(line.replace(inline, (_, name: string, label: string, bag?: string) => (declare(name, label, bag), name)));
   if (tokens.length < 3 || !tokens.some(isOperator)) return false;
   const names = new RegExp(`^${ID}$`, 'u');
-  const steps: Array<{ from: string; to: string; op: string; swap: boolean; label?: string }> = [];
+  const steps: Array<{ from: string; to: string; op: string; swap: boolean; label?: string; hollow?: 'generalization' | 'realization' }> = [];
   let i = 0;
   let from = tokens[i++] as string;
   if (!names.test(from)) return false;
@@ -134,13 +132,13 @@ function readEdges(line: string, b: FlowSourceBuilder, declare: (name: string, l
     const mapped = mapOperator(opToken);
     const to = tokens[i++];
     if (!mapped || to === undefined || !names.test(to)) return false;
-    steps.push({ from, to, op: mapped.op, swap: mapped.swap, ...(label !== undefined ? { label } : {}) });
+    steps.push({ from, to, op: mapped.op, swap: mapped.swap, ...(mapped.hollow ? { hollow: mapped.hollow } : {}), ...(label !== undefined ? { label } : {}) });
     from = to;
   }
   for (const s of steps) {
     for (const name of [s.from, s.to]) if (!b.has(name) && !b.isContainer(name)) b.node(name, name, 'rect');
-    if (s.swap) b.edge(s.to, s.from, s.op, s.label);
-    else b.edge(s.from, s.to, s.op, s.label);
+    if (s.swap) b.edge(s.to, s.from, s.op, s.label, s.hollow);
+    else b.edge(s.from, s.to, s.op, s.label, s.hollow);
   }
   return true;
 }

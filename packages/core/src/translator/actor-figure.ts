@@ -45,7 +45,8 @@ export function actorConnectBox(box: BoxLike): BoxLike {
 export function actorFigure(width: number, height: number): ActorFigure {
   const fh = height * ACTOR_FIGURE_RATIO;
   // Figure height, capped so a narrow box does not clip the arms.
-  const size = Math.min(fh, width * 1.3);
+  // Also kept a little short of the label area, so the legs never touch the label.
+  const size = Math.min(fh * 0.84, width * 1.3);
   const cx = width / 2;
   const top = (fh - size) / 2;
   const r = size * 0.15;
