@@ -161,6 +161,13 @@ Ensuite, dans l'ordre :
               `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; reste **railroad**
               (14 exemples, une note aujourd'hui ; 3 mini-parseurs de grammaire + placement en voies, plusieurs
               jours, usage de niche : attendre une demande).
+            - **Décision du mainteneur, 2026-11-19 : ajouts d'API publique de `core` acceptés** — `DiagramType`
+              `'agentflow'` et `'usecase'` (+ `'mermaidUnsupported'`), `NodeShape` `'actor'`, `EdgeType`
+              `'generalization'` et `'realization'`. Tous additifs ; à publier avec la prochaine release de
+              `core` (0.7.0, pré-1.0). Faits le même jour : bonhomme (acteurs), triangle creux (classes,
+              généralisation), losange creux (agrégation). Reste à valider hors de cette machine :
+              `test:odf-validate`, `test:visual` (CI), et un rendu dans Word du bonhomme et des triangles
+              (vérifiés dans PowerPoint seulement).
             - Limite de l'étage 1 : il ne voit que les avertissements. Un faux nœud créé sans avertissement
               (comme `e1@{ … }` avant correction) n'est visible qu'à l'étage 2.
       - [ ] **Étage 2 — différentiel contre `mermaid`** (dépendances de dev `mermaid` + `jsdom` accordées
