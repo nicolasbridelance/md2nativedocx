@@ -60,8 +60,12 @@ export type DiagramType =
   | 'plantumlActivity'
   /** Any other PlantUML diagram (class, activity, mindmap...): not converted yet, shown as a note. */
   | 'plantuml'
+  /** Mermaid `agentflow-beta` (a flow of AI agents): drawn as a flowchart. */
+  | 'agentflow'
+  /** Mermaid `usecase-beta` (UML use case diagram): drawn as a flowchart. */
+  | 'usecase'
   /**
-   * A Mermaid type this project does not draw yet (`agentflow-beta`, `railroad-beta`, `usecase-beta`):
+   * A Mermaid type this project does not draw yet (`railroad-beta`):
    * a visible note stands in its place, never a flowchart drawn from text that is not one.
    */
   | 'mermaidUnsupported';
@@ -108,9 +112,9 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
   { type: 'cynefin', label: 'Cynefin framework', pattern: /^cynefin-beta\b/i },
   { type: 'treeView', label: 'TreeView', pattern: /^treeView-beta\b/i },
   // Mermaid types not drawn yet: recognized so they become a note instead of a garbled flowchart.
-  { type: 'mermaidUnsupported', label: 'Agentflow diagram', pattern: /^agentflow-beta\b/i },
+  { type: 'agentflow', label: 'Agentflow diagram', pattern: /^agentflow-beta\b/i },
+  { type: 'usecase', label: 'Use case diagram', pattern: /^usecase-beta\b/i },
   { type: 'mermaidUnsupported', label: 'Railroad diagram', pattern: /^railroad(?:-(?:ebnf|abnf|peg))?-beta\b/i },
-  { type: 'mermaidUnsupported', label: 'Use case diagram', pattern: /^usecase-beta\b/i },
 ];
 
 /**

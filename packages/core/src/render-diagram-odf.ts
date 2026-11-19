@@ -13,6 +13,10 @@ import { prepareSource } from './parser/frontmatter.js';
 import { detectDiagramType } from './parser/diagram-type.js';
 import { parseMermaid } from './parser/index.js';
 import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
+import { parseAgentflow } from './diagrams/agentflow/parser.js';
+import { parseUseCase } from './diagrams/usecase/parser.js';
+import type { DiagramType } from './parser/diagram-type.js';
+import type { Flowchart } from './types.js';
 import { layout } from './layout/layout.js';
 import { DiagramTooLargeError } from './layout/graph-limits.js';
 import type { CanvasOptions } from './translator/canvas.js';
@@ -48,6 +52,15 @@ export interface OdfRenderResult {
   metadata: RenderMetadata;
 }
 
+/** The diagram types drawn as flowcharts, with their parser (`.odt` draws these only, for now). */
+const FLOWCHART_PARSERS: Partial<Record<DiagramType, (source: string) => { ast: Flowchart; warnings: string[] }>> = {
+  flowchart: parseMermaid,
+  unknown: parseMermaid,
+  plantumlActivity: parsePlantUmlActivity,
+  agentflow: parseAgentflow,
+  usecase: parseUseCase,
+};
+
 /**
  * Render one Mermaid diagram as native, editable LibreOffice shapes: one shape per node, one connector
  * attached to its two shapes per edge, subgraphs as containers drawn behind their nodes.
@@ -71,16 +84,16 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   const { type, label } = detectDiagramType(source);
   const warnings: string[] = [];
 
-  // A PlantUML activity diagram is a flowchart once parsed, so it is drawn here too.
-  if (type !== 'flowchart' && type !== 'unknown' && type !== 'plantumlActivity') {
-    const message = `${label} not converted: .odt output draws flowcharts (and PlantUML activity diagrams) only for now.`;
+  // PlantUML activity diagrams, agent flows and use case diagrams are flowcharts once parsed: drawn here too.
+  if (!(type in FLOWCHART_PARSERS)) {
+    const message = `${label} not converted: .odt output draws flowcharts (and the types drawn as flowcharts) only for now.`;
     warnings.push(message);
     return { ...buildOdfNote(message, idPrefix), metadata: { diagramType: type, label, warnings } };
   }
 
   const prepared = prepareSource(source, type);
   warnings.push(...prepared.warnings);
-  const parsed = type === 'plantumlActivity' ? parsePlantUmlActivity(prepared.source) : parseMermaid(prepared.source);
+  const parsed = (FLOWCHART_PARSERS[type] ?? parseMermaid)(prepared.source);
   warnings.push(...parsed.warnings);
   const canvas: CanvasOptions = {};
   if (options.maxDrawingCx !== undefined) canvas.maxDrawingCx = options.maxDrawingCx;

@@ -4,11 +4,11 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 379 sans avertissement (70 %), 112 avec avertissement, 50 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 406 sans avertissement (75 %), 121 avec avertissement, 14 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
-| agentflow | 12 | 0 | 0 | 12 | 0 | 0 |
+| agentflow | 12 | 8 | 4 | 0 | 0 | 0 |
 | architecture | 6 | 1 | 5 | 0 | 0 | 0 |
 | block | 30 | 29 | 1 | 0 | 0 | 0 |
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
@@ -35,7 +35,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
 | treemap | 8 | 8 | 0 | 0 | 0 | 0 |
 | treeView | 13 | 9 | 4 | 0 | 0 | 0 |
-| usecase | 24 | 0 | 0 | 24 | 0 | 0 |
+| usecase | 24 | 19 | 5 | 0 | 0 | 0 |
 | userJourney | 1 | 1 | 0 | 0 | 0 | 0 |
 | venn | 8 | 7 | 1 | 0 | 0 | 0 |
 | wardley | 19 | 19 | 0 | 0 | 0 | 0 |
@@ -46,18 +46,10 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### agentflow
 
-- #0 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #1 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #2 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #3 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #4 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #5 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #6 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #7 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #8 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #9 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #10 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
-- #11 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #7 warned: Properties set with `id@{ ... }` on a line of their own (instruction, view, protocol...) are not drawn.
+- #8 warned: Properties set with `id@{ ... }` on a line of their own (instruction, view, protocol...) are not drawn.
+- #9 warned: Properties set with `id@{ ... }` on a line of their own (instruction, view, protocol...) are not drawn.
+- #11 warned: Properties set with `id@{ ... }` on a line of their own (instruction, view, protocol...) are not drawn.
 
 ### architecture
 
@@ -236,30 +228,11 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### usecase
 
-- #0 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #1 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #2 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #3 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #4 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #5 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #6 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #7 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #8 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #9 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #10 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #11 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #12 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #13 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #14 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #15 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #16 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #17 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #18 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #19 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #20 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #21 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #22 not-converted: Use case diagrams are not converted yet; a note stands in their place.
-- #23 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #10 warned: Properties set with `id@{ ... }` on a line of their own (type, animation...) are not drawn.
+- #14 warned: Properties set with `id@{ ... }` on a line of their own (type, animation...) are not drawn.
+- #16 warned: The content of `json` payload nodes is not drawn; only their name.
+- #17 warned: The content of `json` payload nodes is not drawn; only their name. \| classDef "data" referenced but not defined. \| classDef "data" referenced but not defined.
+- #22 warned: The content of `json` payload nodes is not drawn; only their name. \| Properties set with `id@{ ... }` on a line of their own (type, animation...) are not drawn.
 
 ### venn
 

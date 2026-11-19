@@ -143,7 +143,7 @@ Ensuite, dans l'ordre :
       - [~] **Étage 1 — exemples officiels** (`test-corpus/mermaid-official/`, `mermaid@12.3.0`, 541 exemples ;
             `node scripts/mermaid-conformance.mjs --report` ; verrou CI : `mermaid-official.test.ts`). Au
             2026-11-19 : **379 propres (70 %)**, 112 avec avertissement, 50 de types pas encore dessinés (note),
-            0 mal typé, 0 échec (départ : 304, et 50 dessinés comme des organigrammes). Faits : en-tête YAML
+            0 mal typé, 0 échec (départ : 304, et 50 dessinés comme des organigrammes). Après agentflow + usecase : **406 propres** (75 %), 14 de types pas dessinés. Faits : en-tête YAML
             central, types agentflow/railroad/usecase reconnus (note), `;` en séquence, organigrammes (ids de
             lien `e1@-->`, libellés entre guillemets sur plusieurs lignes, `click` écarté exprès).
             Reste, par ordre de rendement (détail : `REPORT.md`) :
@@ -157,7 +157,10 @@ Ensuite, dans l'ordre :
             - **organigrammes (8)** : liens vers un sous-graphe, titre d'en-tête à dessiner ;
             - **séquence (11)**, **C4 (6)**, **architecture (5)**, **Gantt (7)**, **mindmap (4)**, **requirement (4)**,
               **treeView (4)**, divers (8) ;
-            - **types à dessiner** : agentflow, railroad, usecase (50 exemples, une note aujourd'hui).
+            - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
+              `diagrams/flowchart-source.ts`, acteurs en rectangles faute de bonhomme) ; reste **railroad**
+              (14 exemples, une note aujourd'hui ; 3 mini-parseurs de grammaire + placement en voies, plusieurs
+              jours, usage de niche : attendre une demande).
             - Limite de l'étage 1 : il ne voit que les avertissements. Un faux nœud créé sans avertissement
               (comme `e1@{ … }` avant correction) n'est visible qu'à l'étage 2.
       - [ ] **Étage 2 — différentiel contre `mermaid`** (dépendances de dev `mermaid` + `jsdom` accordées

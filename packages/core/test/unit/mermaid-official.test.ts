@@ -17,7 +17,7 @@ const data = JSON.parse(readFileSync(join(corpus, 'examples.json'), 'utf8')) as 
 const baseline = new Set((JSON.parse(readFileSync(join(corpus, 'expected-clean.json'), 'utf8')) as { clean: string[] }).clean);
 
 /** Rendering notices, not syntax gaps (same list as scripts/mermaid-conformance.mjs). */
-const NOTICES = [/^Native shapes used \(/, /^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
+const NOTICES = [/^Native shapes used \(/, /^Actors are drawn as rectangles/, /^Hollow arrowheads/,/^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
 
 test(`Mermaid official examples (${data.tag}): none throws, none is drawn as a flowchart by mistake, the clean ones stay clean`, () => {
   const regressions: string[] = [];
@@ -25,7 +25,7 @@ test(`Mermaid official examples (${data.tag}): none throws, none is drawn as a f
     examples.forEach((source, i) => {
       const id = `${page}#${i}`;
       const result = renderDiagram(source, { smartArt: true, nativeCharts: true, newPartId: () => '00000000-0000-4000-8000-000000000000' });
-      if (['agentflow', 'railroad', 'usecase'].includes(page)) {
+      if (['railroad'].includes(page)) {
         assert.equal(result.metadata.diagramType, 'mermaidUnsupported', id);
         return;
       }

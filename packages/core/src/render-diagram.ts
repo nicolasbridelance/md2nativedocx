@@ -107,6 +107,8 @@ import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
 import type { ClassDiagram } from './diagrams/class-diagram/types.js';
 import type { StateDiagram } from './diagrams/state-diagram/types.js';
 import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
+import { parseAgentflow } from './diagrams/agentflow/parser.js';
+import { parseUseCase } from './diagrams/usecase/parser.js';
 import { prepareSource } from './parser/frontmatter.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
@@ -429,6 +431,9 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   plantumlClass: classRenderer(parsePlantUmlClass),
   // An activity diagram becomes a flowchart: same layout, shapes and SmartArt rule.
   plantumlActivity: flowchartHandler(parsePlantUmlActivity),
+  // Agent flows and use case diagrams are flowcharts under another name: same layout, shapes and SmartArt rule.
+  agentflow: flowchartHandler(parseAgentflow),
+  usecase: flowchartHandler(parseUseCase),
   // A state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
   state: smartArtOrShapes(parseStateDiagram, (ast) => shapeOf(stateDiagramSmartArtLayout(ast)), generateStateDiagramSmartArt, translateStateDiagramToOoxml),
   // Same AST and drawing as stateDiagram. States with description lines stay shapes: SmartArt would drop them.
