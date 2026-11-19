@@ -53,6 +53,7 @@ const SEMICOLON_TYPES: Array<[string, string]> = [
   ['class', 'classDiagram\nclass Animal\nclass Dog\nAnimal <|-- Dog'],
   ['state', 'stateDiagram-v2\n[*] --> Idle\nIdle --> Busy\nBusy --> [*]'],
   ['er', 'erDiagram\nCUSTOMER ||--o{ ORDER : places'],
+  ['sequence', 'sequenceDiagram\nparticipant A\nA->>B: Hello (world)\nB-->>A: Fine "thanks"'],
 ];
 for (const [type, source] of SEMICOLON_TYPES) {
   test(`${type}: trailing semicolons and CRLF give the same rendering`, () => {
@@ -67,4 +68,12 @@ for (const [type, source] of SEMICOLON_TYPES) {
 
 test('splitStatements: brackets:false for grammars where braces are operators', () => {
   assert.deepEqual(splitStatements('A ||--o{ B : has;', { brackets: false }), ['A ||--o{ B : has']);
+});
+
+test('splitStatements: the sequence grammar options (no quotes, no brackets, %% kept, entities whole)', () => {
+  const seq = { brackets: false, quotes: false, comments: false, entities: true };
+  assert.deepEqual(splitStatements('A->>B: "a; b"', seq), ['A->>B: "a', 'b"']);
+  assert.deepEqual(splitStatements('A->>B: f(x; y)', seq), ['A->>B: f(x', 'y)']);
+  assert.deepEqual(splitStatements('A->>B: 50 %% done', seq), ['A->>B: 50 %% done']);
+  assert.deepEqual(splitStatements('A->>B: a #59; b #quot;c#quot;;', seq), ['A->>B: a #59; b #quot;c#quot;']);
 });

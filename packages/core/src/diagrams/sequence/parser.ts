@@ -13,6 +13,7 @@
  * 50 participants, 500 items and 20 nested blocks.
  */
 
+import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from './types.js';
 
 export interface SequenceParseResult {
@@ -123,7 +124,7 @@ export function parseSequence(text: string): SequenceParseResult {
     declare(id, as ? cleanText(body.slice(as.index + as[0].length)) : undefined, isActor);
   };
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const rawLine of sequenceStatements(text)) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith('%%')) continue;
     if (line === '---' && !sawHeader) {
@@ -239,4 +240,31 @@ export function parseSequence(text: string): SequenceParseResult {
     for (let i = 0; i < open; i++) push({ type: 'blockEnd' });
   }
   return { ast, warnings };
+}
+
+/**
+ * The diagram's statements, one per entry: physical lines (CRLF, CR, BOM handled) split on `;` the way
+ * Mermaid's sequence grammar ends a statement (TODO R2.1), so `participant A;` declares `A` and
+ * `A->>B: hi; B->>A: ho` is two messages. The YAML frontmatter before the header is passed through whole,
+ * since its values are not statements.
+ */
+function sequenceStatements(text: string): string[] {
+  const statements: string[] = [];
+  let inFrontmatter = false;
+  let started = false;
+  for (const physical of splitLines(text)) {
+    const trimmed = physical.trim();
+    if (!started && trimmed === '---') {
+      inFrontmatter = !inFrontmatter;
+      statements.push(trimmed);
+      continue;
+    }
+    if (inFrontmatter) {
+      statements.push(trimmed);
+      continue;
+    }
+    if (trimmed.length > 0 && !trimmed.startsWith('%%')) started = true;
+    statements.push(...splitStatements(physical, { brackets: false, quotes: false, comments: false, entities: true }));
+  }
+  return statements;
 }

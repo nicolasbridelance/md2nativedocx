@@ -43,8 +43,9 @@ robustesse » ; récit : `docs/history/incident-flux-arcs-2026-11.md`.
 
 Restes de R1 à R3 :
 
-- [ ] **R2.1, diagrammes de séquence** : leur parseur garde un `;` final dans le texte d'un message, et un
-      test existant l'exige ; Mermaid le traite comme une fin d'instruction. **Décision du mainteneur.**
+- [x] **R2.1, diagrammes de séquence** (2026-11-19, décision du mainteneur : compatibilité 1:1 avec
+      Mermaid) : `;` y finit une instruction, même entre guillemets ou parenthèses ; `#59;` reste un `;`
+      littéral ; le texte après un `;` qui n'est pas une instruction devient un avertissement.
 - [ ] **npm** : « Require two-factor authentication and disallow bypass 2fa tokens » sur les 5 paquets
       (`mcp` compris) et vérifier que l'ancien jeton classique est révoqué (il n'est plus dans `.env`).
       Mainteneur, ou Claude in Chrome sur npmjs.com.

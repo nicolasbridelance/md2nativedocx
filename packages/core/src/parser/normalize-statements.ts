@@ -34,9 +34,19 @@ export function splitLines(text: string): string[] {
  *
  * `options.brackets: false` turns the bracket rule off, for a grammar where `{` `}` `(` `)` are operators
  * and not delimiters (the ER cardinalities `||--o{`).
+ *
+ * The sequence diagram grammar is stricter, and `sequenceDiagram` passes all four options: its message text
+ * ends at the first `;` even inside quotes or brackets (`quotes: false`, `brackets: false`), keeps `%%` as
+ * text (`comments: false`), and spells a literal semicolon `#59;`, an entity Mermaid decodes before it
+ * parses (`entities: true` keeps every `#name;` / `#123;` whole).
  */
-export function splitStatements(line: string, options: { brackets?: boolean } = {}): string[] {
+export function splitStatements(
+  line: string,
+  options: { brackets?: boolean; quotes?: boolean; comments?: boolean; entities?: boolean } = {},
+): string[] {
   const trackBrackets = options.brackets !== false;
+  const trackQuotes = options.quotes !== false;
+  const stripComments = options.comments !== false;
   const trimmed = line.trim();
   if (trimmed.length === 0) return [];
   if (trimmed.startsWith('%%')) return [trimmed];
@@ -47,7 +57,15 @@ export function splitStatements(line: string, options: { brackets?: boolean } = 
   let inQuotes = false;
   for (let i = 0; i < trimmed.length; i++) {
     const ch = trimmed[i]!;
-    if (ch === '"') {
+    if (options.entities && ch === '#') {
+      const entity = /^#\w+;/.exec(trimmed.slice(i));
+      if (entity) {
+        current += entity[0];
+        i += entity[0].length - 1;
+        continue;
+      }
+    }
+    if (trackQuotes && ch === '"') {
       inQuotes = !inQuotes;
     } else if (!inQuotes) {
       if (trackBrackets && (ch === '[' || ch === '(' || ch === '{')) depth++;
@@ -59,7 +77,7 @@ export function splitStatements(line: string, options: { brackets?: boolean } = 
           continue;
         }
         // A trailing comment needs whitespace before it, so `-->|50%%|` style text is not cut.
-        if (ch === '%' && trimmed[i + 1] === '%' && (i === 0 || /\s/.test(trimmed[i - 1]!))) break;
+        if (stripComments && ch === '%' && trimmed[i + 1] === '%' && (i === 0 || /\s/.test(trimmed[i - 1]!))) break;
       }
     }
     current += ch;

@@ -83,3 +83,33 @@ test('caps participants and tolerates hostile input', () => {
   assert.ok(warnings.some((w) => w.includes('limited to 50 participants')));
   assert.doesNotThrow(() => parseSequence('sequenceDiagram\n' + '->>'.repeat(5000) + ':'));
 });
+
+// TODO R2.1: `;` ends a statement in Mermaid's sequence grammar, as it does in the other diagram types.
+test('sequence: a `;` ends a statement, as in Mermaid', () => {
+  const cases: Array<[string, string[], string[]]> = [
+    ['A->>B: Bonjour;\n  B-->>A: Salut', ['A>B:Bonjour', 'B>A:Salut'], ['A', 'B']],
+    ['A->>B: Bonjour; B-->>A: Salut', ['A>B:Bonjour', 'B>A:Salut'], ['A', 'B']],
+    ['participant A;\n  A->>B: x', ['A>B:x'], ['A', 'B']],
+    ['A->>B: a #59; b', ['A>B:a ; b'], ['A', 'B']],
+  ];
+  for (const [body, messages, participants] of cases) {
+    const { ast, warnings } = parseSequence(`sequenceDiagram;\r\n  ${body}\r\n`);
+    const got = ast.items.flatMap((i) => (i.type === 'message' ? [`${i.from}>${i.to}:${i.text}`] : []));
+    assert.deepEqual(got, messages, body);
+    assert.deepEqual(ast.participants.map((p) => p.id), participants, body);
+    assert.deepEqual(warnings, [], body);
+  }
+});
+
+test('sequence: text after a `;` that is not a statement is reported, not glued to the message', () => {
+  const { ast, warnings } = parseSequence('sequenceDiagram\n  A->>B: a; b');
+  const msgs = ast.items.filter((i) => i.type === 'message');
+  assert.equal(msgs.length, 1);
+  assert.equal((msgs[0] as { text: string }).text, 'a');
+  assert.equal(warnings.length, 1);
+});
+
+test('sequence: a `;` in the YAML frontmatter is not a statement end', () => {
+  const { ast } = parseSequence('---\ntitle: x; y\n---\nsequenceDiagram\n  A->>B: ok');
+  assert.deepEqual(ast.participants.map((p) => p.id), ['A', 'B']);
+});
