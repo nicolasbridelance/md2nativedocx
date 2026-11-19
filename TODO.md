@@ -20,8 +20,8 @@ Le produit est complet pour son usage principal (Markdown + Mermaid/PlantUML →
 publié partout (npm, Marketplace, Open VSX, MCP). Ce qui limite le projet aujourd'hui, ce n'est plus la
 couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. D'où cet ordre :
 
-1. **R4.2 Mode de compatibilité Word 15** (§R) : R4.1 est clos (mesuré, rien à rétablir) et montre que
-   c'est ce réglage qui fait vieillir les formes ajoutées par l'utilisateur. Round Word avant adoption.
+1. ~~R4.1, R4.2~~ : mesurés dans Word le 2026-11-19, rien à adopter (détail au §R). R4.3 n'a pas de
+   symptôme : le chantier robustesse est clos.
 2. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
    premiers utilisateurs. Tout ce qui en sort passe devant le reste de cette liste.
 3. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
@@ -34,7 +34,7 @@ couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. D'o
 
 Au second plan, sans date : V2 moteur (§2bis, seulement les ▶), pistes SmartArt (§3), idées (§4).
 
-## R. Robustesse (incident `flux_arcs`, 2026-11-13) — reste R4
+## R. Robustesse (incident `flux_arcs`, 2026-11-13) — clos, restes ci-dessous
 
 R1 à R3 sont faits et publiés (0.8.1 à 0.8.3) : écriture sûre de la sortie, bloc non fermé signalé,
 contrôle Word honnête, fins d'instruction, couleurs de texte, sous-graphes, durcissements de sécurité.
@@ -59,11 +59,17 @@ Restes de R1 à R3 :
       document vierge ; en mode 12 : fond blanc, texte noir, exactement comme avec le gabarit de Pandoc).
       Seul écart corrigé : `w:qFormat` sur `Caption` et `TOC Heading`, pour que « Légende » et « En-tête
       de table des matières » soient dans la galerie comme dans un Word vierge.
-- [ ] **R4.2 `compatibilityMode` = 15** : sort Word du « mode de compatibilité ». Cela peut changer
-      la mise en page, donc il faut un round CHECKLIST dans un vrai Word avant de l'adopter. La mesure
-      de R4.1 montre que c'est ce réglage, pas le gabarit, qui donne aux formes ajoutées par
-      l'utilisateur l'aspect Word 2007 (fond blanc, texte noir en haut à gauche) au lieu de l'aspect
-      actuel. Un vrai gain visible, donc la suite naturelle de R4.
+- [x] **R4.2 `compatibilityMode` = 15 : mesuré, pas adopté** (2026-11-19). Pandoc n'écrit aucun
+      `w:compat`, donc Word ouvre en mode 12. Corpus rendu page par page dans Word (COM), mode 12 contre la
+      même archive avec seulement `w:compat` ajouté : `all-types-mega` 42/42 pages (11 légèrement
+      décalées), `markdown-features` et `combined-settings-demo` inchangés en nombre de pages, **le manuel
+      passe de 65 à 77 pages**. Cause : en mode 15, Word recalcule la largeur automatique des colonnes des
+      tableaux Pandoc (sans largeur fixe) ; dans un tableau « source | diagramme », la colonne de texte tombe
+      à quelques caractères et le dessin déborde à droite. La règle sous l'en-tête de tableau disparaît aussi.
+      Preuves : `test-corpus/word-verification/assets/r4.2-compat15/`. Gain du mode 15 (formes ajoutées par
+      l'utilisateur à l'aspect actuel, plus de mention « Mode de compatibilité ») inférieur à ce coût. À
+      rouvrir seulement si les tableaux reçoivent des largeurs fixes, ce qui touche les propriétés de
+      tableau de `document.xml`, hors de la liste de la règle 7 : **escalade**.
 - [ ] **R4.3 Formes de sous-graphe** (`<wps:bodyPr/>` nu, sans `wps:style`) : valides au schéma.
       Les aligner sur les nœuds seulement si un round Word montre une différence.
 - [x] **R4.4 Titre de sous-graphe à l'échelle 1** *(mergé `9dfdb65`, publié en 0.8.3 ; correctif écrit 2026-11-16 sur `fix/subgraph-title-font` : titre 10 pt, marges verticales à 0, en OOXML et ODF ; rendu Word vérifié 2026-11-16 par pilotage COM : le titre tient sur une ligne ; à confirmer à l'œil par le mainteneur, `titre-sousgraphe-avant/apres.docx`). **Bug trouvé au passage et corrigé** : un sous-graphe listé avant celui qu'il contient perdait l'imbrication (`buildGraph` rattachait l'enfant avant de l'avoir créé) : cadre extérieur écrasé à 0 de large, ou niveaux empilés (`nested-3-levels`)* *(constaté dans Word le 2026-11-16, sur `subgraph-direction.docx`, mais pas dû à R2.4 : `nested-3-levels.docx`, réduit à ~50 %, est correct)* : la barre de titre fait `SUBGRAPH_TITLE_HEIGHT` = 24 px (≈ 18 pt) pour un texte de 12 pt (`NODE_FONT_SIZE_HALFPT`), plus les marges `tIns`/`bIns` : à l'échelle 1, le titre touche ou mord la bordure. Piste : police du titre plus petite (ou barre plus haute), mais cela déplace tous les diagrammes à sous-graphes et leurs golden : round Word avant adoption. Contrôle de non-régression : `nested-3-levels.docx` et `swimlane.docx`.
