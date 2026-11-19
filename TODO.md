@@ -221,7 +221,7 @@ Ensuite, dans l'ordre :
 
 - [ ] Phase 2 (spec 05 §5-§6) : mesurer la voie 1 (conversion du fragment OOXML en ODF) sur trois types
       variés avant d'étendre aux 28 autres types.
-- [ ] Export `.odt` dans l'extension VS Code (elle n'embarque aujourd'hui que le `reference.docx`).
+- [x] Export `.odt` dans l'extension VS Code : livré en 0.8.0 (`ff8f564`, menu « Exporter en LibreOffice (.odt) »).
 - [ ] Porte B (extension LibreOffice, spike S4). Présentation sur le bug 172531 seulement avec une
       première version montrable.
 
