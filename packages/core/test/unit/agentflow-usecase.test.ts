@@ -96,7 +96,7 @@ Pay`);
   assert.equal(ast.direction, 'LR');
   assert.deepEqual(
     ast.nodes.map((n) => [n.label, n.shape]),
-    [['Buyer', 'rect'], ['Support', 'rect'], ['Pay', 'ellipse'], ['Browse catalogue', 'ellipse'], ['Checkout', 'ellipse']],
+    [['Buyer', 'actor'], ['Support', 'actor'], ['Pay', 'ellipse'], ['Browse catalogue', 'ellipse'], ['Checkout', 'ellipse']],
   );
   assert.deepEqual(ast.subgraphs.map((s) => [s.title, s.nodeIds.length]), [['Shop', 2]]);
   assert.deepEqual(edges(ast), [
@@ -158,4 +158,17 @@ test('limits: a huge source is capped, never thrown', () => {
   assert.ok(warnings.some((w) => /limited to 400 nodes/.test(w)));
   assert.doesNotThrow(() => parseAgentflow('agentflow-beta\nend\nend\nflow x[\n@{\n-- --> --'));
   assert.doesNotThrow(() => parseUseCase('usecase-beta\nsystemBoundary\nend\nend\n..> :\n"\n`'));
+});
+
+test('actor: one custom-geometry shape per format, label area below the figure, connectors attached', () => {
+  const source = 'usecase-beta\nactor Customer("Buyer")\nCustomer --> Login';
+  const docx = renderDiagram(source);
+  // One wsp for the actor with a custom geometry (head arc + strokes) and four connection sites.
+  assert.match(docx.fragment, /name="Buyer"[\s\S]*?<a:custGeom>[\s\S]*?<a:arcTo[\s\S]*?<\/a:custGeom>/);
+  assert.equal((docx.fragment.match(/<a:cxn /g) ?? []).length, 4);
+  assert.match(docx.fragment, /<a:stCxn id="\d+" idx="\d"\/>/);
+  assert.doesNotMatch(docx.fragment, /TargetMode="External"/);
+  const odf = renderDiagramOdf(source);
+  assert.match(odf.fragment, /draw:name="Buyer"[\s\S]*?draw:enhanced-path="M \d+ \d+ C/);
+  assert.match(odf.fragment, /draw:text-areas="0 \d+ \d+ \d+"/);
 });

@@ -64,6 +64,7 @@ const SHAPE_BY_SYNTAX: ReadonlyArray<{ open: string; close: string; shape: NodeS
  * the two prior bugs in that same class).
  */
 const SHAPE_ALIAS_MAP: Readonly<Record<string, NodeShape>> = {
+  actor: 'actor',
   proc: 'rect',
   process: 'rect',
   rect: 'rect',

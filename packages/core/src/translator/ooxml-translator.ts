@@ -52,6 +52,7 @@ import type {
   Subgraph,
 } from '../types.js';
 import { escapeXml } from './xml-escape.js';
+import { actorConnectBox, actorFigure, type FigurePoint } from './actor-figure.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
  * DPI that is 9525 EMU per pixel. */
@@ -244,6 +245,7 @@ export const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   horizontalCylinder: 'flowChartMagneticDisk',
   linedCylinder: 'flowChartMagneticDrum',
   manualInput: 'flowChartManualInput',
+  actor: 'rect', // drawn by actorGeometryXml (custom geometry), never as this preset
   asymmetric: 'homePlate', // Mermaid's asymmetric/flag shape (id>Text]); closest built-in preset
 };
 
@@ -535,9 +537,23 @@ function renderContent(
     );
   }
 
+  // Connectors attach to an actor's figure, not to the wider box that also holds its label.
+  const actorIds = new Set(flowchart.nodes.filter((n) => n.shape === 'actor').map((n) => n.id));
+  // One object per node (cached): a self-loop is recognised by its two ends being the same Box object.
+  const attachBoxes = new Map<string, Box>();
+  const attachBox = (id: string): Box | undefined => {
+    const box = layout.nodes[id];
+    if (!box || !actorIds.has(id)) return box;
+    let attach = attachBoxes.get(id);
+    if (!attach) {
+      attach = actorConnectBox(box);
+      attachBoxes.set(id, attach);
+    }
+    return attach;
+  };
   flowchart.edges.forEach((edge, i) => {
-    const from = layout.nodes[edge.from];
-    const to = layout.nodes[edge.to];
+    const from = attachBox(edge.from);
+    const to = attachBox(edge.to);
     if (!from || !to) return;
     const fromId = nodeIds.get(edge.from);
     const toId = nodeIds.get(edge.to);
@@ -776,6 +792,47 @@ function renderSubgraph(
 }
 
 /**
+ * The `a:custGeom` of an `actor` node (UML stick figure): the head is filled, body, arms and legs are open
+ * strokes, the text area is the part of the box below the figure, and the four connection sites are the
+ * box's edge midpoints (same order as the presets: top, left, bottom, right). Coordinates are absolute EMU
+ * for the box as generated; resizing the shape in Word stretches the figure like any custom shape.
+ */
+function actorGeometryXml(w: number, h: number): string {
+  const f = actorFigure(w, h);
+  const n = (v: number): number => Math.round(v);
+  const { cx, cy, r } = f.head;
+  const strokes = f.strokes
+    .map((points) => {
+      const [first, ...rest] = points as [FigurePoint, ...FigurePoint[]];
+      return [
+        `          <a:moveTo><a:pt x="${n(first.x)}" y="${n(first.y)}"/></a:moveTo>`,
+        ...rest.map((p) => `          <a:lnTo><a:pt x="${n(p.x)}" y="${n(p.y)}"/></a:lnTo>`),
+      ].join('\n');
+    })
+    .join('\n');
+  const angles = ['16200000', '10800000', '5400000', '0'];
+  return [
+    '      <a:custGeom>',
+    '        <a:avLst/><a:gdLst/><a:ahLst/>',
+    '        <a:cxnLst>',
+    ...f.sites.map((p, i) => `          <a:cxn ang="${angles[i]}"><a:pos x="${n(p.x)}" y="${n(p.y)}"/></a:cxn>`),
+    '        </a:cxnLst>',
+    `        <a:rect l="0" t="${n(f.textTop)}" r="${w}" b="${h}"/>`,
+    '        <a:pathLst>',
+    `          <a:path w="${w}" h="${h}">`,
+    `          <a:moveTo><a:pt x="${n(cx - r)}" y="${n(cy)}"/></a:moveTo>`,
+    `          <a:arcTo wR="${n(r)}" hR="${n(r)}" stAng="10800000" swAng="21600000"/>`,
+    '          <a:close/>',
+    '          </a:path>',
+    `          <a:path w="${w}" h="${h}" fill="none">`,
+    strokes,
+    '          </a:path>',
+    '        </a:pathLst>',
+    '      </a:custGeom>',
+  ].join('\n');
+}
+
+/**
  * Render a single node as a `wps:wsp` (wordprocessing shape).
  *
  * `mermaidId` is stored in `cNvPr/descr` (not `name`): `name` stays the human
@@ -807,7 +864,9 @@ function renderNode(
   const flipAttr = flip === 'flipH' ? ' flipH="1"' : flip === 'flipV' ? ' flipV="1"' : '';
   const safeLabel = escapeXml(label);
   const safeMermaidId = escapeXml(mermaidId);
-  const textColor = textColorOverride ?? textColorFor(fill);
+  // An actor's label sits below the figure, on the page: dark text whatever the figure's fill.
+  const textColor = textColorOverride ?? (shape === 'actor' ? '000000' : textColorFor(fill));
+  const geometry = shape === 'actor' ? actorGeometryXml(w, h) : `      <a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>`;
 
   return [
     '  <wps:wsp>',
@@ -818,9 +877,7 @@ function renderNode(
     `        <a:off x="${x}" y="${y}"/>`,
     `        <a:ext cx="${w}" cy="${h}"/>`,
     '      </a:xfrm>',
-    `      <a:prstGeom prst="${prst}">`,
-    '        <a:avLst/>',
-    '      </a:prstGeom>',
+    geometry,
     `      <a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`,
     `      <a:ln w="${scaledLineWidth(12700, scale)}" cap="flat" cmpd="sng" algn="ctr">`,
     `        <a:solidFill><a:srgbClr val="${line}"/></a:solidFill>`,

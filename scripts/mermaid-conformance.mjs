@@ -66,7 +66,7 @@ export const PAGE_TYPES = {
  * Rendering notices, not syntax gaps: the source was understood, the renderer only reports a choice it
  * made (shapes instead of SmartArt, a diagram scaled down to fit the page).
  */
-const NOTICES = [/^Native shapes used \(/, /^Actors are drawn as rectangles/, /^Hollow arrowheads/,/^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
+const NOTICES = [/^Native shapes used \(/, /^Actor icons and /, /^Hollow arrowheads/,/^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
 export const isNotice = (warning) => NOTICES.some((re) => re.test(warning));
 
 export function classify(page, source) {

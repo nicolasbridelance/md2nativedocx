@@ -27,6 +27,7 @@ import type { EdgeType, FlowEdge, Flowchart, LabelToken, LayoutPoint, LayoutResu
 import { escapeXml, validateHexColor } from './xml-escape.js';
 import { SUBGRAPH_TITLE_HEIGHT } from '../layout/layout.js';
 import { EMU_PER_PX, type CanvasOptions } from './canvas.js';
+import { actorFigure } from './actor-figure.js';
 
 /**
  * Names of the `office:styles` definitions the diagram styles refer to. The `reference.odt` handed to
@@ -130,6 +131,7 @@ const ODF_TYPE_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   linedCylinder: 'flowchart-magnetic-disk',
   manualInput: 'flowchart-manual-input',
   asymmetric: 'pentagon-right',
+  actor: 'rectangle', // drawn by actorGeometry (explicit path), never as this preset
 };
 
 /** Mirrored horizontally (`draw:mirror-horizontal`, which leaves the text readable). */
@@ -143,6 +145,33 @@ const MIRRORED_SHAPES: ReadonlySet<NodeShape> = new Set(['parallelogramAlt']);
 const NARROW_TOP_TRAPEZOID =
   '<draw:enhanced-geometry svg:viewBox="0 0 21600 21600" draw:type="non-primitive" ' +
   'draw:enhanced-path="M 5400 0 L 16200 0 21600 21600 0 21600 Z N" draw:text-areas="2700 0 18900 21600"/>';
+
+/**
+ * The `actor` node (UML stick figure) as an explicit path in a viewBox matching the box (tenths of a
+ * pixel, so the figure keeps its proportions): the head is a filled circle, body, arms and legs are open
+ * strokes (`F` = no fill from there on), and the text area is the part below the figure. Still one editable
+ * shape that connectors attach to.
+ */
+function actorGeometry(box: Box): string {
+  const w = Math.max(1, Math.round(box.width * 10));
+  const h = Math.max(1, Math.round(box.height * 10));
+  const f = actorFigure(w, h);
+  const n = (v: number): number => Math.round(v);
+  const { cx, cy, r } = f.head;
+  const k = r * 0.5523;
+  const head =
+    `M ${n(cx + r)} ${n(cy)} C ${n(cx + r)} ${n(cy + k)} ${n(cx + k)} ${n(cy + r)} ${n(cx)} ${n(cy + r)} ` +
+    `C ${n(cx - k)} ${n(cy + r)} ${n(cx - r)} ${n(cy + k)} ${n(cx - r)} ${n(cy)} ` +
+    `C ${n(cx - r)} ${n(cy - k)} ${n(cx - k)} ${n(cy - r)} ${n(cx)} ${n(cy - r)} ` +
+    `C ${n(cx + k)} ${n(cy - r)} ${n(cx + r)} ${n(cy - k)} ${n(cx + r)} ${n(cy)} Z N F`;
+  const strokes = f.strokes
+    .map(([first, ...rest]) => `M ${n(first?.x ?? 0)} ${n(first?.y ?? 0)} ${rest.map((p) => `L ${n(p.x)} ${n(p.y)}`).join(' ')} N`)
+    .join(' ');
+  return (
+    `<draw:enhanced-geometry svg:viewBox="0 0 ${w} ${h}" draw:type="non-primitive" ` +
+    `draw:enhanced-path="${head} ${strokes}" draw:text-areas="0 ${n(f.textTop)} ${w} ${h}"/>`
+  );
+}
 
 type Marker = keyof typeof MARKER_NAMES | 'none';
 const MARKER_NAMES = {
@@ -313,14 +342,20 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     );
     const textStyle = shapeText(
       sheet,
-      node.textColor === undefined ? textColorFor(nodeFill) : validateHexColor(node.textColor, textColorFor(nodeFill)),
+      node.textColor === undefined
+        ? node.shape === 'actor'
+          ? '000000' // the label sits below the figure, on the page
+          : textColorFor(nodeFill)
+        : validateHexColor(node.textColor, textColorFor(nodeFill)),
       fontPt(NODE_FONT_PT),
     );
     const mirrorAttr = MIRRORED_SHAPES.has(node.shape) ? ' draw:mirror-horizontal="true"' : '';
     const geometry =
       node.shape === 'trapezoid'
         ? NARROW_TOP_TRAPEZOID
-        : `<draw:enhanced-geometry draw:type="${ODF_TYPE_BY_SHAPE[node.shape] ?? 'rectangle'}"${mirrorAttr}/>`;
+        : node.shape === 'actor'
+          ? actorGeometry(place(raw))
+          : `<draw:enhanced-geometry draw:type="${ODF_TYPE_BY_SHAPE[node.shape] ?? 'rectangle'}"${mirrorAttr}/>`;
     parts.push(
       `<draw:custom-shape draw:style-name="${style}" draw:name="${escapeXml(node.label)}" xml:id="${id}" draw:id="${id}" ${frame(place(raw))}>` +
         `<text:p text:style-name="${textStyle}">${labelSpans(node.labelRuns, sheet)}</text:p>${geometry}</draw:custom-shape>`,

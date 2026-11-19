@@ -5,7 +5,7 @@
  * flowchart's own.
  *
  * - `actor Name`, `actor Name("Label")`, `actor Name@{ ... } <<Stereotype>>` is an actor, drawn as a
- *   rectangle (the flowchart has no stick figure); `Id`, `Id("Label")`, `Id[Label]`, `"Label"` is a use
+ *   stick figure; `Id`, `Id("Label")`, `Id[Label]`, `"Label"` is a use
  *   case, an ellipse, also created by an arrow that names it;
  * - `systemBoundary Name` / `systemBoundary id["Title"]` ... `end` is a frame around its use cases;
  * - `A --> B`, `A -- text --> B`, `A ..> : include B`, `A --|> B`, `A <-- B`, `A --o B`... are arrows; the
@@ -106,8 +106,8 @@ export function parseUseCase(source: string): UseCaseParseResult {
       }
       const name = key(d[1] as string);
       const label = d[2] ?? d[3];
-      b.node(name, withStereotype(label === undefined ? name : unquote(label), d[4]), 'rect', d[5] ? [d[5]] : []);
-      b.warnOnce('actor', 'Actors are drawn as rectangles; icons and `type` / `business` looks are not applied.');
+      b.node(name, withStereotype(label === undefined ? name : unquote(label), d[4]), 'actor', d[5] ? [d[5]] : []);
+      b.warnOnce('actor', 'Actor icons and `type` / `business` looks are not applied; actors are drawn as a stick figure.');
     } else if (PROPS_ONLY.test(line)) {
       b.warnOnce('props', 'Properties set with `id@{ ... }` on a line of their own (type, animation...) are not drawn.');
     } else if (readEdges(line, b, names, key)) {

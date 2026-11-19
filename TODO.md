@@ -158,7 +158,7 @@ Ensuite, dans l'ordre :
             - **séquence (11)**, **C4 (6)**, **architecture (5)**, **Gantt (7)**, **mindmap (4)**, **requirement (4)**,
               **treeView (4)**, divers (8) ;
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
-              `diagrams/flowchart-source.ts`, acteurs en rectangles faute de bonhomme) ; reste **railroad**
+              `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; reste **railroad**
               (14 exemples, une note aujourd'hui ; 3 mini-parseurs de grammaire + placement en voies, plusieurs
               jours, usage de niche : attendre une demande).
             - Limite de l'étage 1 : il ne voit que les avertissements. Un faux nœud créé sans avertissement

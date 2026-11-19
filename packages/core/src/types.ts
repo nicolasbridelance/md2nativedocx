@@ -46,7 +46,9 @@ export type NodeShape =
   | 'horizontalCylinder'
   | 'linedCylinder'
   | 'manualInput'
-  | 'asymmetric';
+  | 'asymmetric'
+  /** UML stick figure with its label below (a use case diagram's actor). */
+  | 'actor';
 
 /**
  * Edge line/arrowhead styles supported (spec §6.2). Named after Mermaid's own

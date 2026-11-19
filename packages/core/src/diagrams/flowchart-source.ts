@@ -287,6 +287,7 @@ function shapeKeyword(shape: NodeShape): string {
     case 'document': return 'doc';
     case 'cylinder': return 'cylinder';
     case 'card': return 'card';
+    case 'actor': return 'actor';
     default: return 'rect';
   }
 }

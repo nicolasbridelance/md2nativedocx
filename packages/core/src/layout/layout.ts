@@ -287,6 +287,13 @@ function nodeDimensions(labelRuns: LabelToken[], shape: NodeShape): { width: num
 
   // A circle with no text (an activity's start / stop / end point, a junction) is a small marker, not a box.
   if (lines === 0 && CIRCLE_SHAPES.has(shape)) return { width: MARKER_SIZE_PX, height: MARKER_SIZE_PX };
+  if (shape === 'actor') {
+    // The figure takes the top share of the box; the label (and its padding) must fit in the rest.
+    return {
+      width: Math.max(ACTOR_MIN_WIDTH_PX, textWidth + 8),
+      height: Math.max(ACTOR_MIN_HEIGHT_PX, (textHeight + PAD_Y) / (1 - ACTOR_FIGURE_RATIO)),
+    };
+  }
   if (shape === 'diamond') {
     return {
       width: Math.max(NODE_WIDTH, 2 * rectWidth),
@@ -309,6 +316,12 @@ function nodeDimensions(labelRuns: LabelToken[], shape: NodeShape): { width: num
     height: Math.max(NODE_HEIGHT, rectHeight),
   };
 }
+
+/** Share of an `actor` node's box height taken by the stick figure; the label is laid out in the rest. */
+export const ACTOR_FIGURE_RATIO = 0.6;
+/** Smallest box of an `actor` node (UML stick figure plus its label), in logical pixels. */
+const ACTOR_MIN_WIDTH_PX = 60;
+const ACTOR_MIN_HEIGHT_PX = 100;
 
 /** Round shapes drawn as a small marker when they carry no text. */
 const CIRCLE_SHAPES: ReadonlySet<NodeShape> = new Set(['ellipse', 'doubleCircle', 'crossedCircle', 'filledCircle']);
