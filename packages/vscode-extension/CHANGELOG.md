@@ -3,6 +3,21 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] — 2026-11-19
+
+### Added
+- **PlantUML class diagrams become editable Word diagrams.** A ```` ```plantuml ```` block holding a class
+  diagram is drawn like a Mermaid one: boxes with their attributes and methods, inheritance, realization,
+  composition, aggregation, association and dependency arrows, labels. An inheritance-only tree becomes a
+  SmartArt hierarchy. Every example of the official reference page (plantuml.com/class-diagram) converts;
+  cardinalities, stereotypes, notes and package frames are not drawn yet (a warning says so).
+
+### Fixed
+- **A diagram element named `constructor`, `valueOf`, `toString` or `__proto__` no longer breaks the export.**
+  In class, ER, state, requirement, C4 and architecture diagrams, such a name made the whole conversion fail
+  (or drew the box in the wrong place).
+- Class diagrams with many unrelated classes are laid out in a grid instead of one long, unreadable row.
+
 ## [0.9.1] — 2026-11-19
 
 ### Improved

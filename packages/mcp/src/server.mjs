@@ -11,6 +11,10 @@ import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { JobFailedError, JobTimeoutError, runJob } from './run-job.mjs';
+import { createRequire } from 'node:module';
+
+/** The version npm published, read from this package's own manifest so it never drifts. */
+const { version: PACKAGE_VERSION } = createRequire(import.meta.url)('../package.json');
 
 export const DEFAULT_RENDER_TIMEOUT_MS = 30_000;
 export const DEFAULT_CONVERT_TIMEOUT_MS = 120_000;
@@ -67,7 +71,7 @@ export function createServer({
   convertTimeoutMs = DEFAULT_CONVERT_TIMEOUT_MS,
   runnerPath,
 }) {
-  const server = new McpServer({ name: 'md2nativedocx', version: '0.1.0' });
+  const server = new McpServer({ name: 'md2nativedocx', version: PACKAGE_VERSION });
   const runnerOption = runnerPath === undefined ? {} : { runnerPath };
 
   server.registerTool(
