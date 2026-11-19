@@ -17,7 +17,7 @@
  */
 
 import dagre from 'dagre';
-import { layoutWithinLimits } from '../../layout/graph-limits.js';
+import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { Requirement, RequirementDiagram, RequirementElement } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -131,10 +131,10 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, op
   for (const [name, content] of boxContents) {
     const size = sizeForBox(content);
     sizes.set(name, size);
-    g.setNode(name, { width: size.width, height: size.height });
+    g.setNode(nodeKey(name), { width: size.width, height: size.height });
   }
   for (const rel of chart.relationships) {
-    if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
+    if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) g.setEdge(nodeKey(rel.from), nodeKey(rel.to));
   }
   layoutWithinLimits(g, options);
 
@@ -143,7 +143,7 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, op
   let minY = Infinity;
   let maxY = -Infinity;
   for (const name of boxContents.keys()) {
-    const n = g.node(name) as { x: number; y: number };
+    const n = g.node(nodeKey(name)) as { x: number; y: number };
     const size = sizes.get(name)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
@@ -178,8 +178,8 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, op
   }
 
   chart.relationships.forEach((rel, relIndex) => {
-    const nFrom = g.node(rel.from) as { x: number; y: number } | undefined;
-    const nTo = g.node(rel.to) as { x: number; y: number } | undefined;
+    const nFrom = g.node(nodeKey(rel.from)) as { x: number; y: number } | undefined;
+    const nTo = g.node(nodeKey(rel.to)) as { x: number; y: number } | undefined;
     if (!nFrom || !nTo) return;
     const sizeFrom = sizes.get(rel.from)!;
     const sizeTo = sizes.get(rel.to)!;
@@ -191,8 +191,8 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, op
     // from this relationship's own from/to would cancel out for a reversed
     // duplicate.
     const sortedPair = [rel.from, rel.to].sort();
-    const posA = g.node(sortedPair[0]!) as { x: number; y: number };
-    const posB = g.node(sortedPair[1]!) as { x: number; y: number };
+    const posA = g.node(nodeKey(sortedPair[0]!)) as { x: number; y: number };
+    const posB = g.node(nodeKey(sortedPair[1]!)) as { x: number; y: number };
     const { ux, uy } = perpendicularUnit(posA, posB);
     const amount = parallelEdgeOffset(index, count);
     const p1 = shiftPoint(rawP1, ux, uy, amount);
@@ -259,7 +259,7 @@ export function translateRequirementDiagramToOoxml(chart: RequirementDiagram, op
   });
 
   for (const [name, content] of boxContents) {
-    const n = g.node(name) as { x: number; y: number };
+    const n = g.node(nodeKey(name)) as { x: number; y: number };
     const size = sizes.get(name)!;
     parts.push(...boxShapes(nextId, content, size, n.x - size.width / 2 + dx, n.y - size.height / 2 + dy, s));
   }

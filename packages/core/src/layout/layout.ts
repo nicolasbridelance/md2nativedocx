@@ -12,7 +12,7 @@
  */
 
 import dagre from 'dagre';
-import { assertWithinLimits, type GraphLimits } from './graph-limits.js';
+import { assertWithinLimits, safeDagreLayout, type GraphLimits } from './graph-limits.js';
 import type {
   Flowchart,
   FlowNode,
@@ -436,7 +436,7 @@ function layoutBase(
   let g = buildGraph(true);
   assertWithinLimits(g, options);
   try {
-    dagre.layout(g);
+    safeDagreLayout(g);
   } catch (err) {
     if (flowchart.subgraphs.length === 0) throw err;
     const message = err instanceof Error ? err.message : String(err);
@@ -444,7 +444,7 @@ function layoutBase(
       `Layout with subgraph containers failed (${message}); retried without them -- subgraph boxes are omitted from this diagram.`,
     );
     g = buildGraph(false);
-    dagre.layout(g);
+    safeDagreLayout(g);
   }
 
   // Use a null-prototype object so hostile node ids like `__proto__` or

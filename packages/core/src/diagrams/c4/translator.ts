@@ -43,7 +43,7 @@
  */
 
 import dagre from 'dagre';
-import { layoutWithinLimits } from '../../layout/graph-limits.js';
+import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { C4Category, C4Diagram, C4Element, C4Relationship } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -168,10 +168,10 @@ export function translateC4DiagramToOoxml(chart: C4Diagram, options: CanvasOptio
   for (const el of chart.elements) {
     const size = sizeForElement(el, bodyLinesById.get(el.id)!);
     sizes.set(el.id, size);
-    g.setNode(el.id, { width: size.width, height: size.height });
+    g.setNode(nodeKey(el.id), { width: size.width, height: size.height });
   }
   for (const rel of chart.relationships) {
-    if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
+    if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) g.setEdge(nodeKey(rel.from), nodeKey(rel.to));
   }
   layoutWithinLimits(g, options);
 
@@ -180,7 +180,7 @@ export function translateC4DiagramToOoxml(chart: C4Diagram, options: CanvasOptio
   let minY = Infinity;
   let maxY = -Infinity;
   for (const el of chart.elements) {
-    const n = g.node(el.id) as { x: number; y: number };
+    const n = g.node(nodeKey(el.id)) as { x: number; y: number };
     const size = sizes.get(el.id)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
@@ -227,8 +227,8 @@ export function translateC4DiagramToOoxml(chart: C4Diagram, options: CanvasOptio
   }
 
   chart.relationships.forEach((rel: C4Relationship, relIndex) => {
-    const nFrom = g.node(rel.from) as { x: number; y: number } | undefined;
-    const nTo = g.node(rel.to) as { x: number; y: number } | undefined;
+    const nFrom = g.node(nodeKey(rel.from)) as { x: number; y: number } | undefined;
+    const nTo = g.node(nodeKey(rel.to)) as { x: number; y: number } | undefined;
     if (!nFrom || !nTo) return;
     const sizeFrom = sizes.get(rel.from)!;
     const sizeTo = sizes.get(rel.to)!;
@@ -236,8 +236,8 @@ export function translateC4DiagramToOoxml(chart: C4Diagram, options: CanvasOptio
     const rawP2 = edgePoint(nTo.x, nTo.y, sizeTo.width / 2, sizeTo.height / 2, nFrom.x, nFrom.y);
     const { index, count } = offsetIndexByRel.get(relIndex)!;
     const sortedPair = [rel.from, rel.to].sort();
-    const posA = g.node(sortedPair[0]!) as { x: number; y: number };
-    const posB = g.node(sortedPair[1]!) as { x: number; y: number };
+    const posA = g.node(nodeKey(sortedPair[0]!)) as { x: number; y: number };
+    const posB = g.node(nodeKey(sortedPair[1]!)) as { x: number; y: number };
     const { ux, uy } = perpendicularUnit(posA, posB);
     const amount = parallelEdgeOffset(index, count);
     const p1 = shiftPoint(rawP1, ux, uy, amount);
@@ -288,7 +288,7 @@ export function translateC4DiagramToOoxml(chart: C4Diagram, options: CanvasOptio
   });
 
   for (const el of chart.elements) {
-    const n = g.node(el.id) as { x: number; y: number };
+    const n = g.node(nodeKey(el.id)) as { x: number; y: number };
     const size = sizes.get(el.id)!;
     parts.push(...elementShapes(nextId, el, bodyLinesById.get(el.id)!, size, n.x - size.width / 2 + dx, n.y - size.height / 2 + dy, s));
   }

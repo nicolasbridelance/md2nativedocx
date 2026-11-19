@@ -18,7 +18,7 @@
  */
 
 import dagre from 'dagre';
-import { layoutWithinLimits } from '../../layout/graph-limits.js';
+import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { StateDiagram, StateNode } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -133,10 +133,10 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
   for (const node of chart.states) {
     const size = sizeForNode(node, chart.direction);
     sizes.set(node.id, size);
-    g.setNode(node.id, { width: size.width, height: size.height });
+    g.setNode(nodeKey(node.id), { width: size.width, height: size.height });
   }
   for (const t of chart.transitions) {
-    if (g.hasNode(t.from) && g.hasNode(t.to)) g.setEdge(t.from, t.to);
+    if (g.hasNode(nodeKey(t.from)) && g.hasNode(nodeKey(t.to))) g.setEdge(nodeKey(t.from), nodeKey(t.to));
   }
   layoutWithinLimits(g, options);
 
@@ -145,7 +145,7 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
   let minY = Infinity;
   let maxY = -Infinity;
   for (const node of chart.states) {
-    const n = g.node(node.id) as { x: number; y: number };
+    const n = g.node(nodeKey(node.id)) as { x: number; y: number };
     const size = sizes.get(node.id)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
@@ -163,8 +163,8 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
   const parts: string[] = [];
 
   for (const t of chart.transitions) {
-    const nFrom = g.node(t.from) as { x: number; y: number } | undefined;
-    const nTo = g.node(t.to) as { x: number; y: number } | undefined;
+    const nFrom = g.node(nodeKey(t.from)) as { x: number; y: number } | undefined;
+    const nTo = g.node(nodeKey(t.to)) as { x: number; y: number } | undefined;
     if (!nFrom || !nTo) continue;
     const sizeFrom = sizes.get(t.from)!;
     const sizeTo = sizes.get(t.to)!;
@@ -206,7 +206,7 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
   }
 
   for (const node of chart.states) {
-    const n = g.node(node.id) as { x: number; y: number };
+    const n = g.node(nodeKey(node.id)) as { x: number; y: number };
     const size = sizes.get(node.id)!;
     parts.push(...nodeShapes(nextId, node, size, n.x - size.width / 2 + dx, n.y - size.height / 2 + dy, s));
   }

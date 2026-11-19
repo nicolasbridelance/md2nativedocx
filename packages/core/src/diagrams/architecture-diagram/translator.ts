@@ -34,7 +34,7 @@
  */
 
 import dagre from 'dagre';
-import { layoutWithinLimits } from '../../layout/graph-limits.js';
+import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { ArchitectureDiagram, ArchitectureNode } from './types.js';
 import { escapeXml } from '../../translator/xml-escape.js';
 import { estimateTextWidth } from '../../layout/layout.js';
@@ -143,10 +143,10 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, 
   for (const node of chart.nodes) {
     const size = sizeForNode(node);
     sizes.set(node.id, size);
-    g.setNode(node.id, { width: size.width, height: size.height });
+    g.setNode(nodeKey(node.id), { width: size.width, height: size.height });
   }
   for (const edge of chart.edges) {
-    if (g.hasNode(edge.from) && g.hasNode(edge.to)) g.setEdge(edge.from, edge.to);
+    if (g.hasNode(nodeKey(edge.from)) && g.hasNode(nodeKey(edge.to))) g.setEdge(nodeKey(edge.from), nodeKey(edge.to));
   }
   layoutWithinLimits(g, options);
 
@@ -155,7 +155,7 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, 
   let minY = Infinity;
   let maxY = -Infinity;
   for (const node of chart.nodes) {
-    const n = g.node(node.id) as { x: number; y: number };
+    const n = g.node(nodeKey(node.id)) as { x: number; y: number };
     const size = sizes.get(node.id)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
@@ -173,8 +173,8 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, 
   const parts: string[] = [];
 
   for (const edge of chart.edges) {
-    const nFrom = g.node(edge.from) as { x: number; y: number } | undefined;
-    const nTo = g.node(edge.to) as { x: number; y: number } | undefined;
+    const nFrom = g.node(nodeKey(edge.from)) as { x: number; y: number } | undefined;
+    const nTo = g.node(nodeKey(edge.to)) as { x: number; y: number } | undefined;
     if (!nFrom || !nTo) continue;
     const sizeFrom = sizes.get(edge.from)!;
     const sizeTo = sizes.get(edge.to)!;
@@ -199,7 +199,7 @@ export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, 
   }
 
   for (const node of chart.nodes) {
-    const n = g.node(node.id) as { x: number; y: number };
+    const n = g.node(nodeKey(node.id)) as { x: number; y: number };
     const size = sizes.get(node.id)!;
     parts.push(
       nodeShape(

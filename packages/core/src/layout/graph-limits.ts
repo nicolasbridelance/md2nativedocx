@@ -62,7 +62,39 @@ export class DiagramTooLargeError extends Error {
  */
 export function layoutWithinLimits(g: dagre.graphlib.Graph, limits: GraphLimits = {}): void {
   assertWithinLimits(g, limits);
-  dagre.layout(g);
+  safeDagreLayout(g);
+}
+
+/**
+ * The key a diagram id is stored under in a Dagre graph. graphlib keeps nodes in plain objects too, so an id
+ * of `__proto__` set through `setNode` was lost (the box came out with `NaN` coordinates): every translator
+ * that builds a graph from user ids goes through this.
+ */
+export function nodeKey(id: string): string {
+  return `id:${id}`;
+}
+
+/**
+ * `dagre.layout(g)` safe for any node id. Dagre keeps nodes in plain objects internally, so an id that names a
+ * built-in property (`constructor`, `valueOf`, `__proto__`: user text, a class or state name) crashed the layout
+ * with a raw `TypeError`. The layout runs on a copy whose ids carry a prefix; the copy shares every node, edge
+ * and graph label object with `g`, so the coordinates Dagre writes into them are visible through `g` as usual.
+ */
+export function safeDagreLayout(g: dagre.graphlib.Graph): void {
+  const key = (id: string): string => `n:${id}`;
+  // graphlib has `isCompound()`; @types/dagre leaves it out.
+  const compound = (g as unknown as { isCompound(): boolean }).isCompound();
+  const copy = new dagre.graphlib.Graph({ directed: g.isDirected(), multigraph: g.isMultigraph(), compound });
+  copy.setGraph(g.graph());
+  for (const v of g.nodes()) copy.setNode(key(v), g.node(v));
+  if (compound) {
+    for (const v of g.nodes()) {
+      const parent = g.parent(v);
+      if (parent !== undefined) copy.setParent(key(v), key(parent));
+    }
+  }
+  for (const e of g.edges()) copy.setEdge(key(e.v), key(e.w), g.edge(e), e.name);
+  dagre.layout(copy);
 }
 
 /** The check alone, for a caller that lays the graph out more than once. */

@@ -19,7 +19,7 @@
  */
 
 import dagre from 'dagre';
-import { layoutWithinLimits } from '../../layout/graph-limits.js';
+import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { ErAttribute, ErCardinality, ErDiagram, ErEntity } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -132,10 +132,10 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
   for (const entity of chart.entities) {
     const size = sizeForEntity(entity);
     sizes.set(entity.id, size);
-    g.setNode(entity.id, { width: size.width, height: size.height });
+    g.setNode(nodeKey(entity.id), { width: size.width, height: size.height });
   }
   for (const rel of chart.relationships) {
-    if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
+    if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) g.setEdge(nodeKey(rel.from), nodeKey(rel.to));
   }
   layoutWithinLimits(g, options);
 
@@ -144,7 +144,7 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
   let minY = Infinity;
   let maxY = -Infinity;
   for (const entity of chart.entities) {
-    const n = g.node(entity.id) as { x: number; y: number };
+    const n = g.node(nodeKey(entity.id)) as { x: number; y: number };
     const size = sizes.get(entity.id)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
@@ -162,8 +162,8 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
   const parts: string[] = [];
 
   for (const rel of chart.relationships) {
-    const nFrom = g.node(rel.from) as { x: number; y: number } | undefined;
-    const nTo = g.node(rel.to) as { x: number; y: number } | undefined;
+    const nFrom = g.node(nodeKey(rel.from)) as { x: number; y: number } | undefined;
+    const nTo = g.node(nodeKey(rel.to)) as { x: number; y: number } | undefined;
     if (!nFrom || !nTo) continue;
     const sizeFrom = sizes.get(rel.from)!;
     const sizeTo = sizes.get(rel.to)!;
@@ -205,7 +205,7 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
   }
 
   for (const entity of chart.entities) {
-    const n = g.node(entity.id) as { x: number; y: number };
+    const n = g.node(nodeKey(entity.id)) as { x: number; y: number };
     const size = sizes.get(entity.id)!;
     parts.push(...entityShapes(nextId, entity, size, n.x - size.width / 2 + dx, n.y - size.height / 2 + dy, s));
   }
