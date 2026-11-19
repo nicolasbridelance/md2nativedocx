@@ -3,6 +3,16 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] — 2026-11-19
+
+### Added
+- **PlantUML activity diagrams become editable Word flowcharts**, in `.docx`, `.pptx` and `.odt` (LibreOffice).
+  Actions, start and stop, `if` / `elseif` / `else` and `switch` with their branch labels, `while` and `repeat`
+  loops, `fork`, arrow labels, swimlanes and partitions (drawn as frames). A straight sequence of actions
+  becomes a SmartArt process. Every example of the official reference page (plantuml.com/activity-diagram-beta)
+  converts; notes and fork bars are not drawn yet (a warning says so). A `[[link]]` keeps only its text and an
+  `<img:...>` is dropped: nothing is ever fetched or linked.
+
 ## [0.11.0] — 2026-11-19
 
 ### Added
