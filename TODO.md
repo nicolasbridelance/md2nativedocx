@@ -20,8 +20,8 @@ Le produit est complet pour son usage principal (Markdown + Mermaid/PlantUML →
 publié partout (npm, Marketplace, Open VSX, MCP). Ce qui limite le projet aujourd'hui, ce n'est plus la
 couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. D'où cet ordre :
 
-1. **R4.1 Gabarit Word** (§R) : rétablir `w:latentStyles` et `a:objectDefaults`. Écart réel introduit par
-   le projet, petit, vérifiable dans Word piloté par COM. Puis R4.2 seulement après un round Word.
+1. **R4.2 Mode de compatibilité Word 15** (§R) : R4.1 est clos (mesuré, rien à rétablir) et montre que
+   c'est ce réglage qui fait vieillir les formes ajoutées par l'utilisateur. Round Word avant adoption.
 2. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
    premiers utilisateurs. Tout ce qui en sort passe devant le reste de cette liste.
 3. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
@@ -51,12 +51,19 @@ Restes de R1 à R3 :
 
 ### R4 — Gabarit et compatibilité Word : vérifier dans Word avant de changer (branche `fix/reference-docx-parity`)
 
-- [ ] **R4.1 Rétablir `w:latentStyles` et `a:objectDefaults`** dans `packages/cli/reference-docx-src/`,
-      écrits par le projet (pas copiés de Pandoc : licence, voir `a8d411a`). Contrôles :
-      `test:oxml-validate`, puis un aller-retour dans Word (galerie de styles, insertion d'une forme
-      par l'utilisateur).
+- [x] **R4.1 `w:latentStyles` et `a:objectDefaults` : mesuré dans Word, pas rétablis** (2026-11-19, Word
+      piloté par COM, comparé à un document Word vierge et au gabarit de Pandoc). Leur absence n'est pas
+      un défaut : sans `latentStyles`, la galerie de styles est celle d'un Word vierge (celle de Pandoc la
+      remplace par Compact, First Paragraph, Author…) ; sans `objectDefaults`, une forme insérée par
+      l'utilisateur prend les défauts de Word (en mode 15 : fond d'accent, texte blanc centré, comme un
+      document vierge ; en mode 12 : fond blanc, texte noir, exactement comme avec le gabarit de Pandoc).
+      Seul écart corrigé : `w:qFormat` sur `Caption` et `TOC Heading`, pour que « Légende » et « En-tête
+      de table des matières » soient dans la galerie comme dans un Word vierge.
 - [ ] **R4.2 `compatibilityMode` = 15** : sort Word du « mode de compatibilité ». Cela peut changer
-      la mise en page, donc il faut un round CHECKLIST dans un vrai Word avant de l'adopter.
+      la mise en page, donc il faut un round CHECKLIST dans un vrai Word avant de l'adopter. La mesure
+      de R4.1 montre que c'est ce réglage, pas le gabarit, qui donne aux formes ajoutées par
+      l'utilisateur l'aspect Word 2007 (fond blanc, texte noir en haut à gauche) au lieu de l'aspect
+      actuel. Un vrai gain visible, donc la suite naturelle de R4.
 - [ ] **R4.3 Formes de sous-graphe** (`<wps:bodyPr/>` nu, sans `wps:style`) : valides au schéma.
       Les aligner sur les nœuds seulement si un round Word montre une différence.
 - [x] **R4.4 Titre de sous-graphe à l'échelle 1** *(mergé `9dfdb65`, publié en 0.8.3 ; correctif écrit 2026-11-16 sur `fix/subgraph-title-font` : titre 10 pt, marges verticales à 0, en OOXML et ODF ; rendu Word vérifié 2026-11-16 par pilotage COM : le titre tient sur une ligne ; à confirmer à l'œil par le mainteneur, `titre-sousgraphe-avant/apres.docx`). **Bug trouvé au passage et corrigé** : un sous-graphe listé avant celui qu'il contient perdait l'imbrication (`buildGraph` rattachait l'enfant avant de l'avoir créé) : cadre extérieur écrasé à 0 de large, ou niveaux empilés (`nested-3-levels`)* *(constaté dans Word le 2026-11-16, sur `subgraph-direction.docx`, mais pas dû à R2.4 : `nested-3-levels.docx`, réduit à ~50 %, est correct)* : la barre de titre fait `SUBGRAPH_TITLE_HEIGHT` = 24 px (≈ 18 pt) pour un texte de 12 pt (`NODE_FONT_SIZE_HALFPT`), plus les marges `tIns`/`bIns` : à l'échelle 1, le titre touche ou mord la bordure. Piste : police du titre plus petite (ou barre plus haute), mais cela déplace tous les diagrammes à sous-graphes et leurs golden : round Word avant adoption. Contrôle de non-régression : `nested-3-levels.docx` et `swimlane.docx`.

@@ -178,6 +178,7 @@
   <w:style w:type="paragraph" w:styleId="Caption">
     <w:name w:val="Caption"/>
     <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
     <w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr>
     <w:rPr><w:i/></w:rPr>
   </w:style>
@@ -203,6 +204,7 @@
     <w:name w:val="TOC Heading"/>
     <w:basedOn w:val="Heading1"/>
     <w:next w:val="BodyText"/>
+    <w:qFormat/>
     <w:pPr><w:spacing w:before="240" w:line="259" w:lineRule="auto"/><w:outlineLvl w:val="9"/></w:pPr>
     <w:rPr><w:rFonts w:asciiTheme="majorHAnsi" w:eastAsiaTheme="majorEastAsia" w:hAnsiTheme="majorHAnsi" w:cstheme="majorBidi"/><w:b w:val="0"/><w:bCs w:val="0"/><w:color w:val="365F91" w:themeColor="accent1" w:themeShade="BF"/></w:rPr>
   </w:style>
