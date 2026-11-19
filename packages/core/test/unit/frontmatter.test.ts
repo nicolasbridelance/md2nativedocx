@@ -9,7 +9,7 @@ test('splitFrontmatter: title (quoted or not), options, body', () => {
   assert.equal(fm.hasOptions, true);
   assert.equal(fm.body, 'flowchart LR\n  A --> B');
   assert.deepEqual(splitFrontmatter('flowchart LR\n  A --> B'), { body: 'flowchart LR\n  A --> B', hasOptions: false });
-  assert.equal(splitFrontmatter('﻿---\r\ntitle: x\r\n---\r\npie').body, 'pie');
+  assert.equal(splitFrontmatter('\uFEFF---\r\ntitle: x\r\n---\r\npie').body, 'pie');
 });
 
 test('prepareSource: a frontmatter title becomes the title statement of a type that has one', () => {

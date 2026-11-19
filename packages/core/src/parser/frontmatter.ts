@@ -21,7 +21,7 @@ export interface Frontmatter {
 }
 
 /** Mermaid's own pattern: `---` on the first line, YAML, `---` on a line of its own. */
-const FRONTMATTER = /^﻿?\s*---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+const FRONTMATTER = /^\uFEFF?\s*---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
 /** Split the YAML frontmatter from `source`. Only top-level keys are read; nothing is evaluated. */
 export function splitFrontmatter(source: string): Frontmatter {
