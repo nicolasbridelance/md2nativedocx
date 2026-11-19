@@ -30,12 +30,22 @@ test('wraps the drawing canvas in the schema-required paragraph hierarchy, same 
   }
 });
 
-test('renders one connector per relationship, with a marker only at the decorated end', () => {
+test('renders one connector per relationship; inheritance ends in a hollow triangle, not a line end', () => {
   const xml = translate(BASIC);
   assert.equal((xml.match(/<wps:cNvCnPr\/>/g) ?? []).length, 1);
-  assert.equal((xml.match(/<a:headEnd /g) ?? []).length, 1, 'inheritance marker is at the "from" end (headEnd)');
+  // A line end is always filled, so the hollow marker is its own white closed polygon.
+  assert.equal((xml.match(/<a:headEnd /g) ?? []).length, 0);
   assert.equal((xml.match(/<a:tailEnd /g) ?? []).length, 0);
-  assert.ok(xml.includes('type="triangle"'));
+  const polygons = xml.match(/<a:custGeom>[\s\S]*?<a:close\/>[\s\S]*?<a:srgbClr val="FFFFFF">/g) ?? [];
+  assert.equal(polygons.length, 1);
+  assert.equal((polygons[0]?.match(/<a:lnTo>/g) ?? []).length, 2, 'a triangle: a move and two lines');
+});
+
+test('aggregation is a hollow diamond, composition a filled line end, association a small arrow head', () => {
+  const diamond = translate('classDiagram\n  A o-- B').match(/<a:lnTo>/g) ?? [];
+  assert.equal(diamond.length, 3, 'a diamond: a move and three lines');
+  assert.match(translate('classDiagram\n  A *-- B'), /<a:headEnd type="diamond"/);
+  assert.match(translate('classDiagram\n  A --> B'), /<a:tailEnd type="triangle" w="sm"/);
 });
 
 test('a relationship label renders as its own text box', () => {

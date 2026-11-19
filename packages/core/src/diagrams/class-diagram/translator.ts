@@ -23,16 +23,11 @@
  * machinery for a diagram family that is typically far smaller (a handful of
  * classes, not hundreds of flowchart nodes).
  *
- * Marker fidelity is also a deliberate v1 simplification: OOXML's
- * `a:headEnd`/`a:tailEnd` markers are solid-filled with no "hollow outline"
- * variant, so strict UML notation (hollow triangle for inheritance/
- * realization, hollow diamond for aggregation vs. filled for composition)
- * isn't reproducible with this project's one confirmed-working connector
- * primitive. Substituted with the closest distinguishable built-in presets —
- * `oval` standing in for aggregation's hollow diamond, and a smaller
- * `triangle` for association/dependency vs. a larger one for inheritance/
- * realization — so all 8 relationship types still render visually distinct
- * from one another, even if not pixel-identical to strict UML notation.
+ * Markers: OOXML's `a:headEnd`/`a:tailEnd` are always filled with the line colour, so the hollow UML
+ * markers (open triangle for inheritance/realization, open diamond for aggregation) are drawn as their own
+ * white polygons over the end of the line (`hollowMarker`, `../../translator/graph-shapes.ts`), while
+ * composition (filled diamond) and association/dependency (small triangle) stay line ends. A class box is
+ * itself several separate shapes and its lines are not attached to it, so a detached marker loses nothing.
  *
  * `edgePoint`/`connector`/`rect`/`textBoxLines` live in
  * `../../translator/graph-shapes.ts`, not here — extracted once
@@ -52,7 +47,7 @@ import {
   wrapDrawingCanvas,
   type CanvasOptions,
 } from '../../translator/canvas.js';
-import { connector, edgePoint, rect, scalePt, textBoxLines, type ArrowMarker } from '../../translator/graph-shapes.js';
+import { connector, edgePoint, hollowMarker, rect, scalePt, textBoxLines, type ArrowMarker, type HollowMarker } from '../../translator/graph-shapes.js';
 
 const LINE_COLOR = '2F5496';
 const TITLE_FILL = 'D9E2F3';
@@ -75,11 +70,18 @@ const RANKDIR: Readonly<Record<ClassDiagram['direction'], 'TB' | 'BT' | 'LR' | '
   RL: 'RL',
 };
 
-const STYLE_BY_TYPE: Readonly<Record<ClassRelationType, { dash: 'solid' | 'dash'; marker: ArrowMarker; size: 'sm' | 'lg' }>> = {
-  inheritance: { dash: 'solid', marker: 'triangle', size: 'lg' },
-  realization: { dash: 'dash', marker: 'triangle', size: 'lg' },
+/** Hollow marker size in px (along the line x across it): UML's open triangle and open diamond. */
+const HOLLOW_SIZE_PX: Readonly<Record<HollowMarker, { length: number; width: number }>> = {
+  triangle: { length: 16, width: 14 },
+  diamond: { length: 20, width: 12 },
+};
+
+const STYLE_BY_TYPE: Readonly<Record<ClassRelationType, { dash: 'solid' | 'dash'; marker: ArrowMarker; size: 'sm' | 'lg'; hollow?: HollowMarker }>> = {
+  // Inheritance, realization and aggregation end in a hollow marker drawn as its own shape (a line end is always filled).
+  inheritance: { dash: 'solid', marker: 'none', size: 'lg', hollow: 'triangle' },
+  realization: { dash: 'dash', marker: 'none', size: 'lg', hollow: 'triangle' },
   composition: { dash: 'solid', marker: 'diamond', size: 'lg' },
-  aggregation: { dash: 'solid', marker: 'oval', size: 'lg' },
+  aggregation: { dash: 'solid', marker: 'none', size: 'lg', hollow: 'diamond' },
   association: { dash: 'solid', marker: 'triangle', size: 'sm' },
   dependency: { dash: 'dash', marker: 'triangle', size: 'sm' },
   link: { dash: 'solid', marker: 'none', size: 'sm' },
@@ -258,6 +260,25 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
         style.size,
       ),
     );
+    if (style.hollow !== undefined) {
+      // The hollow marker sits at the end that carries it, pointing at the box, over the line's last stretch.
+      const atFrom = rel.markerEnd === 'from';
+      const size = HOLLOW_SIZE_PX[style.hollow];
+      const tip = atFrom ? p1 : p2;
+      const other = atFrom ? p2 : p1;
+      parts.push(
+        hollowMarker(
+          nextId(),
+          style.hollow,
+          { x: scalePt(tip.x + dx, s), y: scalePt(tip.y + dy, s) },
+          { x: scalePt(other.x + dx, s), y: scalePt(other.y + dy, s) },
+          scalePt(size.length, s),
+          scalePt(size.width, s),
+          LINE_COLOR,
+          scaledLineWidthEmu(9525, s),
+        ),
+      );
+    }
     if (rel.label) {
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;

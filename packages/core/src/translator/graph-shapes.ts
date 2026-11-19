@@ -16,6 +16,7 @@
  * existed — left alone rather than churned for a refactor they don't need.
  */
 
+import { pathShape } from './path-shape.js';
 import { escapeXml } from './xml-escape.js';
 import { EMU_PER_PX } from './canvas.js';
 
@@ -257,4 +258,44 @@ export function connector(
   ]
     .filter((line) => line.length > 0)
     .join('\n');
+}
+
+/** Hollow end markers DrawingML's line ends cannot draw (they are always filled with the line colour). */
+export type HollowMarker = 'triangle' | 'diamond';
+
+/**
+ * A hollow end marker (UML generalization / realization triangle, aggregation diamond): a closed polygon,
+ * white inside, outlined in the line colour, with its tip on `tip` and its body running back along the line
+ * towards `from`. Emitted right after the line it ends, so its white fill hides the line's last stretch.
+ * A separate shape from the line (a line end cannot be hollow), so it does not follow the line if a
+ * connected box is moved; the class diagram's boxes are not attached to their lines either.
+ *
+ * All coordinates and sizes in EMU. `length` is along the line, `width` across it.
+ */
+export function hollowMarker(
+  id: number,
+  kind: HollowMarker,
+  tip: { x: number; y: number },
+  from: { x: number; y: number },
+  length: number,
+  width: number,
+  lineHex: string,
+  lineEmu: number,
+): string {
+  const dx = from.x - tip.x;
+  const dy = from.y - tip.y;
+  const norm = Math.hypot(dx, dy) || 1;
+  const ux = dx / norm;
+  const uy = dy / norm;
+  const nx = -uy;
+  const ny = ux;
+  const at = (along: number, across: number): { x: number; y: number } => ({
+    x: Math.round(tip.x + ux * along + nx * across),
+    y: Math.round(tip.y + uy * along + ny * across),
+  });
+  const points =
+    kind === 'triangle'
+      ? [at(0, 0), at(length, width / 2), at(length, -width / 2)]
+      : [at(0, 0), at(length / 2, width / 2), at(length, 0), at(length / 2, -width / 2)];
+  return pathShape(id, points, true, 'FFFFFF', 100, lineHex, lineEmu);
 }
