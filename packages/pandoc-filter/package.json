@@ -1,6 +1,6 @@
 {
   "name": "@md2nativedocx/pandoc-filter",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Pandoc Lua filter for md2nativedocx (Markdown to native Word): converts ```mermaid code blocks in a Markdown-to-docx conversion into editable OOXML shapes.",
   "keywords": [
     "pandoc",
@@ -34,6 +34,6 @@
     "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs"
   },
   "dependencies": {
-    "@md2nativedocx/core": "0.3.0"
+    "@md2nativedocx/core": "0.3.1"
   }
 }

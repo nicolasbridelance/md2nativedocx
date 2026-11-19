@@ -3,6 +3,15 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.1] — 2026-11-19
+
+### Improved
+- **PlantUML sequence diagrams: every example of the official reference page now converts.** The 89 examples
+  of plantuml.com/sequence-diagram were run through the converter; 17 lost a line, none does now. New:
+  `autoactivate on`, `partition`, multi-line participant names, `A -> "Long name" as B`, a colour after the
+  receiver (`B #red : text`), `note left A` without `of`. Slanted arrows (`->(10)`), parallel `&` messages and
+  `{anchor}` prefixes are drawn in a simpler form, with a warning; `<style>` blocks are skipped.
+
 ## [0.9.0] — 2026-11-18
 
 ### Added
