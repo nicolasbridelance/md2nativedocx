@@ -48,7 +48,7 @@ export function parsePacketDiagram(text: string): PacketParseResult {
       continue;
     }
     if (inFrontmatter) {
-      const titleMatch = line.match(/^title\s*:\s*(.+)$/i);
+      const titleMatch = line.match(/^title(?:\s*:\s*|\s+)(.+)$/i);
       if (titleMatch) ast.title = stripQuotes(titleMatch[1] ?? '');
       else if (!sawFrontmatterNote) {
         warnings.push('Packet config (showBits, bitOrder, bitsPerRow, ...) is not supported and was ignored.');

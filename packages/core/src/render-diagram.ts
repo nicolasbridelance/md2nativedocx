@@ -107,6 +107,7 @@ import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
 import type { ClassDiagram } from './diagrams/class-diagram/types.js';
 import type { StateDiagram } from './diagrams/state-diagram/types.js';
 import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
+import { prepareSource } from './parser/frontmatter.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
 import type { Flowchart } from './types.js';
@@ -506,7 +507,7 @@ export function chartTypeEnabled(setting: boolean | readonly string[] | undefine
  * type's parser throws. Internal to `core`: `planRendering` is the public face.
  */
 export function planDiagram(type: DiagramType, source: string): Capability {
-  return RENDERERS[type].plan(source);
+  return RENDERERS[type].plan(prepareSource(source, type).source);
 }
 
 /** Part ids end up in XML attribute values and package paths: keep them to a safe alphabet. */
@@ -600,6 +601,8 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
     },
   };
 
-  const rendered = RENDERERS[type].render(source, ctx);
+  const prepared = prepareSource(source, type);
+  warnings.push(...prepared.warnings);
+  const rendered = RENDERERS[type].render(prepared.source, ctx);
   return { ...rendered, metadata: { diagramType: type, label, warnings } };
 }

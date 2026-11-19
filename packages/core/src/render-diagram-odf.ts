@@ -9,6 +9,7 @@
  * Pure, like the rest of `core`.
  */
 
+import { prepareSource } from './parser/frontmatter.js';
 import { detectDiagramType } from './parser/diagram-type.js';
 import { parseMermaid } from './parser/index.js';
 import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
@@ -77,7 +78,9 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
     return { ...buildOdfNote(message, idPrefix), metadata: { diagramType: type, label, warnings } };
   }
 
-  const parsed = type === 'plantumlActivity' ? parsePlantUmlActivity(source) : parseMermaid(source);
+  const prepared = prepareSource(source, type);
+  warnings.push(...prepared.warnings);
+  const parsed = type === 'plantumlActivity' ? parsePlantUmlActivity(prepared.source) : parseMermaid(prepared.source);
   warnings.push(...parsed.warnings);
   const canvas: CanvasOptions = {};
   if (options.maxDrawingCx !== undefined) canvas.maxDrawingCx = options.maxDrawingCx;
