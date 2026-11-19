@@ -22,14 +22,17 @@ couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. D'o
 
 1. ~~R4.1, R4.2~~ : mesurés dans Word le 2026-11-19, rien à adopter (détail au §R). R4.3 n'a pas de
    symptôme : le chantier robustesse est clos.
-2. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
+2. **Conformité syntaxique Mermaid 1:1** (§2, « Conformité Mermaid ») : objectif 100 % de la syntaxe
+   officielle, mesuré et non supposé. Étage 1 (exemples officiels) en cours, étage 2 (différentiel contre
+   `mermaid`) ensuite.
+3. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
    premiers utilisateurs. Tout ce qui en sort passe devant le reste de cette liste.
-3. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
+4. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
    trois types variés, puis décider. Ne pas étendre aux 28 types avant cette mesure.
-4. **Convertisseur dans le navigateur, spike** (§4, « Pistes de distribution ») : seule piste qui
+5. **Convertisseur dans le navigateur, spike** (§4, « Pistes de distribution ») : seule piste qui
    touche des utilisateurs sans installation ni serveur. Une demi-journée pour savoir si Pandoc
    WebAssembly peut appeler le moteur JS ; décision du mainteneur ensuite (périmètre).
-5. **Entretien au fil de l'eau** (§2) : exception d'audit `braces` le 2026-12-31, manuel, défaut
+6. **Entretien au fil de l'eau** (§2) : exception d'audit `braces` le 2026-12-31, manuel, défaut
    `crossing-stress-bipartite`.
 
 Au second plan, sans date : V2 moteur (§2bis, seulement les ▶), pistes SmartArt (§3), idées (§4).
@@ -133,6 +136,18 @@ Ensuite, dans l'ordre :
   boîtes imbriquées (Mermaid aussi), notes non dessinées. Les autres types PlantUML deviennent une note.
 
 ## 2. Faisable par l'agent
+
+- [ ] **Conformité Mermaid, objectif 1:1** (décidé le 2026-11-19 ; proposé dès 2026-09 par
+      `docs/adr/spikes/spike-gantt-parser/spike.md`, jamais fait). Le bug du `;` en séquence a été trouvé
+      par un utilisateur, pas par un test : c'est ce que ce chantier doit rendre impossible.
+      - [ ] **Étage 1 — exemples officiels**, comme pour PlantUML : chaque bloc d'exemple des pages de
+            syntaxe de la doc Mermaid (29 types, licence MIT, gardés dans le dépôt avec leur mention et la
+            version de Mermaid), passé dans le moteur ; rapport par type (sans avertissement / construction
+            ignorée / échec) ; écarts corrigés un par un ; résultat verrouillé par un test en CI.
+      - [ ] **Étage 2 — différentiel contre `mermaid`** (dépendances de dev `mermaid` + `jsdom` accordées
+            par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime) : pour chaque exemple,
+            comparer ce que Mermaid comprend (nœuds, liens, messages, blocs) à notre AST. Recette jsdom :
+            `docs/adr/spikes/spike-gantt-parser/`. Rejouer à chaque montée de version de Mermaid.
 
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
       produit par un script resté hors dépôt. Aujourd'hui le `.md` est la source à éditer à la main.
