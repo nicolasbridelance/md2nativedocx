@@ -9,8 +9,10 @@
  *   - `clean`      : the type expected for the page was detected and rendered with no warning (rendering
  *                    notices such as "Native shapes used" are not syntax gaps and do not count);
  *   - `warned`     : rendered, with warnings (syntax ignored, SmartArt/chart refused, a note…);
+ *   - `not-converted`: a Mermaid type this project recognizes but does not draw yet (a note stands in);
  *   - `wrong-type` : detected as another type than the page documents (e.g. an unknown type drawn as a flowchart);
  *   - `threw`      : renderDiagram threw.
+ * `--write-baseline` rewrites `expected-clean.json`, the list the unit test locks.
  * `--report` rewrites `test-corpus/mermaid-official/REPORT.md`. Exit code 0 always: this measures, the
  * locked expectations live in `packages/core/test/unit/mermaid-official.test.ts`.
  */
@@ -73,6 +75,7 @@ export function classify(page, source) {
     const result = renderDiagram(source, { smartArt: true, nativeCharts: true, newPartId: () => '00000000-0000-4000-8000-000000000000' });
     const { diagramType } = result.metadata;
     const warnings = result.metadata.warnings.filter((w) => !isNotice(w));
+    if (expected === null && diagramType === 'mermaidUnsupported') return { status: 'not-converted', detected: diagramType, warnings };
     if (expected === null || (expected !== undefined && diagramType !== expected)) {
       return { status: 'wrong-type', detected: diagramType, warnings };
     }
@@ -89,10 +92,10 @@ if (isMain) {
   const verbose = args.includes('--verbose');
   const data = JSON.parse(readFileSync(join(root, 'test-corpus', 'mermaid-official', 'examples.json'), 'utf8'));
   const rows = [];
-  const totals = { clean: 0, warned: 0, 'wrong-type': 0, threw: 0 };
+  const totals = { clean: 0, warned: 0, 'not-converted': 0, 'wrong-type': 0, threw: 0 };
   for (const [page, examples] of Object.entries(data.pages)) {
     if (only && page !== only) continue;
-    const counts = { clean: 0, warned: 0, 'wrong-type': 0, threw: 0 };
+    const counts = { clean: 0, warned: 0, 'not-converted': 0, 'wrong-type': 0, threw: 0 };
     const details = [];
     examples.forEach((source, i) => {
       const r = classify(page, source);
@@ -107,10 +110,18 @@ if (isMain) {
   }
   const pct = (n, d) => (d === 0 ? '-' : `${Math.round((100 * n) / d)} %`);
   const all = Object.values(totals).reduce((a, b) => a + b, 0);
-  console.log(`${data.tag}: ${all} examples — clean ${totals.clean} (${pct(totals.clean, all)}), warned ${totals.warned}, wrong-type ${totals['wrong-type']}, threw ${totals.threw}`);
+  console.log(`${data.tag}: ${all} examples — clean ${totals.clean} (${pct(totals.clean, all)}), warned ${totals.warned}, not converted ${totals['not-converted']}, wrong-type ${totals['wrong-type']}, threw ${totals.threw}`);
   for (const r of rows) {
-    console.log(`${r.page.padEnd(26)} ${String(r.n).padStart(4)}  clean ${String(r.clean).padStart(3)}  warned ${String(r.warned).padStart(3)}  wrong ${String(r['wrong-type']).padStart(3)}  threw ${String(r.threw).padStart(3)}`);
+    console.log(`${r.page.padEnd(26)} ${String(r.n).padStart(4)}  clean ${String(r.clean).padStart(3)}  warned ${String(r.warned).padStart(3)}  notconv ${String(r['not-converted']).padStart(3)}  wrong ${String(r['wrong-type']).padStart(3)}  threw ${String(r.threw).padStart(3)}`);
     if (verbose) for (const d of r.details) console.log(`    ${d.slice(0, 300)}`);
+  }
+  if (args.includes('--write-baseline')) {
+    // The examples locked as clean by packages/core/test/unit/mermaid-official.test.ts: raise it after a fix.
+    const clean = [];
+    for (const [page, examples] of Object.entries(data.pages)) examples.forEach((source, i) => classify(page, source).status === 'clean' && clean.push(`${page}#${i}`));
+    writeFileSync(join(root, 'test-corpus', 'mermaid-official', 'expected-clean.json'), `${JSON.stringify({ tag: data.tag, clean }, null, 1)}
+`);
+    console.log(`baseline: ${clean.length} clean examples locked`);
   }
   if (args.includes('--report')) {
     const lines = [
@@ -120,11 +131,11 @@ if (isMain) {
       'chaque bloc d\'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.',
       'Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).',
       '',
-      `**Total : ${all} exemples — ${totals.clean} sans avertissement (${pct(totals.clean, all)}), ${totals.warned} avec avertissement, ${totals['wrong-type']} mal typés, ${totals.threw} en échec.**`,
+      `**Total : ${all} exemples — ${totals.clean} sans avertissement (${pct(totals.clean, all)}), ${totals.warned} avec avertissement, ${totals['not-converted']} de types pas encore dessinés (note à la place), ${totals['wrong-type']} mal typés, ${totals.threw} en échec.**`,
       '',
-      '| Page | Exemples | Sans avert. | Avec avert. | Mal typés | Échecs |',
-      '|---|---:|---:|---:|---:|---:|',
-      ...rows.map((r) => `| ${r.page} | ${r.n} | ${r.clean} | ${r.warned} | ${r['wrong-type']} | ${r.threw} |`),
+      '| Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |',
+      '|---|---:|---:|---:|---:|---:|---:|',
+      ...rows.map((r) => `| ${r.page} | ${r.n} | ${r.clean} | ${r.warned} | ${r['not-converted']} | ${r['wrong-type']} | ${r.threw} |`),
       '',
       '## Détail des écarts',
       '',

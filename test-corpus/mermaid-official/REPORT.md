@@ -4,60 +4,60 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 365 sans avertissement (67 %), 126 avec avertissement, 50 mal typés, 0 en échec.**
+**Total : 541 exemples — 365 sans avertissement (67 %), 126 avec avertissement, 50 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
-| Page | Exemples | Sans avert. | Avec avert. | Mal typés | Échecs |
-|---|---:|---:|---:|---:|---:|
-| agentflow | 12 | 0 | 0 | 12 | 0 |
-| architecture | 6 | 1 | 5 | 0 | 0 |
-| block | 30 | 29 | 1 | 0 | 0 |
-| c4 | 6 | 0 | 6 | 0 | 0 |
-| classDiagram | 38 | 9 | 29 | 0 | 0 |
-| cynefin | 3 | 3 | 0 | 0 | 0 |
-| entityRelationshipDiagram | 25 | 6 | 19 | 0 | 0 |
-| eventmodeling | 13 | 13 | 0 | 0 | 0 |
-| flowchart | 116 | 99 | 17 | 0 | 0 |
-| gantt | 11 | 4 | 7 | 0 | 0 |
-| gitgraph | 35 | 34 | 1 | 0 | 0 |
-| ishikawa | 1 | 1 | 0 | 0 | 0 |
-| kanban | 3 | 3 | 0 | 0 | 0 |
-| mindmap | 15 | 11 | 4 | 0 | 0 |
-| packet | 4 | 4 | 0 | 0 | 0 |
-| pie | 2 | 2 | 0 | 0 | 0 |
-| quadrantChart | 3 | 2 | 1 | 0 | 0 |
-| radar | 3 | 3 | 0 | 0 | 0 |
-| railroad | 14 | 0 | 0 | 14 | 0 |
-| requirementDiagram | 9 | 5 | 4 | 0 | 0 |
-| sankey | 8 | 8 | 0 | 0 | 0 |
-| sequenceDiagram | 38 | 27 | 11 | 0 | 0 |
-| stateDiagram | 22 | 9 | 13 | 0 | 0 |
-| swimlanes | 13 | 12 | 1 | 0 | 0 |
-| timeline | 14 | 13 | 1 | 0 | 0 |
-| treemap | 8 | 8 | 0 | 0 | 0 |
-| treeView | 13 | 9 | 4 | 0 | 0 |
-| usecase | 24 | 0 | 0 | 24 | 0 |
-| userJourney | 1 | 1 | 0 | 0 | 0 |
-| venn | 8 | 7 | 1 | 0 | 0 |
-| wardley | 19 | 19 | 0 | 0 | 0 |
-| xyChart | 8 | 8 | 0 | 0 | 0 |
-| zenuml | 16 | 15 | 1 | 0 | 0 |
+| Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
+|---|---:|---:|---:|---:|---:|---:|
+| agentflow | 12 | 0 | 0 | 12 | 0 | 0 |
+| architecture | 6 | 1 | 5 | 0 | 0 | 0 |
+| block | 30 | 29 | 1 | 0 | 0 | 0 |
+| c4 | 6 | 0 | 6 | 0 | 0 | 0 |
+| classDiagram | 38 | 9 | 29 | 0 | 0 | 0 |
+| cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
+| entityRelationshipDiagram | 25 | 6 | 19 | 0 | 0 | 0 |
+| eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
+| flowchart | 116 | 99 | 17 | 0 | 0 | 0 |
+| gantt | 11 | 4 | 7 | 0 | 0 | 0 |
+| gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
+| ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
+| kanban | 3 | 3 | 0 | 0 | 0 | 0 |
+| mindmap | 15 | 11 | 4 | 0 | 0 | 0 |
+| packet | 4 | 4 | 0 | 0 | 0 | 0 |
+| pie | 2 | 2 | 0 | 0 | 0 | 0 |
+| quadrantChart | 3 | 2 | 1 | 0 | 0 | 0 |
+| radar | 3 | 3 | 0 | 0 | 0 | 0 |
+| railroad | 14 | 0 | 0 | 14 | 0 | 0 |
+| requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
+| sankey | 8 | 8 | 0 | 0 | 0 | 0 |
+| sequenceDiagram | 38 | 27 | 11 | 0 | 0 | 0 |
+| stateDiagram | 22 | 9 | 13 | 0 | 0 | 0 |
+| swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
+| timeline | 14 | 13 | 1 | 0 | 0 | 0 |
+| treemap | 8 | 8 | 0 | 0 | 0 | 0 |
+| treeView | 13 | 9 | 4 | 0 | 0 | 0 |
+| usecase | 24 | 0 | 0 | 24 | 0 | 0 |
+| userJourney | 1 | 1 | 0 | 0 | 0 | 0 |
+| venn | 8 | 7 | 1 | 0 | 0 | 0 |
+| wardley | 19 | 19 | 0 | 0 | 0 | 0 |
+| xyChart | 8 | 8 | 0 | 0 | 0 | 0 |
+| zenuml | 16 | 15 | 1 | 0 | 0 | 0 |
 
 ## Détail des écarts
 
 ### agentflow
 
-- #0 wrong-type: detected unknown
-- #1 wrong-type: detected unknown
-- #2 wrong-type: detected unknown
-- #3 wrong-type: detected unknown
-- #4 wrong-type: detected unknown
-- #5 wrong-type: detected unknown
-- #6 wrong-type: detected unknown
-- #7 wrong-type: detected unknown
-- #8 wrong-type: detected unknown
-- #9 wrong-type: detected unknown
-- #10 wrong-type: detected unknown
-- #11 wrong-type: detected unknown
+- #0 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #1 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #2 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #3 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #4 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #5 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #6 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #7 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #8 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #9 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #10 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
+- #11 not-converted: Agentflow diagrams are not converted yet; a note stands in their place.
 
 ### architecture
 
@@ -181,20 +181,20 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### railroad
 
-- #0 wrong-type: detected unknown
-- #1 wrong-type: detected unknown
-- #2 wrong-type: detected unknown
-- #3 wrong-type: detected unknown
-- #4 wrong-type: detected unknown
-- #5 wrong-type: detected unknown
-- #6 wrong-type: detected unknown
-- #7 wrong-type: detected unknown
-- #8 wrong-type: detected unknown
-- #9 wrong-type: detected unknown
-- #10 wrong-type: detected unknown
-- #11 wrong-type: detected unknown
-- #12 wrong-type: detected unknown
-- #13 wrong-type: detected unknown
+- #0 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #1 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #2 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #3 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #4 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #5 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #6 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #7 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #8 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #9 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #10 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #11 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #12 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
+- #13 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
 
 ### requirementDiagram
 
@@ -250,30 +250,30 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### usecase
 
-- #0 wrong-type: detected unknown
-- #1 wrong-type: detected unknown
-- #2 wrong-type: detected unknown
-- #3 wrong-type: detected unknown
-- #4 wrong-type: detected unknown
-- #5 wrong-type: detected unknown
-- #6 wrong-type: detected unknown
-- #7 wrong-type: detected unknown
-- #8 wrong-type: detected unknown
-- #9 wrong-type: detected unknown
-- #10 wrong-type: detected unknown
-- #11 wrong-type: detected unknown
-- #12 wrong-type: detected unknown
-- #13 wrong-type: detected unknown
-- #14 wrong-type: detected unknown
-- #15 wrong-type: detected unknown
-- #16 wrong-type: detected unknown
-- #17 wrong-type: detected unknown
-- #18 wrong-type: detected unknown
-- #19 wrong-type: detected unknown
-- #20 wrong-type: detected unknown
-- #21 wrong-type: detected unknown
-- #22 wrong-type: detected unknown
-- #23 wrong-type: detected unknown
+- #0 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #1 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #2 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #3 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #4 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #5 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #6 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #7 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #8 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #9 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #10 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #11 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #12 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #13 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #14 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #15 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #16 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #17 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #18 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #19 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #20 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #21 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #22 not-converted: Use case diagrams are not converted yet; a note stands in their place.
+- #23 not-converted: Use case diagrams are not converted yet; a note stands in their place.
 
 ### venn
 

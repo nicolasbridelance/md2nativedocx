@@ -486,6 +486,15 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   // Same AST and translator as sequenceDiagram; only the parser differs.
   zenuml: shapesOnly(parseZenuml, translateSequenceToOoxml),
   plantumlSequence: shapesOnly(parsePlantUmlSequence, translateSequenceToOoxml),
+  // Mermaid types not drawn yet: the same visible note and warning.
+  mermaidUnsupported: {
+    render: (source, ctx) => {
+      const info = detectDiagramType(source);
+      ctx.warnings.push(`${info.label}s are not converted yet; a note stands in their place.`);
+      return shapes(buildUnsupportedDiagramTypeNoteXml(info));
+    },
+    plan: () => SHAPES,
+  },
   // Other PlantUML diagrams: a visible note in place of the diagram, and a warning, until they are drawn.
   plantuml: {
     render: (source, ctx) => {
