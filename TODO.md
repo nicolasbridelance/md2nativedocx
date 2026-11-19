@@ -14,159 +14,40 @@
 
 ---
 
-## R. Priorité — robustesse (incident `flux_arcs`, 2026-11-13)
+## Ordre de travail (réévalué le 2026-11-19)
 
-**Ce qui s'est passé.** Un utilisateur sous Windows et OneDrive Entreprise exporte `flux_arcs.md` avec
-l'extension 0.8.0. Word plante, puis affiche « erreur grave » à chaque réouverture de ce chemin.
-Trois analyses faites par un autre modèle sont arrivées (texte collé, 2026-11-13). Leur contre-analyse
-a fait le test qui tranche : une copie identique octet pour octet du `.docx` s'ouvre, se modifie et
-s'enregistre sans problème dans Word. **Le contenu XML n'est donc pas la cause du plantage.**
-Cause retenue :
-1. Le CLI écrase le fichier pendant que Word l'ouvre. Word note « Opération annulée » à 08:54:40 et
-   l'écrasement a lieu à 08:54:42-43, dans un dossier synchronisé par OneDrive.
-2. Word met ensuite ce chemin en quarantaine dans `Resiliency` / `PotentialDataLossInfo2`.
+Le produit est complet pour son usage principal (Markdown + Mermaid/PlantUML → Word éditable) et
+publié partout (npm, Marketplace, Open VSX, MCP). Ce qui limite le projet aujourd'hui, ce n'est plus la
+couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. D'où cet ordre :
 
-Le fichier exporté ne contenait **aucun** diagramme. Le bloc ```` ```mermaid ```` n'était pas fermé,
-et Pandoc 3.1.3 en a fait un paragraphe de texte brut sans le moindre avertissement (reproduit le
-2026-11-13).
+1. **R4.1 Gabarit Word** (§R) : rétablir `w:latentStyles` et `a:objectDefaults`. Écart réel introduit par
+   le projet, petit, vérifiable dans Word piloté par COM. Puis R4.2 seulement après un round Word.
+2. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
+   premiers utilisateurs. Tout ce qui en sort passe devant le reste de cette liste.
+3. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
+   trois types variés, puis décider. Ne pas étendre aux 28 types avant cette mesure.
+4. **Convertisseur dans le navigateur, spike** (§4, « Pistes de distribution ») : seule piste qui
+   touche des utilisateurs sans installation ni serveur. Une demi-journée pour savoir si Pandoc
+   WebAssembly peut appeler le moteur JS ; décision du mainteneur ensuite (périmètre).
+5. **Entretien au fil de l'eau** (§2) : exception d'audit `braces` le 2026-12-31, manuel, défaut
+   `crossing-stress-bipartite`.
 
-**Vérifié dans le code le 2026-11-13** (tout ce qui suit l'est, sauf mention « à vérifier ») :
+Au second plan, sans date : V2 moteur (§2bis, seulement les ▶), pistes SmartArt (§3), idées (§4).
 
-| Affirmation des analyses | Verdict |
-|---|---|
-| Écriture directe sur la cible, sans fichier temporaire ni contrôle du verrou (`bin/md2nativedocx.mjs:153`, `src/pptxExport.mjs:60`) | **vrai** |
-| « Exporter le document » lit le fichier sur disque et ignore les modifications non enregistrées (aucun `isDirty`) | **vrai** |
-| Un bloc non fermé est abandonné sans rien dire (`mermaidBlocks.ts:71`) | **vrai** (côté Pandoc aussi) |
-| `class A,B c;` rejeté à cause du `;` (`parser/parser.ts:668`, `block/parser.ts:237`) | **vrai, et pire** : une **arête** finie par `;` (`R1 --> P2;`) est aussi ignorée, donc des liens disparaissent |
-| `color:` ignoré dans `classDef` / `style` (`ooxml-translator.ts:794`) | **vrai** |
-| Marqueur `SMARTART_PLACEHOLDER:([^:]+)` puis `join(smartArtDir, id)` sans contrôle (`postprocess.mjs:468`, `:556`) | **vrai** (traversée de chemin depuis la prose) |
-| `escapeXml` laisse passer les caractères interdits en XML 1.0 (`xml-escape.ts:28`) | **vrai** |
-| Le contrôle Word ne compte que `/word/diagrams/` (`bin/md2nativedocx.mjs:204`) | **vrai** ; le message « 0 error(s) » est trompeur |
-| « 13 erreurs viennent du `reference.docx` maison » | **faux** : 11 erreurs sur les styles `*Tok` de coloration syntaxique, plus `w:nsid` et `doNotTrackMoves`, sont toutes écrites par Pandoc 3.1.3. Aucune dans `document.xml` |
-| Style de tableau par défaut `Table` avec `tblStylePr` : « régression 0.8.0 » | **faux** : identique au `reference.docx` de Pandoc |
-| Pas de `compatibilityMode` dans `settings.xml` | vrai, mais Pandoc ne le met pas non plus. Ce n'est pas une régression ; c'est une amélioration possible (R4) |
-| `latentStyles` et `a:objectDefaults` absents | **vrai, écart réel introduit par `a8d411a`** (Pandoc les avait) |
-| Injection de formules dans les classeurs `.xlsx` des graphiques | **ne s'applique pas** : le texte est écrit en `inlineStr`, les nombres passent par `Number.isFinite`, aucun `<f>` (`chartParts.mjs:44-64`) |
+## R. Robustesse (incident `flux_arcs`, 2026-11-13) — reste R4
 
-**Règles du chantier.** Une PR par lot (ou par point si le lot est gros), dépôt vert à chaque étape.
-Les commits de R3 portent le préfixe `security:`. Pas de refonte (ADR 0012) : on extrait, on ne
-réécrit pas. Une modification de message non commitée sur `bin/md2nativedocx.mjs`
-(« No problem found… do not affect how Word opens the file ») est **à abandonner**. Elle affirme ce
-que le contrôle ne vérifie pas ; R1.4 la remplace.
+R1 à R3 sont faits et publiés (0.8.1 à 0.8.3) : écriture sûre de la sortie, bloc non fermé signalé,
+contrôle Word honnête, fins d'instruction, couleurs de texte, sous-graphes, durcissements de sécurité.
+Plan, journal et constats vérifiés : `docs/history/TODO_ARCHIVE.md`, section « 2026-11-19 — §R
+robustesse » ; récit : `docs/history/incident-flux-arcs-2026-11.md`.
 
-### R1 — L'incident lui-même → release 0.8.1 (branche `fix/safe-docx-write`)
+Restes de R1 à R3 :
 
-- [x] **R1.1 Écriture sûre de la sortie.** Un seul utilitaire `writeOutputSafely(path, buffer)` dans
-      `packages/cli/src/`, utilisé par `bin/md2nativedocx.mjs` (`.docx`, `.odt`, journal) et `pptxExport.mjs` :
-      - refus si le fichier de verrou Word existe dans le dossier de sortie. Il y a deux formes :
-        `~$` + nom complet, et `~$` + nom privé de ses 2 premiers caractères pour les noms longs ;
-      - refus si la cible existe et ne s'ouvre pas en `r+` (EBUSY / EPERM / EACCES sous Windows) ;
-      - écriture dans `<cible>.<pid>.tmp` dans le **même dossier**, `fsync`, puis `rename` ; le
-        temporaire est supprimé en cas d'échec, et la cible d'origine n'est jamais tronquée ;
-      - échec signalé par `ConversionError` (`stage: 'write'`), code de sortie 2 et message
-        utilisable : « X.docx est ouvert dans Word : fermez-le ou exportez sous un autre nom ».
-      - Tests : verrou présent → refus et cible intacte au même octet près ; réussite → aucun `.tmp`
-        laissé ; échec de `rename` simulé → cible intacte.
-- [x] **R1.2 Extension : notification claire** quand le CLI renvoie l'erreur `write`, avec un bouton
-      « Exporter sous… ». Aujourd'hui l'erreur ne serait visible que dans le canal de sortie.
-- [x] **R1.3 Enregistrer avant d'exporter.** Dans l'export du document et l'export multi-fichiers, si
-      un `TextDocument` ouvert correspond au fichier et `isDirty`, faire `await doc.save()` avant de
-      lancer le CLI. (Choisi plutôt que d'exporter `getText()` : Pandoc résout images et chemins
-      relatifs depuis le disque.)
-- [x] **R1.4 Contrôle Word honnête.** Classer chaque erreur du validateur :
-      - **les nôtres** : `/word/diagrams/*`, `/word/charts/*`, `/word/document.xml` ;
-      - **connues de Pandoc** : liste fermée de signatures relevées le 2026-11-13 (styles `*Tok` →
-        `w:rPr`, `w:nsid` de `numbering.xml`, `doNotTrackMoves`), liée à la version de Pandoc ;
-      - **autre** : signalé comme erreur.
-      Le message dit par partie ce qui a été vérifié, sans jamais affirmer un effet sur Word. Test sur
-      un `.docx` dont le canevas `wpc` est cassé exprès : le contrôle **doit** le signaler, ce qui
-      vérifie l'« angle mort » annoncé par les analyses.
-- [x] **R1.5 Bloc ```` ```mermaid ```` non fermé.**
-      - `mermaidBlocks.ts` renvoie les blocs non fermés au lieu de `break` ;
-      - avertissement à l'export, et diagnostic `DiagnosticCollection` dans l'éditeur avec un Quick
-        Fix « ajouter ```` ``` ```` » ;
-      - côté CLI, détection équivalente avant Pandoc, avec un avertissement dans le journal.
-- [x] **R1.7 (suite de R1.4, hors release 0.8.1) Un seul classement des erreurs du validateur.** *(fait 2026-11-15 : `test:oxml-validate` utilise `classifyValidatorErrors` ; mesuré : 0 erreur de notre fait, 0 non classée, 598 écarts Pandoc 3.1.3 connus ; les erreurs « autres » sont affichées sans faire échouer le test)*
-      `scripts/test-oxml-validate.mjs` (`isOwnDiagramOutput`) garde son propre filtre, déjà plus large que
-      l'ancien filtre du CLI mais distinct de `classifyValidatorErrors` (`packages/cli/src/wordCheck.mjs`).
-      Le brancher dessus pour que CI et journal classent pareil, et que `test:oxml-validate` distingue aussi
-      les écarts Pandoc connus des erreurs « autres » au lieu de les compter en bloc.
-- [x] **R1.6 Release.** *(0.8.1 publiée le 2026-11-13 ; vérifié 2026-11-16 : message d'erreur et Word intact en CLI dans un dossier OneDrive, par Claude ; le mainteneur a décidé de ne pas bloquer sur le test manuel de l'extension. Suivi : 0.8.2 le 2026-11-16.)* Extension 0.8.1 et CLI en patch. Vérification manuelle par le mainteneur sur
-      son poste Windows + OneDrive : export pendant que le `.docx` est ouvert dans Word → message, pas
-      de plantage. Rédiger alors `docs/history/incident-flux-arcs-2026-11.md` et faire sortir R1 d'ici.
-
-#### Journal de R1 : réalisé, écarts avec le plan, reste à faire (tenu à jour au fil de l'eau)
-
-| Lot | État | Écart avec le plan / limite connue |
-|---|---|---|
-| R1.1 | fait | Test d'échec de `rename` : la cible est un dossier, donc l'échec survient au contrôle `r+` et non au `rename` ; il prouve que la cible reste intacte mais pas le nettoyage du `.tmp`. |
-| R1.2 | fait | Pas de « Exporter sous… » dans l'export multi-fichiers (un nom par fichier à choisir) : l'échec est compté et détaillé dans le canal de sortie. Dialogue non testé dans un VS Code réel (`test:extension-host` non lancé). |
-| R1.3 | fait | L'export d'un seul diagramme n'enregistre pas : il lit le tampon de l'éditeur, pas le disque. `doc.save()` non testé dans un VS Code réel. |
-| R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. Le test `wpc` publie le validateur depuis une copie privée : le premier essai a échoué sur le runner Windows, vraisemblablement un conflit de `obj/` avec l'autre test qui publie le même projet en parallèle (cause non confirmée par les journaux ; corrigé, CI verte). |
-| R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
-| R1.6 | fait | Clos le 2026-11-16 par décision du mainteneur, sans la vérification manuelle Windows + OneDrive (le CLI a été testé sur un dossier OneDrive : message clair, Word intact). PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm publié le 2026-11-15** par publication de confiance (OIDC, PR #25/#26/#29) : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 (relevé par `npm view` le 2026-11-15). Reste : la vérification manuelle Windows + OneDrive (cases de `docs/history/incident-flux-arcs-2026-11.md`), puis sortir R1 de ce fichier. |
-| R1.7 | fait | Un seul classement (CI et journal). Les erreurs non classées ne font pas échouer `test:oxml-validate` (choix prudent, à durcir si le bruit Pandoc reste stable). |
-
-#### Publication npm par publication de confiance (décidé le 2026-11-13)
-
-Le jeton `NPM_TOKEN` du `.env` exige un OTP, et npm retire l'option « bypass 2FA » des jetons granulaires
-(annonce du 2026-07-08 : opérations sensibles dès août 2026, publication directe vers janvier 2027 ;
-résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la **publication de confiance
-(OIDC)** : `.github/workflows/publish.yml`, déclenchement manuel, environnement GitHub `npm-publish`
-(sans relecteur : mainteneur solo, publication automatisée ; garde-fou = règle de déploiement « branche `main` uniquement »). Aucun jeton npm nulle part.
-- [x] Mainteneur : éditeur de confiance configuré sur npmjs.com pour les 4 paquets (owner
-      `nicolasbridelance`, repo `md2nativedocx`, workflow `publish.yml`, environnement `npm-publish`).
-- [x] Mainteneur : environnement `npm-publish` créé, sans relecteur, « Selected branches and tags » = `main`.
-- [x] Workflow lancé : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 publiés (2026-11-15).
-- [~] Le jeton `NPM_TOKEN` n'est plus dans `.env` (constaté le 2026-11-19 ; sa révocation sur npmjs.com
-      n'est pas vérifiable d'ici). Reste au mainteneur : « Require two-factor authentication and disallow
-      bypass 2fa tokens » sur les 5 paquets (`mcp` compris).
-
-### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
-
-- [~] **R2.1 Fins d'instruction.** *Fait 2026-11-13 : `parser/normalize-statements.ts` branché sur flowchart, class, state, er (BOM, CRLF/CR, `;` final et multiple, `%%` en fin de ligne ; table de test dans `normalize-statements.test.ts`). Reste : `sequence` (son parseur garde `;` dans le texte d'un message, et un test existant l'exige : à trancher avec le mainteneur, car Mermaid y traite `;` comme fin d'instruction) ; les autres types gardent `;` comme texte, ce que fait aussi Mermaid.* Une passe de normalisation partagée dans `packages/core/src/parser/` :
-      - CRLF ;
-      - `;` final ;
-      - plusieurs instructions sur une ligne séparées par `;` (`A-->B; B-->C`) ;
-      - commentaire `%%` en fin de ligne, mais pas `%%{init}%%` ;
-      - BOM.
-      Les `;` à l'intérieur d'une étiquette entre guillemets ou crochets sont préservés.
-      Brancher d'abord le flowchart, puis chaque parseur, avec un test en table : « chaque type
-      accepte les `;` finaux ». Les golden ne doivent pas bouger.
-- [x] **R2.2 `color:` dans `classDef` / `style`** *(fait 2026-11-15 pour flowchart en OOXML et ODF ; SmartArt et les autres types de diagramme gardent leur couleur automatique)* → couleur du texte du nœud, passée par
-      `validateHexColor`, en OOXML **et** en ODF. Sinon, le calcul automatique actuel reste.
-- [x] **R2.3 Diagramme réduit au point d'être illisible.** *(fait 2026-11-15 pour les flowcharts en formes : avertissement dans `metadata.warnings`, donc dans le journal du pont ; pas de SmartArt ni d'autres types ; l'affichage dans l'éditeur dépend de la reprise de ces avertissements par l'extension, non vérifié)* Avertissement (journal et extension) quand
-      la police effective tombe sous 7 pt, avec une suggestion : `TB` ou page en paysage. Un plancher
-      de police imposé obligerait à agrandir les boîtes, donc à toucher le layout : à rattacher à
-      l'idée « Gros diagrammes » du §4, pas ici.
-- [x] **R2.4 `direction` dans un `subgraph`** *(fait 2026-11-16 : `layoutWithSubgraphDirections` dans `layout.ts`, passe récursive par sous-graphe isolé puis bloc de taille fixe dans le parent ; ignorée avec avertissement si un lien traverse la frontière, comme Mermaid ; SmartArt inchangé, tout `subgraph` le disqualifie déjà ; à vérifier visuellement dans Word)*
-
-### R3 — Sécurité (branche `security/untrusted-text-hardening`)
-
-- [x] **R3.1 Marqueurs SmartArt et graphiques.** *(fait 2026-11-15 : `placeholderIds.mjs`, UUID strict + confinement du chemin ; un UUID valide mais inconnu reste une erreur, seul le texte qui n'a pas la forme d'un id généré est ignoré)*
-      - Identifiant limité au format UUID (`[0-9a-f]{8}-…`, ce que génère `randomUUID()`), pour
-        `SMARTART_PLACEHOLDER` comme pour `CHART_PLACEHOLDER` ;
-      - contrôle que `resolve(dir, id)` reste bien dans `dir` ;
-      - un identifiant inconnu est ignoré sans planter.
-      - Tests : prose contenant `SMARTART_PLACEHOLDER:../../x:dm`, et un document qui documente le
-        projet lui-même.
-      - Le manifeste hors bande proposé par les analyses change le contrat de `renderDiagram()` :
-        **escalade**, pas dans ce lot.
-- [x] **R3.2 Caractères interdits en XML 1.0** *(fait 2026-11-15 : `escapeXml` du core, PR #35, et `esc` de `chartParts.mjs` ; les `escapeAttr` du pptx ne traitent que du XML déjà analysé, non modifiés)* (`\x00-\x08`, `\x0B`, `\x0C`, `\x0E-\x1F`, demi-paires
-      UTF-16 isolées, `￾`, `￿`) remplacés par U+FFFD dans `escapeXml`. Vérifier qu'aucun
-      autre point d'écriture ne contourne `escapeXml` (`esc` de `chartParts.mjs`, `pptx`, ODF).
-      Ajouter à `test:fuzz` une propriété : toute chaîne JS dans une étiquette donne un XML bien
-      formé.
-- [x] **R3.3 Intégrité après renumérotation.** *(fait 2026-11-15 : test de bout en bout dans `corpus.test.mjs` — 3 diagrammes avec sous-graphes + 3 images ; ids uniques, chaque `stCxn`/`endCxn` désigne un id du même canevas ; `renumberDrawingIds` n'a pas eu besoin de correction)* Test sur un document avec plusieurs diagrammes,
-      des images Markdown et des zones de texte : chaque `stCxn` / `endCxn` désigne un `cNvPr id`
-      existant dans le même canevas, et les ids sont uniques dans tout le document. Vérifie les
-      regex de `renumberDrawingIds()`.
-- [x] **R3.4 Temps de réponse sur entrées pathologiques.**
-      - *Fait 2026-11-15 (PR « budget de travail ») : `estimateLayoutWork` + `maxWork` (défaut 1 500 000, ≈ 15 s sur la machine du mainteneur) refusent avant Dagre les graphes denses à arêtes longues ; le test `dense` passe de 31 s à 7,6 s. Fait aussi 2026-11-15 : `planRendering` (donc `planFor`) mesuré à moins de 250 ms sur ligne de 100 Ko, crochets/parenthèses/guillemets non fermés ×50 000, K40, séquence/gantt/pie/xychart géants ; verrouillé par `planning-budget.test.ts` (borne 3 s). Délai Pandoc : option `timeoutMs` de `convert()` (défaut : aucune limite ; le CLI pose 10 min, `MD2NATIVEDOCX_TIMEOUT_MS`), décidée avec le mainteneur le 2026-11-15. Reste : `recheck` écarté (rien ne le justifie dans les mesures).*
-      - [x] Budget pour `planFor` (appelé à chaque frappe dans l'extension), sur une ligne de 100 Ko, des
-        crochets jamais fermés ×50 000 et un graphe complet K40 ;
-      - [x] délai pour le CLI (fait) ; le pont du filtre reste borné par celui de Pandoc (voir « Limites de ressources », §2bis) ;
-      - `eslint-plugin-regexp` / `recheck` contre les ReDoS : nouvelle dépendance, **escalade**.
+- [ ] **R2.1, diagrammes de séquence** : leur parseur garde un `;` final dans le texte d'un message, et un
+      test existant l'exige ; Mermaid le traite comme une fin d'instruction. **Décision du mainteneur.**
+- [ ] **npm** : « Require two-factor authentication and disallow bypass 2fa tokens » sur les 5 paquets
+      (`mcp` compris) et vérifier que l'ancien jeton classique est révoqué (il n'est plus dans `.env`).
+      Mainteneur, ou Claude in Chrome sur npmjs.com.
 
 ### R4 — Gabarit et compatibilité Word : vérifier dans Word avant de changer (branche `fix/reference-docx-parity`)
 
@@ -232,15 +113,10 @@ Ensuite, dans l'ordre :
   `word-addin-scaffold`. Les 3 spikes demandent un vrai Word desktop (presse-papiers depuis une
   *function command*, forme de `getOoxml()`, rendu du ruban). Mode opératoire :
   `docs/adr/0008-word-addin-ribbon-platform-spike.md` et la section Phase 4 de l'archive.
-- **PlantUML séquence, fusionné et publié en 0.9.0 (2026-11-18)** : parseur dédié
-  (`core/src/diagrams/plantuml/sequence-parser.ts`) vers l'AST et le traducteur des séquences Mermaid,
-  blocs ```` ```plantuml ```` / ```` ```puml ```` dans le filtre, l'extension et le `.pptx` ; les autres
-  types PlantUML deviennent une note et un avertissement. Les 89 exemples officiels passent (0.9.1).
-  **Classes (2026-11-19)** : `core/src/diagrams/plantuml/class-parser.ts` vers l'AST des classes Mermaid ;
-  les 86 exemples officiels passent (0.10.0). **États (2026-11-19)** : `plantuml/state-parser.ts` vers l'AST
-  des états Mermaid, avec lignes de description (nouveau champ `description`) ; les 45 exemples passent.
-  **Activité (2026-11-19)** : `plantuml/activity-parser.ts` vers l'AST flowchart ; les 75 exemples passent. Reste : tester sur de vrais diagrammes du mainteneur ; barres fork/join ; états composites
-  en boîtes imbriquées (Mermaid aussi).
+- **Retours d'usage réels** (priorité 2 de l'ordre de travail). PlantUML : séquence, classes, états et
+  activité sont livrés (0.9.0 à 0.12.0), tous les exemples officiels passent ; aucun vrai diagramme du
+  mainteneur n'a encore été essayé. Restes connus : barres fork/join (activité), états composites en
+  boîtes imbriquées (Mermaid aussi), notes non dessinées. Les autres types PlantUML deviennent une note.
 
 ## 2. Faisable par l'agent
 
