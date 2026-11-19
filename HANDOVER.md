@@ -1,4 +1,4 @@
-# Handover — 2026-10-08
+# Handover — 2026-10-08 (versions and status refreshed 2026-11-19)
 
 One entry point for picking this project back up. It describes the state of the project as of this
 date; `git log` has anything newer. Earlier handovers live in this file's git history.
@@ -6,10 +6,10 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
 ## Where the project stands
 
 - **The product works end to end.** Markdown with Mermaid becomes a `.docx` where every diagram is
-  editable in Word, or (since 2026-10-08, flowcharts only) a `.odt` where it is editable in LibreOffice, from the VS Code extension (0.7.0 on the Marketplace, tag `vscode-v0.7.0`), the
+  editable in Word, or (flowcharts and PlantUML activity diagrams only; other types become a note) a `.odt` where it is editable in LibreOffice, from the VS Code extension (Marketplace and Open VSX), the
   CLI, the Pandoc filter, or the MCP server (`packages/mcp`). The same source can also become a
   `.pptx` deck (`packages/pptx`), which opens in PowerPoint and imports into Google Slides.
-- **All 29 Mermaid types are covered.** What each one becomes (SmartArt, Word chart or shapes), under
+- **All 29 Mermaid types are covered, plus PlantUML sequence, class, state and activity diagrams** (0.9.0 to 0.12.0). What each one becomes (SmartArt, Word chart or shapes), under
   which conditions, and what was ruled out with evidence: [`docs/coverage.md`](docs/coverage.md).
 - **SmartArt and Word charts are verified in real Word** by the maintainer, round by round
   ([`test-corpus/word-verification/CHECKLIST.md`](test-corpus/word-verification/CHECKLIST.md), rounds
@@ -18,14 +18,18 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   `convert()` as the library entry point of `@md2nativedocx/cli`; size limits on every Dagre layout
   (`DiagramTooLargeError`, a visible note instead of a failed export); the MCP server runs each call in
   a child process killed at its deadline.
-- **Versions.** Extension **0.8.0** published to the Marketplace on 2026-10-08 (tag `vscode-v0.8.0`):
-  `.odt` export, the project's own `reference.docx`. npm: the repo is at core, pandoc-filter, cli
-  **0.2.0** and pptx **0.1.1**, but the registry still serves 0.1.0: `npm publish` asked for a one-time
-  password (the `NPM_TOKEN` in `.env` does not bypass 2FA). Publish with an OTP, or replace the token
-  with an Automation / granular token allowed to bypass 2FA, then `npm publish --access public` in
-  `packages/{core,pandoc-filter,pptx,cli}` in that order. `mcp` is not published.
+- **Versions (2026-11-19).** Extension **0.12.1** on the Marketplace and Open VSX (tag `vscode-v0.12.1`).
+  npm: core 0.6.0, pandoc-filter 0.6.0, pptx 0.5.0, cli 0.6.1, mcp 0.4.1, all published by trusted
+  publishing (OIDC) from `.github/workflows/publish.yml` (`workflow_dispatch`, dry run first); no npm
+  token anywhere. The extension is published from the local build (`npm run publish`, `publish:ovsx`):
+  build it from a clean tree.
 
-## Priority since 2026-10-08: LibreOffice / ODF
+## Current priority (2026-11-19)
+
+Robustness first, since the `flux_arcs` incident on 0.8.0 (`TODO.md` §R): R1 to R3 are done, R4 (the
+Word template, checked in Word before changing) remains. LibreOffice / ODF below comes next.
+
+## LibreOffice / ODF (priority since 2026-10-08, after §R)
 
 LibreOffice 26.2 and Google Docs both shipped native Markdown in 2026, and neither renders Mermaid as
 editable shapes. The maintainer made an ODF output (`.odt` with native `draw:` shapes and attached

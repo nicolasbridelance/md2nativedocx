@@ -104,6 +104,7 @@ md2nativedocx/
 │   ├── pandoc-filter/            # Lua filter, thin wrapper calling core (spec §5.4.a)
 │   ├── cli/                      # `npx md2nativedocx` (spec §8)
 │   ├── pptx/                     # .pptx decks from the same core output (ADR 0010)
+│   ├── mcp/                      # MCP server: convert_document, render_diagram (stdio)
 │   └── vscode-extension/         # spec §5.4.b (the Word add-in, on hold, lives on branch word-addin-scaffold)
 └── docs/
     ├── specs/                     # product specs: cahier_des_charges.md (what/why), UX_SPEC.md,

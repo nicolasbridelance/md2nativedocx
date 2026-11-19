@@ -1,6 +1,6 @@
 # TODO — `md2nativedocx`
 
-> Backlog des items **réellement ouverts** au 2026-11-13 (§R ajouté ce jour ; le reste au 2026-10-07), chacun vérifié contre le code et l'historique.
+> Backlog des items **réellement ouverts**, revérifié contre le code et l'historique le 2026-11-19.
 > Rien de terminé ici : un item fini sort du fichier (son détail va dans le message de commit, ou dans
 > `docs/history/TODO_ARCHIVE.md` s'il mérite un récit). L'ancien `TODO.md` complet (1 500 lignes, tous
 > les chantiers fermés) est recopié en fin de `docs/history/TODO_ARCHIVE.md`.
@@ -9,8 +9,8 @@
 > escalades : `AGENTS.md`. Suite du produit (V2 moteur, V3 aller-retour) : `docs/specs/01-…`, `03-…`,
 > `04-…` et `docs/adr/0012-evolution-by-extraction.md` ; phases au §11 du cahier des charges.
 > **Priorité depuis le 2026-11-13 : la robustesse (§R ci-dessous)**, après l'incident `flux_arcs`
-> sur la 0.8.0 publiée. La cible LibreOffice / ODF (§0, `docs/specs/05-libreoffice-odf-spec.md`)
-> reprend ensuite. Les numéros de section existants ne bougent pas : d'autres documents les citent.
+> sur la 0.8.0 publiée ; R1 à R3 sont faits, reste R4 (gabarit Word). La cible LibreOffice / ODF (§0,
+> `docs/specs/05-libreoffice-odf-spec.md`) reprend ensuite. Les numéros de section existants ne bougent pas : d'autres documents les citent.
 
 ---
 
@@ -104,7 +104,7 @@ que le contrôle ne vérifie pas ; R1.4 la remplace.
 | R1.3 | fait | L'export d'un seul diagramme n'enregistre pas : il lit le tampon de l'éditeur, pas le disque. `doc.save()` non testé dans un VS Code réel. |
 | R1.4 | fait | La liste « connue de Pandoc » est plus large que prévu : le validateur signale aussi, dans `document.xml`, `tblHeader val="true"`, `jc="start"` et l'ordre `pStyle`/`numPr` des listes (3.1.3). `scripts/test-oxml-validate.mjs` garde son filtre propre → R1.7. Le test `wpc` publie le validateur depuis une copie privée : le premier essai a échoué sur le runner Windows, vraisemblablement un conflit de `obj/` avec l'autre test qui publie le même projet en parallèle (cause non confirmée par les journaux ; corrigé, CI verte). |
 | R1.5 | fait | `parseMermaidBlocks` inchangé (fonction séparée `findUnclosedMermaidFences`, pour ne pas décaler les index des appelants). Détection dupliquée TS/`.mjs` (extension TS, CLI vendorisé). Quick Fix et diagnostics non testés dans un VS Code réel. L'export `.pptx` ne signale pas ce cas (parseur propre). |
-| R1.6 | partiel | PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm publié le 2026-11-15** par publication de confiance (OIDC, PR #25/#26/#29) : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 (relevé par `npm view` le 2026-11-15). Reste : la vérification manuelle Windows + OneDrive (cases de `docs/history/incident-flux-arcs-2026-11.md`), puis sortir R1 de ce fichier. |
+| R1.6 | fait | Clos le 2026-11-16 par décision du mainteneur, sans la vérification manuelle Windows + OneDrive (le CLI a été testé sur un dossier OneDrive : message clair, Word intact). PR #24 mergée ; **extension 0.8.1 publiée sur le Marketplace** (tag `vscode-v0.8.1`) le 2026-11-13, **avant** la vérification manuelle Windows + OneDrive (décision du mainteneur). **npm publié le 2026-11-15** par publication de confiance (OIDC, PR #25/#26/#29) : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 (relevé par `npm view` le 2026-11-15). Reste : la vérification manuelle Windows + OneDrive (cases de `docs/history/incident-flux-arcs-2026-11.md`), puis sortir R1 de ce fichier. |
 | R1.7 | fait | Un seul classement (CI et journal). Les erreurs non classées ne font pas échouer `test:oxml-validate` (choix prudent, à durcir si le bruit Pandoc reste stable). |
 
 #### Publication npm par publication de confiance (décidé le 2026-11-13)
@@ -118,8 +118,9 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       `nicolasbridelance`, repo `md2nativedocx`, workflow `publish.yml`, environnement `npm-publish`).
 - [x] Mainteneur : environnement `npm-publish` créé, sans relecteur, « Selected branches and tags » = `main`.
 - [x] Workflow lancé : core 0.2.0, pandoc-filter 0.2.0, pptx 0.1.1, cli 0.2.1 publiés (2026-11-15).
-- [ ] Ensuite : « Require two-factor authentication and disallow bypass 2fa tokens » sur les 4 paquets, et
-      révoquer le jeton classique de `.env`.
+- [~] Le jeton `NPM_TOKEN` n'est plus dans `.env` (constaté le 2026-11-19 ; sa révocation sur npmjs.com
+      n'est pas vérifiable d'ici). Reste au mainteneur : « Require two-factor authentication and disallow
+      bypass 2fa tokens » sur les 5 paquets (`mcp` compris).
 
 ### R2 — Fidélité du parseur sur le cas `flux_arcs` (branche `fix/mermaid-statement-endings`)
 
@@ -177,7 +178,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       la mise en page, donc il faut un round CHECKLIST dans un vrai Word avant de l'adopter.
 - [ ] **R4.3 Formes de sous-graphe** (`<wps:bodyPr/>` nu, sans `wps:style`) : valides au schéma.
       Les aligner sur les nœuds seulement si un round Word montre une différence.
-- [~] **R4.4 Titre de sous-graphe à l'échelle 1** *(correctif écrit 2026-11-16 sur `fix/subgraph-title-font` : titre 10 pt, marges verticales à 0, en OOXML et ODF ; rendu Word vérifié 2026-11-16 par pilotage COM : le titre tient sur une ligne ; à confirmer à l'œil par le mainteneur, `titre-sousgraphe-avant/apres.docx`). **Bug trouvé au passage et corrigé** : un sous-graphe listé avant celui qu'il contient perdait l'imbrication (`buildGraph` rattachait l'enfant avant de l'avoir créé) : cadre extérieur écrasé à 0 de large, ou niveaux empilés (`nested-3-levels`)* *(constaté dans Word le 2026-11-16, sur `subgraph-direction.docx`, mais pas dû à R2.4 : `nested-3-levels.docx`, réduit à ~50 %, est correct)* : la barre de titre fait `SUBGRAPH_TITLE_HEIGHT` = 24 px (≈ 18 pt) pour un texte de 12 pt (`NODE_FONT_SIZE_HALFPT`), plus les marges `tIns`/`bIns` : à l'échelle 1, le titre touche ou mord la bordure. Piste : police du titre plus petite (ou barre plus haute), mais cela déplace tous les diagrammes à sous-graphes et leurs golden : round Word avant adoption. Contrôle de non-régression : `nested-3-levels.docx` et `swimlane.docx`.
+- [x] **R4.4 Titre de sous-graphe à l'échelle 1** *(mergé `9dfdb65`, publié en 0.8.3 ; correctif écrit 2026-11-16 sur `fix/subgraph-title-font` : titre 10 pt, marges verticales à 0, en OOXML et ODF ; rendu Word vérifié 2026-11-16 par pilotage COM : le titre tient sur une ligne ; à confirmer à l'œil par le mainteneur, `titre-sousgraphe-avant/apres.docx`). **Bug trouvé au passage et corrigé** : un sous-graphe listé avant celui qu'il contient perdait l'imbrication (`buildGraph` rattachait l'enfant avant de l'avoir créé) : cadre extérieur écrasé à 0 de large, ou niveaux empilés (`nested-3-levels`)* *(constaté dans Word le 2026-11-16, sur `subgraph-direction.docx`, mais pas dû à R2.4 : `nested-3-levels.docx`, réduit à ~50 %, est correct)* : la barre de titre fait `SUBGRAPH_TITLE_HEIGHT` = 24 px (≈ 18 pt) pour un texte de 12 pt (`NODE_FONT_SIZE_HALFPT`), plus les marges `tIns`/`bIns` : à l'échelle 1, le titre touche ou mord la bordure. Piste : police du titre plus petite (ou barre plus haute), mais cela déplace tous les diagrammes à sous-graphes et leurs golden : round Word avant adoption. Contrôle de non-régression : `nested-3-levels.docx` et `swimlane.docx`.
 - **Écarté sans preuve d'un problème** : envelopper `wpc` dans `mc:AlternateContent`, car ce rendu a
   été validé de nombreuses fois dans Word réel. Corriger les erreurs de Pandoc en post-traitement :
   hors de la liste fermée de la règle 7 d'AGENTS.md (`styles.xml` / `numbering.xml` d'une sortie
@@ -187,7 +188,7 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
 
 L'ADR 0012 interdit de réécrire un traducteur qui fonctionne. On ne fait **ni** IR complète, **ni**
 builder XML générique. On garde ce qui s'extrait sans refonte :
-- [ ] l'étape de normalisation en entrée, qui est R2.1 ;
+- [x] l'étape de normalisation en entrée, qui est R2.1 (`parser/normalize-statements.ts`, reste `sequence`) ;
 - [ ] une fonction unique `buildWordShape()` dans `ooxml-translator.ts`, introduite uniquement là où
       R2 / R4.3 modifient déjà le code ;
 - [ ] des types bornés (`HexColor`, coordonnées EMU finies et positives) seulement aux endroits
@@ -197,7 +198,7 @@ builder XML générique. On garde ce qui s'extrait sans refonte :
 
 - Manifeste hors bande au lieu des marqueurs (contrat public de `renderDiagram()`).
 - `eslint-plugin-regexp` ou `recheck` (nouvelle dépendance).
-- Option de `convert()` pour refuser les ressources externes (API du CLI).
+- ~~Option de `convert()` pour refuser les ressources externes~~ : faite (`sandbox`, `--sandbox`, `MD2NATIVEDOCX_SANDBOX`).
 - Test « vrai Word » en CI : les runners GitHub n'ont pas Word. Pour l'instant, round manuel avant
   chaque release ; une machine Windows avec Office en runner auto-hébergé serait une décision de
   coût et de sécurité.
@@ -277,7 +278,8 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       pont du filtre et dans `pptx` (le document se convertit). Le **délai** est dans `packages/mcp` : chaque
       appel tourne dans un processus enfant tué avec ses descendants à l'échéance (30 s / 120 s). Les plafonds
       bornent le pire cas sans le rendre bon marché (~35 s mesurés pour 400 nœuds / 800 arêtes), d'où le
-      délai ; le CLI et le pont n'ont toujours pas le leur. Taille du paquet : `packages/mcp` refuse d'écrire
+      délai ; le CLI a le sien depuis le 2026-11-15 (Pandoc arrêté après 10 min, `MD2NATIVEDOCX_TIMEOUT_MS`),
+      le pont du filtre reste borné seulement par ce délai de Pandoc. Taille du paquet : `packages/mcp` refuse d'écrire
       un `.docx` de plus de 100 Mo ; `convert()` n'a pas de plafond (l'ajouter = option d'API, escalade).
 - [ ] ⏸ **Déterminisme, investigation** : ids `randomUUID()` des parties, horodatage Pandoc,
       dates d'entrées `adm-zip`. Ne rien promettre avant un test bout en bout.
@@ -292,10 +294,10 @@ annexe A). Chaque étape laisse le dépôt vert ; les sorties actuelles ne chang
       d'accessibilité). Choisir un autre emplacement, vérifié dans un vrai Word, avant le spike V3.0, et
       le choisir avec son équivalent ODF (`draw:id` / `xml:id`, renommés par LibreOffice à
       l'enregistrement : spike S1).
-- ⏸ Puis, adaptateurs minces sur l'API publique : documentation SDK Node, serveur MCP
-  (`render_diagram`, `convert_document`), Quarto (vérifier d'abord : le filtre lance `node`, absent de
-  Quarto, et l'injection SmartArt/graphiques vit dans le CLI, pas dans le filtre). Puis les deux sondes
-  PlantUML et draw.io (cahier §11).
+- ⏸ Puis, adaptateurs minces sur l'API publique : documentation SDK Node, ~~serveur MCP~~ (fait :
+  `@md2nativedocx/mcp`, publié le 2026-11-19), Quarto (vérifier d'abord : le filtre lance `node`, absent de
+  Quarto, et l'injection SmartArt/graphiques vit dans le CLI, pas dans le filtre). Puis la sonde draw.io (cahier §11) ; celle de
+  PlantUML est dépassée : séquence, classes, états et activité sont livrés (0.9.0 à 0.12.0).
 
 ## 3. Backlog — pistes SmartArt et graphiques (analysées, pas commencées)
 
@@ -349,8 +351,9 @@ LibreOffice, `test:oxml-validate`, puis un fichier `smartart-vNN-*` ouvert dans 
   d'abord un besoin précis sur leur suivi, si un jour il y en a un.
 - **Phase 8, lot 6** (numérotation automatique des titres, styles de tableau) et **couleur de fond des
   sous-graphes** (toucherait l'API publique du core : escalade).
-- **Contrôle de compatibilité Word au CLI en dev** (`wordCompatibilityCheck` n'existe que dans
-  l'extension empaquetée) : coût d'un `dotnet build` par export, jamais tranché.
+- **Contrôle de compatibilité Word au CLI en dev** (le CLI ne le lance que si
+  `MD2NATIVEDOCX_OXML_VALIDATOR_DLL` est posé, ce que seule l'extension empaquetée fait ; sinon le journal dit
+  `Not checked`) : coût d'un `dotnet build` par export, jamais tranché.
 - **Aperçu dans VS Code (Phase 2.5 de `docs/specs/UX_SPEC.md`)** : jamais commencé ; lecture seule
   stricte si un jour. La V3 (§3.4 de la spec 03) envisage un éditeur visuel dans VS Code : si l'aperçu
   se fait, le construire comme composant réutilisable plutôt que spécifique à VS Code.
