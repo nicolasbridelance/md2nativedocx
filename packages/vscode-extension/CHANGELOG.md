@@ -3,6 +3,21 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.1] — 2026-11-19
+
+### Fixed
+- Command line: an output with an unsupported extension (`-o report.pdf`) is refused before converting; it
+  used to write a Word file under that name and report success.
+- Command line: an output that names the input file itself is refused, however the path is written.
+- A Word template set in the settings that no longer exists is now reported as a warning (the bundled
+  template is used, as before), instead of being skipped silently.
+- If the `.log` next to the document cannot be written, the export no longer reports a failure: the
+  document is kept and the problem is reported.
+
+### Added
+- Command line (`@md2nativedocx/cli` 0.6.1): `--reference-doc <file>` (fails if the file is missing), `--toc`
+  and `--version`; the help and the README document the exit codes for scripts and CI.
+
 ## [0.12.0] — 2026-11-19
 
 ### Added
