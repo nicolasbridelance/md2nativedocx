@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish core, pandoc-filter, pptx, cli
+    name: Publish core, pandoc-filter, pptx, cli, mcp
     runs-on: ubuntu-latest
     # Only from main: never publish an unreviewed branch.
     if: github.ref == 'refs/heads/main'
@@ -59,7 +59,9 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          for pkg in core pandoc-filter pptx cli; do
+          # mcp: its first version (0.1.0) was published by hand, since npm only lets a trusted publisher be set on
+          # a package that already exists.
+          for pkg in core pandoc-filter pptx cli mcp; do
             dir="packages/$pkg"
             name=$(node -p "require('./$dir/package.json').name")
             version=$(node -p "require('./$dir/package.json').version")
