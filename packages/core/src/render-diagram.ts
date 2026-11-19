@@ -102,7 +102,9 @@ import { translateEventModelingToOoxml } from './diagrams/event-modeling/transla
 import { parseSequence } from './diagrams/sequence/parser.js';
 import { parsePlantUmlSequence } from './diagrams/plantuml/sequence-parser.js';
 import { parsePlantUmlClass } from './diagrams/plantuml/class-parser.js';
+import { parsePlantUmlState } from './diagrams/plantuml/state-parser.js';
 import type { ClassDiagram } from './diagrams/class-diagram/types.js';
+import type { StateDiagram } from './diagrams/state-diagram/types.js';
 import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
@@ -309,6 +311,11 @@ function smartArtOrShapes<T>(
   };
 }
 
+/** Whether a state diagram has description lines (PlantUML `State : text`), which only the shapes show. */
+function hasStateDescriptions(ast: StateDiagram): boolean {
+  return ast.states.some((s) => (s.description?.length ?? 0) > 0);
+}
+
 /** A class diagram (Mermaid or PlantUML): an inheritance-only tree becomes a SmartArt hierarchy, members in each box. */
 function classRenderer(parse: (source: string) => { ast: ClassDiagram; warnings: string[] }): TypeHandler {
   return smartArtOrShapes(
@@ -416,6 +423,13 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   plantumlClass: classRenderer(parsePlantUmlClass),
   // A state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
   state: smartArtOrShapes(parseStateDiagram, (ast) => shapeOf(stateDiagramSmartArtLayout(ast)), generateStateDiagramSmartArt, translateStateDiagramToOoxml),
+  // Same AST and drawing as stateDiagram. States with description lines stay shapes: SmartArt would drop them.
+  plantumlState: smartArtOrShapes(
+    parsePlantUmlState,
+    (ast) => (hasStateDescriptions(ast) ? undefined : shapeOf(stateDiagramSmartArtLayout(ast))),
+    (ast, options) => (hasStateDescriptions(ast) ? null : generateStateDiagramSmartArt(ast, options)),
+    translateStateDiagramToOoxml,
+  ),
   er: shapesOnly(parseErDiagram, translateErDiagramToOoxml),
   requirement: shapesOnly(parseRequirementDiagram, translateRequirementDiagramToOoxml),
   architecture: shapesOnly(parseArchitectureDiagram, translateArchitectureDiagramToOoxml),

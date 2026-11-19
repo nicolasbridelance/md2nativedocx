@@ -236,8 +236,10 @@ Ensuite, dans l'ordre :
   blocs ```` ```plantuml ```` / ```` ```puml ```` dans le filtre, l'extension et le `.pptx` ; les autres
   types PlantUML deviennent une note et un avertissement. Les 89 exemples officiels passent (0.9.1).
   **Classes (2026-11-19)** : `core/src/diagrams/plantuml/class-parser.ts` vers l'AST des classes Mermaid ;
-  les 86 exemples officiels passent. Reste : tester sur de vrais diagrammes du mainteneur, puis états et
-  activité (l'activité irait vers l'AST flowchart).
+  les 86 exemples officiels passent (0.10.0). **États (2026-11-19)** : `plantuml/state-parser.ts` vers l'AST
+  des états Mermaid, avec lignes de description (nouveau champ `description`) ; les 45 exemples passent.
+  Reste : tester sur de vrais diagrammes du mainteneur ; activité (vers l'AST flowchart) ; états composites
+  en boîtes imbriquées (Mermaid aussi).
 
 ## 2. Faisable par l'agent
 

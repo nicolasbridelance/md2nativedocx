@@ -54,6 +54,8 @@ export type DiagramType =
   | 'plantumlSequence'
   /** PlantUML (`@startuml`) class diagram: same AST and drawing as `class`. */
   | 'plantumlClass'
+  /** PlantUML (`@startuml`) state diagram: same AST and drawing as `state`. */
+  | 'plantumlState'
   /** Any other PlantUML diagram (class, activity, mindmap...): not converted yet, shown as a note. */
   | 'plantuml';
 
@@ -150,13 +152,14 @@ export function detectDiagramType(text: string): DiagramTypeInfo {
  */
 const PLANTUML_KINDS: ReadonlyArray<{ kind: string; pattern: RegExp }> = [
   { kind: 'activity', pattern: /^(?:start|stop|endif|endwhile|fork|end fork|detach|kill)$|^:.*[;|<>\]}/]$|^if\s*\(|^while\s*\(|^repeat\b|^\|[^|]+\|/i },
+  // Before class: a state transition may carry a direction hint (`[*] -up-> First`) that class diagrams share.
+  { kind: 'state', pattern: /^state\s+\S|\[\*\]/i },
   // A declaration, or a relation only class diagrams have (`<|--`, `*--`, `o--`, `..|>`...).
   {
     kind: 'class',
     pattern:
       /^[-#~+]?(?:abstract\s+class|abstract|class|interface|enum|annotation|struct|exception|protocol|metaclass|record|dataclass)\s+\S|^(?:\(\)|<>)\s+\S|(?:<\||\|>)[-.]|[-.](?:<\||\|>)|\s[*o#x}+^][-.]{2}|[-.]{2}[*o#x{+^]\s|\s-(?:left|right|up|down)-+>/i,
   },
-  { kind: 'state', pattern: /^state\s+\S|\[\*\]/i },
   { kind: 'use case', pattern: /^usecase\s+\S|^\([^)]+\)/i },
   { kind: 'object', pattern: /^(?:object|map|json)\s+\S/i },
   { kind: 'component', pattern: /^(?:component|node|artifact|cloud|frame|folder|package|card|file|storage|rectangle|interface)\s+\S|^\[[^\]-]+\]/i },
@@ -170,12 +173,14 @@ function detectPlantUmlType(header: string, text: string): DiagramTypeInfo {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (line.length === 0 || line.startsWith("'") || line.startsWith('@')) continue;
-    // Groupings (`package`, `namespace`, `together`) exist in several diagram kinds: their content decides.
-    if (/^(?:package|namespace|together)\b/i.test(line)) continue;
+    // Groupings exist in several diagram kinds (`package`, `namespace`, `together`, or a `frame` / `folder`...
+    // opening a block): their content decides.
+    if (/^(?:package|namespace|together)\b/i.test(line) || /^(?:frame|folder|rectangle|node|cloud)\b.*\{$/i.test(line)) continue;
     for (const { kind, pattern } of PLANTUML_KINDS) {
       // A class relation is read before its `: label`, where any text may appear.
       if (!pattern.test(kind === 'class' ? line.replace(/(?<!:):(?!:).*$/, '') : line)) continue;
       if (kind === 'class') return { type: 'plantumlClass', label: 'PlantUML class diagram' };
+      if (kind === 'state') return { type: 'plantumlState', label: 'PlantUML state diagram' };
       return { type: 'plantuml', label: `PlantUML ${kind}` };
     }
     if (/^(?:participant|actor|boundary|control|entity|database|collections|queue)\s/i.test(line) || /-+>|<-+/.test(line)) sequenceLike = true;

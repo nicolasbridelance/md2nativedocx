@@ -27,6 +27,9 @@ export interface StateNode {
    * this (no text is drawn inside their shape). */
   label: string;
   kind: StateNodeKind;
+  /** Description lines drawn under the label, inside the state box (PlantUML `State : text`, one entry per
+   * line). Absent for Mermaid, where `id : text` sets the label instead. */
+  description?: string[];
 }
 
 export interface StateTransition {

@@ -16,7 +16,7 @@ test('detection: @startuml with messages is a PlantUML sequence diagram', () => 
 test('detection: other PlantUML diagrams are recognised and named, not drawn as sequences', () => {
   assert.deepEqual(detectDiagramType(uml('class Car\nCar --> Wheel')), { type: 'plantumlClass', label: 'PlantUML class diagram' });
   assert.equal(detectDiagramType(uml('start\n:Step;\nstop')).label, 'PlantUML activity');
-  assert.equal(detectDiagramType(uml('[*] --> On')).label, 'PlantUML state');
+  assert.equal(detectDiagramType(uml('[*] --> On')).type, 'plantumlState');
   assert.equal(detectDiagramType(uml('actor User\n(Login)\nUser -> (Login)')).label, 'PlantUML use case');
   assert.equal(detectDiagramType('@startmindmap\n* root\n@endmindmap').label, 'PlantUML mindmap');
   // Mermaid is untouched.

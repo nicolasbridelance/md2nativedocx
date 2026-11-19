@@ -19,7 +19,7 @@ document to can edit in Word, without Markdown, Mermaid or you:
   SmartArt; add a step in one click.
 - **Send it with confidence:** every export is checked against Word's own file-format rules.
 
-All 29 Mermaid diagram types are supported, plus PlantUML sequence and class diagrams (```` ```plantuml ```` blocks). (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
+All 29 Mermaid diagram types are supported, plus PlantUML sequence, class and state diagrams (```` ```plantuml ```` blocks). (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
 means Word's own editable objects, not pictures.)
 
 <img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
@@ -142,7 +142,7 @@ SmartArt graphic (each node keeps its Mermaid shape): add a step or a branch fro
 **Export to Word** above the diagram. The result is native Word shapes, not a PNG.
 
 **Which Mermaid diagrams are supported?** All 29 types: flowchart, sequence, class, state, ER, Gantt, pie, mindmap,
-timeline, journey, git graph, C4, and more. PlantUML sequence and class diagrams too; other PlantUML types get a note for now.
+timeline, journey, git graph, C4, and more. PlantUML sequence, class and state diagrams too; other PlantUML types get a note for now.
 
 **Do I need Pandoc, Word or Mermaid CLI?** No Word and no Mermaid CLI. Pandoc is downloaded automatically on first
 export if missing (see *Prerequisites*).
