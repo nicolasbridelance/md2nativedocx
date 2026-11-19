@@ -44,8 +44,8 @@ test('convert(): MD2NATIVEDOCX_* variables of the host process do not change the
 });
 
 test('convert(): diagram warnings come back without the stderr prefix', async () => {
-  const { warnings, pandocStderr } = await convert('```mermaid\ngraph TD\n  A --> B\n  click A callback\n```\n');
-  assert.deepEqual(warnings, ['warning: Unsupported line ignored: click A callback']);
+  const { warnings, pandocStderr } = await convert('```mermaid\ngraph TD\n  A --> B\n  this is not mermaid\n```\n');
+  assert.deepEqual(warnings, ['warning: Unsupported line ignored: this is not mermaid']);
   assert.match(pandocStderr, /md2nativedocx: warning: Unsupported line ignored/);
 });
 
