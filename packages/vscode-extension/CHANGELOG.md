@@ -3,6 +3,20 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0] — 2026-11-19
+
+### Added
+- **PlantUML state diagrams become editable Word diagrams.** Start and end points, transitions with their
+  labels, choice, fork and join, history states. A state's description lines (`State : text`) are drawn
+  inside its box, under the name. A plain chain or loop of states becomes SmartArt, like a Mermaid one. Every
+  example of the official reference page (plantuml.com/state-diagram) converts; composite states are
+  flattened and notes are not drawn yet (a warning says so).
+
+### Fixed
+- State diagrams (Mermaid too): a transition from a state to itself is drawn as a loop beside the state; it
+  used to be invisible, with its label written over the box.
+- State diagrams: the labels of two transitions leaving the same state no longer overlap.
+
 ## [0.10.0] — 2026-11-19
 
 ### Added
