@@ -41,7 +41,7 @@
  */
 
 import dagre from 'dagre';
-import { layoutWithinLimits } from '../../layout/graph-limits.js';
+import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
@@ -188,10 +188,22 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   for (const box of chart.classes) {
     const size = boxSizeFor(box);
     sizes.set(box.id, size);
-    g.setNode(box.id, { width: size.width, height: size.height });
+    g.setNode(nodeKey(box.id), { width: size.width, height: size.height });
   }
+  const linked = new Set<string>();
   for (const rel of chart.relationships) {
-    if (g.hasNode(rel.from) && g.hasNode(rel.to)) g.setEdge(rel.from, rel.to);
+    if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) {
+      g.setEdge(nodeKey(rel.from), nodeKey(rel.to));
+      linked.add(rel.from).add(rel.to);
+    }
+  }
+  // Classes with no relation would all land on one rank, a single row shrunk until unreadable (a catalogue
+  // of types, a PlantUML package listing). Layout-only edges stack them into columns, a grid of about
+  // sqrt(n) columns; the drawing below follows `chart.relationships`, so these edges are never drawn.
+  const isolated = chart.classes.map((c) => c.id).filter((id) => !linked.has(id));
+  if (isolated.length > 4) {
+    const columns = Math.ceil(Math.sqrt(isolated.length));
+    for (let i = 0; i + columns < isolated.length; i++) g.setEdge(nodeKey(isolated[i] as string), nodeKey(isolated[i + columns] as string));
   }
   layoutWithinLimits(g, options);
 
@@ -200,7 +212,7 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   let minY = Infinity;
   let maxY = -Infinity;
   for (const box of chart.classes) {
-    const n = g.node(box.id) as { x: number; y: number };
+    const n = g.node(nodeKey(box.id)) as { x: number; y: number };
     const size = sizes.get(box.id)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
@@ -220,8 +232,8 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   // Relationships first (z-order = emission order), so class boxes always
   // render on top of the lines feeding into them.
   for (const rel of chart.relationships) {
-    const nFrom = g.node(rel.from) as { x: number; y: number } | undefined;
-    const nTo = g.node(rel.to) as { x: number; y: number } | undefined;
+    const nFrom = g.node(nodeKey(rel.from)) as { x: number; y: number } | undefined;
+    const nTo = g.node(nodeKey(rel.to)) as { x: number; y: number } | undefined;
     if (!nFrom || !nTo) continue;
     const sizeFrom = sizes.get(rel.from)!;
     const sizeTo = sizes.get(rel.to)!;
@@ -266,7 +278,7 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   }
 
   for (const box of chart.classes) {
-    const n = g.node(box.id) as { x: number; y: number };
+    const n = g.node(nodeKey(box.id)) as { x: number; y: number };
     const size = sizes.get(box.id)!;
     parts.push(...classBoxShapes(nextId, box, size, n.x - size.width / 2 + dx, n.y - size.height / 2 + dy, s));
   }

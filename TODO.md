@@ -234,8 +234,10 @@ Ensuite, dans l'ordre :
 - **PlantUML séquence, fusionné et publié en 0.9.0 (2026-11-18)** : parseur dédié
   (`core/src/diagrams/plantuml/sequence-parser.ts`) vers l'AST et le traducteur des séquences Mermaid,
   blocs ```` ```plantuml ```` / ```` ```puml ```` dans le filtre, l'extension et le `.pptx` ; les autres
-  types PlantUML deviennent une note et un avertissement. Reste : tester sur de vrais diagrammes du
-  mainteneur, puis les autres types (classes, états, activité).
+  types PlantUML deviennent une note et un avertissement. Les 89 exemples officiels passent (0.9.1).
+  **Classes (2026-11-19)** : `core/src/diagrams/plantuml/class-parser.ts` vers l'AST des classes Mermaid ;
+  les 86 exemples officiels passent. Reste : tester sur de vrais diagrammes du mainteneur, puis états et
+  activité (l'activité irait vers l'AST flowchart).
 
 ## 2. Faisable par l'agent
 

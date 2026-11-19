@@ -14,7 +14,7 @@ test('detection: @startuml with messages is a PlantUML sequence diagram', () => 
 });
 
 test('detection: other PlantUML diagrams are recognised and named, not drawn as sequences', () => {
-  assert.deepEqual(detectDiagramType(uml('class Car\nCar --> Wheel')), { type: 'plantuml', label: 'PlantUML class' });
+  assert.deepEqual(detectDiagramType(uml('class Car\nCar --> Wheel')), { type: 'plantumlClass', label: 'PlantUML class diagram' });
   assert.equal(detectDiagramType(uml('start\n:Step;\nstop')).label, 'PlantUML activity');
   assert.equal(detectDiagramType(uml('[*] --> On')).label, 'PlantUML state');
   assert.equal(detectDiagramType(uml('actor User\n(Login)\nUser -> (Login)')).label, 'PlantUML use case');
@@ -124,10 +124,10 @@ test('renderDiagram: PlantUML sequence becomes shapes; another PlantUML type bec
   const seq = renderDiagram(uml('Alice -> Bob : hi'));
   assert.equal(seq.metadata.diagramType, 'plantumlSequence');
   assert.ok(seq.fragment.includes('<wps:wsp'));
-  const cls = renderDiagram(uml('class Car'));
-  assert.equal(cls.metadata.diagramType, 'plantuml');
-  assert.ok(cls.fragment.includes('not yet supported'));
-  assert.ok(cls.metadata.warnings.some((w) => w.includes('PlantUML class')));
+  const act = renderDiagram(uml('start\n:Step;\nstop'));
+  assert.equal(act.metadata.diagramType, 'plantuml');
+  assert.ok(act.fragment.includes('not yet supported'));
+  assert.ok(act.metadata.warnings.some((w) => w.includes('PlantUML activity')));
 });
 
 test('never throws on malformed input, and caps hostile sizes', () => {

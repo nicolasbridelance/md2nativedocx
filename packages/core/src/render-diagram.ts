@@ -101,6 +101,8 @@ import { parseEventModeling } from './diagrams/event-modeling/parser.js';
 import { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
 import { parseSequence } from './diagrams/sequence/parser.js';
 import { parsePlantUmlSequence } from './diagrams/plantuml/sequence-parser.js';
+import { parsePlantUmlClass } from './diagrams/plantuml/class-parser.js';
+import type { ClassDiagram } from './diagrams/class-diagram/types.js';
 import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-diagram-note.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
@@ -307,6 +309,19 @@ function smartArtOrShapes<T>(
   };
 }
 
+/** A class diagram (Mermaid or PlantUML): an inheritance-only tree becomes a SmartArt hierarchy, members in each box. */
+function classRenderer(parse: (source: string) => { ast: ClassDiagram; warnings: string[] }): TypeHandler {
+  return smartArtOrShapes(
+    parse,
+    (ast) => {
+      const tree = classDiagramToFlowchart(ast);
+      return tree && classDiagramSmartArtLayout(ast) ? { layout: 'tree', depth: flowchartTreeDepth(tree) } : undefined;
+    },
+    generateClassDiagramSmartArt,
+    translateClassDiagramToOoxml,
+  );
+}
+
 /** A type that becomes a native chart when charts are on for it, shapes otherwise. */
 function chartOrShapes<T>(
   type: NativeChartType,
@@ -396,15 +411,9 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   // A mindmap becomes a left-to-right SmartArt hierarchy; the radial shape-built one otherwise.
   mindmap: smartArtOrShapes(parseMindmap, (ast) => treeShape(mindmapToFlowchart(ast)), generateMindmapSmartArt, translateMindmapToOoxml),
   // An inheritance-only class tree becomes a SmartArt hierarchy (members in each box).
-  class: smartArtOrShapes(
-    parseClassDiagram,
-    (ast) => {
-      const tree = classDiagramToFlowchart(ast);
-      return tree && classDiagramSmartArtLayout(ast) ? { layout: 'tree', depth: flowchartTreeDepth(tree) } : undefined;
-    },
-    generateClassDiagramSmartArt,
-    translateClassDiagramToOoxml,
-  ),
+  class: classRenderer(parseClassDiagram),
+  // Same AST, SmartArt rule and drawing as classDiagram; only the parser differs.
+  plantumlClass: classRenderer(parsePlantUmlClass),
   // A state machine shaped as a chain or a loop becomes a SmartArt process or cycle.
   state: smartArtOrShapes(parseStateDiagram, (ast) => shapeOf(stateDiagramSmartArtLayout(ast)), generateStateDiagramSmartArt, translateStateDiagramToOoxml),
   er: shapesOnly(parseErDiagram, translateErDiagramToOoxml),

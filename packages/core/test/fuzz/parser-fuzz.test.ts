@@ -158,3 +158,23 @@ test('property: PlantUML sequence input never throws and always gives well-forme
     { numRuns: 300 },
   );
 });
+
+test('property: PlantUML class input never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  const classLine = fc.oneof(
+    hostileText,
+    fc
+      .tuple(nodeId, fc.constantFrom('<|--', '*--', 'o--', '-->', '..>', '..|>', '--', '..', '-up->', '#--', '()-'), nodeId, hostileText)
+      .map(([a, arrow, b, t]) => `${a} "${t}" ${arrow} ${b} : ${t}`),
+    fc.tuple(fc.constantFrom('class', 'abstract class', 'interface', 'enum', 'object', 'json'), hostileText, nodeId).map(([k, label, id]) => `${k} "${label}" as ${id} {`),
+    fc.tuple(nodeId, hostileText).map(([id, t]) => `${id} : ${t}`),
+    fc.constantFrom('}', 'package p {', 'note left of A', 'end note', 'skinparam class {', '<style>', '</style>', '@enduml', 'left to right direction'),
+  );
+  fc.assert(
+    fc.property(fc.array(classLine, { minLength: 0, maxLength: 25 }), (lines) => {
+      const result = renderDiagram(`@startuml\n${lines.join('\n')}\n@enduml`);
+      assertWellFormedXml(result.fragment);
+    }),
+    { numRuns: 300 },
+  );
+});
