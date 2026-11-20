@@ -289,7 +289,20 @@ const SETTINGS_FIXTURE = '<w:settings xmlns:w="http://schemas.openxmlformats.org
 
 test('patchSettings: adds w:updateFields when toc is true', () => {
   const out = patchSettings(SETTINGS_FIXTURE, { toc: true });
-  assert.match(out, /<w:settings[^>]*>\s*<w:updateFields w:val="true" \/>/);
+  assert.match(out, /<w:settings[^>]*><w:updateFields w:val="true" \/><\/w:settings>/);
+});
+
+test('patchSettings: puts w:updateFields where the schema orders it, not first', () => {
+  // The order Pandoc writes (3.14): zoom ... savePreviewPicture, then rsids, themeFontLang ... listSeparator.
+  const settings =
+    '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:zoom w:percent="100" />' +
+    '<w:defaultTabStop w:val="720" /><w:savePreviewPicture /><w:rsids></w:rsids><w:themeFontLang w:val="en-US" />' +
+    '<w:decimalSymbol w:val="." /></w:settings>';
+  const out = patchSettings(settings, { toc: true });
+  assert.match(out, /<w:savePreviewPicture \/><w:updateFields w:val="true" \/><w:rsids>/);
+  // m:mathPr also comes after it
+  const withMath = '<w:settings><w:zoom w:percent="100" /><m:mathPr><m:mathFont m:val="Cambria Math"/></m:mathPr></w:settings>';
+  assert.match(patchSettings(withMath, { toc: true }), /<w:zoom w:percent="100" \/><w:updateFields w:val="true" \/><m:mathPr>/);
 });
 
 test('patchSettings: no-op when toc is false/unset', () => {

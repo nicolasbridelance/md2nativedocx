@@ -410,14 +410,30 @@ export function collapseTrailingLandscapeSection(documentXml) {
  * `theme1.xml`/`styles.xml`/`document.xml`'s `sectPr`, all confirmed
  * carried over).
  *
+ * `w:settings` is a sequence (ECMA-376 Part 1, `CT_Settings`): `w:updateFields`
+ * goes right before the first element the schema puts after it, or at the end
+ * when none is there. Placing it first made the file schema-invalid (found
+ * 2026-11-20 by the Open XML validator on a Pandoc 3.14 output, where it was
+ * the only error; Pandoc 3.1.3's own settings errors had hidden it).
+ *
  * @param {string} settingsXml
  * @param {{ toc?: boolean }} [options]
  * @returns {string}
  */
 export function patchSettings(settingsXml, { toc } = {}) {
   if (!toc || /<w:updateFields\b/.test(settingsXml)) return settingsXml;
-  return settingsXml.replace(/(<w:settings\b[^>]*>)/, `$1\n  <w:updateFields w:val="true" />`);
+  const element = '<w:updateFields w:val="true" />';
+  const next = SETTINGS_AFTER_UPDATE_FIELDS.exec(settingsXml);
+  if (next) return settingsXml.slice(0, next.index) + element + settingsXml.slice(next.index);
+  return settingsXml.replace(/<\/w:settings>/, `${element}</w:settings>`);
 }
+
+/** The `CT_Settings` children that come after `w:updateFields`, in schema order. */
+const SETTINGS_AFTER_UPDATE_FIELDS = new RegExp(
+  '<(?:w:(?:hdrShapeDefaults|footnotePr|endnotePr|compat|docVars|rsids|attachedSchema|themeFontLang|clrSchemeMapping|' +
+    'doNotIncludeSubdocsInStats|doNotAutoCompressPictures|forceUpgrade|captions|readModeInkLockDown|smartTagType|' +
+    'shapeDefaults|doNotEmbedSmartTags|decimalSymbol|listSeparator)|m:mathPr|sl:schemaLibrary)[\\s/>]',
+);
 
 /**
  * Post-process a .docx package: read `word/document.xml`, apply the
