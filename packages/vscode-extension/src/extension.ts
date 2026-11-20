@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { basename, extname, isAbsolute, join } from 'node:path';
 import { MermaidCodeLensProvider } from './codeLensProvider';
 import { planFor, planHover } from './diagramPlan';
-import { nativeChartTypesSetting } from './settings';
+import { nativeChartTypesSetting, sandboxEnabledSetting } from './settings';
 import { registerStatusBar } from './statusBar';
 import { parseMermaidBlocks, isExportablePath, isMermaidFilePath } from './mermaidBlocks';
 import {
@@ -231,7 +231,9 @@ async function exportOptions(progress: vscode.Progress<{ message?: string }>, fo
   if (format === 'pptx') return { format, pptxShowSource: pptxShowSourceSetting() };
   // LibreOffice: Pandoc and the bundled reference.odt; the template, page layout, SmartArt, charts and the
   // Word compatibility check are Word features (ADR 0013).
-  if (format === 'odt') return { format, pandocBin: await resolvePandocBin(progress), toc: tocEnabledSetting(), tocDepth: tocDepthSetting() };
+  if (format === 'odt') {
+    return { format, pandocBin: await resolvePandocBin(progress), toc: tocEnabledSetting(), tocDepth: tocDepthSetting(), sandbox: sandboxEnabledSetting() };
+  }
   const pandocBin = await resolvePandocBin(progress);
   const referenceDoc = referenceDocumentSetting();
   const layout = layoutOptionsSetting();
@@ -248,6 +250,7 @@ async function exportOptions(progress: vscode.Progress<{ message?: string }>, fo
     toc: tocEnabledSetting(),
     tocDepth: tocDepthSetting(),
     emojiFont: emojiFontEnabledSetting(),
+    sandbox: sandboxEnabledSetting(),
     ...wordCompatibilityCheck,
   };
 }

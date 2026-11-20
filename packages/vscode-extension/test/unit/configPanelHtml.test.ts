@@ -24,6 +24,7 @@ function baseState(overrides: Partial<ConfigState> = {}): ConfigState {
     tocDepth: 3,
     emojiForceColorFont: true,
     wordCompatibilityCheckEnabled: true,
+    sandboxEnabled: false,
     referenceDocument: '',
     outputDirectory: '',
     smartArtEnabled: true,

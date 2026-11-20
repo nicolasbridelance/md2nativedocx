@@ -184,6 +184,10 @@ export interface RunCliOptions {
   /** Mirrors `md2nativedocx.emoji.forceColorFont` (default `true` — only
    * `false` needs forwarding; the CLI's own default already matches `true`). */
   emojiFont?: boolean;
+  /** Mirrors `md2nativedocx.sandbox.enabled`: Pandoc reads no image, local file, URL or network share named in
+   * the Markdown (the CLI's `--sandbox`). Images are left out, each with a warning. For `.docx` and `.odt`; a
+   * `.pptx` deck reads no image anyway. */
+  sandbox?: boolean;
   /** `dotnet` executable to run the Word-compatibility check with (ADR 0007
    * part D) — resolved by `dotnetProvisioner.ts`, mirroring `pandocBin`
    * above. Omitted when `md2nativedocx.wordCompatibilityCheck.enabled` is
@@ -262,6 +266,7 @@ function runCli(input: string, output: string, cwd: string, options: RunCliOptio
     if (options.tocDepth !== undefined) env.MD2NATIVEDOCX_TOC_DEPTH = String(options.tocDepth);
   }
   if (options.emojiFont === false) env.MD2NATIVEDOCX_EMOJI_FONT = '0';
+  if (options.sandbox === true) env.MD2NATIVEDOCX_SANDBOX = '1';
   if (options.oxmlValidatorDll) {
     env.MD2NATIVEDOCX_OXML_VALIDATOR_DLL = options.oxmlValidatorDll;
     if (options.dotnetBin) env.MD2NATIVEDOCX_DOTNET_BIN = options.dotnetBin;

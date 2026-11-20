@@ -32,7 +32,7 @@ requirements* and adds the hardening specific to each channel (sandbox, MCP limi
 | Macros, scripts, external links in ODF | `.odt` output | Never `office:scripts`, event listeners, `xlink:href` to a URL, links, DDE sources or linked objects; `.odt` schema validation must report zero errors |
 | Command injection | CLI and MCP server running Pandoc | `execFile`/`spawn` with an argument array only, never a shell string |
 | Path traversal | CLI paths, extension, MCP server | Paths resolved and checked against the expected root before any file operation |
-| Untrusted Markdown reading local files or URLs | Pandoc, when it embeds images | `--sandbox` in the CLI (`MD2NATIVEDOCX_SANDBOX=1` in scripts); always on in the MCP server, so a request cannot copy a local file into a document, fetch a URL or leak a Windows NTLM hash through a `\\server\share` path |
+| Untrusted Markdown reading local files or URLs | Pandoc, when it embeds images | `--sandbox` in the CLI (`MD2NATIVEDOCX_SANDBOX=1` in scripts), `md2nativedocx.sandbox.enabled` in the extension; always on in the MCP server, so a request cannot copy a local file into a document, fetch a URL or leak a Windows NTLM hash through a `\\server\share` path |
 | PlantUML reading files or URLs | PlantUML diagrams | Parsed by this project's own code; PlantUML itself (Java) is never run. `!include` is never followed (a warning says its content is missing) and `[[url]]` links keep only their label |
 | Resource exhaustion | MCP server | Each call runs in a child process killed at a deadline (30 s per diagram, 120 s per document); diagrams over 500 nodes, 800 edges or 1 M characters and Markdown over 5 M characters are refused |
 | Zip bomb | Out of direct scope: Pandoc writes the packages, nothing reads an outside `.docx`/`.odt` yet | Size and ratio caps required before any future feature reads one |
@@ -44,10 +44,12 @@ requirements* and adds the hardening specific to each channel (sandbox, MCP limi
 | Untested input | The Mermaid parser, the most exposed boundary | Property-based tests (`fast-check`) on that boundary, not only examples |
 | Malicious dev-container config in an external PR | Codespaces | Never open an unreviewed external PR branch in a Codespace; review `.devcontainer/` and `.vscode/` diffs on github.com first |
 
-**One trust assumption to know.** The VS Code extension converts the document the user has open, so it
-treats that Markdown as the user's own: it does not run Pandoc in sandbox mode, and images the Markdown
-names are read or downloaded. For Markdown from an untrusted source, use the CLI with `--sandbox` or the
-MCP server.
+**The VS Code extension and untrusted Markdown.** VS Code does not run the extension at all in a folder
+it has not trusted (Restricted Mode). In a trusted folder, the extension treats the open Markdown as the
+user's own by default and lets Pandoc read the images it names, since reports with images are its main
+use. For Markdown from elsewhere, the setting `md2nativedocx.sandbox.enabled` turns on Pandoc's sandbox,
+as `--sandbox` does in the CLI. Once on at any level (user, workspace, folder) it stays on, so a
+repository's `.vscode/settings.json` cannot turn it off.
 
 ## What CI checks
 
@@ -119,7 +121,6 @@ test:fuzz && npm audit --omit=dev --audit-level=high`. `test:ci` writes the same
   ([`TESTING.md`](../../TESTING.md), chapters 6 and 7), not by an automated job.
 - **Pandoc versions differ by channel.** CI and the extension use Pandoc 3.1.3; the browser converter uses
   the `pandoc.wasm` of Pandoc 3.14. Bringing them together is planned.
-- **No extension sandbox setting.** See the trust assumption above.
 
 ## Related documents
 

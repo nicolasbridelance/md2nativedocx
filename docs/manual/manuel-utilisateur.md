@@ -90,6 +90,8 @@ Les réglages se passent par variables d'environnement (ou par le panneau de con
 
 Le sommaire est un champ Word : à l'ouverture, cliquer « Activer la modification » puis accepter la mise à jour des champs.
 
+**Markdown venu d'ailleurs.** Pour un document que vous n'avez pas écrit (généré par une IA, reçu par mail, téléchargé), activez le mode sandbox : option `--sandbox` du CLI, variable `MD2NATIVEDOCX_SANDBOX=1`, ou réglage « Markdown venu d'ailleurs » (`md2nativedocx.sandbox.enabled`) de l'extension. Pandoc ne lit alors aucune image, aucun fichier, aucune adresse web ni aucun partage réseau cité par le document : il ne peut pas glisser un de vos fichiers dans l'export ni envoyer votre identité Windows vers un chemin `\\serveur\partage`. Les images sont omises, chacune signalée dans le `.log`. Le serveur MCP fonctionne toujours ainsi.
+
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
 ```

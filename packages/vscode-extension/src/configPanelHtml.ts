@@ -68,6 +68,8 @@ export interface ConfigState {
    * schema and reports the result in the export's `.log`. Never greyed by
    * a custom reference doc (works regardless, same category as TOC/emoji). */
   wordCompatibilityCheckEnabled: boolean;
+  /** `md2nativedocx.sandbox.enabled`: Markdown you did not write, no image, file or URL read. */
+  sandboxEnabled: boolean;
   /** `md2nativedocx.outputDirectory`, `''` = next to the source file. */
   outputDirectory: string;
   /** Diagrams section (2026-10 UX review, lot C). */
@@ -257,7 +259,7 @@ const GROUP_KEYS = {
   structure: ['toc.enabled', 'toc.depth'],
   emoji: ['emoji.forceColorFont'],
   output: ['outputDirectory', 'referenceDocument'],
-  advanced: ['wordCompatibilityCheck.enabled'],
+  advanced: ['wordCompatibilityCheck.enabled', 'sandbox.enabled'],
 } as const;
 
 const ALL_SETTING_KEYS = Object.values(GROUP_KEYS).flat();
@@ -482,14 +484,23 @@ export function buildConfigPanelHtml(state: ConfigState, describe: Describe, non
     `<button type="button" id="browse-reference-doc">${escapeHtmlText(t('Browse…'))}</button>` +
     `</div></div>`;
 
-  const advancedGroup = row({
-    label: t('Word compatibility check'),
-    settingPath: 'wordCompatibilityCheck.enabled',
-    control: checkbox('wordCompatibilityCheck.enabled', state.wordCompatibilityCheckEnabled, false),
-    describe,
-    greyWhenCustomRef: false,
-    hasCustomRef,
-  });
+  const advancedGroup =
+    row({
+      label: t('Word compatibility check'),
+      settingPath: 'wordCompatibilityCheck.enabled',
+      control: checkbox('wordCompatibilityCheck.enabled', state.wordCompatibilityCheckEnabled, false),
+      describe,
+      greyWhenCustomRef: false,
+      hasCustomRef,
+    }) +
+    row({
+      label: t('Markdown from someone else: read no image, file or link'),
+      settingPath: 'sandbox.enabled',
+      control: checkbox('sandbox.enabled', state.sandboxEnabled, false),
+      describe,
+      greyWhenCustomRef: false,
+      hasCustomRef,
+    });
 
   const diagramRow = (label: string, settingPath: string, control: string) =>
     row({ label, settingPath, control, describe, greyWhenCustomRef: false, hasCustomRef });

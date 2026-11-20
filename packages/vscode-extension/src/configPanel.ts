@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { buildConfigPanelHtml, type ConfigState, type Describe } from './configPanelHtml';
+import { sandboxEnabledSetting } from './settings';
 
 /** Must match `contributes.views`' view id in `package.json`. */
 export const CONFIG_VIEW_ID = 'md2nativedocx.configView';
@@ -92,6 +93,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       tocDepth: config.get<number>('toc.depth', 3),
       emojiForceColorFont: config.get<boolean>('emoji.forceColorFont', true),
       wordCompatibilityCheckEnabled: config.get<boolean>('wordCompatibilityCheck.enabled', true),
+      sandboxEnabled: sandboxEnabledSetting(),
       referenceDocument: config.get<string>('referenceDocument', ''),
       outputDirectory: config.get<string>('outputDirectory', ''),
       smartArtEnabled: config.get<boolean>('smartArt.enabled', true),

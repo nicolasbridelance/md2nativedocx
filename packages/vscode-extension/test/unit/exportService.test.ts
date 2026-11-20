@@ -143,6 +143,28 @@ test('exportDocument in odt format writes a LibreOffice document with native sha
   }
 });
 
+test('sandbox: the image the Markdown names is embedded by default and left out, with a warning, when sandbox is on', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-sandbox-export-test-'));
+  try {
+    // A 1x1 transparent PNG next to the document.
+    writeFileSync(join(dir, 'pixel.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
+    const mdPath = join(dir, 'rapport.md');
+    writeFileSync(mdPath, '# Title\n\n![a pixel](pixel.png)\n');
+    const media = (docx: string) => execFileSync('unzip', ['-l', docx], { encoding: 'utf8' }).includes('word/media/');
+
+    const open = await exportDocument(mdPath, '', { outputPath: join(dir, 'open.docx') });
+    assert.ok(media(open.outputPath), 'without sandbox Pandoc embeds the image');
+    assert.equal(open.warningCount, 0);
+
+    const sandboxed = await exportDocument(mdPath, '', { outputPath: join(dir, 'sandboxed.docx'), sandbox: true });
+    assert.ok(!media(sandboxed.outputPath), 'with sandbox no image is read');
+    assert.equal(sandboxed.warningCount, 1);
+    assert.match(readFileSync(sandboxed.logPath, 'utf8'), /image not embedded \(sandbox mode[^)]*\): pixel\.png/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('exportBlock in pptx format makes a one-slide deck named after the diagram; showSource is passed through', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-pptx-block-test-'));
   try {

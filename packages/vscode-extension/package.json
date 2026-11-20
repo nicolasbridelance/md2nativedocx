@@ -492,31 +492,37 @@
             "markdownDescription": "%configuration.wordCompatibilityCheck.enabled.markdownDescription%",
             "order": 0
           },
+          "md2nativedocx.sandbox.enabled": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%configuration.sandbox.enabled.markdownDescription%",
+            "order": 1
+          },
           "md2nativedocx.pandoc.downloadUrl": {
             "type": "string",
             "default": "",
             "markdownDescription": "%configuration.pandoc.downloadUrl.markdownDescription%",
-            "order": 1
+            "order": 2
           },
           "md2nativedocx.pandoc.sha256": {
             "type": "string",
             "default": "",
             "pattern": "^$|^[0-9a-f]{64}$",
             "markdownDescription": "%configuration.pandoc.sha256.markdownDescription%",
-            "order": 2
+            "order": 3
           },
           "md2nativedocx.dotnet.downloadUrl": {
             "type": "string",
             "default": "",
             "markdownDescription": "%configuration.dotnet.downloadUrl.markdownDescription%",
-            "order": 3
+            "order": 4
           },
           "md2nativedocx.dotnet.sha512": {
             "type": "string",
             "default": "",
             "pattern": "^$|^[0-9a-f]{128}$",
             "markdownDescription": "%configuration.dotnet.sha512.markdownDescription%",
-            "order": 4
+            "order": 5
           }
         }
       }

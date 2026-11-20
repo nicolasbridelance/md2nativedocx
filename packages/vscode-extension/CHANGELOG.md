@@ -5,6 +5,13 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+### Added
+- **`md2nativedocx.sandbox.enabled`** (default off, also in the settings panel under *Advanced*): for Markdown
+  you did not write. Pandoc then reads no image, local file, URL or network share the document names, so a
+  received document cannot copy one of your files into the export, fetch a web address or send your Windows
+  identity to a `\\server\share` path. Images are left out, each with a warning. Turned on at any level
+  (user, workspace, folder), it stays on: a repository's `.vscode/settings.json` cannot turn it off.
+
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,
   zip and XML libraries, the Open XML SDK of the Word compatibility check) in `dist/licenses/`; before, only

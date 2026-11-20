@@ -47,6 +47,7 @@
   "configuration.toc.depth.markdownDescription": "目录包含的标题级别数（H1-H4）。仅当开启 `#md2nativedocx.toc.enabled#` 时使用。",
   "configuration.emoji.forceColorFont.markdownDescription": "对象形字符强制使用“Segoe UI Emoji”字体，使大多数字符在 Word 中以彩色显示，而不是退化为灰色的平面字形。对少数旧式符号（✅ ❌ ✔ ✖ ⭐ ☑ 等）无效 —— 在 Word 中实测它们仍为单色。在 macOS、Linux 和 LibreOffice 上取决于本地字体替换 —— 如果效果比不开启更差，请关闭此项。",
   "configuration.wordCompatibilityCheck.enabled.markdownDescription": "按照 Word 自身执行的精确架构（通过 Microsoft 的 Open XML SDK）验证生成的 `.docx`，并把结果写入导出的 `.log` 文件。首次使用时会一次性下载一个小型官方 `.NET` 运行时（与 Pandoc 类似）。关闭此项可跳过该一次性下载以及每次导出时的额外检查。",
+  "configuration.sandbox.enabled.markdownDescription": "用于并非由您编写的 Markdown（由 AI 生成、通过邮件收到或下载的）：Pandoc 将不读取文档中引用的任何图片、本地文件、网址或网络共享，因此无法把您的文件复制进导出结果、访问网址，或将您的 Windows 身份发送到 `\\\\server\\share` 路径。图片会被省略，并在 `.log` 中逐一给出警告。仅适用于 `.docx` 和 `.odt`（PowerPoint 演示文稿本就不读取图片）。在任一级别（用户、工作区、文件夹）开启后即保持开启：仓库的设置无法将其关闭。",
   "configuration.pandoc.downloadUrl.markdownDescription": "适用于由 IT 管理、网络完全隔离的部署：托管本平台 Pandoc 发布包的内部镜像 URL（例如 Nexus/Artifactory），用于替代 `github.com`。必须以 `https://` 开头。留空（默认）= 使用 GitHub 官方发布。仍会校验完整性哈希 —— 只是更换了下载位置。",
   "configuration.pandoc.sha256.markdownDescription": "`#md2nativedocx.pandoc.downloadUrl#` 处发布包的 SHA-256（64 个小写十六进制字符）。设置了 `#md2nativedocx.pandoc.downloadUrl#` 时必填 —— 让 IT 可以托管其他 Pandoc 版本，同时保留强制的完整性校验。留空（默认）= 使用官方发布的固定哈希。",
   "configuration.dotnet.downloadUrl.markdownDescription": "适用于由 IT 管理、网络完全隔离的部署：托管本平台 `.NET` 运行时发布包的内部镜像 URL，用于替代 `builds.dotnet.microsoft.com`。必须以 `https://` 开头。留空（默认）= 使用 Microsoft 官方发布。仍会校验完整性哈希。",

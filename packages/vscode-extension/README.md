@@ -165,7 +165,10 @@ chooses where `.docx` files are written (default: the same folder as the source)
 styles; `md2nativedocx.smartArt.enabled` (default: on) turns an eligible diagram into a native
 SmartArt graphic instead of OOXML canvas shapes;
 `md2nativedocx.wordCompatibilityCheck.enabled` (default: on) validates every export against Word's
-own schema and reports the result in its `.log` file.
+own schema and reports the result in its `.log` file; `md2nativedocx.sandbox.enabled` (default: off)
+is for Markdown you did not write: Pandoc then reads no image, file, URL or network share the document
+names, and images are left out with a warning. Turned on at any level, a repository's settings cannot
+turn it off.
 
 A guided Getting Started walkthrough (Command Palette → *Get Started with md2nativedocx*) shows
 the three steps in practice right after install.
@@ -246,8 +249,9 @@ only relocate *where* the archive is fetched from, they never turn off the integ
 
 **Images in Markdown you did not write.** Pandoc reads every image a document points at, including
 network shares (`\\server\share\…`), `file://` and `http(s)` URLs. On Windows, a share path can make
-the machine send the user's NTLM hash to that server. Don't export Markdown from an untrusted source
-on a machine where that matters.
+the machine send the user's NTLM hash to that server. For Markdown from an untrusted source, turn on
+`md2nativedocx.sandbox.enabled`: Pandoc then reads none of them and leaves the images out. (In a
+folder VS Code has not trusted, Restricted Mode, the extension does not run at all.)
 
 **Security-policy blocking on the machine.** On a restricted workstation (AppLocker / Windows
 Defender Application Control / strict SmartScreen), a downloaded binary may exist but be blocked

@@ -346,9 +346,6 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   - la sélection des blocs de diagramme existe en Lua et en JS (`diagram-blocks.mjs`) : n'en garder qu'une
     si le CLI passe un jour par l'AST JSON.
 - **Conformité, restes** (revue du 2026-11-20, `docs/compliance/it-security.md` → *What is not covered yet*) :
-  - l'extension VS Code n'a pas de mode `--sandbox` : elle suppose que le Markdown ouvert est celui de
-    l'utilisateur et laisse Pandoc lire ou télécharger les images. Un réglage
-    `md2nativedocx.sandbox` serait simple (l'option existe dans `convert()`) ; à décider ;
   - pas de hook local gitleaks avant commit (la CI bloque au push) ;
   - le tableau Sécurité d'`AGENTS.md` n'a pas les lignes propres aux canaux que `it-security.md` ajoute
     (sandbox Pandoc, limites MCP, binaires téléchargés, publication OIDC, PlantUML `!include`) : les y
