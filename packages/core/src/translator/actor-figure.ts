@@ -64,12 +64,13 @@ export function actorFigure(width: number, height: number): ActorFigure {
       [{ x: cx - legSpan, y: bottom }, { x: cx, y: hip }, { x: cx + legSpan, y: bottom }],
     ],
     textTop: fh,
-    bounds: { x: cx - armSpan, y: top, width: 2 * armSpan, height: size },
+    // Down to the bottom of the box, so a connector leaves below the label instead of crossing it.
+    bounds: { x: cx - armSpan, y: top, width: 2 * armSpan, height: height - top },
     sites: [
       { x: cx, y: top },
-      { x: cx - armSpan, y: top + size / 2 },
-      { x: cx, y: bottom },
-      { x: cx + armSpan, y: top + size / 2 },
+      { x: cx - armSpan, y: top + (height - top) / 2 },
+      { x: cx, y: height },
+      { x: cx + armSpan, y: top + (height - top) / 2 },
     ],
   };
 }

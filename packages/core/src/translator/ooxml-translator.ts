@@ -815,13 +815,18 @@ function actorGeometryXml(w: number, h: number): string {
     })
     .join('\n');
   const angles = ['16200000', '10800000', '5400000', '0'];
+  // Sites and text area are ratios of the shape's own size (`*/ w x W`), not absolute EMU: LibreOffice reads
+  // absolute values in a 21600-unit space, which hid the label and sent glued connectors to the wrong point.
+  const sites = f.sites.map((p, i) => `<a:gd name="cx${i}" fmla="*/ w ${n(p.x)} ${w}"/><a:gd name="cy${i}" fmla="*/ h ${n(p.y)} ${h}"/>`).join('');
   return [
     '      <a:custGeom>',
-    '        <a:avLst/><a:gdLst/><a:ahLst/>',
+    '        <a:avLst/>',
+    `        <a:gdLst><a:gd name="textTop" fmla="*/ h ${n(f.textTop)} ${h}"/>${sites}</a:gdLst>`,
+    '        <a:ahLst/>',
     '        <a:cxnLst>',
-    ...f.sites.map((p, i) => `          <a:cxn ang="${angles[i]}"><a:pos x="${n(p.x)}" y="${n(p.y)}"/></a:cxn>`),
+    ...f.sites.map((_, i) => `          <a:cxn ang="${angles[i]}"><a:pos x="cx${i}" y="cy${i}"/></a:cxn>`),
     '        </a:cxnLst>',
-    `        <a:rect l="0" t="${n(f.textTop)}" r="${w}" b="${h}"/>`,
+    '        <a:rect l="l" t="textTop" r="r" b="b"/>',
     '        <a:pathLst>',
     `          <a:path w="${w}" h="${h}">`,
     `          <a:moveTo><a:pt x="${n(cx - r)}" y="${n(cy)}"/></a:moveTo>`,
