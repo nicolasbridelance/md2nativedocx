@@ -26,6 +26,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { npmPackagesInBundle, renderNotices } from '../../../scripts/third-party-licenses.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const extensionRoot = dirname(here);
@@ -70,9 +71,10 @@ const requireShimBanner = {
   js: "import { createRequire as __md2nativedocxCreateRequire } from 'node:module';\nconst require = __md2nativedocxCreateRequire(import.meta.url);",
 };
 
-await build({
+const cliBundle = await build({
   entryPoints: [cliEntry],
   outfile: cliOut,
+  metafile: true,
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -80,9 +82,10 @@ await build({
   banner: requireShimBanner,
 });
 
-await build({
+const coreBridgeBundle = await build({
   entryPoints: [coreBridgeEntry],
   outfile: coreBridgeOut,
+  metafile: true,
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -95,6 +98,24 @@ await build({
   const cliPkg = JSON.parse(readFileSync(join(repoRoot, 'packages', 'cli', 'package.json'), 'utf8'));
   writeFileSync(join(vendorDir, 'package.json'), `${JSON.stringify({ name: cliPkg.name, version: cliPkg.version, private: true }, null, 2)}
 `);
+}
+
+// The license notices of the npm packages esbuild put into the two bundles (MIT, ISC and BSD ask for them to
+// travel with every copy). Read from the bundles themselves, so a new dependency cannot ship without one.
+{
+  const bundled = new Map();
+  for (const { metafile } of [cliBundle, coreBridgeBundle]) {
+    for (const p of npmPackagesInBundle(metafile, process.cwd())) bundled.set(`${p.name}@${p.version}`, p);
+  }
+  const licensesDir = join(extensionRoot, 'dist', 'licenses');
+  mkdirSync(licensesDir, { recursive: true });
+  writeFileSync(
+    join(licensesDir, 'vendor.txt'),
+    renderNotices(
+      "Third-party code inside dist/vendor/ (the bundled CLI and diagram engine). This project's own code is CC0 1.0.",
+      [...bundled.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    ),
+  );
 }
 
 mkdirSync(pandocFilterDir, { recursive: true });

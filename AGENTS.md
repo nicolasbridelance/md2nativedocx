@@ -354,12 +354,18 @@ not something a diagram-focused fix needs to also resolve. Since 2026-10-08 the 
   <https://creativecommons.org/publicdomain/zero/1.0/legalcode> — copied exactly, never paraphrased
   or summarized. Use SPDX identifier `CC0-1.0` in `package.json`'s `license` field.
 - **`DocumentFormat.OpenXml` (Microsoft's Open XML SDK, used by `scripts/oxml-validator/`) is
-  MIT-licensed** (verified from the NuGet package's own `.nuspec`). Currently a dev/CI-only tool
-  invoked as a separate `dotnet` subprocess, not linked into any shipped package — no different in
-  kind from Pandoc below. If it becomes a runtime dependency of the CLI/VS Code extension (ADR
-  0007: auto-provisioning the `.NET` runtime the same way `pandocProvisioner.ts` auto-provisions
-  Pandoc), the same arm's-length subprocess model applies and this note should move to reflect
-  that, same as the Pandoc entry below did when its provisioner shipped.
+  MIT-licensed** (verified from the NuGet package's own `.nuspec`). It runs in CI
+  (`scripts/oxml-validator/`) and, since ADR 0007 part D, inside the VS Code extension: the `.vsix`
+  ships the published validator (`dist/vendor/oxml-validator/`: our DLL, the Open XML SDK DLLs and
+  `System.IO.Packaging`, all MIT) and runs it as a separate `dotnet` subprocess, downloading
+  Microsoft's .NET runtime (MIT) the way `pandocProvisioner.ts` downloads Pandoc when none is on
+  `PATH` (`dotnetProvisioner.ts`, SHA-512 pinned).
+- **Notices of bundled third-party code.** The extension's esbuild bundles, its validator DLLs and the
+  browser converter's scripts carry MIT code whose license asks for its notice in every copy. Each
+  build writes those notices next to what it ships (`dist/licenses/` in the extension,
+  `THIRD_PARTY_NOTICES.txt` on the site), read from what was actually bundled by
+  `scripts/third-party-licenses.mjs`, which also fails the build on a license outside its allowlist
+  (MIT, ISC, BSD, Apache-2.0). Never maintain that list by hand.
 - **Pandoc is GPL-2.0-or-later** (verified directly from `jgm/pandoc`'s `COPYRIGHT`/`COPYING.md` —
   earlier text in this file said GPL-3.0, which was incorrect) and is invoked as an external
   subprocess, not linked into this codebase. Arm's-length process invocation is generally

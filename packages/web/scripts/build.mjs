@@ -5,6 +5,7 @@ import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { fetchPandoc } from './fetch-pandoc.mjs';
+import { npmPackagesInBundle, renderNotices } from '../../../scripts/third-party-licenses.mjs';
 
 const here = (path) => fileURLToPath(new URL(path, import.meta.url));
 const dist = here('../dist');
@@ -12,9 +13,23 @@ const dist = here('../dist');
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 
-const common = { bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true, sourcemap: true, legalComments: 'none', logLevel: 'warning' };
-await build({ ...common, entryPoints: [here('../src/main.mjs')], outfile: `${dist}/app.js` });
-await build({ ...common, entryPoints: [here('../src/worker.mjs')], outfile: `${dist}/worker.js` });
+// legalComments 'none': the license notices of the bundled packages go, whole, into THIRD_PARTY_NOTICES.txt
+// below rather than as scattered comments some packages carry and others do not.
+const common = { bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true, sourcemap: true, legalComments: 'none', logLevel: 'warning', metafile: true };
+const bundles = [
+  await build({ ...common, entryPoints: [here('../src/main.mjs')], outfile: `${dist}/app.js` }),
+  await build({ ...common, entryPoints: [here('../src/worker.mjs')], outfile: `${dist}/worker.js` }),
+];
+const bundled = new Map();
+for (const { metafile } of bundles) for (const p of npmPackagesInBundle(metafile, process.cwd())) bundled.set(`${p.name}@${p.version}`, p);
+writeFileSync(
+  `${dist}/THIRD_PARTY_NOTICES.txt`,
+  renderNotices(
+    "Third-party code inside this page's scripts (app.js, worker.js). The page's own code is public domain (CC0 1.0).\n"
+      + 'Pandoc, which this page runs, has its own license and source next to it: pandoc/COPYING.md, pandoc/COPYRIGHT.',
+    [...bundled.values()].sort((a, b) => a.name.localeCompare(b.name)),
+  ),
+);
 
 copyFileSync(here('../src/index.html'), `${dist}/index.html`);
 copyFileSync(here('../src/styles.css'), `${dist}/styles.css`);

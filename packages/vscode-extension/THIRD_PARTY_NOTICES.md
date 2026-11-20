@@ -1,43 +1,24 @@
 # Third-party notices
 
-This extension's own code is CC0 1.0 Universal (see `LICENSE`). It bundles one third-party
-library and one file derived from Pandoc's templates inside the `.vsix` package, and automates the
-use of one third-party tool that is downloaded separately and never bundled:
+This extension's own code is CC0 1.0 Universal (see `LICENSE`). The `.vsix` package also contains
+third-party libraries (bundled JavaScript, and the .NET libraries of the Word compatibility check)
+and one file derived from Pandoc's templates. It downloads two third-party tools separately, never
+bundled: Pandoc and the .NET runtime.
 
-## adm-zip
+## Bundled libraries
 
-- **What**: [adm-zip](https://github.com/cthackers/adm-zip) 0.6.x, © 2012 Another-D-Mention
-  Software and other contributors.
-- **License**: MIT. Full text below.
-- **How it's used**: bundled (via `esbuild`) directly into the vendored CLI shipped inside this
-  `.vsix` (`packages/cli/src/zipUtils.mjs`), to patch a handful of entries inside the generated
-  `.docx` (itself a zip archive) without shelling out to a `zip`/`unzip` binary — neither exists on
-  stock Windows.
-- **Modifications**: none — used as published upstream, unmodified.
+All MIT-licensed. Their license texts ship inside the `.vsix`, in `dist/licenses/`, written at
+build time from what the build actually bundled (`scripts/third-party-licenses.mjs` at the
+repository root): a library whose license is not MIT, ISC, BSD or Apache-2.0, or that has no notice
+to copy, fails the build.
 
-### MIT license text
+| File in `dist/licenses/` | What it covers | Libraries |
+|---|---|---|
+| `vendor.txt` | the CLI and diagram engine bundled into `dist/vendor/` | `adm-zip` (writes the `.docx` zip entries), `dagre`, `graphlib`, `lodash` (diagram layout), `fast-xml-parser` and its dependencies `@nodable/entities`, `anynum`, `fast-xml-builder`, `is-unsafe`, `path-expression-matcher`, `strnum`, `xml-naming` (`.pptx` export) |
+| `analysis.txt` | `dist/analysis.cjs`, the diagram analysis behind the CodeLens | `dagre`, `graphlib`, `lodash` |
+| `oxml-validator.txt` | `dist/vendor/oxml-validator/`, the Word compatibility check | `DocumentFormat.OpenXml`, `DocumentFormat.OpenXml.Framework` (Microsoft's Open XML SDK), `System.IO.Packaging`, with the third-party notices `System.IO.Packaging` itself ships |
 
-> MIT License
->
-> Copyright (c) 2012 Another-D-Mention Software and other contributors
->
-> Permission is hereby granted, free of charge, to any person obtaining a copy
-> of this software and associated documentation files (the "Software"), to deal
-> in the Software without restriction, including without limitation the rights
-> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-> copies of the Software, and to permit persons to whom the Software is
-> furnished to do so, subject to the following conditions:
->
-> The above copyright notice and this permission notice shall be included in all
-> copies or substantial portions of the Software.
->
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-> SOFTWARE.
+All are used as published upstream, unmodified.
 
 ## Pandoc's `opendocument` template (derived)
 
@@ -109,3 +90,16 @@ released under the GPL, version 2 or later. Verbatim text of GPL version 2:
 The complete, unmodified license text (preamble, all 12 numbered terms, and "How to Apply These
 Terms to Your New Programs") is available at <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
 and at <https://github.com/jgm/pandoc/blob/3.1.3/COPYING.md>.
+
+## .NET runtime
+
+- **What**: the Microsoft .NET runtime (not the SDK), version pinned in `src/dotnetProvisioner.ts`
+  (`DOTNET_RUNTIME_VERSION`), © .NET Foundation and Contributors.
+- **License**: MIT. The downloaded archive carries its own `LICENSE.txt` and
+  `ThirdPartyNotices.txt`, kept with it.
+- **How it's used**: the Word compatibility check (`md2nativedocx.wordCompatibilityCheck.enabled`,
+  on by default) runs `dist/vendor/oxml-validator/oxmlvalidator.dll` on the exported `.docx`. If no
+  `dotnet` is on `PATH`, the extension downloads Microsoft's official runtime archive for the
+  platform once from `builds.dotnet.microsoft.com`, verifies it against the SHA-512 Microsoft
+  publishes, and caches it outside the extension, like Pandoc. Never bundled in the `.vsix`.
+- **Modifications**: none.

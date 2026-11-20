@@ -3,6 +3,13 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- The extension package now carries the license notices of all the third-party code inside it (layout,
+  zip and XML libraries, the Open XML SDK of the Word compatibility check) in `dist/licenses/`; before, only
+  `adm-zip` was named.
+
 ## [0.13.0] — 2026-11-20
 
 ### Added

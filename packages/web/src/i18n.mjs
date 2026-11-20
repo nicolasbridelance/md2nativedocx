@@ -65,6 +65,7 @@ const en = {
 
   footerMore: 'Also as a VS Code extension, a command-line tool and an MCP server.',
   footerPandoc: (version) => `Converter: Pandoc ${version} (GPL-2.0-or-later).`,
+  footerNotices: 'Third-party notices',
   footerLicense: 'License',
   footerSource: 'Source code',
   footerProject: 'md2nativedocx on GitHub (public domain, CC0)',
@@ -133,6 +134,7 @@ const fr = {
 
   footerMore: 'Existe aussi en extension VS Code, en outil en ligne de commande et en serveur MCP.',
   footerPandoc: (version) => `Convertisseur : Pandoc ${version} (GPL-2.0-or-later).`,
+  footerNotices: 'Licences des bibliothèques incluses',
   footerLicense: 'Licence',
   footerSource: 'Code source',
   footerProject: 'md2nativedocx sur GitHub (domaine public, CC0)',

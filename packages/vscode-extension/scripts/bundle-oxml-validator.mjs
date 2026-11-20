@@ -21,12 +21,14 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, readdirSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { nugetPackagesOf, renderNotices } from '../../../scripts/third-party-licenses.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const extensionRoot = dirname(here);
 const repoRoot = join(extensionRoot, '..', '..');
 const validatorProject = join(repoRoot, 'scripts', 'oxml-validator');
 const vendorDir = join(extensionRoot, 'dist', 'vendor', 'oxml-validator');
+const licensesDir = join(extensionRoot, 'dist', 'licenses');
 const cli = join(repoRoot, 'packages', 'cli', 'bin', 'md2nativedocx.mjs');
 
 if (!existsSync(join(validatorProject, 'oxmlvalidator.csproj'))) {
@@ -68,6 +70,20 @@ if (!existsSync(dllPath)) {
   console.error(`dotnet publish ran without error but did not produce ${dllPath}.`);
   console.error('Contents of vendor dir:', readdirSync(vendorDir));
   process.exit(1);
+}
+
+// The DLLs `dotnet publish` copied next to ours (Open XML SDK, System.IO.Packaging) are MIT: their notice
+// ships with them, read from each package's .nuspec in the NuGet cache the publish just used.
+{
+  const listing = execFileSync('dotnet', ['nuget', 'locals', 'global-packages', '--list'], { encoding: 'utf8' });
+  const nugetRoot = /global-packages:\s*(.+)/.exec(listing)?.[1]?.trim();
+  if (!nugetRoot) throw new Error(`could not read the NuGet global-packages folder from: ${listing}`);
+  const packages = nugetPackagesOf(join(vendorDir, 'oxmlvalidator.deps.json'), nugetRoot);
+  mkdirSync(licensesDir, { recursive: true });
+  writeFileSync(
+    join(licensesDir, 'oxml-validator.txt'),
+    renderNotices("Third-party libraries inside dist/vendor/oxml-validator/ (the Word compatibility check). oxmlvalidator.dll itself is this project's code, CC0 1.0.", packages),
+  );
 }
 
 // Self-check: a broken publish (missing dependency DLL, wrong target

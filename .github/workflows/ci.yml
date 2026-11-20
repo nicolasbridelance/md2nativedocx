@@ -63,6 +63,10 @@ jobs:
       - name: Fuzz tests (core)
         run: npm run test:fuzz
 
+      # The license-notice generator the extension and browser-converter builds use (scripts/third-party-licenses.mjs).
+      - name: Third-party license notices
+        run: node --test scripts/third-party-licenses.test.mjs
+
       - name: Open XML schema validation
         run: npm run test:oxml-validate
 

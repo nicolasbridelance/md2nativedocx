@@ -10,10 +10,11 @@
  */
 
 import { build } from 'esbuild';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { npmPackagesInBundle, renderNotices } from '../../../scripts/third-party-licenses.mjs';
 
 const extensionRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const entry = join(extensionRoot, '..', 'core', 'dist', 'rendering-plan.js');
@@ -24,7 +25,15 @@ if (!existsSync(entry)) {
   process.exit(1);
 }
 
-await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'cjs', target: 'node18' });
+const { metafile } = await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'cjs', target: 'node18', metafile: true });
+
+// The license notices of the npm packages inside the bundle (dagre and its dependencies), shipped next to it.
+const licensesDir = join(extensionRoot, 'dist', 'licenses');
+mkdirSync(licensesDir, { recursive: true });
+writeFileSync(
+  join(licensesDir, 'analysis.txt'),
+  renderNotices("Third-party code inside dist/analysis.cjs (the diagram analysis behind the CodeLens). This project's own code is CC0 1.0.", npmPackagesInBundle(metafile, process.cwd())),
+);
 
 // Self-check: a broken bundle must fail here, not as a silent missing CodeLens in a packaged extension.
 const { planRendering } = createRequire(import.meta.url)(outfile);
