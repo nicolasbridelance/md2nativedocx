@@ -1,0 +1,72 @@
+name: Pages
+
+# The browser converter (packages/web) as a static site on GitHub Pages. Built and smoke-tested with the
+# real pandoc.wasm before every deployment: a site that cannot convert is never published.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/web/**'
+      - 'packages/core/src/**'
+      - 'packages/cli/src/**'
+      - 'packages/cli/assets/reference.docx'
+      - 'packages/vscode-extension/icon.svg'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits rather than cancelling one halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and smoke-test the site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # 24: pandoc.wasm uses WebAssembly exception handling (exnref), behind a flag in Node 24 and
+          # missing from older versions. Browsers that run the page ship it by default.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build the core
+        run: npm run build -w packages/core
+
+      - name: Unit tests of the browser converter
+        run: npm test -w packages/web
+
+      - name: Build the site (downloads the pinned Pandoc release and checks its SHA-256)
+        run: npm run build:site -w packages/web
+
+      - name: Smoke test with the real pandoc.wasm
+        run: npm run smoke -w packages/web
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: packages/web/dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

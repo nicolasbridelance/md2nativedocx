@@ -24,14 +24,11 @@ couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. Le 
 1. ~~**Ménage de la vitrine**~~ (fait le 2026-11-20) : releases GitHub 0.8.3 à 0.13.0 créées depuis le
    CHANGELOG (étape ajoutée à la procédure de release, `HANDOVER.md`), Discussions activées, Dependabot
    #39 mergé.
-2. **Convertisseur dans le navigateur** (§4, « Pistes de distribution »), remonté à la demande du
-   mainteneur. **Spike fait le 2026-11-20 : faisable** (`docs/adr/spikes/spike-browser-converter/spike.md`) :
-   `pandoc.wasm` officiel en deux passes (Markdown → AST JSON, diagrammes rendus par `core` dans la page,
-   AST → `.docx`), 0 erreur de schéma, rendu vérifié dans Word, conversion en ~0,5 s après ~6 s de
-   chargement. **Décisions du mainteneur avant de construire** : héberger `pandoc.wasm` (GPL, 62,5 Mo) sur
-   GitHub Pages (licence : escalade) ; ZIP (`zip.mjs` maison ou `fflate`) et colle WASI (maison ou
-   `browser_wasi_shim`) : dépendances, escalade. Ensuite : post-traitement du CLI sur des octets au lieu de
-   chemins (sert aussi le CLI), puis la page.
+2. ~~**Convertisseur dans le navigateur**~~ (fait le 2026-11-20 : `packages/web`, publié sur GitHub Pages
+   par `.github/workflows/pages.yml` ; spike : `docs/adr/spikes/spike-browser-converter/spike.md`).
+   Décisions du mainteneur du même jour : héberger `pandoc.wasm`, ZIP et WASI écrits par le projet. Le
+   post-traitement du CLI travaille désormais sur un paquet en mémoire (`docxPackage.mjs`). Restes, §4
+   « Convertisseur navigateur ».
 3. **Documents de conformité à jour** (`docs/compliance/*`, `SECURITY.md`, inchangés depuis le
    2026-09-04) : chiffres revérifiés (tests, dépendances runtime), serveur MCP, `.pptx` / `.odt`,
    PlantUML (`!include` jamais suivi), publication npm par OIDC avec provenance, Open VSX, `--sandbox`.
@@ -338,10 +335,16 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   temporaire) pour claude.ai et ChatGPT : demande un service hébergé (isolation des conversions, quotas,
   pas de journal du Markdown). Décision mainteneur : c'est un service à opérer, pas du code. Le flux local
   (`@md2nativedocx/mcp` en stdio, `.mcpb` pour Claude Desktop) reste prioritaire et ne coûte rien.
-- **Convertisseur 100 % navigateur sur GitHub Pages** (Pandoc WebAssembly + `core` en Web Worker, pont
-  Lua → Node remplacé par un appel JS) : alternative au MCP distant sans serveur ni envoi du texte.
-  Spike fait le 2026-11-20 (point 2 de l'ordre de travail) : pas de filtre JS possible, mais deux passes
-  Pandoc autour de `core` suffisent, sans toucher la règle 7.
+- **Convertisseur navigateur, restes** (livré le 2026-11-20, `packages/web`) :
+  - options de page et de typographie (`referenceDocBuilder` à passer sur `DocxPackage`, comme le
+    post-traitement), tableaux en paysage (le filtre lit `os.getenv`, absent de `pandoc.wasm` : passer
+    par des métadonnées Pandoc, ce qui servirait aussi le CLI) ;
+  - images du Markdown (déposer les fichiers avec le `.md`, passés à `pandoc.wasm`) ; `.odt` ;
+  - avertissements du moteur en anglais seulement, même sur la page en français ;
+  - vérifier sur le site publié que GitHub Pages compresse `pandoc.wasm` (17 Mo au lieu de 62,5) ;
+  - Pandoc 3.14 dans la page, 3.1.3 épinglé pour le CLI en CI : à rapprocher (§2bis « Pandoc comme contrat ») ;
+  - la sélection des blocs de diagramme existe en Lua et en JS (`diagram-blocks.mjs`) : n'en garder qu'une
+    si le CLI passe un jour par l'AST JSON.
 - **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
   (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
 - **draw.io, dans les deux sens : décidé par le mainteneur le 2026-11-20** (point 7 de l'ordre de

@@ -18,6 +18,10 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   `convert()` as the library entry point of `@md2nativedocx/cli`; size limits on every Dagre layout
   (`DiagramTooLargeError`, a visible note instead of a failed export); the MCP server runs each call in
   a child process killed at its deadline.
+- **Browser converter (2026-11-20).** `packages/web`, on GitHub Pages
+  (<https://nicolasbridelance.github.io/md2nativedocx/>, deployed by `.github/workflows/pages.yml` after a
+  smoke test with the real `pandoc.wasm`): official `pandoc.wasm` on the project's own WASI host and ZIP
+  code, the core and the CLI's post-processing in a Web Worker, nothing sent anywhere. See its README.
 - **Versions (2026-11-20).** Extension **0.13.0** on the Marketplace and Open VSX (tag `vscode-v0.13.0`).
   npm: core 0.7.0, pandoc-filter 0.7.0, pptx 0.6.0, cli 0.7.0, mcp 0.5.0, all published by trusted
   publishing (OIDC) from `.github/workflows/publish.yml` (`workflow_dispatch`, dry run first); no npm

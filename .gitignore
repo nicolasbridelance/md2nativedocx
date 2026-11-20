@@ -67,3 +67,4 @@ handmade_samples/
 # process1 layoutDef, same rationale as real-diagram*/ and handmade_samples/
 # above: local research reference only, never committed.
 docs/adr/spikes/spike-smartart-connectors/round3-chain-conn-nested-foreach/chain-conn_to_processus_simple.docx
+packages/web/.cache/

@@ -30,7 +30,12 @@ so the people who own the document after you can change it in Word, without Mark
 - **Send it with confidence:** every file is checked against Word's own file-format rules before you get it.
 
 All 32 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
-graph, railroad, …), plus PlantUML sequence, class, state and activity diagrams. A document without any diagram converts just as well. Use it from the
+graph, railroad, …), plus PlantUML sequence, class, state and activity diagrams. A document without any diagram converts just as well.
+
+**Try it in your browser, nothing to install:** <https://nicolasbridelance.github.io/md2nativedocx/>. Paste
+Markdown, get the `.docx`; the conversion runs in the page and your text is never sent anywhere.
+
+Use it from the
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (also on [Open VSX](https://open-vsx.org/extension/md2nativedocx/md2nativedocx) for VSCodium, Cursor, Windsurf…; one
 click), the CLI (`md2nativedocx report.md -o report.docx`, npm package `@md2nativedocx/cli`), or as a Pandoc filter. It can also write a
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
@@ -128,7 +133,11 @@ validator was used) and `docs/adr/0007-openxml-validator-adoption.md` for how it
 
 ## Installation
 
-Prerequisites: **Node.js ≥ 18** and **Pandoc ≥ 3.1.3** on `PATH` (Pandoc runs the Lua filter itself). The VS
+Nothing to install for the [browser converter](https://nicolasbridelance.github.io/md2nativedocx/) (a recent
+Chrome, Edge, Firefox or Safari; it downloads Pandoc's engine once, about 17 MB, and keeps it). It has no
+page or typography options and leaves out images; the extension and the CLI do everything below.
+
+For the extension and the CLI, prerequisites: **Node.js ≥ 18** and **Pandoc ≥ 3.1.3** on `PATH` (Pandoc runs the Lua filter itself). The VS
 Code extension downloads Pandoc for you; the CLI does not.
 
 ```bash

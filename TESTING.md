@@ -10,7 +10,7 @@
 | # | Chapter | Where | Automated | What it guarantees |
 |---|---|---|---|---|
 | 1 | [Unit](#1-unit) | `packages/*/test/{unit,golden,fuzz}` | yes, on every push | pure logic (parser, layout, translator), no I/O |
-| 2 | [Pipeline integration](#2-pipeline-integration) | `packages/cli/test`, `packages/pandoc-filter/test` | yes, on every push | the real chain Markdown → Pandoc → Lua filter → core → `.docx` |
+| 2 | [Pipeline integration](#2-pipeline-integration) | `packages/cli/test`, `packages/pandoc-filter/test`, `packages/web/scripts/smoke.mjs` | yes, on every push (the browser converter's smoke test: in `pages.yml`, before each deployment) | the real chain Markdown → Pandoc → Lua filter → core → `.docx`; for the browser converter, Markdown → `pandoc.wasm` → core → `.docx` with the real `pandoc.wasm` |
 | 3 | [Real diagram corpus](#3-real-diagram-corpus) | `test-corpus/corpus/` | yes (regeneration + conformance) + manual Word review | real `.mmd` files from mermaid-js/mermaid go through the whole pipeline |
 | 4 | [Visual regression](#4-visual-regression) | `test-corpus/visual/`, `scripts/test-visual.mjs` | yes, on demand (LibreOffice required) | the actual render doesn't regress, not just the XML |
 | 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs`, `scripts/test-odf-validate.mjs` | yes, on demand (.NET SDK / Java required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML; same for `.odt` against the ODF schema |

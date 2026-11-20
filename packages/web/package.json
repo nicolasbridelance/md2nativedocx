@@ -1,0 +1,24 @@
+{
+  "name": "@md2nativedocx/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "md2nativedocx in the browser: Markdown with Mermaid and PlantUML diagrams to an editable Word document, with the official pandoc.wasm and the core, nothing sent to a server. Published as a static site on GitHub Pages, not on npm.",
+  "license": "CC0-1.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo \"web: the site is built by npm run build:site (downloads Pandoc)\"",
+    "build:site": "node scripts/build.mjs",
+    "typecheck": "echo \"web: no typecheck step\"",
+    "test": "node --test test/*.test.mjs",
+    "pretest:ci": "mkdir -p reports",
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml test/*.test.mjs",
+    "smoke": "node --experimental-wasm-exnref scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@md2nativedocx/core": "0.7.0"
+  },
+  "devDependencies": {
+    "adm-zip": "^0.6.1",
+    "esbuild": "^0.28.2"
+  }
+}

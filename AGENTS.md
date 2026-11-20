@@ -105,6 +105,7 @@ md2nativedocx/
 │   ├── cli/                      # `npx md2nativedocx` (spec §8)
 │   ├── pptx/                     # .pptx decks from the same core output (ADR 0010)
 │   ├── mcp/                      # MCP server: convert_document, render_diagram (stdio)
+│   ├── web/                      # browser converter on GitHub Pages: pandoc.wasm + core, nothing sent anywhere (private, not on npm)
 │   └── vscode-extension/         # spec §5.4.b (the Word add-in, on hold, lives on branch word-addin-scaffold)
 └── docs/
     ├── specs/                     # product specs: cahier_des_charges.md (what/why), UX_SPEC.md,
@@ -295,6 +296,7 @@ checklist tacked on at the end, it's load-bearing for the architecture itself.
 | Supply chain | Whole repo | `npm audit` + Dependabot/Renovate in CI; every new dependency justified in the PR (rule 6 above) |
 | Secret leakage | Whole repo, public from commit #1 | Secret scanning (e.g. `gitleaks`) in pre-commit hook and CI |
 | Untested untrusted input | Mermaid parser — the most exposed boundary, since input may be AI-generated on someone else's behalf | Property-based / fuzz testing (e.g. `fast-check`) specifically on this boundary, not just example-based unit tests |
+| Third-party binary served to visitors (`pandoc.wasm`) | Browser converter (`packages/web`, GitHub Pages) | Official release asset only, pinned by SHA-256 at build time (`pandoc-release.mjs`) and checked again by the page before it runs; Content-Security-Policy `connect-src 'self'`, no third-party script; `pandoc.wasm` sees only an in-memory file system the page fills itself (`wasi.mjs`), no environment, no network |
 | Malicious `.devcontainer/`/`.vscode/` config from an external PR | Codespaces dev environment (see dedicated section above) | Never open an unreviewed external PR branch in a Codespace; review these paths' diffs on github.com first |
 
 ---
@@ -373,6 +375,13 @@ not something a diagram-focused fix needs to also resolve. Since 2026-10-08 the 
     platform-specific packages and a build pipeline that doesn't exist yet, at odds with this
     project being "small and auditable" — see rule 6 above); GPL notices for the downloaded binary
     live in `packages/vscode-extension/THIRD_PARTY_NOTICES.md`.
+  - **Decision (Nicolas Bridelance, 2026-11-20):** the browser converter (`packages/web`) **hosts**
+    Pandoc's official, unmodified `pandoc.wasm` on GitHub Pages, so here the project distributes the
+    binary itself. It is served with `COPYING.md`, `COPYRIGHT` and the source archive of the same
+    release (GPL-2.0 §3, source offered from the same place), pinned by SHA-256 in
+    `packages/web/src/pandoc-release.mjs`. The ZIP reader/writer and the WASI host of the page are
+    this project's own code (CC0), not dependencies. Detail and the points left for a legal review:
+    `docs/compliance/legal.md` → *The Pandoc case*.
 - **DCO: adopted (maintainer decision, 2026-10-07).** Every commit in an external PR carries a
   `Signed-off-by:` trailer (`git commit -s`), certifying the
   [Developer Certificate of Origin](https://developercertificate.org/). No CLA. The license stays

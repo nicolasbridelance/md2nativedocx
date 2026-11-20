@@ -108,6 +108,8 @@ local is_odt = FORMAT == 'odt' or FORMAT == 'opendocument'
 local odf_count = 0
 local odf_styles = pandoc.List()
 
+-- The browser converter (packages/web/src/diagram-blocks.mjs) applies the same block selection and the
+-- same @startuml rule on Pandoc's JSON AST: keep the two in step.
 local mermaid_filter = {
   CodeBlock = function(el)
     local lang = el.classes[1]

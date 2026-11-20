@@ -53,6 +53,19 @@ What that means in practice:
   `.vsix` — never bundled inside the package published on the Marketplace. Full detail, including
   the complete GPL-2.0 text, in
   [`packages/vscode-extension/THIRD_PARTY_NOTICES.md`](../../packages/vscode-extension/THIRD_PARTY_NOTICES.md).
+- **Browser converter (`packages/web`, GitHub Pages; maintainer decision 2026-11-20)**: the site
+  serves Pandoc's official, unmodified `pandoc.wasm` (the WebAssembly build Pandoc publishes with
+  each release since 3.9), checked against a SHA-256 pinned in `packages/web/src/pandoc-release.mjs`
+  at build time and again by the page before it runs. Here the project **does distribute** the
+  Pandoc binary. GPL-2.0 section 3 is met by offering the source from the same place: the site serves
+  `pandoc/COPYING.md`, `pandoc/COPYRIGHT` and the source archive of that exact Pandoc release
+  (`pandoc/pandoc-<version>-source.tar.gz`) next to `pandoc/pandoc.wasm`, all linked from the page's
+  footer. `pandoc.wasm` stays a separate program: it runs in its own WebAssembly instance, and this
+  project's code talks to it only through its published interface (a JSON options object and files
+  in an in-memory file system), without modifying or linking it. Two points for a legal review that
+  needs certainty: whether that boundary counts as "arm's length" in a browser the way a subprocess
+  does, and the sources of the Haskell libraries compiled into the binary, which are public on
+  Hackage but not served by the site.
 
 ## Data flows / privacy
 
@@ -67,6 +80,13 @@ What that means in practice:
   2. Opening the `pandoc.org/installing.html` page in the browser if the user clicks the
      installation help link.
 - The CLI and the core engine (`packages/core`) make **no** network calls at all.
+- **Browser converter** (`packages/web`): the conversion runs in the visitor's browser. The page
+  loads its own files from the same site (the page, its scripts, `reference.docx`, `pandoc.wasm`)
+  and nothing else; its Content-Security-Policy (`connect-src 'self'`, no third-party script, font or
+  image) makes any other request impossible, so the Markdown typed or opened never leaves the
+  browser. No analytics. The page keeps a draft and the chosen options in the browser's
+  `localStorage`, and `pandoc.wasm` in its Cache Storage; both stay on the visitor's device. GitHub,
+  as the host, receives the usual HTTP requests for those files (GitHub's privacy statement applies).
 
 ## Where to verify for yourself
 

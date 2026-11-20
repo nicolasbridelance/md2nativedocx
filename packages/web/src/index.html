@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Nothing leaves the page: scripts, the engine and its data come from this site only, and no request
+       can go anywhere else. 'wasm-unsafe-eval' lets the worker compile pandoc.wasm. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <title>md2nativedocx: Markdown to Word</title>
+  <meta name="description" content="Convert Markdown with Mermaid and PlantUML diagrams to a Word document with editable diagrams, entirely in your browser.">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="36" height="36">
+      <div>
+        <p class="name">md2nativedocx</p>
+        <h1 data-text="title">Markdown to Word, diagrams included</h1>
+      </div>
+      <button type="button" class="link-button lang-switch" id="lang-switch" data-text="switchLanguage">Français</button>
+    </div>
+    <p class="tagline" data-text="tagline"></p>
+    <p class="privacy"><span class="dot" aria-hidden="true"></span><span data-text="privacy"></span></p>
+  </header>
+
+  <main class="layout">
+    <section class="editor-panel" aria-labelledby="editor-label">
+      <div class="editor-bar">
+        <label id="editor-label" for="markdown" data-text="editorLabel">Your Markdown</label>
+        <div class="editor-actions">
+          <button type="button" class="secondary" id="open-file" data-text="openFile">Open a .md file</button>
+          <button type="button" class="secondary" id="load-example" data-text="loadExample">Load an example</button>
+          <button type="button" class="link-button" id="clear" data-text="clear">Clear</button>
+        </div>
+        <input type="file" id="file-input" accept=".md,.markdown,.mmd,.txt,.qmd,text/markdown,text/plain" hidden>
+      </div>
+      <div class="editor-wrap" id="editor-wrap">
+        <textarea id="markdown" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        <div class="drop-hint" aria-hidden="true"><span data-text="dropHint"></span></div>
+      </div>
+      <p class="editor-meta"><span id="source-name"></span><span id="char-count"></span></p>
+    </section>
+
+    <aside class="side">
+      <button type="button" class="primary" id="convert" data-text="convert">Convert to Word (.docx)</button>
+
+      <section class="card result" id="result" aria-labelledby="result-title" hidden>
+        <h2 id="result-title" data-text="stepsTitle">Conversion</h2>
+        <ol class="steps" id="steps"></ol>
+        <p class="status" id="result-status" role="status" aria-live="polite"></p>
+        <a class="primary download" id="download" hidden></a>
+        <p class="hint" id="open-hint" data-text="openInWord" hidden></p>
+        <details id="warnings" hidden>
+          <summary id="warnings-title"></summary>
+          <ul id="warnings-list"></ul>
+        </details>
+      </section>
+
+      <section class="card engine" aria-labelledby="engine-title">
+        <h2 id="engine-title" data-text="engineTitle">Conversion engine</h2>
+        <p class="status" id="engine-status" role="status" aria-live="polite"></p>
+        <progress id="engine-progress" max="100" value="0" hidden></progress>
+        <button type="button" class="secondary" id="engine-action" hidden></button>
+        <details id="engine-why">
+          <summary data-text="engineWhy">Why wait?</summary>
+          <p id="engine-why-text"></p>
+        </details>
+      </section>
+
+      <section class="card options" aria-labelledby="options-title">
+        <h2 id="options-title" data-text="optionsTitle">Options</h2>
+        <label class="option"><input type="checkbox" id="opt-smartart" checked><span><strong data-text="optSmartArt"></strong><small data-text="optSmartArtHint"></small></span></label>
+        <label class="option"><input type="checkbox" id="opt-charts" checked><span><strong data-text="optCharts"></strong><small data-text="optChartsHint"></small></span></label>
+        <label class="option"><input type="checkbox" id="opt-toc"><span><strong data-text="optToc"></strong><small data-text="optTocHint"></small></span></label>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <p><a href="https://github.com/nicolasbridelance/md2nativedocx" data-text="footerProject"></a>. <span data-text="footerMore"></span></p>
+    <p><span id="footer-pandoc"></span> <a href="pandoc/COPYING.md" data-text="footerLicense"></a> · <a href="pandoc/COPYRIGHT">COPYRIGHT</a> · <a id="footer-source" data-text="footerSource"></a></p>
+  </footer>
+</body>
+</html>
