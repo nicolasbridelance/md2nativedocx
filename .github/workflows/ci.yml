@@ -4,8 +4,8 @@ on:
   push:
     branches: [main, 'release/**']
   pull_request:
-  # The visual job runs weekly and on demand (Actions tab, "Run workflow"), not on every push: see its
-  # comment below. Until 2026-10-08 there was no schedule at all, so that job had never run.
+  # The visual job runs weekly, on demand (Actions tab, "Run workflow") and when a change touches rendering
+  # code, not on every push: see its comment below. Until 2026-10-08 there was no schedule at all.
   schedule:
     - cron: '17 4 * * 1'
   workflow_dispatch:
@@ -262,10 +262,13 @@ jobs:
 
   # Visual-regression tests need LibreOffice headless and are slower; run them
   # on a schedule and on release branches rather than every PR. This trade-off
-  # is explicit: see AGENTS.md → CI/CD. Exception: a PR that touches the visual
-  # job's own infrastructure (this workflow, the runner script, the pinned
-  # LibreOffice installer, the visual corpus) runs it too, so that a change to
-  # the job is validated by the job itself instead of by a manual dispatch.
+  # is explicit: see AGENTS.md → CI/CD. Exception: a PR or a push that touches
+  # the visual job's own infrastructure (this workflow, the runner script, the
+  # pinned LibreOffice installer, the visual corpus) or the code that draws what
+  # it renders (core, pptx, cli, pandoc-filter sources) runs it too. Until
+  # 2026-11-20 only the infrastructure paths counted, and only on a PR: a layout
+  # change pushed to main (52aeea8) left 34 baselines stale for days, unseen
+  # until the next weekly run.
   visual-scope:
     name: Visual job scope
     runs-on: ubuntu-latest
@@ -279,13 +282,25 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
         run: |
           run=false
+          scope='^(\.github/workflows/ci\.yml|scripts/test-visual\.mjs|scripts/lib/|scripts/install-libreoffice-pinned\.sh|test-corpus/visual/|packages/core/src/|packages/pptx/src/|packages/cli/(src|bin|assets|reference-docx-src|reference-odt-src)/|packages/pandoc-filter/)'
+          changed=''
           if [ "${EVENT}" = "pull_request" ]; then
-            if git diff --name-only "origin/${BASE_REF}...HEAD" \
-              | grep -qE '^(\.github/workflows/ci\.yml|scripts/test-visual\.mjs|scripts/lib/|scripts/install-libreoffice-pinned\.sh|test-corpus/visual/)'; then
+            changed=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+          elif [ "${EVENT}" = "push" ]; then
+            if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              # New branch or force push: no reliable range, so run the job.
               run=true
+            else
+              changed=$(git diff --name-only "${BEFORE}" "${SHA}")
             fi
+          fi
+          if printf '%s\n' "${changed}" | grep -qE "${scope}"; then
+            run=true
           fi
           echo "run=${run}" >> "$GITHUB_OUTPUT"
 

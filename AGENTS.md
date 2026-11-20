@@ -194,6 +194,26 @@ real environment and may run only in CI) should not be described as done.
 
 ---
 
+## Quality bar: do it properly, not just quickly
+
+The maintainer's standing instruction (2026-11-20): every change is done as cleanly as possible.
+Concretely:
+
+- **Fix the cause, not the symptom.** No workaround, special case or magic number that hides a
+  problem without explaining it. If the clean fix is out of reach for now, say so and record it in
+  `TODO.md`, rather than shipping a hack silently.
+- **Understand a failure before accepting it.** A red test, a moved visual baseline or a validator
+  error is explained (which commit, which intent) before a test is adjusted or a baseline refreshed.
+  The 2026-11-20 baseline refresh is the model: 34 images, each traced to its commit and reviewed.
+- **Verify where the user sees it.** A rendering change is checked in real Word (and LibreOffice
+  for `.odt`), not only in unit tests: LibreOffice and Word disagree more often than expected.
+- **Leave the place consistent.** Comments, `TODO.md`, `docs/coverage.md`, the manual and the
+  tests follow the code in the same change; no dead code, no stale comment, no orphaned TODO.
+- **Clean does not mean rewrite.** This bar applies to what a change touches. Rewriting working
+  code for cleanliness alone is still ruled out (ADR 0012); scope stays as in rule 1.
+
+---
+
 ## Coding conventions
 
 - TypeScript, `strict: true`. No `any` without an inline comment justifying it.
