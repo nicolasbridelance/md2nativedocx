@@ -25,10 +25,6 @@ test(`Mermaid official examples (${data.tag}): none throws, none is drawn as a f
     examples.forEach((source, i) => {
       const id = `${page}#${i}`;
       const result = renderDiagram(source, { smartArt: true, nativeCharts: true, newPartId: () => '00000000-0000-4000-8000-000000000000' });
-      if (['railroad'].includes(page)) {
-        assert.equal(result.metadata.diagramType, 'mermaidUnsupported', id);
-        return;
-      }
       assert.notEqual(result.metadata.diagramType, 'unknown', id);
       const gaps = result.metadata.warnings.filter((w) => !NOTICES.some((re) => re.test(w)));
       if (baseline.has(id) && gaps.length > 0) regressions.push(`${id}: ${gaps.join(' | ')}`);

@@ -45,7 +45,7 @@ export const PAGE_TYPES = {
   pie: 'pie',
   quadrantChart: 'quadrant',
   radar: 'radar',
-  railroad: null,
+  railroad: 'railroad',
   requirementDiagram: 'requirement',
   sankey: 'sankey',
   sequenceDiagram: 'sequence',

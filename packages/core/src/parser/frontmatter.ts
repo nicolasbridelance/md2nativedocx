@@ -41,7 +41,7 @@ function unquote(value: string): string {
 
 /** Types whose grammar has a `title …` statement, so a frontmatter title can become one. */
 const TITLE_STATEMENT: ReadonlySet<DiagramType> = new Set<DiagramType>([
-  'c4', 'cynefin', 'gantt', 'gitGraph', 'journey', 'packet', 'pie', 'quadrant', 'radar', 'sequence',
+  'c4', 'cynefin', 'gantt', 'gitGraph', 'journey', 'packet', 'pie', 'quadrant', 'radar', 'railroad', 'sequence',
   'timeline', 'venn', 'wardley', 'xychart', 'zenuml',
 ]);
 

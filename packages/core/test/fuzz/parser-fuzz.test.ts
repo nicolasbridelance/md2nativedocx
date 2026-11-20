@@ -218,3 +218,23 @@ test('property: PlantUML class input never throws and always gives well-formed, 
     { numRuns: 300 },
   );
 });
+
+test('property: railroad input (any dialect) never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  const token = fc.oneof(
+    hostileText.map((t) => `"${t}"`),
+    hostileText.map((t) => `'${t}'`),
+    nodeId,
+    fc.constantFrom('=', '::=', '<-', '=/', ';', '|', '/', ',', '(', ')', '[', ']', '{', '}', '?', '*', '+', '-', '&', '!', '.', '1*', '2*5', '%x41-5A', '? special ?', '(* c *)', '/* c */', '# c', '; c'),
+    fc.constantFrom('sequence(', 'choice(', 'optional(', 'oneOrMore(', 'zeroOrMore(', 'terminal(', 'nonterminal(', 'special('),
+    fc.constantFrom('\ntitle ', '\naccTitle: ', '\naccDescr { x }', '\n'),
+  );
+  const header = fc.constantFrom('railroad-beta', 'railroad-ebnf-beta', 'railroad-abnf-beta', 'railroad-peg-beta');
+  fc.assert(
+    fc.property(header, fc.array(token, { minLength: 0, maxLength: 60 }), (h, toks) => {
+      const result = renderDiagram(`${h}\n${toks.join(' ')}`);
+      assertWellFormedXml(result.fragment);
+    }),
+    { numRuns: 400 },
+  );
+});

@@ -64,8 +64,10 @@ export type DiagramType =
   | 'agentflow'
   /** Mermaid `usecase-beta` (UML use case diagram): drawn as a flowchart. */
   | 'usecase'
+  /** Mermaid railroad (syntax) diagram, any dialect: `railroad-beta`, `railroad-ebnf-beta`, `-abnf-`, `-peg-`. */
+  | 'railroad'
   /**
-   * A Mermaid type this project does not draw yet (`railroad-beta`):
+   * A Mermaid type this project does not draw yet (none today; kept for the next new Mermaid type):
    * a visible note stands in its place, never a flowchart drawn from text that is not one.
    */
   | 'mermaidUnsupported';
@@ -111,10 +113,10 @@ const NON_FLOWCHART_HEADERS: Array<{ type: DiagramType; label: string; pattern: 
   { type: 'wardley', label: 'Wardley map', pattern: /^wardley(?:-beta)?\b/i },
   { type: 'cynefin', label: 'Cynefin framework', pattern: /^cynefin-beta\b/i },
   { type: 'treeView', label: 'TreeView', pattern: /^treeView-beta\b/i },
-  // Mermaid types not drawn yet: recognized so they become a note instead of a garbled flowchart.
   { type: 'agentflow', label: 'Agentflow diagram', pattern: /^agentflow-beta\b/i },
   { type: 'usecase', label: 'Use case diagram', pattern: /^usecase-beta\b/i },
-  { type: 'mermaidUnsupported', label: 'Railroad diagram', pattern: /^railroad(?:-(?:ebnf|abnf|peg))?-beta\b/i },
+  { type: 'railroad', label: 'Railroad diagram', pattern: /^railroad(?:-(?:ebnf|abnf|peg))?-beta\b/i },
+  // A Mermaid type not drawn yet goes here as `mermaidUnsupported`: a note instead of a garbled flowchart.
 ];
 
 /**

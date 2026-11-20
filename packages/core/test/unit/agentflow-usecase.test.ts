@@ -16,7 +16,7 @@ const edges = (ast: Flowchart): string[] => {
 test('detection: agentflow-beta and usecase-beta are their own types', () => {
   assert.equal(detectDiagramType('agentflow-beta TB\n a --> b').type, 'agentflow');
   assert.equal(detectDiagramType('---\nconfig:\n  theme: default\n---\nusecase-beta\nactor A').type, 'usecase');
-  assert.equal(detectDiagramType('railroad-beta\n x').type, 'mermaidUnsupported');
+  assert.equal(detectDiagramType('railroad-beta\n x').type, 'railroad');
 });
 
 test('agentflow: flows are subgraphs, shapes follow the node kind, arrows to a flow reach its nodes', () => {

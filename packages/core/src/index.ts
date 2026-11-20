@@ -252,6 +252,26 @@ export { translateWardleyToOoxml } from './diagrams/wardley/translator.js';
 export { parseEventModeling } from './diagrams/event-modeling/parser.js';
 export { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
 
+// railroad module (Family D — one track per grammar rule, with boxes, branches and loops, on a wpc:wpc canvas).
+export { parseRailroad } from './diagrams/railroad/parser.js';
+export type { RailroadParseResult } from './diagrams/railroad/parser.js';
+export { layoutRailroad, repeatBounds } from './diagrams/railroad/layout.js';
+export type { RailroadLayout, RailRuleLayout, RailBox, RailText, RailPathOp } from './diagrams/railroad/layout.js';
+export { translateRailroadToOoxml } from './diagrams/railroad/translator.js';
+export type {
+  RailroadDiagram,
+  RailroadDialect,
+  RailroadRule,
+  RailroadNode,
+  RailroadTerminal,
+  RailroadNonTerminal,
+  RailroadSequence,
+  RailroadChoice,
+  RailroadOptional,
+  RailroadRepeat,
+  RailroadSpecial,
+} from './diagrams/railroad/types.js';
+
 // sequence module (Family E — lifelines, messages, activations, notes and block frames on a wpc:wpc canvas).
 export { parseSequence } from './diagrams/sequence/parser.js';
 export { translateSequenceToOoxml } from './diagrams/sequence/translator.js';

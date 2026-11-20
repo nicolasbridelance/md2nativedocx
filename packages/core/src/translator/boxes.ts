@@ -51,6 +51,14 @@ export interface BoxStyle {
   align?: 'left' | 'center' | 'right';
   /** Disable word wrap (text may overflow the box instead of breaking mid-word). */
   noWrap?: boolean;
+  /** Preset geometry (default `rect`); `roundRect` takes {@link BoxStyle.cornerAdj}. */
+  prst?: 'rect' | 'roundRect' | 'ellipse';
+  /** `roundRect` corner radius, as DrawingML's `adj` (100000 = half the shorter side). */
+  cornerAdj?: number;
+  /** Dashed outline. */
+  dashed?: boolean;
+  /** Outline width in EMU before scaling (default 9525, 1px). */
+  lineEmu?: number;
 }
 
 /** A filled rectangle with one centered/left paragraph per entry of `lines`
@@ -79,8 +87,10 @@ export function boxShape(
     .join('');
   const fill = style.fill ? `<a:solidFill><a:srgbClr val="${style.fill}"/></a:solidFill>` : '<a:noFill/>';
   const ln = style.line
-    ? `<a:ln w="${scaledLineWidthEmu(9525, scale)}"><a:solidFill><a:srgbClr val="${style.line}"/></a:solidFill></a:ln>`
+    ? `<a:ln w="${scaledLineWidthEmu(style.lineEmu ?? 9525, scale)}"><a:solidFill><a:srgbClr val="${style.line}"/></a:solidFill>${style.dashed ? '<a:prstDash val="dash"/>' : ''}</a:ln>`
     : '<a:ln><a:noFill/></a:ln>';
+  const prst = style.prst ?? 'rect';
+  const av = prst === 'roundRect' && style.cornerAdj !== undefined ? `<a:gd name="adj" fmla="val ${Math.round(style.cornerAdj)}"/>` : '';
   const inset = jc === 'center' ? 0 : scalePt(style.noWrap ? 2 : 8, scale);
   return [
     '<wps:wsp>',
@@ -88,7 +98,7 @@ export function boxShape(
     '  <wps:cNvSpPr/>',
     '  <wps:spPr>',
     `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-    '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
+    `    <a:prstGeom prst="${prst}">${av ? `<a:avLst>${av}</a:avLst>` : '<a:avLst/>'}</a:prstGeom>`,
     `    ${fill}`,
     `    ${ln}`,
     '  </wps:spPr>',

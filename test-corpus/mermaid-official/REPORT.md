@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 406 sans avertissement (75 %), 121 avec avertissement, 14 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 420 sans avertissement (78 %), 121 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -26,7 +26,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | pie | 2 | 2 | 0 | 0 | 0 | 0 |
 | quadrantChart | 3 | 2 | 1 | 0 | 0 | 0 |
 | radar | 3 | 3 | 0 | 0 | 0 | 0 |
-| railroad | 14 | 0 | 0 | 14 | 0 | 0 |
+| railroad | 14 | 14 | 0 | 0 | 0 | 0 |
 | requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
 | sequenceDiagram | 38 | 27 | 11 | 0 | 0 | 0 |
@@ -156,23 +156,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 ### quadrantChart
 
 - #2 warned: classDef styling is not yet supported for quadrant charts, ignored: classDef class1 color: #109060 \| classDef styling is not yet supported for quadrant charts, ignored: classDef class2 color: #908342, radius : 10, stroke-color: #310085, stroke-width: 10px \| classDef styling is not yet supported for quadrant charts, ignored: classDef class3 color: #f00fff, radius : 10
-
-### railroad
-
-- #0 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #1 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #2 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #3 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #4 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #5 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #6 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #7 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #8 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #9 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #10 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #11 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #12 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
-- #13 not-converted: Railroad diagrams are not converted yet; a note stands in their place.
 
 ### requirementDiagram
 

@@ -99,6 +99,8 @@ import { parseWardley } from './diagrams/wardley/parser.js';
 import { translateWardleyToOoxml } from './diagrams/wardley/translator.js';
 import { parseEventModeling } from './diagrams/event-modeling/parser.js';
 import { translateEventModelingToOoxml } from './diagrams/event-modeling/translator.js';
+import { parseRailroad } from './diagrams/railroad/parser.js';
+import { translateRailroadToOoxml } from './diagrams/railroad/translator.js';
 import { parseSequence } from './diagrams/sequence/parser.js';
 import { parsePlantUmlSequence } from './diagrams/plantuml/sequence-parser.js';
 import { parsePlantUmlClass } from './diagrams/plantuml/class-parser.js';
@@ -487,6 +489,7 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   sankey: shapesOnly(parseSankey, translateSankeyToOoxml),
   wardley: shapesOnly(parseWardley, translateWardleyToOoxml),
   eventModeling: shapesOnly(parseEventModeling, translateEventModelingToOoxml),
+  railroad: shapesOnly(parseRailroad, translateRailroadToOoxml),
   sequence: shapesOnly(parseSequence, translateSequenceToOoxml),
   // Same AST and translator as sequenceDiagram; only the parser differs.
   zenuml: shapesOnly(parseZenuml, translateSequenceToOoxml),
