@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 429 sans avertissement (79 %), 112 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 431 sans avertissement (80 %), 110 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -16,7 +16,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
 | entityRelationshipDiagram | 25 | 13 | 12 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
-| flowchart | 116 | 110 | 6 | 0 | 0 | 0 |
+| flowchart | 116 | 112 | 4 | 0 | 0 | 0 |
 | gantt | 11 | 4 | 7 | 0 | 0 | 0 |
 | gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
 | ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
@@ -117,10 +117,8 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 - #0 warned: The frontmatter title "Node" is not drawn for this diagram type.
 - #1 warned: The frontmatter title "Node with text" is not drawn for this diagram type.
-- #100 warned: Subgraph "one" was also used as a node; node ignored. \| Subgraph "two" was also used as a node; node ignored. \| Subgraph "three" was also used as a node; node ignored. \| Edge one -> two references a subgraph; ignored (V1). \| Edge three -> two references a subgraph; ignored (V1). \| Edge two -> c2 references a subgraph; ignored (V1).
-- #101 warned: Subgraph "TOP" was also used as a node; node ignored. \| Subgraph "B1" was also used as a node; node ignored. \| Subgraph "B2" was also used as a node; node ignored. \| Edge A -> TOP references a subgraph; ignored (V1). \| Edge TOP -> B references a subgraph; ignored (V1). \| Edge B1 -> B2 references a subgraph; ignored (V1).
-- #102 warned: Subgraph "subgraph1" was also used as a node; node ignored. \| Edge outside -> subgraph1 references a subgraph; ignored (V1). \| Subgraph "subgraph2" direction (TD) is ignored: a node inside is linked to a node outside, so it follows the flowchart's direction (same as Mermaid).
-- #103 warned: Subgraph "one" was also used as a node; node ignored. \| Edge Start -> one references a subgraph; ignored (V1). \| Edge one -> End references a subgraph; ignored (V1).
+- #102 warned: Subgraph "subgraph2" direction (TD) is ignored: something inside is linked to something outside, so it follows the flowchart's direction (same as Mermaid).
+- #103 warned: Subgraph "one" is drawn open: `view: collapsed` is not supported yet.
 
 ### gantt
 

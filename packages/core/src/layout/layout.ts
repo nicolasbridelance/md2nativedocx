@@ -15,6 +15,7 @@ import dagre from 'dagre';
 import { assertWithinLimits, safeDagreLayout, type GraphLimits } from './graph-limits.js';
 import type {
   Flowchart,
+  FlowEdge,
   FlowNode,
   Layout,
   LayoutBox,
@@ -391,6 +392,30 @@ function layoutBase(
   // (`subgraph S` holding a node `S`), and one shared key made Dagre throw "Setting S as parent of S
   // would create a cycle" (found by the ODF fuzz property, 2026-10-08). A NUL cannot appear in an id.
   const clusterKey = (id: string): string => `\u0000subgraph:${id}`;
+  const nodeIdSet = new Set(flowchart.nodes.map((n) => n.id));
+  const subgraphById = new Map(flowchart.subgraphs.map((s) => [s.id, s]));
+  // Dagre takes no edge to a cluster, so a link to a subgraph (`A --> S`) is ranked as a link to a node
+  // standing for it: the placeholder of a subgraph laid out on its own (its whole box), else its first
+  // node, depth first, as Mermaid does. The translator ends the link on the subgraph's box, not on that
+  // node. `undefined` (no such node or subgraph, or a subgraph with no node): the edge gets no route.
+  const firstNode = (sg: Subgraph, seen: Set<string>): string | undefined => {
+    if (seen.has(sg.id)) return undefined;
+    seen.add(sg.id);
+    const own = sg.nodeIds.find((id) => nodeIdSet.has(id));
+    if (own !== undefined) return own;
+    for (const childId of sg.subgraphIds) {
+      const child = subgraphById.get(childId);
+      const found = child && firstNode(child, seen);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  const dagreEnd = (id: string): string | undefined => {
+    if (nodeIdSet.has(id)) return id;
+    if (nodeIdSet.has(`${PLACEHOLDER_PREFIX}${id}`)) return `${PLACEHOLDER_PREFIX}${id}`;
+    const sg = subgraphById.get(id);
+    return sg && firstNode(sg, new Set());
+  };
   const buildGraph = (useClusters: boolean) => {
     const g = new dagre.graphlib.Graph({ compound: true });
     g.setGraph({
@@ -407,12 +432,14 @@ function layoutBase(
       g.setNode(node.id, { width, height });
     }
     for (const edge of flowchart.edges) {
-      if (g.hasNode(edge.from) && g.hasNode(edge.to)) {
+      const from = dagreEnd(edge.from);
+      const to = dagreEnd(edge.to);
+      if (from !== undefined && to !== undefined) {
         // A labelled edge tells Dagre its label's size, so the gap between the two ranks makes room for
         // it (Dagre puts the label on its own intermediate rank, labelpos 'c').
         const runs = edge.labelRuns;
         const hasLabel = runs !== null && labelLines(runs).some((l) => l.trim().length > 0);
-        g.setEdge(edge.from, edge.to, hasLabel ? { ...edgeLabelSize(runs), labelpos: 'c' } : {});
+        g.setEdge(from, to, hasLabel ? { ...edgeLabelSize(runs), labelpos: 'c' } : {});
       }
     }
 
@@ -501,7 +528,9 @@ function layoutBase(
   // in the same raw coordinate space as `nodes`/`subgraphs` above, before
   // normalization.
   const edges: LayoutPoint[][] = flowchart.edges.map((edge) => {
-    const e = g.edge({ v: edge.from, w: edge.to });
+    const from = dagreEnd(edge.from);
+    const to = dagreEnd(edge.to);
+    const e = from !== undefined && to !== undefined ? g.edge({ v: from, w: to }) : undefined;
     return e ? e.points.map((p) => ({ x: p.x, y: p.y })) : [];
   });
 
@@ -550,27 +579,36 @@ function layoutBase(
 const PLACEHOLDER_PREFIX = '\u0000direction:';
 
 /**
- * Lay out a flowchart, honouring a subgraph's own `direction` statement.
+ * Lay out a flowchart, honouring a subgraph's own `direction` statement and the links to a subgraph.
  *
  * Dagre ranks a whole graph under one `rankdir`, so a subgraph with a different direction is laid out
  * on its own (recursively, in its own direction), then placed in the parent's pass as one fixed-size
- * block. Same rule as Mermaid: this only applies when no edge crosses the subgraph's boundary; when a
- * node inside is linked to one outside, the direction is ignored and a warning says so.
+ * block. A subgraph a link ends at (`A --> S`, `S --> B`) is laid out on its own the same way, in the
+ * direction it would have anyway, so the link ranks against the whole box: `S --> B` puts `B` after all
+ * of `S`, not just after its first node. Same rule as Mermaid, which lays out every such subgraph as one
+ * block: this only applies when no edge crosses the subgraph's boundary; when a node inside is linked to
+ * one outside, the subgraph is laid out with the rest (a direction of its own is then ignored, with a
+ * warning). A link to the subgraph itself does not cross it.
  */
 function layoutWithSubgraphDirections(flowchart: Flowchart, options: LayoutOptions): LayoutResult {
   const warnings: string[] = [];
-  const candidates = flowchart.subgraphs.filter(
-    (sg) => sg.direction !== undefined && sg.direction !== flowchart.direction,
-  );
+  const hasOwnDirection = (sg: Subgraph): boolean => sg.direction !== undefined && sg.direction !== flowchart.direction;
+  const linked = new Set(flowchart.edges.flatMap((e) => [e.from, e.to]));
+  const parentOf = new Map<string, Subgraph>();
+  for (const sg of flowchart.subgraphs) for (const childId of sg.subgraphIds) parentOf.set(childId, sg);
+  const ancestors = (sg: Subgraph): string[] => {
+    const ids: string[] = [];
+    for (let p = parentOf.get(sg.id); p && !ids.includes(p.id); p = parentOf.get(p.id)) ids.push(p.id);
+    return ids;
+  };
+  // Outermost first: a candidate inside one that is laid out on its own is handled by that one's
+  // recursive pass; inside one that is not, it is still a candidate here.
+  const candidates = flowchart.subgraphs
+    .filter((sg) => hasOwnDirection(sg) || linked.has(sg.id))
+    .map((sg) => ({ sg, depth: ancestors(sg).length }))
+    .sort((a, b) => a.depth - b.depth)
+    .map(({ sg }) => sg);
   if (candidates.length === 0) return layoutBase(flowchart, options);
-
-  const candidateIds = new Set(candidates.map((sg) => sg.id));
-  // A candidate inside another candidate is handled by the recursive pass of that ancestor.
-  const isNested = (sg: Subgraph): boolean =>
-    flowchart.subgraphs.some(
-      (other) =>
-        other !== sg && candidateIds.has(other.id) && descendantSubgraphIds(other, flowchart).includes(sg.id),
-    );
 
   interface Isolated {
     sg: Subgraph;
@@ -582,12 +620,19 @@ function layoutWithSubgraphDirections(flowchart: Flowchart, options: LayoutOptio
   const isolated: Isolated[] = [];
 
   for (const sg of candidates) {
-    if (isNested(sg)) continue;
-    const inside = new Set(descendantNodeIds(sg, flowchart));
-    if (flowchart.edges.some((e) => inside.has(e.from) !== inside.has(e.to))) {
-      warnings.push(
-        `Subgraph "${sg.id}" direction (${sg.direction}) is ignored: a node inside is linked to a node outside, so it follows the flowchart's direction (same as Mermaid).`,
-      );
+    if (ancestors(sg).some((id) => isolated.some((iso) => iso.sg.id === id))) continue;
+    // What a link can end at inside `sg`: its nodes and the subgraphs nested in it. A link to `sg`
+    // itself (`A --> S`) stops at its border, so, as in Mermaid, it does not cross it: it is laid out in
+    // the parent pass, to the placeholder standing for `sg`.
+    const inside = new Set([...descendantNodeIds(sg, flowchart), ...descendantSubgraphIds(sg, flowchart)]);
+    const crosses = (e: FlowEdge): boolean =>
+      e.from !== sg.id && e.to !== sg.id && inside.has(e.from) !== inside.has(e.to);
+    if (flowchart.edges.some(crosses)) {
+      if (hasOwnDirection(sg)) {
+        warnings.push(
+          `Subgraph "${sg.id}" direction (${sg.direction}) is ignored: something inside is linked to something outside, so it follows the flowchart's direction (same as Mermaid).`,
+        );
+      }
       continue;
     }
     const innerEdgeIndexes: number[] = [];
@@ -596,7 +641,7 @@ function layoutWithSubgraphDirections(flowchart: Flowchart, options: LayoutOptio
     });
     const subIds = new Set([sg.id, ...descendantSubgraphIds(sg, flowchart)]);
     const innerChart: Flowchart = {
-      direction: sg.direction!,
+      direction: sg.direction ?? flowchart.direction,
       nodes: flowchart.nodes.filter((n) => inside.has(n.id)),
       edges: innerEdgeIndexes.map((i) => flowchart.edges[i]!),
       // The subgraph itself stays in the inner chart so its box and title bar come out of the inner pass.
@@ -608,7 +653,9 @@ function layoutWithSubgraphDirections(flowchart: Flowchart, options: LayoutOptio
     const box = inner.subgraphs[sg.id];
     if (!box) {
       warnings.push(
-        `Subgraph "${sg.id}" direction (${sg.direction}) could not be applied (its container failed to lay out).`,
+        hasOwnDirection(sg)
+          ? `Subgraph "${sg.id}" direction (${sg.direction}) could not be applied (its container failed to lay out).`
+          : `Subgraph "${sg.id}" could not be laid out as one block (its container failed to lay out); links to it are ranked against its first node.`,
       );
       continue;
     }

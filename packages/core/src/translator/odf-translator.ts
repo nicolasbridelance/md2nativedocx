@@ -311,10 +311,14 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
 
   const parts: string[] = [];
 
-  // Subgraph containers first, outer before inner: document order is z-order, so they stay behind.
-  for (const sg of subgraphsOuterFirst(flowchart)) {
+  // Subgraph containers first, outer before inner: document order is z-order, so they stay behind. Each
+  // has an id too: a link to the subgraph (`A --> S`) glues its connector to the container.
+  const shapeIds = new Map<string, string>();
+  subgraphsOuterFirst(flowchart).forEach((sg, i) => {
     const raw = layout.subgraphs[sg.id];
-    if (!raw) continue;
+    if (!raw) return;
+    const id = `${prefix}-s${i + 1}`;
+    shapeIds.set(sg.id, id);
     const box = place(raw);
     const style = sheet.graphic(
       `<style:graphic-properties draw:fill="solid" draw:fill-color="#${SUBGRAPH_FILL}" draw:opacity="40%" ` +
@@ -324,13 +328,12 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     );
     const title = escapeXml(sg.title);
     parts.push(
-      `<draw:custom-shape draw:style-name="${style}" draw:name="${title}" ${frame(box)}>` +
+      `<draw:custom-shape draw:style-name="${style}" draw:name="${title}" xml:id="${id}" draw:id="${id}" ${frame(box)}>` +
         `<text:p text:style-name="${shapeText(sheet, '000000', fontPt(SUBGRAPH_TITLE_FONT_PT))}">${title}</text:p><draw:enhanced-geometry draw:type="rectangle"/></draw:custom-shape>`,
     );
-  }
+  });
 
   // Nodes, each with an id its connectors refer to.
-  const shapeIds = new Map<string, string>();
   flowchart.nodes.forEach((node, i) => {
     const raw = layout.nodes[node.id];
     if (!raw) return;
@@ -369,8 +372,9 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
   // horizontally at the middle of the line (centred text area, see edgeGraphicProperties) and moving
   // with it.
   flowchart.edges.forEach((edge, i) => {
-    const from = layout.nodes[edge.from];
-    const to = layout.nodes[edge.to];
+    // An end that is no node is a subgraph: the connector stops at its container's border.
+    const from = layout.nodes[edge.from] ?? layout.subgraphs[edge.from];
+    const to = layout.nodes[edge.to] ?? layout.subgraphs[edge.to];
     const fromId = shapeIds.get(edge.from);
     const toId = shapeIds.get(edge.to);
     if (!from || !to || fromId === undefined || toId === undefined) return;

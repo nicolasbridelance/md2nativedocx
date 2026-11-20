@@ -513,8 +513,9 @@ function renderContent(
 
   // Render subgraph titles (spec §6.1) as flat shapes, then nodes and edges.
   const renderedSubgraphs = new Set<string>();
+  const containerIds = new Map<string, number>();
   for (const sg of flowchart.subgraphs) {
-    parts.push(renderSubgraph(sg, flowchart, layout, renderedSubgraphs, nextId, scale));
+    parts.push(renderSubgraph(sg, flowchart, layout, renderedSubgraphs, nextId, scale, containerIds));
   }
 
   for (const node of flowchart.nodes) {
@@ -545,9 +546,11 @@ function renderContent(
   const actorIds = new Set(flowchart.nodes.filter((n) => n.shape === 'actor').map((n) => n.id));
   // One object per node (cached): a self-loop is recognised by its two ends being the same Box object.
   const attachBoxes = new Map<string, Box>();
+  // An end that is no node is a subgraph (`A --> S`): the connector stops at its container's border.
   const attachBox = (id: string): Box | undefined => {
     const box = layout.nodes[id];
-    if (!box || !actorIds.has(id)) return box;
+    if (!box) return layout.subgraphs[id];
+    if (!actorIds.has(id)) return box;
     let attach = attachBoxes.get(id);
     if (!attach) {
       attach = actorConnectBox(box);
@@ -559,8 +562,8 @@ function renderContent(
     const from = attachBox(edge.from);
     const to = attachBox(edge.to);
     if (!from || !to) return;
-    const fromId = nodeIds.get(edge.from);
-    const toId = nodeIds.get(edge.to);
+    const fromId = nodeIds.get(edge.from) ?? containerIds.get(edge.from);
+    const toId = nodeIds.get(edge.to) ?? containerIds.get(edge.to);
     if (fromId === undefined || toId === undefined) return;
     const dagrePoints = layout.edges[i] ?? [];
     // Every other node's box, i.e. what this connector must NOT be drawn
@@ -713,6 +716,7 @@ function renderSubgraph(
   rendered: Set<string>,
   nextId: () => number,
   scale: number,
+  containerIds: Map<string, number>,
 ): string {
   if (rendered.has(sg.id)) return '';
   rendered.add(sg.id);
@@ -738,8 +742,11 @@ function renderSubgraph(
   // default subgraph border style. Rendered first (behind, per emission
   // order = z-order in this format) so it never occludes member nodes/edges,
   // which are drawn later in `renderContent`.
+  // Its shape id is kept: a link to the subgraph (`A --> S`) attaches its connector to this box.
+  const containerId = nextId();
+  containerIds.set(sg.id, containerId);
   parts.push('  <wps:wsp>');
-  parts.push(`    <wps:cNvPr id="${nextId()}" name="${safeTitle} (container)"/>`);
+  parts.push(`    <wps:cNvPr id="${containerId}" name="${safeTitle} (container)"/>`);
   parts.push('    <wps:cNvSpPr/>');
   parts.push('    <wps:spPr>');
   parts.push('      <a:xfrm>');
@@ -789,7 +796,7 @@ function renderSubgraph(
   // Nested subgraphs, each its own flat title box.
   for (const childId of sg.subgraphIds) {
     const child = flowchart.subgraphs.find((s) => s.id === childId);
-    if (child) parts.push(renderSubgraph(child, flowchart, layout, rendered, nextId, scale));
+    if (child) parts.push(renderSubgraph(child, flowchart, layout, rendered, nextId, scale, containerIds));
   }
 
   return parts.join('\n');

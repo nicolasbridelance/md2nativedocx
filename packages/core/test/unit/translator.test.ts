@@ -703,3 +703,16 @@ test('a labeled self-loop still positions its edge label near the loop, not at t
   assert.ok(label, 'expected to find the "retry" edge label');
   assert.ok(xml.includes('>retry<'));
 });
+
+test('a link to a subgraph attaches its connector to the subgraph container, title escaped', () => {
+  // Injection case (AGENTS.md): the title is user text, and the container a link now attaches to is
+  // named after it.
+  const xml = translate(`graph TD\n  X[Before] --> S\n  subgraph S["a <b> & 'c'"]\n    A --> B\n  end\n  S --> Y[After]`);
+  const container = /<wps:cNvPr id="(\d+)" name="([^"]*) \(container\)"\/>/.exec(xml);
+  assert.ok(container, 'a container shape is emitted');
+  assert.equal(container[2], escapeXml("a <b> & 'c'"));
+  assert.ok(!xml.includes('<b>'));
+  const id = container[1];
+  assert.ok(xml.includes(`<a:endCxn id="${id}" idx="0"/>`), 'X --> S ends on the top of the container');
+  assert.ok(xml.includes(`<a:stCxn id="${id}" idx="2"/>`), 'S --> Y starts from the bottom of the container');
+});

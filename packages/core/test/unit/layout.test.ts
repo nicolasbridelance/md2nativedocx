@@ -261,8 +261,13 @@ test('a graph combining many subgraph clusters with cycles among their members d
   // corpus/ directory's normal purpose (external real-world syntax
   // coverage, see test-corpus/README.md).
   const fixturePath = join(here, '..', '..', '..', '..', '..', 'test-corpus', 'corpus', 'source', 'medium3.mmd');
-  const { ast } = parseMermaid(readFileSync(fixturePath, 'utf8'));
-  assert.ok(ast.subgraphs.length > 1, 'fixture should still declare multiple subgraphs');
+  const parsed = parseMermaid(readFileSync(fixturePath, 'utf8')).ast;
+  assert.ok(parsed.subgraphs.length > 1, 'fixture should still declare multiple subgraphs');
+  // The graph Dagre crashed on had no link to a subgraph: the parser dropped them then. Keeping the
+  // fixture's one such link (`Y01 --> BLFWIP_HTZ`, 2026-11-20) changes the ranking enough that Dagre
+  // no longer crashes on it, so the link is taken out again to keep reaching the retry path.
+  const subgraphIds = new Set(parsed.subgraphs.map((s) => s.id));
+  const ast = { ...parsed, edges: parsed.edges.filter((e) => !subgraphIds.has(e.from) && !subgraphIds.has(e.to)) };
 
   const result = layout(ast);
   assert.equal(Object.keys(result.nodes).length, ast.nodes.length, 'every node should still get a position');
@@ -351,4 +356,31 @@ test('a subgraph listed before the subgraph it contains still encloses it (nesti
       }
     }
   }
+});
+
+test('a link from a subgraph ranks its target after the whole subgraph, not after its first node', () => {
+  // Mermaid lays out a subgraph a link ends at as one block (flowchart#103 of its docs).
+  const { ast } = parseMermaid('flowchart TD\n  Start --> one\n  subgraph one\n    A --> B --> C\n  end\n  one --> End');
+  const r = layout(ast);
+  const box = r.subgraphs['one']!;
+  assert.ok(r.nodes.Start!.y + r.nodes.Start!.height <= box.y, 'Start sits above the subgraph');
+  assert.ok(r.nodes.End!.y >= box.y + box.height, 'End sits below the subgraph');
+  assert.ok(r.edges.every((points) => points.length > 0), 'every link gets a route');
+  assert.deepEqual(r.warnings, []);
+});
+
+test('a subgraph keeps its own direction when only links to the subgraph itself reach it (as Mermaid)', () => {
+  const { ast } = parseMermaid('flowchart LR\n  subgraph S\n    direction TB\n    A --> B\n  end\n  X --> S');
+  const r = layout(ast);
+  assert.ok(r.nodes.A!.y < r.nodes.B!.y && r.nodes.A!.x === r.nodes.B!.x, 'A above B: the subgraph runs top to bottom');
+  assert.deepEqual(r.warnings, []);
+});
+
+test('a link to a subgraph that cannot be laid out as one block ranks against its first node', () => {
+  // `B --> Y` crosses S's border, so S is laid out with the rest, as in Mermaid.
+  const { ast } = parseMermaid('flowchart TD\n  X --> S\n  subgraph S\n    A --> B\n  end\n  B --> Y');
+  const r = layout(ast);
+  assert.ok(r.subgraphs['S']);
+  assert.ok(r.nodes.X!.y + r.nodes.X!.height <= r.subgraphs['S']!.y);
+  assert.ok(r.edges.every((points) => points.length > 0));
 });

@@ -576,19 +576,54 @@ test('warns on unclosed subgraph', () => {
   assert.ok(warnings.some((w) => w.includes('Unclosed')));
 });
 
-test('does not duplicate a subgraph id as a node (Dagre crash fix)', () => {
-  // Mermaid allows edges between subgraphs (`U1 --> Y2`). The subgraph id must
-  // not also be registered as a plain node, or Dagre crashes (an id cannot be
-  // both a node and a cluster).
+test('a link to a subgraph keeps the subgraph as its end, never as a node', () => {
+  // Mermaid draws `U1 --> Y2` between the two subgraphs' borders. The subgraph id must not also be a
+  // node, or Dagre crashes (an id cannot be both a node and a cluster).
   const { ast, warnings } = parseMermaid(
-    'graph TD\n  subgraph U1\n    A --> B\n  end\n  subgraph Y2\n    C --> D\n  end\n  U1 --> Y2',
+    'graph TD\n  subgraph U1\n    A --> B\n  end\n  subgraph Y2\n    C --> D\n  end\n  U1 --> Y2\n  X --> U1',
   );
   const nodeIds = ast.nodes.map((n) => n.id);
   assert.ok(!nodeIds.includes('U1'), 'U1 must not be a node');
   assert.ok(!nodeIds.includes('Y2'), 'Y2 must not be a node');
-  // The inter-subgraph edge is dropped with a warning (V1 limitation).
-  assert.ok(!ast.edges.some((e) => e.from === 'U1' || e.to === 'Y2'));
-  assert.ok(warnings.some((w) => w.includes('references a subgraph')));
+  assert.deepEqual(
+    ast.edges.map((e) => `${e.from}->${e.to}`),
+    ['A->B', 'C->D', 'U1->Y2', 'X->U1'],
+  );
+  assert.deepEqual(warnings, []);
+});
+
+test('a link between nested subgraphs does not make them members of their parent', () => {
+  const { ast, warnings } = parseMermaid(
+    'flowchart LR\n  subgraph TOP\n    subgraph B1\n      i1 --> f1\n    end\n    subgraph B2\n      i2 --> f2\n    end\n    B1 --> B2\n  end\n  A --> TOP --> B',
+  );
+  const top = ast.subgraphs.find((s) => s.id === 'TOP')!;
+  assert.deepEqual(top.nodeIds, []);
+  assert.deepEqual(top.subgraphIds, ['B1', 'B2']);
+  assert.ok(ast.edges.some((e) => e.from === 'B1' && e.to === 'B2'));
+  assert.deepEqual(warnings, []);
+});
+
+test('a link between a subgraph and its own contents is dropped with a warning', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  subgraph S\n    A --> B\n    subgraph T\n      C\n    end\n  end\n  S --> A\n  T --> S\n  S --> S',
+  );
+  assert.deepEqual(ast.edges.map((e) => `${e.from}->${e.to}`), ['A->B']);
+  assert.equal(warnings.filter((w) => w.includes('to something inside it')).length, 3);
+});
+
+test('a link to a subgraph with no node is dropped with a warning', () => {
+  const { ast, warnings } = parseMermaid('graph TD\n  subgraph E\n  end\n  A --> E');
+  assert.equal(ast.edges.length, 0);
+  assert.ok(warnings.some((w) => w.includes('holds no node')));
+});
+
+test('a node declared under a subgraph id, or a collapsed view, is warned about', () => {
+  const { ast, warnings } = parseMermaid(
+    'graph TD\n  S[Shown?]\n  subgraph S\n    A\n  end\n  subgraph one\n    B\n  end\n  one@{ view: collapsed }',
+  );
+  assert.deepEqual(ast.nodes.map((n) => n.id).sort(), ['A', 'B']);
+  assert.ok(warnings.some((w) => w.includes('"S" was also declared as a node')));
+  assert.ok(warnings.some((w) => w.includes('"one" is drawn open')));
 });
 
 test('records nested subgraph relationships in subgraphIds', () => {

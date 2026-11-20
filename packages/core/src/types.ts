@@ -116,9 +116,15 @@ export interface FlowNode {
   textColor?: string;
 }
 
-/** A single directed edge between two nodes. */
+/**
+ * A single directed edge. Each end is a node id or, for a link drawn to a subgraph's border as Mermaid
+ * does (`A --> S`, `S1 --> S2`), a {@link Subgraph} id. `parseMermaid()` never gives a node and a
+ * subgraph the same id, and never links a subgraph to its own contents.
+ */
 export interface FlowEdge {
+  /** Node or subgraph id the edge starts from. */
   from: string;
+  /** Node or subgraph id the edge ends at. */
   to: string;
   type: EdgeType;
   label: string | null;
@@ -147,7 +153,8 @@ export interface Subgraph {
    *
    * Applied by `layout()`: a subgraph with a different direction is laid out on its own,
    * then placed as one block in its parent's pass. Like Mermaid, it is ignored (with a layout
-   * warning) when a node inside is linked to a node outside.
+   * warning) when something inside is linked to something outside (a link to the subgraph itself does
+   * not count).
    */
   direction?: 'TD' | 'LR' | 'BT' | 'RL';
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { renderDiagramOdf, buildOdfDiagramTooLargeNote } from '../../src/render-diagram-odf.js';
 import { translateToOdf, ODF_GRAPHIC_DEFINITIONS, ODF_STYLE_NAMES } from '../../src/translator/odf-translator.js';
 import { layout } from '../../src/layout/layout.js';
+import { parseMermaid } from '../../src/parser/index.js';
 import { DiagramTooLargeError } from '../../src/layout/graph-limits.js';
 import type { Flowchart } from '../../src/types.js';
 
@@ -259,4 +260,12 @@ test('glue points: a connector whose direct elbow would cross a third node is at
   assert.equal(attr(yes, 'draw:start-glue-point'), '2', 'the unobstructed branch keeps bottom to top');
   assert.equal(attr(yes, 'draw:end-glue-point'), '0');
   assert.notDeepEqual([attr(no, 'draw:start-glue-point'), attr(no, 'draw:end-glue-point')], ['2', '0']);
+});
+
+test('a link to a subgraph glues its connector to the subgraph container', () => {
+  const { ast } = parseMermaid('graph TD\n  X --> S\n  subgraph S["a <b> & c"]\n    A --> B\n  end');
+  const { fragment } = translateToOdf(ast, layout(ast), { idPrefix: 'v' });
+  const container = /<draw:custom-shape [^>]*draw:name="a &lt;b&gt; &amp; c" xml:id="([^"]+)" draw:id="\1"/.exec(fragment);
+  assert.ok(container, 'the container has an id, its title escaped');
+  assert.ok(fragment.includes(`draw:end-shape="${container[1]}"`), 'X --> S ends on the container');
 });

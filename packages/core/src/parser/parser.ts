@@ -669,14 +669,21 @@ export function parseMermaid(text: string): ParseResult {
   // edge (`e1@{ animate: true }`, `class e1 animate`) are not taken for nodes.
   const edgeIds = new Set<string>();
   const lines = rawLines.map((l) => stripEdgeIds(l, edgeIds));
+  // Ids given `view: collapsed` (`S@{ view: collapsed }`), see linkSubgraphEndpoints.
+  const collapsedViews = new Set<string>();
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (line.length === 0) continue;
     // Edge metadata (`e1@{ animate: true, curve: linear }`): animation and per-edge curve have no
     // counterpart in a static Word drawing.
-    const edgeMeta = /^([A-Za-z_][\w-]*)@\{.*\}$/.exec(line);
+    const edgeMeta = /^([A-Za-z_][\w-]*)@\{(.*)\}$/.exec(line);
     if (edgeMeta && edgeIds.has(edgeMeta[1]!)) continue;
+    // `S@{ view: collapsed }` folds a subgraph in Mermaid. Whether `S` is a subgraph is only known at
+    // the end (it may be declared later), so it is noted here and the line goes on as a node statement.
+    if (edgeMeta && parseAtShapeProps(edgeMeta[2]!).get('view')?.toLowerCase() === 'collapsed') {
+      collapsedViews.add(edgeMeta[1]!);
+    }
     if (isInteractiveDirective(line, ['click'])) {
       if (!warnings.includes(INTERACTIVE_DIRECTIVES_IGNORED)) warnings.push(INTERACTIVE_DIRECTIVES_IGNORED);
       continue;
@@ -901,41 +908,96 @@ export function parseMermaid(text: string): ParseResult {
     }
   }
 
-  // A subgraph id must not also be a node: Mermaid allows edges between
-  // subgraphs (e.g. `U1 --> Y2`), and our parser would otherwise register the
-  // subgraph id as a plain node, which breaks Dagre (an id cannot be both a
-  // node and a cluster). Drop such nodes and warn. Edges referencing subgraphs
-  // as endpoints are dropped too (V1 does not support inter-subgraph edges).
-  const subgraphIdSet = new Set(subgraphs.map((s) => s.id));
-  for (const id of subgraphIdSet) {
-    if (nodes.has(id)) {
-      nodes.delete(id);
-      warnings.push(`Subgraph "${id}" was also used as a node; node ignored.`);
-    }
-  }
-  const edgesWithoutSubgraphs = edges.filter((e) => {
-    if (subgraphIdSet.has(e.from) || subgraphIdSet.has(e.to)) {
-      warnings.push(`Edge ${e.from} -> ${e.to} references a subgraph; ignored (V1).`);
-      return false;
-    }
-    return true;
-  });
-
   if (subgraphStack.length > 0) {
     warnings.push('Unclosed `subgraph` block.');
     // Still drawn as if closed at the end, innermost first, as an `end` would have.
     for (const open of [...subgraphStack].reverse()) closeSubgraph(open, claimedBySubgraph);
   }
 
+  // Before the node list is taken: this removes the nodes registered under a subgraph's id.
+  const keptEdges = linkSubgraphEndpoints(nodes, edges, subgraphs, collapsedViews, warnings);
   return {
     ast: {
       direction,
       nodes: [...nodes.values()],
-      edges: edgesWithoutSubgraphs,
+      edges: keptEdges,
       subgraphs,
     },
     warnings,
   };
+}
+
+/**
+ * Settle the links whose end is a subgraph (`A --> S`, `S1 --> S2`), which Mermaid draws to the
+ * subgraph's border. The parser registered such an end as a plain node; it is removed here, so that an
+ * id is never both a node and a subgraph, and the link keeps the subgraph's id as its end (see
+ * {@link FlowEdge}). A subgraph's member lists drop the subgraph ids a link inside it mentioned.
+ *
+ * Warned and dropped: a link between a subgraph and something inside it (no border to stop at), and a
+ * link to a subgraph with no node in it (no box to draw). Warned and kept: a node declared with its own
+ * label or shape under a subgraph's id (the subgraph wins, as in Mermaid's drawing), and
+ * `view: collapsed`, which Mermaid draws as one folded box and this project draws open.
+ */
+function linkSubgraphEndpoints(
+  nodes: Map<string, FlowNode>,
+  edges: FlowEdge[],
+  subgraphs: Subgraph[],
+  collapsedViews: ReadonlySet<string>,
+  warnings: string[],
+): FlowEdge[] {
+  const byId = new Map(subgraphs.map((s) => [s.id, s]));
+  for (const [id, sg] of byId) {
+    const node = nodes.get(id);
+    if (node) {
+      nodes.delete(id);
+      // `A --> S` registers `S` as a bare node: that is how a link to a subgraph is written.
+      if (node.label !== id || node.shape !== 'rect') {
+        warnings.push(`Subgraph "${id}" was also declared as a node; the node is not drawn.`);
+      }
+    }
+    sg.nodeIds = sg.nodeIds.filter((member) => !byId.has(member));
+    if (collapsedViews.has(id)) {
+      warnings.push(`Subgraph "${id}" is drawn open: \`view: collapsed\` is not supported yet.`);
+    }
+  }
+
+  // Everything inside a subgraph, nested subgraphs included, memoized: a link is checked at both ends.
+  const contents = new Map<string, Set<string>>();
+  const contentsOf = (sg: Subgraph, seen: Set<string> = new Set()): Set<string> => {
+    const known = contents.get(sg.id);
+    if (known) return known;
+    const all = new Set<string>(sg.nodeIds);
+    seen.add(sg.id);
+    for (const childId of sg.subgraphIds) {
+      const child = byId.get(childId);
+      // `seen` guards against a cycle, which the parser cannot build but a caller-made AST could.
+      if (!child || seen.has(childId)) continue;
+      all.add(childId);
+      for (const id of contentsOf(child, seen)) all.add(id);
+    }
+    contents.set(sg.id, all);
+    return all;
+  };
+  const hasNode = (sg: Subgraph): boolean => [...contentsOf(sg)].some((id) => !byId.has(id));
+
+  return edges.filter((e) => {
+    for (const [end, other] of [
+      [e.from, e.to],
+      [e.to, e.from],
+    ] as const) {
+      const sg = byId.get(end);
+      if (!sg) continue;
+      if (end === other || contentsOf(sg).has(other)) {
+        warnings.push(`Edge ${e.from} -> ${e.to} links subgraph "${end}" to something inside it; ignored.`);
+        return false;
+      }
+      if (!hasNode(sg)) {
+        warnings.push(`Edge ${e.from} -> ${e.to} links to subgraph "${end}", which holds no node; ignored.`);
+        return false;
+      }
+    }
+    return true;
+  });
 }
 
 function parseSubgraphHeader(line: string): Subgraph {

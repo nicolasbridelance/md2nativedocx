@@ -125,7 +125,10 @@ const COMPARATORS = {
     theirs(db) {
       const facts = [];
       const md = (item) => item.labelType === 'markdown';
-      for (const v of db.getVertices().values()) facts.push(`node ${v.id} "${normText(mermaidEntities(v.text ?? v.id), md(v))}"`);
+      // A link to a subgraph (`A --> S`) leaves a vertex `S` in Mermaid's base, which its renderer merges
+      // into the cluster and never draws as a node: the cluster is what both sides compare.
+      const subgraphIds = new Set(db.getSubGraphs().map((s) => s.id));
+      for (const v of db.getVertices().values()) if (!subgraphIds.has(v.id)) facts.push(`node ${v.id} "${normText(mermaidEntities(v.text ?? v.id), md(v))}"`);
       for (const e of db.getEdges()) facts.push(`link ${e.start} -> ${e.end}${e.text ? ` "${normText(mermaidEntities(e.text), md(e))}"` : ''}`);
       for (const s of db.getSubGraphs()) facts.push(`subgraph ${s.id} "${normText(mermaidEntities(s.title), md(s))}" [${[...s.nodes].sort().join(' ')}]`);
       return facts;

@@ -165,7 +165,16 @@ Ensuite, dans l'ordre :
               `<<interface>>` (en ligne ou seules), `class X:::style` (avec ou sans corps), cardinalités, notes,
               `namespace`, styles ;
             - **états (13)** : états composites en boîtes imbriquées, notes, styles ;
-            - **organigrammes (8)** : liens vers un sous-graphe, titre d'en-tête à dessiner ;
+            - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
+              cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;
+              vérifié dans Word et LibreOffice, `test-corpus/word-verification/subgraph-links.*`) ; titre d'en-tête à
+              dessiner ; `view: collapsed` (Mermaid dessine le sous-graphe replié en une boîte ; ici ouvert, avec
+              avertissement) ;
+            - **Écart de mise en page relevé le 2026-11-20, non traité :** Mermaid range à part tout sous-graphe
+              qu'aucun lien ne traverse et, sans `direction` propre, **inverse** sa direction (TB ↔ LR,
+              `extractor` de son rendu dagre). Ici, seuls les sous-graphes à direction propre ou visés par un lien
+              sont rangés à part, dans la direction du diagramme. Adopter la règle de Mermaid changerait le rendu
+              de la plupart des diagrammes à sous-graphes (baselines `test:visual`) : décision du mainteneur ;
             - **séquence (11)**, **C4 (6)**, **architecture (5)**, **Gantt (7)**, **mindmap (4)**, **requirement (4)**,
               **treeView (4)**, divers (8) ;
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
@@ -210,14 +219,15 @@ Ensuite, dans l'ordre :
             2026-11-20** (flèche longue avec libellé, membres de sous-graphe à la règle de Mermaid, titre de
             sous-graphe lu comme un libellé, `participant X@{…} as …` et `"alias"`, entités nommées HTML 4 partagées
             par organigrammes et séquence, ce qui a aussi supprimé un `RangeError` sur `#99999999;`) : **225
-            identiques, 27 écarts, tous avec avertissement** (classes, ER, liens vers un sous-graphe, état seul). Vu
+            identiques, 27 écarts, tous avec avertissement** (classes, ER, liens vers un sous-graphe — faits depuis —, état seul). Vu
             dans Word au passage : deux sous-graphes empilés (`flowchart#104`) se touchent, sans marge entre eux.
             ER refait le 2026-11-20 (cardinalités en toutes lettres, symboles collés ou inversés, alias `p[Person]`,
             noms entre guillemets, déclarations seules, `direction`, `:::classe`) : **25/25 ER identiques à Mermaid**,
             237/252 au total. Vu dans Word : les libellés de relation ER sont posés sur le trait, sans fond.
             Classes le même jour (relations selon la grammaire de Mermaid : extrémité optionnelle de chaque côté,
             trait plein ou pointillé, donc `<|..`, `|>..` et la relation double `<|--|>` ; noms entre backticks avec
-            espaces ; `class X <<annotation>>` et `class X:::style`) : **36/38**, **245/252 au total**. Restent les
+            espaces ; `class X <<annotation>>` et `class X:::style`) : **36/38**, **245/252 au total**. Liens vers un
+            sous-graphe le même jour (#100 à #103) : **250/252**, étage 1 à **431 propres (80 %)**. Restent les
             « sucettes » `()--` / `--()` (#15, #16) : une interface dessinée en petit cercle, forme à ajouter au
             traducteur, pas une lecture à corriger.
             Reste : comparateurs des autres types (mindmap, Gantt, C4, requirement…).
