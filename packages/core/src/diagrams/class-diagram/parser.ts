@@ -98,6 +98,22 @@ function stripQuotedSegments(line: string): { clean: string; hadQuoted: boolean 
   return { clean, hadQuoted };
 }
 
+/**
+ * `namespace Name {` or `namespace Name["Label"] {`, or `null`. Read in steps rather than with one regular
+ * expression whose optional label group sat between free-spacing runs (flagged by
+ * `security/detect-unsafe-regex`: untrusted input).
+ */
+function parseNamespaceHeader(line: string): { name: string; label?: string } | null {
+  if (!/^namespace\s/i.test(line) || !line.endsWith('{')) return null;
+  const rest = line.slice('namespace'.length, -1).trim();
+  const name = /^[\w.$-]+/.exec(rest)?.[0];
+  if (name === undefined) return null;
+  const tail = rest.slice(name.length).trim();
+  if (tail.length === 0) return { name };
+  const label = /^\["([^"]*)"\]$/.exec(tail.replace(/^\[\s*/, '[').replace(/\s*\]$/, ']'));
+  return label ? { name, label: (label[1] ?? '').trim() } : null;
+}
+
 function stripIdQuotes(id: string): string {
   return id.replace(/^`|`$/g, '').trim();
 }
@@ -213,9 +229,9 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       continue;
     }
 
-    const namespaceMatch = /^namespace\s+([\w.$-]+)\s*(?:\[\s*"([^"]*)"\s*\])?\s*\{\s*$/i.exec(line);
-    if (namespaceMatch) {
-      stack.push({ kind: 'namespace', id: declareNamespace(namespaceMatch[1]!, namespaceMatch[2]?.trim()) });
+    const namespaceHeader = parseNamespaceHeader(line);
+    if (namespaceHeader) {
+      stack.push({ kind: 'namespace', id: declareNamespace(namespaceHeader.name, namespaceHeader.label) });
       continue;
     }
 
