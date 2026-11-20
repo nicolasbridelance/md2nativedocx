@@ -2,7 +2,7 @@
   "name": "md2nativedocx",
   "displayName": "md2nativedocx — Markdown to Word with editable diagrams (+ PowerPoint)",
   "description": "%extension.description%",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "publisher": "md2nativedocx",
   "private": true,
   "license": "CC0-1.0",
@@ -596,6 +596,6 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@md2nativedocx/cli": "0.6.1"
+    "@md2nativedocx/cli": "0.7.0"
   }
 }

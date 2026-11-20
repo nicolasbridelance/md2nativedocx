@@ -3,6 +3,32 @@
 All notable changes to `md2nativedocx` are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.0] — 2026-11-20
+
+### Added
+- **Railroad diagrams** (Mermaid `railroad-ebnf-beta`, `railroad-abnf-beta`, `railroad-peg-beta` and the
+  function form) become editable Word diagrams: one track per rule, with sequences, choices, optional and
+  repeated parts.
+- **Mermaid `agentflow-beta` and `usecase-beta`** are drawn instead of a "not converted" note, through the
+  flowchart engine (layout, SmartArt for a plain chain, `.pptx` and `.odt` too). Use case actors are drawn as a
+  stick figure.
+- UML arrow ends: class diagrams now draw the **hollow triangle** of inheritance and realization and the
+  **hollow diamond** of aggregation; use case generalization and realization get the hollow triangle too
+  (a plain arrow in `.odt`, with a warning).
+
+### Fixed
+- **Text placed where it belongs in real Word.** Word shrinks some text boxes to their text, so centred titles
+  (pie, quadrant, sequence), participant names, Venn labels, quadrant axes, edge labels and mindmap nodes drifted
+  sideways, and Ishikawa boxes shrank. They now stay where they are drawn, as in LibreOffice.
+- Sequence diagrams: a `;` ends a statement, as in Mermaid (no more phantom `A;` participant); `alt`/`else`
+  guards and block tags are no longer hidden behind activation bars.
+- A Mermaid YAML frontmatter (`---` block: `title:`, `config:`...) is read for every diagram type instead of
+  being reported as unsupported lines; `title:` becomes the diagram's title.
+- Flowcharts: edge ids (`A e1@--> B`) and their `e1@{ ... }` statements, quoted labels spanning several lines,
+  and interactive directives no longer break the diagram.
+- Use case actors and their connectors render correctly in LibreOffice (`.docx`).
+- Word template: `Caption` and `TOC Heading` appear in Word's style gallery.
+
 ## [0.12.1] — 2026-11-19
 
 ### Fixed
