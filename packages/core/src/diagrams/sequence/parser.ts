@@ -14,6 +14,7 @@
  */
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
+import { decodeMermaidEntities } from '../../parser/entities.js';
 import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from './types.js';
 
 export interface SequenceParseResult {
@@ -43,14 +44,9 @@ const ARROWS: ReadonlyArray<{ token: string; dashed: boolean; head: SequenceHead
   { token: '->', dashed: false, head: 'none', both: false },
 ];
 
-/** Decode `#59;` style entity codes and `<br/>` breaks, and cap the length. */
+/** Decode `#59;` / `#infin;` style entity codes and `<br/>` breaks, and cap the length. */
 export function cleanText(raw: string): string {
-  return raw
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/#(\d{1,6});/g, (whole, code: string) => {
-      const n = Number(code);
-      return n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : whole;
-    })
+  return decodeMermaidEntities(raw.replace(/<br\s*\/?>/gi, '\n'))
     .trim()
     .slice(0, MAX_TEXT);
 }
@@ -105,15 +101,23 @@ export function parseSequence(text: string): SequenceParseResult {
   };
   const known = (id: string): boolean => find(id) !== undefined;
 
-  /** Parse `Name [as Alias] [@{...}]`. */
+  /**
+   * Parse `Name[@{...}] [as Alias]` (the `@{...}` config right after the name, as Mermaid writes it, or at the
+   * end of the line). The label is the `as` text, else the config's `"alias"`, else the name: Mermaid's order.
+   */
   const declareFrom = (rest: string, actor: boolean): void => {
     let body = rest.trim();
-    const cfg = /@\{.*\}\s*$/.exec(body);
+    const cfg = /@\{[^}]*\}/.exec(body);
     let isActor = actor;
+    let configAlias: string | undefined;
     if (cfg) {
-      body = body.slice(0, cfg.index).trim();
-      if (/"type"\s*:\s*"actor"/.test(cfg[0])) isActor = true;
-      else warnOnce('ptype', 'Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.');
+      body = `${body.slice(0, cfg.index)} ${body.slice(cfg.index + cfg[0].length)}`.trim();
+      configAlias = /"alias"\s*:\s*"([^"]*)"/.exec(cfg[0])?.[1];
+      const type = /"type"\s*:\s*"([^"]*)"/.exec(cfg[0])?.[1];
+      if (type === 'actor') isActor = true;
+      else if (type !== undefined && type !== 'participant') {
+        warnOnce('ptype', 'Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.');
+      }
     }
     const as = /\s+as\s+/.exec(body);
     const id = (as ? body.slice(0, as.index) : body).trim();
@@ -121,7 +125,8 @@ export function parseSequence(text: string): SequenceParseResult {
       warnings.push(`Participant without a name ignored: ${rest}`);
       return;
     }
-    declare(id, as ? cleanText(body.slice(as.index + as[0].length)) : undefined, isActor);
+    const label = as ? body.slice(as.index + as[0].length) : configAlias;
+    declare(id, label !== undefined ? cleanText(label) : undefined, isActor);
   };
 
   for (const rawLine of sequenceStatements(text)) {

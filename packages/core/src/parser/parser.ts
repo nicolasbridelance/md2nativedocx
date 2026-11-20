@@ -11,6 +11,7 @@
 
 import { splitLines, splitStatements } from './normalize-statements.js';
 import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from './interactive.js';
+import { decodeMermaidEntities } from './entities.js';
 import type {
   EdgeType,
   FlowEdge,
@@ -375,17 +376,6 @@ function stripQuotedLabel(text: string): string {
   return text;
 }
 
-/** Mermaid's named HTML-derived entity codes (written without the leading
- * `&`, e.g. `#quot;`), the ones Mermaid's own docs call out explicitly. */
-const NAMED_ENTITIES: ReadonlyArray<readonly [string, string]> = [
-  ['quot', '"'],
-  ['amp', '&'],
-  ['lt', '<'],
-  ['gt', '>'],
-  ['nbsp', ' '],
-  ['apos', "'"],
-];
-
 /**
  * Parse the small set of inline-text conveniences Mermaid supports (found via
  * `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`) into
@@ -393,10 +383,9 @@ const NAMED_ENTITIES: ReadonlyArray<readonly [string, string]> = [
  * and `layout.ts`'s width/height estimation — neither needs to know about a
  * bold/italic span) and a structured rich-text body (`runs`, `types.ts`'s
  * `LabelToken[]` — what the translator actually renders):
- *  - Mermaid's entity codes (`#quot;`, `#9829;`, ...) are decoded to their
- *    character first — the numeric form via its Unicode code point, plus the
- *    handful of named entities Mermaid documents — regardless of the two
- *    cases below.
+ *  - Mermaid's entity codes (`#quot;`, `#9829;`, `#infin;`, ...) are decoded to
+ *    their character first ({@link decodeMermaidEntities}), regardless of the
+ *    two cases below.
  *  - `<br/>` (and `<br>`, `<br />`, case-insensitive) becomes a real line
  *    break: a `{ break: true }` token in `runs` (`text` flattens it to a
  *    single space instead, same as before this function could produce real
@@ -410,10 +399,7 @@ const NAMED_ENTITIES: ReadonlyArray<readonly [string, string]> = [
  *    label stays literal, unchanged from before.
  */
 function parseLabel(text: string): { text: string; runs: LabelToken[] } {
-  let decoded = text.replace(/#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)));
-  for (const [name, char] of NAMED_ENTITIES) {
-    decoded = decoded.split(`#${name};`).join(char);
-  }
+  let decoded = decodeMermaidEntities(text);
   const isMarkdownString = decoded.length >= 2 && decoded.startsWith('`') && decoded.endsWith('`');
   if (isMarkdownString) decoded = decoded.slice(1, -1);
 

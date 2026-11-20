@@ -113,3 +113,27 @@ test('sequence: a `;` in the YAML frontmatter is not a statement end', () => {
   const { ast } = parseSequence('---\ntitle: x; y\n---\nsequenceDiagram\n  A->>B: ok');
   assert.deepEqual(ast.participants.map((p) => p.id), ['A', 'B']);
 });
+
+test('participant config @{...} before `as`: no bogus participant, the `as` text is the label (Mermaid official examples)', () => {
+  // sequenceDiagram#12 and #14 of Mermaid's docs: the config was only recognized at the end of the line, so
+  // `API@{ "type": "boundary" } as Public API` declared a participant named after the whole text.
+  const { ast, warnings } = parseSequence(
+    'sequenceDiagram\n  participant API@{ "type": "boundary", "alias": "Internal" } as Public API\n  actor DB@{ "type": "database" } as User Database\n  API->>DB: Query',
+  );
+  assert.deepEqual(ast.participants.map((p) => [p.id, p.label]), [
+    ['API', 'Public API'],
+    ['DB', 'User Database'],
+  ]);
+  assert.ok(warnings.some((w) => w.includes('Participant types')));
+});
+
+test('participant config "alias" is the label when there is no `as`', () => {
+  const { ast } = parseSequence('sequenceDiagram\n  participant API@{ "type": "boundary", "alias": "Public API" }\n  API->>API: ping');
+  assert.deepEqual(ast.participants.map((p) => [p.id, p.label]), [['API', 'Public API']]);
+});
+
+test('named entities are decoded like Mermaid (#infin;, #hearts;), unknown names and out-of-range codes stay as written', () => {
+  const { ast } = parseSequence('sequenceDiagram\n  A->>B: I #hearts; you #infin; times #foo; #99999999;');
+  const message = ast.items.find((i) => i.type === 'message');
+  assert.equal(message?.type === 'message' ? message.text : '', 'I ♥ you ∞ times #foo; #99999999;');
+});

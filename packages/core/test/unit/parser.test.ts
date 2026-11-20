@@ -523,6 +523,12 @@ test('Mermaid entity codes are decoded (numeric and the documented named ones)',
   assert.equal(byId.get('B'), '"quoted"');
 });
 
+test('any HTML 4 named entity is decoded (#infin;, #rarr;); an out-of-range code no longer throws', () => {
+  // `#99999999;` made String.fromCodePoint throw a RangeError out of renderDiagram (untrusted input).
+  const { ast } = parseMermaid('graph TD\n  A["a #rarr; b #infin; #foo; #99999999;"]');
+  assert.equal(ast.nodes[0]!.label, 'a → b ∞ #foo; #99999999;');
+});
+
 test('a backtick-delimited Markdown string has its delimiters and emphasis markers stripped, not shown literally', () => {
   const { ast } = parseMermaid('graph TD\n  A["`**bold** and _italic_`"]');
   const a = ast.nodes.find((n) => n.id === 'A')!;

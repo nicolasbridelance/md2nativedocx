@@ -5,9 +5,9 @@ exemple de `examples.json`, ce que Mermaid a compris (sa base après analyse, sa
 analyseur a compris. Un écart est un nœud, un lien, un message ou un bloc qu'un seul des deux côtés voit, même
 sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**252 exemples comparés : 221 identiques, 31 avec écart, dont 3 sans avertissement** (l'étage 1 les
+**252 exemples comparés : 225 identiques, 27 avec écart, dont 0 sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
-`sequenceDiagram#12`, `sequenceDiagram#14`, `sequenceDiagram#34`). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
+aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 289 d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états et ER en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
@@ -15,7 +15,7 @@ compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à c
 | classDiagram | 38 | 28 | 10 | 0 |
 | entityRelationshipDiagram | 25 | 13 | 12 | 0 |
 | flowchart | 116 | 112 | 4 | 0 |
-| sequenceDiagram | 38 | 34 | 4 | 0 |
+| sequenceDiagram | 38 | 38 | 0 | 0 |
 | stateDiagram | 22 | 21 | 1 | 0 |
 | swimlanes | 13 | 13 | 0 | 0 |
 
@@ -168,41 +168,6 @@ compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à c
 - Mermaid seulement : `node one "one"`
 - Mermaid seulement : `link Start -> one`
 - Mermaid seulement : `link one -> End`
-
-### sequenceDiagram#12 — sans avertissement
-
-- Mermaid seulement : `participant API "Public API"`
-- Mermaid seulement : `participant DB "User Database"`
-- Mermaid seulement : `participant Svc "Auth Service"`
-- nous seulement : `participant API@{ "type": "boundary" } "Public API"`
-- nous seulement : `participant DB@{ "type": "database" } "User Database"`
-- nous seulement : `participant Svc@{ "type": "control" } "Auth Service"`
-- nous seulement : `participant API "API"`
-- nous seulement : `participant Svc "Svc"`
-- nous seulement : `participant DB "DB"`
-
-### sequenceDiagram#13
-
-- Mermaid seulement : `participant API "Public API"`
-- Mermaid seulement : `participant Auth "Auth Service"`
-- Mermaid seulement : `participant DB "User Database"`
-- nous seulement : `participant API "API"`
-- nous seulement : `participant Auth "Auth"`
-- nous seulement : `participant DB "DB"`
-
-### sequenceDiagram#14 — sans avertissement
-
-- Mermaid seulement : `participant API "External Name"`
-- Mermaid seulement : `participant DB "External DB"`
-- nous seulement : `participant API@{ "type": "boundary", "alias": "Internal Name" } "External Name"`
-- nous seulement : `participant DB@{ "type": "database", "alias": "Internal DB" } "External DB"`
-- nous seulement : `participant API "API"`
-- nous seulement : `participant DB "DB"`
-
-### sequenceDiagram#34 — sans avertissement
-
-- Mermaid seulement : `message B -> A "I ♥ you ∞ times more!"`
-- nous seulement : `message B -> A "I ♥ you #infin; times more!"`
 
 ### stateDiagram#4
 

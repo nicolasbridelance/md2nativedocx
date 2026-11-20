@@ -206,10 +206,13 @@ Ensuite, dans l'ordre :
             `tools/mermaid-differential/` (hors workspaces, son propre lockfile, `mermaid@12.3.0` épinglé comme le
             corpus), rapport `test-corpus/mermaid-official/DIFFERENTIAL.md`, verrou CI (job *Mermaid differential*,
             `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER. Premier passage :
-            252 exemples comparés, **217 identiques, 35 écarts, dont 7 sans avertissement** (à corriger d'abord :
-            `flowchart#95` flèche longue `---->` avec libellé, `#98`/`#99` nœud déjà vu ajouté à un sous-graphe,
-            `#104` id de sous-graphe entre backticks, `sequenceDiagram#12`/`#14` `participant X@{…}`, `#34`
-            entité nommée `#infin;`). Reste : comparateurs des autres types (mindmap, Gantt, C4, requirement…).
+            252 exemples comparés, 217 identiques, 35 écarts dont 7 sans avertissement ; **les 7 corrigés le
+            2026-11-20** (flèche longue avec libellé, membres de sous-graphe à la règle de Mermaid, titre de
+            sous-graphe lu comme un libellé, `participant X@{…} as …` et `"alias"`, entités nommées HTML 4 partagées
+            par organigrammes et séquence, ce qui a aussi supprimé un `RangeError` sur `#99999999;`) : **225
+            identiques, 27 écarts, tous avec avertissement** (classes, ER, liens vers un sous-graphe, état seul). Vu
+            dans Word au passage : deux sous-graphes empilés (`flowchart#104`) se touchent, sans marge entre eux.
+            Reste : comparateurs des autres types (mindmap, Gantt, C4, requirement…).
             Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
