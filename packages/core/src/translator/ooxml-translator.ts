@@ -1433,7 +1433,10 @@ function renderEdgeLabel(
     '        </w:p>',
     '      </w:txbxContent>',
     '    </wps:txbx>',
-    `    <wps:bodyPr rot="0" vert="horz" wrap="none" lIns="${insetEmu}" tIns="0" rIns="${insetEmu}" bIns="0"`,
+    // `wrap="square"`, never `"none"`: real Word shrinks a `wrap="none"` box to its text with the left edge
+    // fixed, which shifted every label left of its edge (see `unwrappedTextFrame` in `canvas.ts`). The box
+    // is already sized to its text with a safety margin (`edgeLabelSize`), so the text does not wrap.
+    `    <wps:bodyPr rot="0" vert="horz" wrap="square" lIns="${insetEmu}" tIns="0" rIns="${insetEmu}" bIns="0"`,
     '      anchor="ctr" anchorCtr="1"><a:noAutofit/></wps:bodyPr>',
     '  </wps:wsp>',
   ].join('\n');

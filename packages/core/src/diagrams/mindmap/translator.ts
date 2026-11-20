@@ -193,7 +193,9 @@ function nodeShape(
     '      </w:p>',
     '    </w:txbxContent>',
     '  </wps:txbx>',
-    '  <wps:bodyPr lIns="45720" tIns="22860" rIns="45720" bIns="22860" anchor="ctr" wrap="none"/>',
+    // `wrap="square"`, never `"none"`: real Word shrinks a `wrap="none"` box to its text (see
+    // `unwrappedTextFrame` in `canvas.ts`); `boxSizeFor` leaves enough margin for the text to stay on one line.
+    '  <wps:bodyPr lIns="45720" tIns="22860" rIns="45720" bIns="22860" anchor="ctr" wrap="square"/>',
     '</wps:wsp>',
   ].join('\n');
 }

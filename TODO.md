@@ -175,9 +175,10 @@ Ensuite, dans l'ordre :
               boîtes remplies rétrécies (Ishikawa). Correctif : `unwrappedTextFrame` (`canvas.ts`) élargit les
               zones de texte invisibles du côté où le texte peut déborder, `wrapDrawingCanvas` les ramène dans le
               canevas (LibreOffice décale tout le dessin sinon), les boîtes remplies passent en `wrap="square"`.
-              Vérifié dans Word et LibreOffice sur 31 types. Reste : les étiquettes d'arêtes du flowchart
-              (`ooxml-translator.ts`, `wrap="none"`, fond blanc, boîte déjà à la taille du texte : petit décalage
-              à gauche) et les nœuds de mindmap en formes (même cas) ; baselines `test:visual` à confirmer en CI.
+              Vérifié dans Word et LibreOffice sur 31 types. Le même jour, les étiquettes d'arêtes du flowchart
+              et les nœuds de mindmap en formes passent aussi en `wrap="square"` (vérifié dans Word) : plus aucun
+              `wrap="none"` dans `core`. Baselines `test:visual` rafraîchies depuis la CI Linux (34 images,
+              dérive due surtout à 52aeea8, l'espace réservé aux étiquettes d'arêtes ; toutes revues).
               Constat à part : en séquence, la garde d'un `else` passe sous la barre d'activation.
             - **Décision du mainteneur, 2026-11-19 : ajouts d'API publique de `core` acceptés** — `DiagramType`
               `'agentflow'` et `'usecase'` (+ `'mermaidUnsupported'`), `NodeShape` `'actor'`, `EdgeType`
