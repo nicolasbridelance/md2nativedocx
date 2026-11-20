@@ -39,11 +39,13 @@
  * it does; it is a no-op whenever a document has no SmartArt diagram in it.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { patchSettings } from './referenceDocBuilder.mjs';
-import { AdmZip, readZipEntry, setZipEntry } from './zipUtils.mjs';
-import { UUID_SOURCE, resolvePartDir } from './placeholderIds.mjs';
+// No Node import here: these steps work on a `DocxPackage` (docxPackage.mjs), so the browser converter
+// runs them unchanged. The file-based entry points (`postProcessDocx`, `injectSmartArtParts`) live in
+// docxFiles.mjs.
+import { UUID_SOURCE, isPartId } from './placeholderIds.mjs';
+
+/** @typedef {import('./docxPackage.mjs').DocxPackage} DocxPackage */
+/** @typedef {import('./docxPackage.mjs').DiagramPartsSource} DiagramPartsSource */
 
 /** Extended namespaces Word declares on the document root, prefix -> URI. */
 const EXTENDED_NS = {
@@ -297,7 +299,7 @@ export function forceEmojiColorFont(documentXml) {
  * (`--toc` wasn't used) or no Heading1 paragraph to anchor after — in the
  * latter case the TOC is left at Pandoc's own default position rather than
  * silently dropped. Safe to always run, TOC or not: this is why
- * `postProcessDocx` composes it unconditionally instead of taking a flag.
+ * `postProcessPackage` composes it unconditionally instead of taking a flag.
  */
 export function repositionTocAfterTitle(documentXml) {
   const tocMatch = documentXml.match(/<w:sdt>[\s\S]*?<w:docPartGallery w:val="Table of Contents"[\s\S]*?<\/w:sdt>/);
@@ -395,7 +397,30 @@ export function collapseTrailingLandscapeSection(documentXml) {
 }
 
 /**
- * Post-process a .docx file in place: read `word/document.xml`, apply the
+ * Patch `word/settings.xml` to add `<w:updateFields w:val="true" />` when a
+ * TOC is requested (spec §1.10/§2.2) — without it, a Pandoc-generated TOC
+ * field shows stale/empty content until the user manually refreshes it
+ * (F9); with it, Word itself offers to update fields on open. No-op (and
+ * idempotent) when `toc` is falsy or the flag is already present.
+ *
+ * Applied to the **final generated `.docx`**'s own `settings.xml` (see
+ * {@link postProcessPackage}), not to the reference doc — confirmed
+ * empirically that Pandoc synthesizes its own `word/settings.xml` from
+ * scratch and does NOT carry over the reference document's (unlike
+ * `theme1.xml`/`styles.xml`/`document.xml`'s `sectPr`, all confirmed
+ * carried over).
+ *
+ * @param {string} settingsXml
+ * @param {{ toc?: boolean }} [options]
+ * @returns {string}
+ */
+export function patchSettings(settingsXml, { toc } = {}) {
+  if (!toc || /<w:updateFields\b/.test(settingsXml)) return settingsXml;
+  return settingsXml.replace(/(<w:settings\b[^>]*>)/, `$1\n  <w:updateFields w:val="true" />`);
+}
+
+/**
+ * Post-process a .docx package: read `word/document.xml`, apply the
  * corrections above, and write the entry back into the archive. When `toc`
  * is true (spec §1.10/§2.2, "Lot 3"), also patches `word/settings.xml` to
  * add `<w:updateFields w:val="true" />` — confirmed empirically that this
@@ -406,44 +431,39 @@ export function collapseTrailingLandscapeSection(documentXml) {
  * When `emojiFont` is true (default — spec §1.15/§2.5, "Lot 2"), also forces
  * the emoji color font onto any run containing a pictographic character.
  *
- * @param docxPath - Path to the .docx to patch.
- * @param options.toc - Whether a TOC was requested for this export.
- * @param options.emojiFont - Whether to force the emoji color font (default `true`).
+ * @param {DocxPackage} pkg - The package to patch.
+ * @param {{ toc?: boolean, emojiFont?: boolean }} [options] - `toc`: whether a TOC was requested for this
+ *   export; `emojiFont`: whether to force the emoji color font (default `true`).
+ * @returns {boolean} Whether any entry changed. Only changed entries are written: every other part of
+ *   Pandoc's archive is left byte-for-byte untouched.
  */
-export function postProcessDocx(docxPath, { toc = false, emojiFont = true } = {}) {
-  const archive = resolve(docxPath);
-  const zip = new AdmZip(archive);
-
-  const originalDocument = readZipEntry(zip, 'word/document.xml');
+export function postProcessPackage(pkg, { toc = false, emojiFont = true } = {}) {
+  const originalDocument = pkg.readText('word/document.xml');
   let patchedDocument = repositionTocAfterTitle(renumberDrawingIds(injectNamespaces(originalDocument)));
   patchedDocument = collapseTrailingLandscapeSection(collapseAdjacentSectionBreaks(patchedDocument));
   if (emojiFont) patchedDocument = forceEmojiColorFont(patchedDocument);
   let changed = false;
   if (patchedDocument !== originalDocument) {
-    setZipEntry(zip, 'word/document.xml', patchedDocument);
+    pkg.write('word/document.xml', patchedDocument);
     changed = true;
   }
 
   if (toc) {
-    const originalSettings = readZipEntry(zip, 'word/settings.xml');
+    const originalSettings = pkg.readText('word/settings.xml');
     const patchedSettings = patchSettings(originalSettings, { toc });
     if (patchedSettings !== originalSettings) {
-      setZipEntry(zip, 'word/settings.xml', patchedSettings);
+      pkg.write('word/settings.xml', patchedSettings);
       changed = true;
     }
   }
-
-  if (!changed) return;
-  // Replace only the entries that actually changed; every other part of
-  // Pandoc's archive is left byte-for-byte untouched.
-  zip.writeZip(archive);
+  return changed;
 }
 
 /**
  * SmartArt package wiring — the "notable postprocess.mjs extension" flagged
  * in `docs/specs/FUTURE_mmd2smartart_SPEC.md` §8 as needing sign-off before writing
  * (given 2026-09-03): adds brand-new ZIP entries, not just a same-path
- * replacement like {@link postProcessDocx} above.
+ * replacement like {@link postProcessPackage} above.
  *
  * Why this exists at all: `packages/pandoc-filter/bin/md2nativedocx-core.mjs`
  * cannot add `.docx` package parts or relationships itself (Pandoc's Lua
@@ -482,8 +502,8 @@ const SMARTART_CONTENTTYPE = {
 };
 /** `data`/`layout`/`quickStyle`/`colors` — the on-disk part-name stem per kind (`qs` -> `quickStyle1.xml`, not `qs1.xml`). */
 const SMARTART_PART_STEM = { dm: 'data', lo: 'layout', qs: 'quickStyle', cs: 'colors' };
-/** The 4 files `md2nativedocx-core.mjs` writes per diagram id, one per relIds kind. */
-const SMARTART_SOURCE_FILE = { dm: 'data.xml', lo: 'layout.xml', qs: 'quickStyle.xml', cs: 'colors.xml' };
+/** The core part field holding each relIds kind (`SmartArtPartsData`, docxPackage.mjs). */
+const SMARTART_SOURCE_FIELD = { dm: 'dataXml', lo: 'layoutXml', qs: 'styleXml', cs: 'colorsXml' };
 
 /** The optional fifth part: the pre-rendered `dsp:drawing` Word and LibreOffice show as the diagram's cached rendering. */
 const SMARTART_DRAWING_RELTYPE = 'http://schemas.microsoft.com/office/2007/relationships/diagramDrawing';
@@ -504,10 +524,10 @@ function findSmartArtPlaceholderIds(documentXml) {
 }
 
 /** The next unused `word/diagrams/data{N}.xml` number, scanning the archive's existing entries (1 if none). */
-function nextSmartArtPartNumber(zip) {
+function nextSmartArtPartNumber(pkg) {
   let max = 0;
-  for (const entry of zip.getEntries()) {
-    const match = /^word\/diagrams\/data(\d+)\.xml$/.exec(entry.entryName);
+  for (const name of pkg.names()) {
+    const match = /^word\/diagrams\/data(\d+)\.xml$/.exec(name);
     if (match) max = Math.max(max, Number(match[1]));
   }
   return max + 1;
@@ -521,42 +541,42 @@ function nextFreeRelId(relsXml, prefix) {
 }
 
 /**
- * Complete the SmartArt wiring for every placeholder diagram found in
- * `docxPath`'s `word/document.xml` — a no-op (no extraction, no rezip) if
- * none are present, which covers every export that never dispatched to
- * SmartArt in the first place. Must run after {@link postProcessDocx} (this
- * reads the already-namespace-fixed/id-renumbered `word/document.xml`).
+ * Complete the SmartArt wiring for every placeholder diagram found in the
+ * package's `word/document.xml` — a no-op (nothing written) if none are
+ * present, which covers every export that never dispatched to SmartArt in the
+ * first place. Must run after {@link postProcessPackage} (this reads the
+ * already-namespace-fixed/id-renumbered `word/document.xml`).
  *
- * @param docxPath - Path to the .docx to patch.
- * @param smartArtDir - The directory `MD2NATIVEDOCX_SMARTART_DIR` pointed
- *   the core bridge at; each placeholder id names a `<smartArtDir>/<id>/`
- *   subdirectory holding that diagram's `data.xml`/`layout.xml`/
- *   `colors.xml`/`quickStyle.xml`.
+ * @param {DocxPackage} pkg - The package to patch.
+ * @param {DiagramPartsSource | null} parts - Where each placeholder id's parts
+ *   (`dataXml`, `layoutXml`, `colorsXml`, `styleXml`, optional `drawingXml`)
+ *   are found: the bridge's directory (`docxFiles.mjs`) or memory.
+ * @param {string} [where] - Named in the error when a diagram's parts are missing.
+ * @returns {boolean} Whether anything was written.
  */
-export function injectSmartArtParts(docxPath, smartArtDir) {
-  const archive = resolve(docxPath);
-  const zip = new AdmZip(archive);
-  let documentXml = readZipEntry(zip, 'word/document.xml');
+export function injectSmartArtIntoPackage(pkg, parts, where = 'the rendered parts') {
+  let documentXml = pkg.readText('word/document.xml');
 
   const ids = findSmartArtPlaceholderIds(documentXml);
-  if (ids.length === 0) return;
+  if (ids.length === 0) return false;
 
-  if (!smartArtDir) {
+  if (!parts) {
     throw new Error(
       'md2nativedocx: document.xml references SmartArt placeholders but no smartArtDir was given'
     );
   }
 
-  let contentTypes = readZipEntry(zip, '[Content_Types].xml');
-  let relsXml = readZipEntry(zip, 'word/_rels/document.xml.rels');
+  let contentTypes = pkg.readText('[Content_Types].xml');
+  let relsXml = pkg.readText('word/_rels/document.xml.rels');
 
-  let nextPartNumber = nextSmartArtPartNumber(zip);
+  let nextPartNumber = nextSmartArtPartNumber(pkg);
   const newParts = [];
 
   for (const id of ids) {
-    const sourceDir = resolvePartDir(smartArtDir, id);
-    if (sourceDir === null || !existsSync(sourceDir)) {
-      throw new Error(`md2nativedocx: no SmartArt parts found for diagram "${id}" in ${smartArtDir}`);
+    // The id comes from document.xml, which holds author text too: only a generated id is looked up.
+    const source = isPartId(id) ? parts.smartArt(id) : null;
+    if (!source) {
+      throw new Error(`md2nativedocx: no SmartArt parts found for diagram "${id}" in ${where}`);
     }
 
     const n = nextPartNumber++;
@@ -564,8 +584,7 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
     // Optional 5th part (`dsp:drawing`): written by the bridge only when SmartArt drawings are on. Its
     // relationship id lives inside the *data* part (`dsp:dataModelExt/@relId`), not in document.xml.
     let drawingRelId = null;
-    const drawingFile = join(sourceDir, 'drawing.xml');
-    if (existsSync(drawingFile)) {
+    if (source.drawingXml !== undefined) {
       drawingRelId = nextFreeRelId(relsXml, `rIdSmartArt${n}DR`);
       relsXml = relsXml.replace(
         '</Relationships>',
@@ -575,7 +594,7 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
         '</Types>',
         `<Override PartName="/word/diagrams/drawing${n}.xml" ContentType="${SMARTART_DRAWING_CONTENTTYPE}" /></Types>`
       );
-      newParts.push([`word/diagrams/drawing${n}.xml`, readFileSync(drawingFile, 'utf8')]);
+      newParts.push([`word/diagrams/drawing${n}.xml`, source.drawingXml]);
     }
 
     /** @type {Record<'dm'|'lo'|'qs'|'cs', string>} */
@@ -583,7 +602,7 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
     for (const kind of /** @type {const} */ (['dm', 'lo', 'qs', 'cs'])) {
       const partName = `${SMARTART_PART_STEM[kind]}${n}.xml`;
       const partPath = `word/diagrams/${partName}`;
-      let xml = readFileSync(join(sourceDir, SMARTART_SOURCE_FILE[kind]), 'utf8');
+      let xml = source[SMARTART_SOURCE_FIELD[kind]];
       if (kind === 'dm') {
         const token = `SMARTART_PLACEHOLDER:${id}:dr`;
         if (drawingRelId) xml = xml.split(token).join(drawingRelId);
@@ -618,12 +637,11 @@ export function injectSmartArtParts(docxPath, smartArtDir) {
   // unrelated to anything this function adds. The 4 relationships added
   // above are always internal (`Target="diagrams/..."`, no `TargetMode`
   // attribute at all), by construction, not by a runtime check.
-  setZipEntry(zip, 'word/document.xml', documentXml);
-  setZipEntry(zip, '[Content_Types].xml', contentTypes);
-  setZipEntry(zip, 'word/_rels/document.xml.rels', relsXml);
+  pkg.write('word/document.xml', documentXml);
+  pkg.write('[Content_Types].xml', contentTypes);
+  pkg.write('word/_rels/document.xml.rels', relsXml);
   for (const [partPath, xml] of newParts) {
-    setZipEntry(zip, partPath, xml);
+    pkg.write(partPath, xml);
   }
-
-  zip.writeZip(archive);
+  return true;
 }

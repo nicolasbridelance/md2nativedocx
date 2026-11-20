@@ -8,13 +8,12 @@ import { join, resolve } from 'node:path';
 import {
   injectNamespaces,
   renumberDrawingIds,
-  injectSmartArtParts,
   repositionTocAfterTitle,
   forceEmojiColorFont,
   collapseAdjacentSectionBreaks,
   collapseTrailingLandscapeSection,
-  postProcessDocx,
 } from '../src/postprocess.mjs';
+import { injectSmartArtParts, postProcessDocx, resolvePartDir } from '../src/docxFiles.mjs';
 
 /** A `w:document` root as Pandoc emits it: no wpc/wpg/wps declarations. */
 const PANDOC_ROOT =
@@ -321,8 +320,7 @@ test('prose that merely mentions a placeholder with a path or a non-UUID id is l
   });
 });
 
-test('resolvePartDir accepts a generated UUID and refuses anything that could leave the directory', async () => {
-  const { resolvePartDir } = await import('../src/placeholderIds.mjs');
+test('resolvePartDir accepts a generated UUID and refuses anything that could leave the directory', () => {
   const root = resolve('parts');
   const uuid = '0f8fad5b-d9cb-469f-a165-70867728950e';
   assert.equal(resolvePartDir(root, uuid), join(root, uuid));

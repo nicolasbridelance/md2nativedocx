@@ -28,9 +28,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { postProcessDocx, injectSmartArtParts } from './postprocess.mjs';
+import { postProcessDocx, injectSmartArtParts, injectChartParts } from './docxFiles.mjs';
 import { unclosedFenceWarnings } from './unclosedFences.mjs';
-import { injectChartParts } from './chartParts.mjs';
 import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from './referenceDocBuilder.mjs';
 
 /** A conversion that produced no document. `stage` says where it stopped. */

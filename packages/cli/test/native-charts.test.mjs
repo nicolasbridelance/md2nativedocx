@@ -6,7 +6,11 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
-import { buildWorkbookXlsx } from '../src/chartParts.mjs';
+import { buildWorkbookXlsx as buildWorkbook } from '../src/chartParts.mjs';
+import { admZipWriter } from '../src/docxFiles.mjs';
+
+/** The workbook as the CLI writes it (adm-zip). */
+const buildWorkbookXlsx = (data) => buildWorkbook(data, admZipWriter);
 
 /**
  * Native Word charts (ADR 0011): the opt-in pie chart + embedded workbook, end to end through the
