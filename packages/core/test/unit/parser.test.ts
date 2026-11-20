@@ -289,6 +289,25 @@ test('parses mid-chain labels across all supported edge families (dotted, thick,
   assert.equal(warnings.length, 0);
 });
 
+test('a mid-chain label accepts a longer closing marker, as Mermaid does (B -- No ----> E, official example)', () => {
+  const { ast, warnings } = parseMermaid(
+    'flowchart TD\n  B -- No ----> E[End]\n  C -- a ---- D\n  F == b ====> G\n  H -. c ..-> I\n  J -- d ----o K',
+  );
+  assert.deepEqual(
+    ast.edges.map((e) => [e.from, e.to, e.type, e.label]),
+    [
+      ['B', 'E', 'arrow', 'No'],
+      ['C', 'D', 'line', 'a'],
+      ['F', 'G', 'thick', 'b'],
+      ['H', 'I', 'dotted', 'c'],
+      ['J', 'K', 'circle', 'd'],
+    ],
+  );
+  assert.deepEqual(ast.nodes.map((n) => n.id), ['B', 'E', 'C', 'D', 'F', 'G', 'H', 'I', 'J', 'K']);
+  assert.equal(ast.nodes.find((n) => n.id === 'E')!.label, 'End');
+  assert.equal(warnings.length, 0);
+});
+
 test('mid-chain labels work in a same-line chain and are independent per segment', () => {
   const { ast } = parseMermaid('graph TD\n  A-- Yes -->B-- No -->C');
   assert.equal(ast.edges.length, 2);
@@ -611,10 +630,10 @@ test('a bare "direction LR" outside any subgraph is not valid syntax and still w
   assert.ok(warnings.some((w) => w.includes('Unsupported line ignored: direction LR')));
 });
 
-test('a node stays attached to the subgraph where it was first declared, not a later enclosing one', () => {
+test('a node kept by a nested subgraph is not moved to the enclosing one that mentions it later', () => {
   // Regression: `B --> C` here runs AFTER Inner's `end`, back inside Outer.
-  // C was already declared inside Inner and must not be re-attached to
-  // Outer just because a later line mentions it from an outer scope.
+  // Inner closed first and keeps C, as in Mermaid; Outer must not take it
+  // just because a later line mentions it from an outer scope.
   const { ast } = parseMermaid(
     'graph TD\n  subgraph Outer[Out]\n    A --> B\n    subgraph Inner[In]\n      C --> D\n    end\n    B --> C\n  end',
   );
@@ -622,6 +641,46 @@ test('a node stays attached to the subgraph where it was first declared, not a l
   const inner = ast.subgraphs.find((s) => s.id === 'Inner')!;
   assert.deepEqual(outer.nodeIds, ['A', 'B']);
   assert.deepEqual(inner.nodeIds, ['C', 'D']);
+});
+
+test('a subgraph keeps a node it mentions even when the node was first seen outside it (Mermaid official example)', () => {
+  // flowchart#98 of Mermaid's docs: c1 and a2 appear in a top-level link first. Mermaid puts each node in
+  // the subgraph that mentions it; drawing a2 outside `one` was a silent difference found by the
+  // differential against Mermaid (tools/mermaid-differential/).
+  const { ast } = parseMermaid(
+    'flowchart TB\n  c1-->a2\n  subgraph one\n  a1-->a2\n  end\n  subgraph two\n  b1-->b2\n  end\n  subgraph three\n  c1-->c2\n  end',
+  );
+  assert.deepEqual(
+    ast.subgraphs.map((s) => [s.id, s.nodeIds]),
+    [
+      ['one', ['a1', 'a2']],
+      ['two', ['b1', 'b2']],
+      ['three', ['c1', 'c2']],
+    ],
+  );
+});
+
+test('a subgraph title is read like a node label: Markdown string, #name; entity, <br> (Mermaid official example)', () => {
+  // flowchart#104 of Mermaid's docs: the title was drawn as "`**Two**`", syntax included.
+  const { ast } = parseMermaid('flowchart LR\n  subgraph "`**Two**`"\n  c --> d\n  end\n  subgraph S["A #59; B<br>C"]\n  x\n  end');
+  assert.deepEqual(ast.subgraphs.map((s) => [s.id, s.title]), [
+    ['**Two**', 'Two'],
+    ['S', 'A ; B C'],
+  ]);
+});
+
+test('of two sibling subgraphs mentioning the same node, the first one to close keeps it', () => {
+  const { ast } = parseMermaid('flowchart TB\n  subgraph S1\n  A --> B\n  end\n  subgraph S2\n  B --> C\n  end');
+  assert.deepEqual(ast.subgraphs.map((s) => [s.id, s.nodeIds]), [
+    ['S1', ['A', 'B']],
+    ['S2', ['C']],
+  ]);
+});
+
+test('an unclosed subgraph still settles its members (and warns)', () => {
+  const { ast, warnings } = parseMermaid('flowchart TB\n  A --> B\n  subgraph S\n  B --> C');
+  assert.deepEqual(ast.subgraphs[0]!.nodeIds, ['B', 'C']);
+  assert.ok(warnings.includes('Unclosed `subgraph` block.'));
 });
 
 test('joins a node label that wraps across a raw newline instead of dropping the statement', () => {

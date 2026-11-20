@@ -289,37 +289,51 @@ const EDGE_OPERATORS: ReadonlyArray<EdgeOperatorMatcher> = [
  * {@link EdgeType} within that family. Only matched when no full token from
  * {@link EDGE_OPERATORS} already matched at the same position (checked first
  * in {@link parseEdgeChain}), so a plain `A-->B` is never reinterpreted here.
- * Each family's closings are ordered longest-token-first so e.g. `.-` doesn't
- * capture prematurely and strand the `>` of `.->`.
+ *
+ * As in Mermaid's grammar, a closing marker may be longer than its shortest
+ * form (`A-- No ---->B` is an arrow, a longer one in Mermaid's layout): a run
+ * of at least two dashes (or `=`) then the end character, or dots then `-`.
+ * Each family's closings are tried in order, arrow forms first, so a line
+ * form never captures the dashes of an arrow and strands its `>`.
  */
 const MID_LABEL_FAMILIES: ReadonlyArray<{
   open: string;
-  closings: ReadonlyArray<{ token: string; type: EdgeType }>;
+  closings: ReadonlyArray<{ pattern: RegExp; type: EdgeType }>;
 }> = [
   {
     open: '--',
     closings: [
-      { token: '-->', type: 'arrow' },
-      { token: '--o', type: 'circle' },
-      { token: '--x', type: 'cross' },
-      { token: '---', type: 'line' },
+      { pattern: /-{2,}>/y, type: 'arrow' },
+      { pattern: /-{2,}o/y, type: 'circle' },
+      { pattern: /-{2,}x/y, type: 'cross' },
+      { pattern: /-{3,}/y, type: 'line' },
     ],
   },
   {
     open: '-.',
     closings: [
-      { token: '.->', type: 'dotted' },
-      { token: '.-', type: 'dottedLine' },
+      { pattern: /\.+->/y, type: 'dotted' },
+      { pattern: /\.+-/y, type: 'dottedLine' },
     ],
   },
   {
     open: '==',
     closings: [
-      { token: '==>', type: 'thick' },
-      { token: '===', type: 'thickLine' },
+      { pattern: /={2,}>/y, type: 'thick' },
+      { pattern: /={3,}/y, type: 'thickLine' },
     ],
   },
 ];
+
+/** Length of a closing marker of `family` starting at `at`, and its edge type; `null` if none starts there. */
+function matchClosing(line: string, at: number, family: (typeof MID_LABEL_FAMILIES)[number]): { length: number; type: EdgeType } | null {
+  for (const closing of family.closings) {
+    closing.pattern.lastIndex = at;
+    const m = closing.pattern.exec(line);
+    if (m) return { length: m[0].length, type: closing.type };
+  }
+  return null;
+}
 
 /**
  * Node ids that collide with Object.prototype members. Dagre stores nodes in a
@@ -641,9 +655,8 @@ export function parseMermaid(text: string): ParseResult {
   const edges: FlowEdge[] = [];
   const subgraphs: Subgraph[] = [];
   const subgraphStack: Subgraph[] = [];
-  // Node ids whose subgraph membership (or lack of one) has already been
-  // decided, by the first line that mentions them — see attachToCurrentSubgraph.
-  const subgraphAttached = new Set<string>();
+  // Node ids already kept by a subgraph that has closed — see closeSubgraph.
+  const claimedBySubgraph = new Set<string>();
   // class name -> style patch, from `classDef` (spec §6.3).
   const classDefs = new Map<string, NodeStylePatch>();
   // node id -> style patch, for nodes styled (via class/`:::`/`style`) before they are defined.
@@ -791,6 +804,7 @@ export function parseMermaid(text: string): ParseResult {
     if (/^end\s*$/i.test(line)) {
       if (subgraphStack.length > 0) {
         const closed = subgraphStack.pop()!;
+        closeSubgraph(closed, claimedBySubgraph);
         const parent = subgraphStack[subgraphStack.length - 1];
         if (parent && !parent.subgraphIds.includes(closed.id)) {
           parent.subgraphIds.push(closed.id);
@@ -839,8 +853,8 @@ export function parseMermaid(text: string): ParseResult {
         // Apply inline class styles (`A:::crit`) to the edge endpoints.
         applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, edge.from, edge.fromClass);
         applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, edge.to, edge.toClass);
-        attachToCurrentSubgraph(subgraphStack, edge.from, subgraphAttached);
-        attachToCurrentSubgraph(subgraphStack, edge.to, subgraphAttached);
+        mentionInCurrentSubgraph(subgraphStack, edge.from);
+        mentionInCurrentSubgraph(subgraphStack, edge.to);
       }
       continue;
     }
@@ -852,7 +866,7 @@ export function parseMermaid(text: string): ParseResult {
         warnings.push(`Node id "${node.id}" is reserved and was ignored.`);
       }
       applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, node.id, node.className);
-      attachToCurrentSubgraph(subgraphStack, node.id, subgraphAttached);
+      mentionInCurrentSubgraph(subgraphStack, node.id);
       continue;
     }
 
@@ -923,6 +937,8 @@ export function parseMermaid(text: string): ParseResult {
 
   if (subgraphStack.length > 0) {
     warnings.push('Unclosed `subgraph` block.');
+    // Still drawn as if closed at the end, innermost first, as an `end` would have.
+    for (const open of [...subgraphStack].reverse()) closeSubgraph(open, claimedBySubgraph);
   }
 
   return {
@@ -938,18 +954,24 @@ export function parseMermaid(text: string): ParseResult {
 
 function parseSubgraphHeader(line: string): Subgraph {
   const rest = line.replace(/^subgraph\b/i, '').trim();
+  // A title is read like a node label (Markdown string, `#name;` entities, `<br>`): the reader sees its
+  // text, never the syntax around it.
+  const title = (raw: string): string => parseLabel(raw).text;
   // subgraph id["Title"] or subgraph id[Title] or subgraph "Title" or subgraph id
   const withTitle = rest.match(/^([A-Za-z0-9_-]+)\s*\[\s*"([^"]*)"\s*\]/);
   if (withTitle) {
-    return { id: withTitle[1]!, title: withTitle[2]!, nodeIds: [], subgraphIds: [] };
+    return { id: withTitle[1]!, title: title(withTitle[2]!), nodeIds: [], subgraphIds: [] };
   }
   const withTitleNoQuotes = rest.match(/^([A-Za-z0-9_-]+)\s*\[\s*([^\]]*)\s*\]/);
   if (withTitleNoQuotes) {
-    return { id: withTitleNoQuotes[1]!, title: withTitleNoQuotes[2]!.trim(), nodeIds: [], subgraphIds: [] };
+    return { id: withTitleNoQuotes[1]!, title: title(withTitleNoQuotes[2]!.trim()), nodeIds: [], subgraphIds: [] };
   }
   const quotedTitle = rest.match(/^"([^"]+)"\s*$/);
   if (quotedTitle) {
-    return { id: quotedTitle[1]!, title: quotedTitle[1]!, nodeIds: [], subgraphIds: [] };
+    // As in Mermaid, the id is the quoted text, without the backticks of a Markdown string.
+    const text = quotedTitle[1]!;
+    const id = text.length >= 2 && text.startsWith('`') && text.endsWith('`') ? text.slice(1, -1) : text;
+    return { id, title: title(text), nodeIds: [], subgraphIds: [] };
   }
   // Bare id (or id with spaces used as title).
   const bare = rest.match(/^([A-Za-z0-9_-]+)\s*$/);
@@ -961,19 +983,28 @@ function parseSubgraphHeader(line: string): Subgraph {
 }
 
 /**
- * Attach a node to the innermost currently-open subgraph, but only the FIRST
- * time that node id is seen — matching Mermaid's own semantics, where a
- * node's subgraph membership is decided by where it's first declared, not by
- * every later line that happens to mention it. Without this, a node declared
- * inside a nested subgraph gets re-attached to an ENCLOSING subgraph the next
- * time an edge outside the nested block references it (e.g. `B --> C` after
- * `C`'s subgraph already closed), leaking it into the wrong cluster.
+ * Note that the innermost open subgraph mentions `nodeId` (a node statement or
+ * either end of a link inside it). Membership is settled when the subgraph
+ * closes, see {@link closeSubgraph}.
  */
-function attachToCurrentSubgraph(stack: Subgraph[], nodeId: string, attached: Set<string>): void {
-  if (attached.has(nodeId)) return;
-  attached.add(nodeId);
+function mentionInCurrentSubgraph(stack: Subgraph[], nodeId: string): void {
   const top = stack[stack.length - 1];
-  if (top) top.nodeIds.push(nodeId);
+  if (top && !top.nodeIds.includes(nodeId)) top.nodeIds.push(nodeId);
+}
+
+/**
+ * Settle a subgraph's members when it closes, the way Mermaid does: every node
+ * it mentions, wherever that node was first declared (`c1 --> a2` at the top,
+ * then `a1 --> a2` inside `one`, puts `a2` in `one`), except the nodes a
+ * subgraph that closed earlier already keeps. A nested subgraph closes before
+ * its parent, so `B --> C` written in the parent after the nested block keeps
+ * `C` in the nested subgraph; of two sibling subgraphs mentioning the same
+ * node, the first one to close keeps it. Checked against Mermaid itself on its
+ * official examples (`tools/mermaid-differential/`).
+ */
+function closeSubgraph(subgraph: Subgraph, claimed: Set<string>): void {
+  subgraph.nodeIds = subgraph.nodeIds.filter((id) => !claimed.has(id));
+  for (const id of subgraph.nodeIds) claimed.add(id);
 }
 
 function registerNode(
@@ -1144,10 +1175,10 @@ function matchMidLabelEdge(
   let j = start + family.open.length;
   while (j < line.length) {
     if (depth === 0) {
-      const closing = family.closings.find((c) => line.startsWith(c.token, j));
+      const closing = matchClosing(line, j, family);
       if (closing) {
         const parsed = parseLabel(stripQuotedLabel(line.slice(start + family.open.length, j).trim()));
-        return { type: closing.type, end: j + closing.token.length, label: parsed.text, labelRuns: parsed.runs };
+        return { type: closing.type, end: j + closing.length, label: parsed.text, labelRuns: parsed.runs };
       }
     }
     const ch = line[j]!;

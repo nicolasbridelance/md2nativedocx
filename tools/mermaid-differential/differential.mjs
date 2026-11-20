@@ -79,14 +79,30 @@ function mermaidEntities(text) {
   return String(text ?? '').replace(/ﬂ°°(\d+)¶ß/g, '&#$1;').replace(/ﬂ°(\w+)¶ß/g, '&$1;');
 }
 
-/** Label text as a reader sees it: tags and Markdown emphasis removed, HTML entities decoded, spaces collapsed. */
-export function normText(text) {
+/** Mermaid's label text as its rendering shows it: tags and Markdown emphasis removed, HTML entities decoded, spaces collapsed. */
+export function normText(text, markdown = false) {
   if (text === undefined || text === null) return '';
-  return decodeEntities(String(text).replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ''))
-    .replace(/[*_`]+/g, '')
+  let value = String(text).trim();
+  // Mermaid reads Markdown only inside a "`…`" string (a flowchart stores it without the backticks and says
+  // so with `labelType: 'markdown'`); elsewhere a `*` or `_` is a plain character.
+  if (value.length >= 2 && value.startsWith('`') && value.endsWith('`')) {
+    value = value.slice(1, -1);
+    markdown = true;
+  }
+  if (markdown) value = value.replace(/\*\*|__|\*|_/g, '');
+  return decodeEntities(value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ''))
     .replace(/\\n/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Our side, as Word will show it: our parser's text goes into the document as it is (escaped), so only
+ * spaces are collapsed. An HTML entity or tag left in it is a real gap, not noise: Mermaid's side is
+ * reduced to what its rendering shows ({@link normText}), ours is not.
+ */
+function ourText(text) {
+  return String(text ?? '').replace(/\s+/g, ' ').trim();
 }
 
 // --- Comparators: each returns { ours, theirs }, two lists of comparable fact strings ---------------------
@@ -108,17 +124,18 @@ const COMPARATORS = {
   flowchart: {
     theirs(db) {
       const facts = [];
-      for (const v of db.getVertices().values()) facts.push(`node ${v.id} "${normText(mermaidEntities(v.text ?? v.id))}"`);
-      for (const e of db.getEdges()) facts.push(`link ${e.start} -> ${e.end}${e.text ? ` "${normText(mermaidEntities(e.text))}"` : ''}`);
-      for (const s of db.getSubGraphs()) facts.push(`subgraph ${s.id} "${normText(mermaidEntities(s.title))}" [${[...s.nodes].sort().join(' ')}]`);
+      const md = (item) => item.labelType === 'markdown';
+      for (const v of db.getVertices().values()) facts.push(`node ${v.id} "${normText(mermaidEntities(v.text ?? v.id), md(v))}"`);
+      for (const e of db.getEdges()) facts.push(`link ${e.start} -> ${e.end}${e.text ? ` "${normText(mermaidEntities(e.text), md(e))}"` : ''}`);
+      for (const s of db.getSubGraphs()) facts.push(`subgraph ${s.id} "${normText(mermaidEntities(s.title), md(s))}" [${[...s.nodes].sort().join(' ')}]`);
       return facts;
     },
     ours(source) {
       const { ast } = parseMermaid(source);
       const facts = [];
-      for (const n of ast.nodes) facts.push(`node ${n.id} "${normText(n.label)}"`);
-      for (const e of ast.edges) facts.push(`link ${e.from} -> ${e.to}${e.label ? ` "${normText(e.label)}"` : ''}`);
-      for (const s of ast.subgraphs) facts.push(`subgraph ${s.id} "${normText(s.title)}" [${[...s.nodeIds, ...s.subgraphIds].sort().join(' ')}]`);
+      for (const n of ast.nodes) facts.push(`node ${n.id} "${ourText(n.label)}"`);
+      for (const e of ast.edges) facts.push(`link ${e.from} -> ${e.to}${e.label ? ` "${ourText(e.label)}"` : ''}`);
+      for (const s of ast.subgraphs) facts.push(`subgraph ${s.id} "${ourText(s.title)}" [${[...s.nodeIds, ...s.subgraphIds].sort().join(' ')}]`);
       return facts;
     },
   },
@@ -141,12 +158,12 @@ const COMPARATORS = {
     },
     ours(source) {
       const { ast } = parseSequence(source);
-      const facts = ast.participants.map((p) => `participant ${p.id} "${normText(p.label)}"`);
+      const facts = ast.participants.map((p) => `participant ${p.id} "${ourText(p.label)}"`);
       for (const item of ast.items) {
-        if (item.type === 'message') facts.push(`message ${item.from} -> ${item.to} "${normText(item.text)}"`);
-        else if (item.type === 'note') facts.push(`note "${normText(item.text)}"`);
-        else if (item.type === 'blockStart') facts.push(item.kind === 'rect' ? 'block rect' : `block ${item.kind} "${normText(item.label)}"`);
-        else if (item.type === 'blockElse') facts.push(`else "${normText(item.label)}"`);
+        if (item.type === 'message') facts.push(`message ${item.from} -> ${item.to} "${ourText(item.text)}"`);
+        else if (item.type === 'note') facts.push(`note "${ourText(item.text)}"`);
+        else if (item.type === 'blockStart') facts.push(item.kind === 'rect' ? 'block rect' : `block ${item.kind} "${ourText(item.label)}"`);
+        else if (item.type === 'blockElse') facts.push(`else "${ourText(item.label)}"`);
         else if (item.type === 'blockEnd') facts.push('end');
       }
       return facts;
@@ -160,7 +177,7 @@ const COMPARATORS = {
     },
     ours(source) {
       const { ast } = parseClassDiagram(source);
-      const facts = ast.classes.map((c) => `class ${c.id} "${normText(c.label)}" ${c.attributes.length}a ${c.methods.length}m`);
+      const facts = ast.classes.map((c) => `class ${c.id} "${ourText(c.label)}" ${c.attributes.length}a ${c.methods.length}m`);
       for (const r of ast.relationships) facts.push(`relation ${r.from} -- ${r.to}`);
       return facts;
     },
@@ -182,7 +199,7 @@ const COMPARATORS = {
       const { ast } = parseStateDiagram(source);
       const pseudo = new Map(ast.states.filter((s) => s.kind === 'start' || s.kind === 'end').map((s) => [s.id, `(${s.kind})`]));
       const facts = ast.states.filter((s) => !pseudo.has(s.id)).map((s) => `state ${s.id}`);
-      for (const t of ast.transitions) facts.push(`transition ${pseudo.get(t.from) ?? t.from} -> ${pseudo.get(t.to) ?? t.to}${t.label ? ` "${normText(t.label)}"` : ''}`);
+      for (const t of ast.transitions) facts.push(`transition ${pseudo.get(t.from) ?? t.from} -> ${pseudo.get(t.to) ?? t.to}${t.label ? ` "${ourText(t.label)}"` : ''}`);
       return facts;
     },
   },
@@ -197,7 +214,7 @@ const COMPARATORS = {
     ours(source) {
       const { ast } = parseErDiagram(source);
       const facts = ast.entities.map((e) => `entity ${e.id} ${e.attributes.length} attributes`);
-      for (const r of ast.relationships) facts.push(`relation ${r.from} -- ${r.to} "${normText(r.label)}"`);
+      for (const r of ast.relationships) facts.push(`relation ${r.from} -- ${r.to} "${ourText(r.label)}"`);
       return facts;
     },
   },
