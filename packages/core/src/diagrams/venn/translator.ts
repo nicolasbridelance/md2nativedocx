@@ -29,6 +29,8 @@ import {
   scaledFontSizeHalfPt,
   wrapDrawingCanvas,
   type CanvasOptions,
+  LABEL_NAME,
+  unwrappedTextFrame,
 } from '../../translator/canvas.js';
 
 const CIRCLE_R = 130;
@@ -119,12 +121,13 @@ function textBox(
   const boldAttr = opts.bold ? ' <w:b/>' : '';
   const italicAttr = opts.italic ? ' <w:i/>' : '';
   const sizeHalfPt = scaledFontSizeHalfPt(opts.sizeHalfPt, scaleFactor);
+  const frame = unwrappedTextFrame(x, w, 'center');
   return [
     '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Text ${id}"/>`,
+    `  <wps:cNvPr id="${id}" name="${LABEL_NAME} ${id}"/>`,
     '  <wps:cNvSpPr txBox="1"/>',
     '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
+    `    <a:xfrm><a:off x="${frame.x}" y="${y}"/><a:ext cx="${Math.max(1, frame.w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
     '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
     '    <a:noFill/>',
     '    <a:ln><a:noFill/></a:ln>',
@@ -137,7 +140,7 @@ function textBox(
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,
     '    </w:txbxContent>',
     '  </wps:txbx>',
-    '  <wps:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/>',
+    '  <wps:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/>',
     '</wps:wsp>',
   ].join('\n');
 }

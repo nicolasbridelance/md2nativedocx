@@ -18,7 +18,7 @@
 
 import { pathShape } from './path-shape.js';
 import { escapeXml } from './xml-escape.js';
-import { EMU_PER_PX } from './canvas.js';
+import { EMU_PER_PX, LABEL_NAME, unwrappedTextFrame } from './canvas.js';
 
 /** `a:headEnd`/`a:tailEnd` marker presets this project has confirmed render
  * correctly (see `../translator/ooxml-translator.ts`'s `ArrowMarker`). */
@@ -162,6 +162,7 @@ export function textBoxLines(
   opts: { bold?: boolean; align?: 'l' | 'ctr'; color?: string } = {},
 ): string {
   const align = opts.align ?? 'l';
+  const frame = unwrappedTextFrame(x, w, WORD_JC[align]);
   const boldAttr = opts.bold ? '<w:b/>' : '';
   const color = opts.color ?? '000000';
   const paragraphs = lines
@@ -174,10 +175,10 @@ export function textBoxLines(
     .join('\n');
   return [
     '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Text ${id}"/>`,
+    `  <wps:cNvPr id="${id}" name="${LABEL_NAME} ${id}"/>`,
     '  <wps:cNvSpPr txBox="1"/>',
     '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
+    `    <a:xfrm><a:off x="${frame.x}" y="${y}"/><a:ext cx="${Math.max(1, frame.w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
     '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
     '    <a:noFill/>',
     '    <a:ln><a:noFill/></a:ln>',
@@ -187,7 +188,7 @@ export function textBoxLines(
     paragraphs,
     '    </w:txbxContent>',
     '  </wps:txbx>',
-    `  <wps:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="${align === 'ctr' ? 'ctr' : 't'}"/>`,
+    `  <wps:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="${align === 'ctr' ? 'ctr' : 't'}"/>`,
     '</wps:wsp>',
   ].join('\n');
 }

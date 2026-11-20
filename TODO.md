@@ -167,9 +167,18 @@ Ensuite, dans l'ordre :
               Ajout d'API publique : `DiagramType` `'railroad'` et les types/fonctions `Railroad*` (à publier avec
               la prochaine release de `core`). Reste : baseline
               `test:visual` pour railroad (à produire en CI, pas sur Windows) ; `.odt` (note, comme tous les types
-              non organigrammes) ; constat de rendu Word à suivre : une zone de texte `wrap="none"` remplie est
-              rétrécie à son texte par Word (vu sur railroad, corrigé là ; vérifier les autres traducteurs qui
-              combinent `noWrap` et un fond, ex. tête d'Ishikawa).
+              non organigrammes).
+            - **Corrigé le 2026-11-20 : `wrap="none"` dans Word.** Word redimensionne une zone de texte
+              `wrap="none"` à la largeur de son texte, bord gauche fixe (vérifié par l'export PDF de Word ;
+              `noAutofit`, `txBox`, `anchorCtr` n'y changent rien) : texte centré décalé à gauche (titres pie /
+              quadrant / séquence, noms des participants), texte aligné à droite décollé (axes du quadrant),
+              boîtes remplies rétrécies (Ishikawa). Correctif : `unwrappedTextFrame` (`canvas.ts`) élargit les
+              zones de texte invisibles du côté où le texte peut déborder, `wrapDrawingCanvas` les ramène dans le
+              canevas (LibreOffice décale tout le dessin sinon), les boîtes remplies passent en `wrap="square"`.
+              Vérifié dans Word et LibreOffice sur 31 types. Reste : les étiquettes d'arêtes du flowchart
+              (`ooxml-translator.ts`, `wrap="none"`, fond blanc, boîte déjà à la taille du texte : petit décalage
+              à gauche) et les nœuds de mindmap en formes (même cas) ; baselines `test:visual` à confirmer en CI.
+              Constat à part : en séquence, la garde d'un `else` passe sous la barre d'activation.
             - **Décision du mainteneur, 2026-11-19 : ajouts d'API publique de `core` acceptés** — `DiagramType`
               `'agentflow'` et `'usecase'` (+ `'mermaidUnsupported'`), `NodeShape` `'actor'`, `EdgeType`
               `'generalization'` et `'realization'`. Tous additifs ; à publier avec la prochaine release de

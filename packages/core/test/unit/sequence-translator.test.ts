@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseSequence } from '../../src/diagrams/sequence/parser.js';
 import { translateSequenceToOoxml } from '../../src/diagrams/sequence/translator.js';
+import { estimateTextWidth } from '../../src/layout/layout.js';
+import { EMU_PER_PX } from '../../src/translator/canvas.js';
 
 const tr = (t: string): string => translateSequenceToOoxml(parseSequence(t).ast);
 const base = `sequenceDiagram
@@ -53,9 +55,14 @@ test('a block frame widens to hold the text of a self-message inside it', () => 
   const frameRight = Number(frame[1]) + Number(frame[2]);
   const textAt = xml.indexOf('Check the pending');
   assert.ok(textAt > 0);
+  // The left-aligned text box is widened to the right so Word never wraps or resizes it (unwrappedTextFrame):
+  // where the text ends is its left edge plus the width of its longest line, not the box's right edge.
   const boxes = [...xml.slice(0, textAt).matchAll(/<a:off x="(\d+)" y="\d+"\/><a:ext cx="(\d+)"/g)];
   const last = boxes[boxes.length - 1];
   assert.ok(last);
-  const textRight = Number(last[1]) + Number(last[2]);
+  const shapeXml = xml.slice(textAt - 2000, xml.indexOf('</wps:wsp>', textAt));
+  const lineTexts = [...shapeXml.slice(shapeXml.lastIndexOf('<wps:wsp>')).matchAll(/<w:t xml:space="preserve">([^<]*)<\/w:t>/g)].map((m) => m[1] ?? '');
+  const widest = Math.max(...lineTexts.map((t) => estimateTextWidth(t, 11)));
+  const textRight = Number(last[1]) + Math.round(widest * EMU_PER_PX);
   assert.ok(textRight <= frameRight, `text ends at ${textRight}, past the frame (${frameRight})`);
 });

@@ -149,6 +149,7 @@ export function wrapDrawingCanvas(
   options: CanvasOptions = {},
 ): string {
   const { cx, cy } = scaledExtent(widthPx, heightPx, options);
+  content = clampLabelFrames(content, cx);
   return [
     `<w:p ${NS.w}>`,
     '  <w:r>',
@@ -172,4 +173,62 @@ export function wrapDrawingCanvas(
     '  </w:r>',
     '</w:p>',
   ].join('\n');
+}
+
+/**
+ * The frame to give a one-line, unfilled text box so it renders where it was placed, in real Word as in
+ * LibreOffice. Never use `wrap="none"` for a text box: real Word resizes such a box to the width of its
+ * text, keeping its left edge (measured 2026-11-20 with Word's own PDF export, `noAutofit`, `txBox` and
+ * `anchorCtr` changing nothing), so centred text drifts left, right-aligned text detaches from what it
+ * labels, and a filled box shrinks or grows. Instead the box keeps `wrap="square"` and is widened on the
+ * side(s) the text may run into: both sides when centred, the left when right-aligned, the right when
+ * left-aligned. The box draws nothing, so the extra width is invisible and the text never wraps.
+ *
+ * `x` and `w` are in EMU; returns the widened frame, in EMU. The shape must be named
+ * `${LABEL_NAME} <id>`: {@link wrapDrawingCanvas} then brings the frame back inside the canvas, since
+ * LibreOffice moves the whole drawing when a shape reaches past the canvas edges.
+ */
+export function unwrappedTextFrame(x: number, w: number, align: 'left' | 'center' | 'right'): { x: number; w: number } {
+  // Room for text up to about three times the box, and at least one inch, on each open side.
+  const extra = Math.max(w, 914400);
+  if (align === 'center') return { x: x - extra, w: w + 2 * extra };
+  if (align === 'right') return { x: x - extra, w: w + extra };
+  return { x, w: w + extra };
+}
+
+/** `cNvPr` name prefix of a text frame widened by {@link unwrappedTextFrame}. */
+export const LABEL_NAME = 'Label';
+
+/**
+ * Bring every widened text frame (`name="Label <id>"`) back inside a canvas `canvasCx` EMU wide, keeping
+ * what its alignment anchors: the centre for centred text, the right edge for right-aligned, the left edge
+ * for left-aligned. The frame never ends up narrower than the box it was widened from, as long as that box
+ * was inside the canvas.
+ */
+function clampLabelFrames(content: string, canvasCx: number): string {
+  return content.replace(/<wps:wsp>(?:(?!<\/wps:wsp>)[\s\S])*?<\/wps:wsp>/g, (shape) => {
+    if (!shape.includes(`name="${LABEL_NAME} `)) return shape;
+    const frame = /<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)"/.exec(shape);
+    if (!frame) return shape;
+    const x = Number(frame[1]);
+    const w = Number(frame[3]);
+    const jc = /<w:jc w:val="(left|center|right)"\/>/.exec(shape)?.[1] ?? 'left';
+    let nx: number;
+    let nw: number;
+    if (jc === 'center') {
+      const c = x + w / 2;
+      const half = Math.min(w / 2, c, canvasCx - c);
+      if (half <= 0) return shape;
+      nx = Math.round(c - half);
+      nw = Math.round(2 * half);
+    } else if (jc === 'right') {
+      nx = Math.max(0, x);
+      nw = x + w - nx;
+    } else {
+      nx = x;
+      nw = Math.min(w, canvasCx - x);
+    }
+    if (nw < 1 || (nx === x && nw === w)) return shape;
+    return shape.replace(frame[0], `<a:off x="${nx}" y="${frame[2]}"/><a:ext cx="${nw}"`);
+  });
 }

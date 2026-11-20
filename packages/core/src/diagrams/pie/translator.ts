@@ -21,6 +21,8 @@ import {
   scaledLineWidthEmu,
   wrapDrawingCanvas,
   type CanvasOptions,
+  LABEL_NAME,
+  unwrappedTextFrame,
 } from '../../translator/canvas.js';
 
 const RADIUS = 150;
@@ -67,12 +69,13 @@ function sliceShape(id: number, x: number, y: number, d: number, fill: string, s
 }
 
 function textBox(id: number, x: number, y: number, w: number, h: number, text: string, sizeHalfPt: number, color: string, jc: 'left' | 'center', bold: boolean, scale: number): string {
+  const frame = unwrappedTextFrame(x, w, jc);
   return [
     '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Text ${id}"/>`,
+    `  <wps:cNvPr id="${id}" name="${LABEL_NAME} ${id}"/>`,
     '  <wps:cNvSpPr txBox="1"/>',
     '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
+    `    <a:xfrm><a:off x="${frame.x}" y="${y}"/><a:ext cx="${Math.max(1, frame.w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
     '    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
     '    <a:noFill/>',
     '    <a:ln><a:noFill/></a:ln>',
@@ -85,7 +88,7 @@ function textBox(id: number, x: number, y: number, w: number, h: number, text: s
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,
     '    </w:txbxContent>',
     '  </wps:txbx>',
-    '  <wps:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/>',
+    '  <wps:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/>',
     '</wps:wsp>',
   ].join('\n');
 }

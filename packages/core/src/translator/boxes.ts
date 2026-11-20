@@ -6,7 +6,7 @@
 
 import { estimateTextWidth } from '../layout/layout.js';
 import { escapeXml } from './xml-escape.js';
-import { EMU_PER_PX, scaledFontSizeHalfPt, scaledLineWidthEmu } from './canvas.js';
+import { EMU_PER_PX, LABEL_NAME, scaledFontSizeHalfPt, scaledLineWidthEmu, unwrappedTextFrame } from './canvas.js';
 
 /** Pixels -> EMU, multiplied by the canvas `scale` from `scaledExtent`. */
 export function scalePt(px: number, factor: number): number {
@@ -49,7 +49,10 @@ export interface BoxStyle {
   /** Outline color; no outline when omitted. */
   line?: string;
   align?: 'left' | 'center' | 'right';
-  /** Disable word wrap (text may overflow the box instead of breaking mid-word). */
+  /**
+   * One line, never wrapped. Without a fill or outline the box is widened so the text may overflow it
+   * ({@link unwrappedTextFrame}); with one, the box keeps its size and the caller sizes it to the text.
+   */
   noWrap?: boolean;
   /** Preset geometry (default `rect`); `roundRect` takes {@link BoxStyle.cornerAdj}. */
   prst?: 'rect' | 'roundRect' | 'ellipse';
@@ -91,13 +94,16 @@ export function boxShape(
     : '<a:ln><a:noFill/></a:ln>';
   const prst = style.prst ?? 'rect';
   const av = prst === 'roundRect' && style.cornerAdj !== undefined ? `<a:gd name="adj" fmla="val ${Math.round(style.cornerAdj)}"/>` : '';
+  // `wrap="none"` is never written: Word resizes such a box to its text (see `unwrappedTextFrame`).
+  const invisible = !style.fill && !style.line;
+  const frame = style.noWrap && invisible ? unwrappedTextFrame(x, w, jc) : { x, w };
   const inset = jc === 'center' ? 0 : scalePt(style.noWrap ? 2 : 8, scale);
   return [
     '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="Box ${id}"/>`,
+    `  <wps:cNvPr id="${id}" name="${style.noWrap && invisible ? LABEL_NAME : 'Box'} ${id}"/>`,
     '  <wps:cNvSpPr/>',
     '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
+    `    <a:xfrm><a:off x="${frame.x}" y="${y}"/><a:ext cx="${Math.max(1, frame.w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
     `    <a:prstGeom prst="${prst}">${av ? `<a:avLst>${av}</a:avLst>` : '<a:avLst/>'}</a:prstGeom>`,
     `    ${fill}`,
     `    ${ln}`,
@@ -105,7 +111,7 @@ export function boxShape(
     '  <wps:txbx>',
     `    <w:txbxContent>${paragraphs}</w:txbxContent>`,
     '  </wps:txbx>',
-    `  <wps:bodyPr wrap="${style.noWrap ? 'none' : 'square'}" lIns="${inset}" tIns="0" rIns="${inset}" bIns="0" anchor="ctr"/>`,
+    `  <wps:bodyPr wrap="square" lIns="${inset}" tIns="0" rIns="${inset}" bIns="0" anchor="ctr"/>`,
     '</wps:wsp>',
   ].join('\n');
 }
