@@ -19,6 +19,7 @@ import { parseUseCase } from './diagrams/usecase/parser.js';
 import type { DiagramType } from './parser/diagram-type.js';
 import type { Flowchart } from './types.js';
 import { layout } from './layout/layout.js';
+import { collapseSubgraphs } from './layout/collapse-subgraphs.js';
 import { DiagramTooLargeError } from './layout/graph-limits.js';
 import type { CanvasOptions } from './translator/canvas.js';
 import { buildOdfNote, ODF_ID_PREFIX, translateToOdf } from './translator/odf-translator.js';
@@ -96,8 +97,9 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   const prepared = prepareSource(source, type);
   warnings.push(...prepared.warnings);
   const parsed = (FLOWCHART_PARSERS[type] ?? parseMermaid)(prepared.source);
+  const flowchart = collapseSubgraphs(parsed.ast);
   warnings.push(...parsed.warnings);
-  if (parsed.ast.edges.some((e) => e.type === 'generalization' || e.type === 'realization')) {
+  if (flowchart.edges.some((e) => e.type === 'generalization' || e.type === 'realization')) {
     warnings.push('Hollow triangles (`--|>`, `..|>`) are drawn as plain arrows in a .odt.');
   }
   const canvas: CanvasOptions = {};
@@ -106,9 +108,9 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   if (options.maxNodes !== undefined) canvas.maxNodes = options.maxNodes;
   if (options.maxEdges !== undefined) canvas.maxEdges = options.maxEdges;
   if (options.maxWork !== undefined) canvas.maxWork = options.maxWork;
-  const result = layout(parsed.ast, canvas);
+  const result = layout(flowchart, canvas);
   warnings.push(...result.warnings);
-  const drawing = translateToOdf(parsed.ast, result, { ...canvas, idPrefix });
+  const drawing = translateToOdf(flowchart, result, { ...canvas, idPrefix });
   if (prepared.title === undefined) return { ...drawing, metadata: { diagramType: type, label, warnings } };
   // A frontmatter `title:` is drawn above the diagram, as in the .docx: bold, aligned with the drawing's
   // left edge, kept with it.

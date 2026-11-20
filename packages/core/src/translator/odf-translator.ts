@@ -132,6 +132,7 @@ const ODF_TYPE_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   manualInput: 'flowchart-manual-input',
   asymmetric: 'pentagon-right',
   actor: 'rectangle', // drawn by actorGeometry (explicit path), never as this preset
+  collapsedGroup: 'round-rectangle', // a folded subgraph, in the subgraph colours
 };
 
 /** Mirrored horizontally (`draw:mirror-horizontal`, which leaves the text readable). */
@@ -339,8 +340,10 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
     if (!raw) return;
     const id = `${prefix}-n${i + 1}`;
     shapeIds.set(node.id, id);
-    const nodeFill = validateHexColor(node.fill, DEFAULT_FILL);
-    const nodeLine = validateHexColor(node.stroke, DEFAULT_LINE);
+    // A folded subgraph keeps the colours of an open one, so it still reads as a group.
+    const folded = node.shape === 'collapsedGroup';
+    const nodeFill = validateHexColor(node.fill, folded ? SUBGRAPH_FILL : DEFAULT_FILL);
+    const nodeLine = validateHexColor(node.stroke, folded ? SUBGRAPH_LINE : DEFAULT_LINE);
     const style = sheet.graphic(
       `<style:graphic-properties draw:fill="solid" draw:fill-color="#${nodeFill}" draw:stroke="solid" ` +
         `svg:stroke-color="#${nodeLine}" svg:stroke-width="${pt(linePt(LINE_PT))}" ` +

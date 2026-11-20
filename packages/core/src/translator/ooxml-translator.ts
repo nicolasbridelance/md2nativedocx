@@ -247,6 +247,7 @@ export const PRST_BY_SHAPE: Readonly<Record<NodeShape, string>> = {
   linedCylinder: 'flowChartMagneticDrum',
   manualInput: 'flowChartManualInput',
   actor: 'rect', // drawn by actorGeometryXml (custom geometry), never as this preset
+  collapsedGroup: 'roundRect', // a folded subgraph; subgraph colours, see renderContent
   asymmetric: 'homePlate', // Mermaid's asymmetric/flag shape (id>Text]); closest built-in preset
 };
 
@@ -523,8 +524,10 @@ function renderContent(
     if (!box) continue;
     // Per-node fill/stroke from classDef/style/`:::` take priority over the
     // global default (spec §6.3).
-    const nodeFill = hexColor(node.fill, fill);
-    const nodeLine = hexColor(node.stroke, line);
+    // A folded subgraph keeps the colours of an open one, so it still reads as a group.
+    const folded = node.shape === 'collapsedGroup';
+    const nodeFill = hexColor(node.fill, folded ? SUBGRAPH_FILL : fill);
+    const nodeLine = hexColor(node.stroke, folded ? SUBGRAPH_LINE : line);
     const nodeText = node.textColor === undefined ? undefined : hexColor(node.textColor, textColorFor(nodeFill));
     parts.push(
       renderNode(

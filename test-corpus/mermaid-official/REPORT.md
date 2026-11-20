@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 437 sans avertissement (81 %), 104 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 438 sans avertissement (81 %), 103 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -16,7 +16,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
 | entityRelationshipDiagram | 25 | 15 | 10 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
-| flowchart | 116 | 114 | 2 | 0 | 0 | 0 |
+| flowchart | 116 | 115 | 1 | 0 | 0 | 0 |
 | gantt | 11 | 4 | 7 | 0 | 0 | 0 |
 | gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
 | ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
@@ -113,7 +113,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 ### flowchart
 
 - #102 warned: Subgraph "subgraph2" direction (TD) is ignored: something inside is linked to something outside, so it follows the flowchart's direction (same as Mermaid).
-- #103 warned: Subgraph "one" is drawn open: `view: collapsed` is not supported yet.
 
 ### gantt
 

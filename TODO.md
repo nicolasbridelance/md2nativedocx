@@ -173,8 +173,12 @@ Ensuite, dans l'ordre :
               instruction `title` (organigramme, classes, états, ER, et tous les autres) est un paragraphe en gras
               au-dessus du dessin, aligné à gauche comme le dessin, `keepNext` ; aussi en `.odt` ; vérifié dans Word
               et LibreOffice, `test-corpus/word-verification/frontmatter-titles.*` ; étage 1 à **437 propres
-              (81 %)**) ; `view: collapsed` (Mermaid dessine le sous-graphe replié en une boîte ; ici ouvert, avec
-              avertissement) ;
+              (81 %)**) ; ~~`view: collapsed`~~ (fait le 2026-11-20 : `Subgraph.collapsed` dans l'AST, repli avant la
+              mise en page par `layout/collapse-subgraphs.ts` comme dans Mermaid, forme `collapsedGroup` aux
+              couleurs des sous-graphes, titre puis `• • •` ; `.docx`, `.odt`, SmartArt ; vérifié dans Word et
+              LibreOffice, `test-corpus/word-verification/collapsed-subgraphs.*` ; étage 1 à **438 propres** ;
+              ajouts d'API publique `NodeShape` `'collapsedGroup'` et `Subgraph.collapsed`, à publier avec `core`).
+              Organigrammes officiels : un seul avertissement reste (#102, direction ignorée comme dans Mermaid) ;
             - **Écart de mise en page relevé le 2026-11-20, non traité :** Mermaid range à part tout sous-graphe
               qu'aucun lien ne traverse et, sans `direction` propre, **inverse** sa direction (TB ↔ LR,
               `extractor` de son rendu dagre). Ici, seuls les sous-graphes à direction propre ou visés par un lien

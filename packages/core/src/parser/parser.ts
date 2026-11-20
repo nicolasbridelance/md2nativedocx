@@ -935,8 +935,8 @@ export function parseMermaid(text: string): ParseResult {
  *
  * Warned and dropped: a link between a subgraph and something inside it (no border to stop at), and a
  * link to a subgraph with no node in it (no box to draw). Warned and kept: a node declared with its own
- * label or shape under a subgraph's id (the subgraph wins, as in Mermaid's drawing), and
- * `view: collapsed`, which Mermaid draws as one folded box and this project draws open.
+ * label or shape under a subgraph's id (the subgraph wins, as in Mermaid's drawing). A subgraph given
+ * `view: collapsed` is marked {@link Subgraph.collapsed}.
  */
 function linkSubgraphEndpoints(
   nodes: Map<string, FlowNode>,
@@ -956,9 +956,7 @@ function linkSubgraphEndpoints(
       }
     }
     sg.nodeIds = sg.nodeIds.filter((member) => !byId.has(member));
-    if (collapsedViews.has(id)) {
-      warnings.push(`Subgraph "${id}" is drawn open: \`view: collapsed\` is not supported yet.`);
-    }
+    if (collapsedViews.has(id)) sg.collapsed = true;
   }
 
   // Everything inside a subgraph, nested subgraphs included, memoized: a link is checked at both ends.

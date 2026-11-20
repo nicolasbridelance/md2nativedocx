@@ -269,14 +269,14 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 - Directions `TD`, `TB`, `LR`, `RL`, `BT`
 - Nœuds `A[texte]`, `A(arrondi)`, `A([stade])`, `A{losange}`, `A((cercle))`, `A[(base)]`, `A[/parallélogramme/]`, etc., et la forme générique `A@{ shape: nom, label: "…" }`
 - Liens `-->`, `---`, `-.->`, `==>`, `<-->`, `~~~`, avec libellé `-- texte -->`, chaînage `A --> B --> C` et groupes `A & B --> C`
-- `subgraph … end` (imbriqués), liens vers un sous-graphe (`A --> S`, `S1 --> S2`) tracés jusqu’au bord de son cadre, `<br/>` et `**gras**`/`_italique_` dans un libellé entre accents graves
+- `subgraph … end` (imbriqués), liens vers un sous-graphe (`A --> S`, `S1 --> S2`) tracés jusqu’au bord de son cadre, sous-graphe replié (`S@{ view: collapsed }`) dessiné en une seule boîte grise (son titre puis « • • • »), son contenu caché et les liens vers ce contenu arrivant sur la boîte, `<br/>` et `**gras**`/`_italique_` dans un libellé entre accents graves
 
 **Pris en charge :** Couleurs : `classDef`, `class`, `:::nom`, `style`, `linkStyle` (couleur, épaisseur) ; Auto-boucles `A --> A`, diagrammes très grands (réduits pour tenir dans la page).
 
 **Limites**
 
 - `direction` à l’intérieur d’un `subgraph` : appliquée (mise en page propre au sous-graphe) tant qu’aucun lien ne relie l’intérieur à l’extérieur ; sinon ignorée avec un avertissement, comme Mermaid
-- Pas de `click`, d’animation d’arête ni de formes icône/image ; un sous-graphe replié (`view: collapsed`) est dessiné ouvert, avec un avertissement
+- Pas de `click`, d’animation d’arête ni de formes icône/image
 - `classDef default` n’est pas appliqué ; SmartArt : option expérimentale, désactivée par défaut
 
 

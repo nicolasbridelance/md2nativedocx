@@ -617,13 +617,13 @@ test('a link to a subgraph with no node is dropped with a warning', () => {
   assert.ok(warnings.some((w) => w.includes('holds no node')));
 });
 
-test('a node declared under a subgraph id, or a collapsed view, is warned about', () => {
+test('a node declared under a subgraph id is warned about; a collapsed view is not', () => {
   const { ast, warnings } = parseMermaid(
     'graph TD\n  S[Shown?]\n  subgraph S\n    A\n  end\n  subgraph one\n    B\n  end\n  one@{ view: collapsed }',
   );
   assert.deepEqual(ast.nodes.map((n) => n.id).sort(), ['A', 'B']);
   assert.ok(warnings.some((w) => w.includes('"S" was also declared as a node')));
-  assert.ok(warnings.some((w) => w.includes('"one" is drawn open')));
+  assert.ok(!warnings.some((w) => w.includes('"one"')));
 });
 
 test('records nested subgraph relationships in subgraphIds', () => {

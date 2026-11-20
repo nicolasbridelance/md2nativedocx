@@ -48,7 +48,12 @@ export type NodeShape =
   | 'manualInput'
   | 'asymmetric'
   /** UML stick figure with its label below (a use case diagram's actor). */
-  | 'actor';
+  | 'actor'
+  /**
+   * A collapsed subgraph folded into one box (`S@{ view: collapsed }`), drawn in the subgraph colours.
+   * Never produced by `parseMermaid()`: the folding happens before layout (`collapseSubgraphs`).
+   */
+  | 'collapsedGroup';
 
 /**
  * Edge line/arrowhead styles supported (spec §6.2). Named after Mermaid's own
@@ -157,6 +162,11 @@ export interface Subgraph {
    * not count).
    */
   direction?: 'TD' | 'LR' | 'BT' | 'RL';
+  /**
+   * `true` for `S@{ view: collapsed }`: drawn folded into one box holding its title, its contents not
+   * shown, as Mermaid does. The parsed diagram keeps the contents; renderers fold it before layout.
+   */
+  collapsed?: boolean;
 }
 
 /** The full intermediate AST for one flowchart. */

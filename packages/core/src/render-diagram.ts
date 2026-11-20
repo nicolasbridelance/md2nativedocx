@@ -112,6 +112,7 @@ import { buildUnsupportedDiagramTypeNoteXml } from './translator/unsupported-dia
 import { parseAgentflow } from './diagrams/agentflow/parser.js';
 import { parseUseCase } from './diagrams/usecase/parser.js';
 import { prepareSource } from './parser/frontmatter.js';
+import { collapseSubgraphs } from './layout/collapse-subgraphs.js';
 import { translateSequenceToOoxml } from './diagrams/sequence/translator.js';
 import { parseZenuml } from './diagrams/zenuml/parser.js';
 import type { Flowchart } from './types.js';
@@ -386,7 +387,7 @@ const MIN_READABLE_FONT_PT = 7;
 
 /** Flowchart (and text with no recognized header): SmartArt when its topology allows, else Dagre + shapes. */
 const renderFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnings: string[] }): TypeRenderer => (source, ctx) => {
-  const ast = parsed(ctx, parse(source));
+  const ast = collapseSubgraphs(parsed(ctx, parse(source)));
   const smartArt = ctx.smartArt((options) => generateSmartArt(ast, options));
   if (smartArt) return smartArt;
   const result = layout(ast, ctx.canvas);
@@ -411,7 +412,7 @@ const renderFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnin
 };
 
 const planFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnings: string[] }) => (source: string): Capability => {
-  const { ast } = parse(source);
+  const ast = collapseSubgraphs(parse(source).ast);
   const classification = classifyTopology(ast);
   if (!classification.eligible) return { kind: 'shapes', smartArtRejected: classification };
   const { layout: family } = classification;
