@@ -346,10 +346,8 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   - la sélection des blocs de diagramme existe en Lua et en JS (`diagram-blocks.mjs`) : n'en garder qu'une
     si le CLI passe un jour par l'AST JSON.
 - **Conformité, restes** (revue du 2026-11-20, `docs/compliance/it-security.md` → *What is not covered yet*) :
-  - pas de hook local gitleaks avant commit (la CI bloque au push) ;
-  - le tableau Sécurité d'`AGENTS.md` n'a pas les lignes propres aux canaux que `it-security.md` ajoute
-    (sandbox Pandoc, limites MCP, binaires téléchargés, publication OIDC, PlantUML `!include`) : les y
-    reporter demande l'accord du mainteneur (escalade).
+  - pas de hook local gitleaks avant commit (la CI bloque au push), alors que la ligne « Secret leakage » du
+    tableau Sécurité d'`AGENTS.md` le demande : écart à combler ou ligne à reformuler.
 - **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
   (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
 - **draw.io, dans les deux sens : décidé par le mainteneur le 2026-11-20** (point 7 de l'ordre de
