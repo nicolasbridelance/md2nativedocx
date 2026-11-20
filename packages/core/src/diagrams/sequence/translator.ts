@@ -127,6 +127,9 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   // Draw layers, assembled bottom to top once the total height is known.
   const bg: string[] = [];
   const framesXml: string[] = [];
+  // Block tags and guards (`alt`, `[paid]`, an `else` divider's `[failed]`) sit above the activation bars,
+  // which would otherwise hide a guard that starts on a lifeline.
+  const frameText: string[] = [];
   const lifelines: string[] = [];
   const bars: string[] = [];
   const notes: string[] = [];
@@ -189,11 +192,11 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
     }
     box(framesXml, x0, f.startY, x1 - x0, h, undefined, '7F7F7F', `Block ${f.kind}`);
     const tagW = estimateTextWidth(f.kind, SMALL) + 16;
-    text(framesXml, x0, f.startY, tagW, [f.kind], { fontPx: SMALL, bold: true, fill: 'E6E6E6', line: '7F7F7F', lineH: 16 });
-    if (f.label) text(framesXml, x0 + tagW + 6, f.startY, x1 - x0 - tagW - 12, [`[${f.label}]`], { align: 'left', fontPx: SMALL, lineH: 16 });
+    text(frameText, x0, f.startY, tagW, [f.kind], { fontPx: SMALL, bold: true, fill: 'E6E6E6', line: '7F7F7F', lineH: 16 });
+    if (f.label) text(frameText, x0 + tagW + 6, f.startY, x1 - x0 - tagW - 12, [`[${f.label}]`], { align: 'left', fontPx: SMALL, lineH: 16 });
     for (const d of f.dividers) {
       line(framesXml, x0, d.y, x1, d.y, { color: '7F7F7F', dash: 'dash' });
-      if (d.label) text(framesXml, x0 + 6, d.y + 2, x1 - x0 - 12, [`[${d.label}]`], { align: 'left', fontPx: SMALL, lineH: 14 });
+      if (d.label) text(frameText, x0 + 6, d.y + 2, x1 - x0 - 12, [`[${d.label}]`], { align: 'left', fontPx: SMALL, lineH: 14 });
     }
   };
 
@@ -324,5 +327,5 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   const emu = (v: number): number => scalePt(v, s);
   const thin = scaledLineWidthEmu(9525, s);
   for (const op of ops) op(emu, s, thin);
-  return wrapDrawingCanvas([...bg, ...framesXml, ...lifelines, ...bars, ...notes, ...msgs, ...boxes].join('\n'), W, H, nextId(), 'Sequence diagram', options);
+  return wrapDrawingCanvas([...bg, ...framesXml, ...lifelines, ...bars, ...frameText, ...notes, ...msgs, ...boxes].join('\n'), W, H, nextId(), 'Sequence diagram', options);
 }

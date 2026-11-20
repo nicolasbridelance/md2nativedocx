@@ -179,7 +179,8 @@ Ensuite, dans l'ordre :
               et les nœuds de mindmap en formes passent aussi en `wrap="square"` (vérifié dans Word) : plus aucun
               `wrap="none"` dans `core`. Baselines `test:visual` rafraîchies depuis la CI Linux (34 images,
               dérive due surtout à 52aeea8, l'espace réservé aux étiquettes d'arêtes ; toutes revues).
-              Constat à part : en séquence, la garde d'un `else` passe sous la barre d'activation.
+              Séquence : les libellés de blocs (`alt`, gardes, `[failed]` d'un `else`) passent au-dessus des
+              barres d'activation (corrigé le 2026-11-20, vérifié dans Word).
             - **Décision du mainteneur, 2026-11-19 : ajouts d'API publique de `core` acceptés** — `DiagramType`
               `'agentflow'` et `'usecase'` (+ `'mermaidUnsupported'`), `NodeShape` `'actor'`, `EdgeType`
               `'generalization'` et `'realization'`. Tous additifs ; à publier avec la prochaine release de
