@@ -41,6 +41,7 @@ export interface StateDiagramParseResult {
 const STATE_ALIAS = /^state\s+"([^"]*)"\s+as\s+(\S+?)\s*(\{)?\s*$/i;
 const STATE_DECL = /^state\s+(\S+)\s*(?:<<(choice|fork|join)>>)?\s*(\{)?\s*$/i;
 const DESCRIPTION = /^(\S+)\s*:\s*(.+)$/;
+const BARE_STATE = /^[\p{L}\p{N}_][\p{L}\p{N}_-]*$/u;
 const NOTE_BLOCK_OPEN = /^note\s+(?:left|right)\s+of\s+\S+\s*$/i;
 const NOTE_ONE_LINE = /^note\s+(?:left|right)\s+of\s+\S+\s*:\s*.+$/i;
 
@@ -216,6 +217,13 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       const id = descMatch[1] ?? '';
       const node = getOrCreateState(id);
       node.label = (descMatch[2] ?? '').trim();
+      continue;
+    }
+
+    // A state declared by its name alone (`stateId`), as Mermaid allows; the `--` concurrency divider never
+    // gets here (it starts with no letter).
+    if (BARE_STATE.test(line)) {
+      getOrCreateState(line);
       continue;
     }
 

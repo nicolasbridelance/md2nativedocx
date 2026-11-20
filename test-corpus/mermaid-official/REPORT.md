@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 428 sans avertissement (79 %), 113 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 429 sans avertissement (79 %), 112 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -30,7 +30,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
 | sequenceDiagram | 38 | 25 | 13 | 0 | 0 | 0 |
-| stateDiagram | 22 | 9 | 13 | 0 | 0 | 0 |
+| stateDiagram | 22 | 10 | 12 | 0 | 0 | 0 |
 | swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
 | treemap | 8 | 8 | 0 | 0 | 0 | 0 |
@@ -175,7 +175,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 - #0 warned: The frontmatter title "Simple sample" is not drawn for this diagram type.
 - #2 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
 - #3 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
-- #4 warned: Unsupported line ignored: stateId
 - #10 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
 - #11 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
 - #12 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.

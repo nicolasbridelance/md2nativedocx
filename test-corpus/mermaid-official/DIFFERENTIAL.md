@@ -5,7 +5,7 @@ exemple de `examples.json`, ce que Mermaid a compris (sa base après analyse, sa
 analyseur a compris. Un écart est un nœud, un lien, un message ou un bloc qu'un seul des deux côtés voit, même
 sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**252 exemples comparés : 245 identiques, 7 avec écart, dont 0 sans avertissement** (l'étage 1 les
+**252 exemples comparés : 246 identiques, 6 avec écart, dont 0 sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 289 d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états et ER en ont un).
@@ -16,7 +16,7 @@ aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 | entityRelationshipDiagram | 25 | 25 | 0 | 0 |
 | flowchart | 116 | 112 | 4 | 0 |
 | sequenceDiagram | 38 | 38 | 0 | 0 |
-| stateDiagram | 22 | 21 | 1 | 0 |
+| stateDiagram | 22 | 22 | 0 | 0 |
 | swimlanes | 13 | 13 | 0 | 0 |
 
 ## Écarts
@@ -61,7 +61,3 @@ aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 - Mermaid seulement : `node one "one"`
 - Mermaid seulement : `link Start -> one`
 - Mermaid seulement : `link one -> End`
-
-### stateDiagram#4
-
-- Mermaid seulement : `state stateId`

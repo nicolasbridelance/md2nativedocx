@@ -102,3 +102,9 @@ test('accTitle/accDescr, frontmatter, trailing %% comments and :::class suffixes
   assert.equal(warnings.filter((w) => /frontmatter/.test(w)).length, 1);
   assert.equal(warnings.filter((w) => /:::className/.test(w)).length, 1);
 });
+
+test('a state declared by its name alone is kept (Mermaid official example stateDiagram#4)', () => {
+  const { ast, warnings } = parseStateDiagram('stateDiagram-v2\n  stateId\n  [*] --> Other');
+  assert.ok(ast.states.some((s) => s.id === 'stateId'));
+  assert.equal(warnings.length, 0);
+});
