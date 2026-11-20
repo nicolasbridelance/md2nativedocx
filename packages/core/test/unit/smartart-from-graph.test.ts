@@ -62,3 +62,8 @@ test('labels from all three are XML-escaped in every SmartArt part', () => {
     }
   }
 });
+
+test('classDiagram: a two-way inheritance (<|--|>) has no superclass, so it stays shapes with both triangles', () => {
+  assert.equal(classDiagramToFlowchart(cls('classDiagram\n  Animal <|--|> Zebra')), null);
+  assert.equal(classDiagramSmartArtLayout(cls('classDiagram\n  Animal <|--|> Zebra')), null);
+});

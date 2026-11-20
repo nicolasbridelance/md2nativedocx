@@ -172,13 +172,24 @@ const COMPARATORS = {
   class: {
     theirs(db) {
       const facts = [...db.getClasses().values()].map((c) => `class ${c.id} "${normText(mermaidEntities(c.label))}" ${c.members.length}a ${c.methods.length}m`);
-      for (const r of db.getRelations()) facts.push(`relation ${r.id1} -- ${r.id2}`);
+      // Mermaid's relation end codes (classDb's relationType), type1 on id1's side, type2 on id2's.
+      const end = { 0: 'aggregation', 1: 'triangle', 2: 'composition', 3: 'arrow', 4: 'lollipop' };
+      for (const r of db.getRelations()) {
+        const { type1, type2, lineType } = r.relation;
+        facts.push(`relation ${r.id1} ${end[type1] ?? 'none'} ${lineType === 1 ? '..' : '--'} ${end[type2] ?? 'none'} ${r.id2}`);
+      }
       return facts;
     },
     ours(source) {
       const { ast } = parseClassDiagram(source);
       const facts = ast.classes.map((c) => `class ${c.id} "${ourText(c.label)}" ${c.attributes.length}a ${c.methods.length}m`);
-      for (const r of ast.relationships) facts.push(`relation ${r.from} -- ${r.to}`);
+      const kind = { inheritance: 'triangle', realization: 'triangle', composition: 'composition', aggregation: 'aggregation', association: 'arrow', dependency: 'arrow' };
+      const dotted = new Set(['realization', 'dependency', 'dashedLink']);
+      for (const r of ast.relationships) {
+        const atFrom = r.markerEnd === 'from' || r.markerEnd === 'both' ? (kind[r.type] ?? 'none') : 'none';
+        const atTo = r.markerEnd === 'to' || r.markerEnd === 'both' ? (kind[r.type] ?? 'none') : 'none';
+        facts.push(`relation ${r.from} ${atFrom} ${dotted.has(r.type) ? '..' : '--'} ${atTo} ${r.to}`);
+      }
       return facts;
     },
   },

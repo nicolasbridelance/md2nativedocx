@@ -215,6 +215,11 @@ Ensuite, dans l'ordre :
             ER refait le 2026-11-20 (cardinalités en toutes lettres, symboles collés ou inversés, alias `p[Person]`,
             noms entre guillemets, déclarations seules, `direction`, `:::classe`) : **25/25 ER identiques à Mermaid**,
             237/252 au total. Vu dans Word : les libellés de relation ER sont posés sur le trait, sans fond.
+            Classes le même jour (relations selon la grammaire de Mermaid : extrémité optionnelle de chaque côté,
+            trait plein ou pointillé, donc `<|..`, `|>..` et la relation double `<|--|>` ; noms entre backticks avec
+            espaces ; `class X <<annotation>>` et `class X:::style`) : **36/38**, **245/252 au total**. Restent les
+            « sucettes » `()--` / `--()` (#15, #16) : une interface dessinée en petit cercle, forme à ajouter au
+            traducteur, pas une lecture à corriger.
             Reste : comparateurs des autres types (mindmap, Gantt, C4, requirement…).
             Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 

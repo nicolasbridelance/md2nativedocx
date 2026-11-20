@@ -42,34 +42,49 @@ export interface ClassDiagramParseResult {
   warnings: string[];
 }
 
-// Longest-prefix-first so e.g. `..|>` doesn't get cut short by `..` or `..>`.
-const REL_TOKEN_PATTERN =
-  '<\\|--|--\\|>|\\.\\.\\|>|\\|>\\.\\.|\\.\\.>|<\\.\\.|--\\*|\\*--|--o|o--|-->|<--|--|\\.\\.';
+/**
+ * A relation as Mermaid's grammar writes it: an optional end on the left, a solid `--` or dotted `..` line, an
+ * optional end on the right, each endpoint a plain id or a backtick-quoted one (which may contain spaces):
+ * `A <|-- B`, `A ..|> B`, `classM <|.. classN`, `Animal <|--|> Zebra` (two-way). The `()` lollipop ends
+ * (an interface drawn as a small circle) are not matched here; they fall through to the unsupported-line warning.
+ */
+// An unquoted id stops at a relation symbol; it is greedy, so `Foo--Bar` keeps `Foo` whole rather than reading
+// its last `o` as an aggregation end, as Mermaid's own lexer does.
+const ENDPOINT = '(`[^`]+`|[^\\s`<>|*.:"-]+)';
+// Mermaid's lexer reads an end symbol whichever side it is on (`A |>.. B` is `A <|.. B`), so both ends accept
+// every spelling.
+const END = '(<\\||\\|>|\\*|o|<|>)?';
+const REL_LINE = new RegExp(`^${ENDPOINT}\\s*${END}(--|\\.\\.)${END}\\s*${ENDPOINT}\\s*(?::\\s*(.+))?$`);
 
-const REL_LINE = new RegExp(`^(\\S+)\\s*(${REL_TOKEN_PATTERN})\\s*(\\S+)\\s*(?::\\s*(.+))?$`);
-
-const REL_INFO: Readonly<
-  Record<string, { type: ClassRelationType; markerEnd: 'from' | 'to' | 'none' }>
-> = {
-  '<|--': { type: 'inheritance', markerEnd: 'from' },
-  '--|>': { type: 'inheritance', markerEnd: 'to' },
-  '*--': { type: 'composition', markerEnd: 'from' },
-  '--*': { type: 'composition', markerEnd: 'to' },
-  'o--': { type: 'aggregation', markerEnd: 'from' },
-  '--o': { type: 'aggregation', markerEnd: 'to' },
-  '-->': { type: 'association', markerEnd: 'to' },
-  '<--': { type: 'association', markerEnd: 'from' },
-  '..>': { type: 'dependency', markerEnd: 'to' },
-  '<..': { type: 'dependency', markerEnd: 'from' },
-  '..|>': { type: 'realization', markerEnd: 'to' },
-  '|>..': { type: 'realization', markerEnd: 'from' },
-  '--': { type: 'link', markerEnd: 'none' },
-  '..': { type: 'dashedLink', markerEnd: 'none' },
+/** What an end symbol means, on whichever side it sits. */
+const END_KIND: Readonly<Record<string, 'triangle' | 'composition' | 'aggregation' | 'arrow'>> = {
+  '<|': 'triangle',
+  '|>': 'triangle',
+  '*': 'composition',
+  o: 'aggregation',
+  '<': 'arrow',
+  '>': 'arrow',
 };
 
+function relationType(kind: 'triangle' | 'composition' | 'aggregation' | 'arrow' | undefined, dotted: boolean): ClassRelationType {
+  switch (kind) {
+    case 'triangle':
+      return dotted ? 'realization' : 'inheritance';
+    case 'composition':
+      return 'composition';
+    case 'aggregation':
+      return 'aggregation';
+    case 'arrow':
+      return dotted ? 'dependency' : 'association';
+    default:
+      return dotted ? 'dashedLink' : 'link';
+  }
+}
+
 const CLASS_HEADER = new RegExp(
+  // id, generic, ["label"], :::style, <<annotation>>, {
   '^class\\s+(?:`([^`]+)`|([A-Za-z_$][\\w$]*))(?:~[^~]*~)?' +
-    '(?:\\[(?:"([^"]*)"|([^\\]]*))\\])?\\s*(\\{)?\\s*$',
+    '(?:\\[(?:"([^"]*)"|([^\\]]*))\\])?(:::[\\w,-]+)?\\s*(<<[^>]*>>)?\\s*(\\{)?\\s*$',
   'i',
 );
 
@@ -112,6 +127,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   const stack: Frame[] = [];
   let warnedNamespace = false;
   let warnedAnnotation = false;
+  let warnedStyleClass = false;
 
   for (const rawLine of splitLines(text).flatMap((l) => splitStatements(l))) {
     const line = rawLine.trim();
@@ -165,7 +181,15 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       const box = getOrCreateClass(id);
       const label = classMatch[3] ?? classMatch[4];
       if (label !== undefined) box.label = label.trim();
-      if (classMatch[5] === '{') stack.push({ kind: 'class', box });
+      if (classMatch[5] && !warnedStyleClass) {
+        warnings.push('Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored.');
+        warnedStyleClass = true;
+      }
+      if (classMatch[6] && !warnedAnnotation) {
+        warnings.push('Class annotations (e.g. <<Interface>>) are not yet rendered, ignored.');
+        warnedAnnotation = true;
+      }
+      if (classMatch[7] === '{') stack.push({ kind: 'class', box });
       continue;
     }
 
@@ -182,18 +206,23 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
     const relMatch = clean.match(REL_LINE);
     if (relMatch) {
       const fromId = stripIdQuotes(relMatch[1] ?? '');
-      const token = relMatch[2] ?? '';
-      const toId = stripIdQuotes(relMatch[3] ?? '');
-      const info = REL_INFO[token];
-      if (fromId.length > 0 && toId.length > 0 && info) {
+      const fromKind = relMatch[2] ? END_KIND[relMatch[2]] : undefined;
+      const dotted = relMatch[3] === '..';
+      const toKind = relMatch[4] ? END_KIND[relMatch[4]] : undefined;
+      const toId = stripIdQuotes(relMatch[5] ?? '');
+      if (fromId.length > 0 && toId.length > 0) {
         getOrCreateClass(fromId);
         getOrCreateClass(toId);
+        if (fromKind && toKind && fromKind !== toKind) {
+          warnings.push(`A relation with two different ends is drawn with the right-hand one only: ${line}`);
+        }
+        const markerEnd = fromKind && toKind ? (fromKind === toKind ? 'both' : 'to') : fromKind ? 'from' : toKind ? 'to' : 'none';
         relationships.push({
           from: fromId,
           to: toId,
-          type: info.type,
-          markerEnd: info.markerEnd,
-          ...(relMatch[4] ? { label: relMatch[4].trim() } : {}),
+          type: relationType(toKind ?? fromKind, dotted),
+          markerEnd,
+          ...(relMatch[6] ? { label: relMatch[6].trim() } : {}),
         });
         if (hadQuoted) {
           warnings.push(`Relationship cardinalities are not yet supported, ignored: ${line}`);

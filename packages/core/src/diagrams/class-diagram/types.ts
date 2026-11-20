@@ -54,9 +54,9 @@ export interface ClassRelationship {
   to: string;
   type: ClassRelationType;
   /** Which endpoint carries the marker (triangle/diamond/oval) that
-   * distinguishes `type` — `'none'` for `link`/`dashedLink`, which have no
-   * marker at either end. */
-  markerEnd: 'from' | 'to' | 'none';
+   * distinguishes `type` — `'both'` for a two-way relation (`<|--|>`),
+   * `'none'` for `link`/`dashedLink`, which have no marker at either end. */
+  markerEnd: 'from' | 'to' | 'both' | 'none';
   label?: string;
 }
 

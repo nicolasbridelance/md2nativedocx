@@ -63,9 +63,13 @@ function member(m: ClassMember): string {
   return `${m.visibility ?? ''}${m.text}`;
 }
 
-/** The superclass → subclass tree of an inheritance-only class diagram, or `null` with any other relation. */
+/**
+ * The superclass → subclass tree of an inheritance-only class diagram, or `null` with any other relation. A
+ * two-way inheritance (`A <|--|> B`) names no superclass, so it is not a tree either: the shapes keep both
+ * triangles.
+ */
 export function classDiagramToFlowchart(diagram: ClassDiagram): Flowchart | null {
-  if (diagram.relationships.length === 0 || diagram.relationships.some((r) => r.type !== 'inheritance')) return null;
+  if (diagram.relationships.length === 0 || diagram.relationships.some((r) => r.type !== 'inheritance' || r.markerEnd === 'both')) return null;
   const nodes = diagram.classes.map((c) => node(c.id, lines(c.label, [...c.attributes, ...c.methods].map(member))));
   // The triangle marks the superclass: `Animal <|-- Duck` has its marker on `from`.
   const edges = diagram.relationships.map((r) => (r.markerEnd === 'to' ? edge(r.to, r.from, r.label) : edge(r.from, r.to, r.label)));

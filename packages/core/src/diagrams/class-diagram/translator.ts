@@ -236,8 +236,10 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     const p1 = edgePoint(nFrom.x, nFrom.y, sizeFrom.width / 2, sizeFrom.height / 2, nTo.x, nTo.y);
     const p2 = edgePoint(nTo.x, nTo.y, sizeTo.width / 2, sizeTo.height / 2, nFrom.x, nFrom.y);
     const style = STYLE_BY_TYPE[rel.type];
-    const headMarker = rel.markerEnd === 'from' ? style.marker : 'none';
-    const tailMarker = rel.markerEnd === 'to' ? style.marker : 'none';
+    const atFrom = rel.markerEnd === 'from' || rel.markerEnd === 'both';
+    const atTo = rel.markerEnd === 'to' || rel.markerEnd === 'both';
+    const headMarker = atFrom ? style.marker : 'none';
+    const tailMarker = atTo ? style.marker : 'none';
     parts.push(
       connector(
         nextId(),
@@ -255,23 +257,22 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
       ),
     );
     if (style.hollow !== undefined) {
-      // The hollow marker sits at the end that carries it, pointing at the box, over the line's last stretch.
-      const atFrom = rel.markerEnd === 'from';
+      // A hollow marker sits at each end that carries one, pointing at the box, over the line's last stretch.
       const size = HOLLOW_SIZE_PX[style.hollow];
-      const tip = atFrom ? p1 : p2;
-      const other = atFrom ? p2 : p1;
-      parts.push(
-        hollowMarker(
-          nextId(),
-          style.hollow,
-          { x: scalePt(tip.x + dx, s), y: scalePt(tip.y + dy, s) },
-          { x: scalePt(other.x + dx, s), y: scalePt(other.y + dy, s) },
-          scalePt(size.length, s),
-          scalePt(size.width, s),
-          LINE_COLOR,
-          scaledLineWidthEmu(9525, s),
-        ),
-      );
+      for (const [tip, other] of [...(atFrom ? [[p1, p2]] : []), ...(atTo ? [[p2, p1]] : [])] as Array<[typeof p1, typeof p1]>) {
+        parts.push(
+          hollowMarker(
+            nextId(),
+            style.hollow,
+            { x: scalePt(tip.x + dx, s), y: scalePt(tip.y + dy, s) },
+            { x: scalePt(other.x + dx, s), y: scalePt(other.y + dy, s) },
+            scalePt(size.length, s),
+            scalePt(size.width, s),
+            LINE_COLOR,
+            scaledLineWidthEmu(9525, s),
+          ),
+        );
+      }
     }
     if (rel.label) {
       const midX = (p1.x + p2.x) / 2;

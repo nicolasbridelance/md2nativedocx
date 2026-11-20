@@ -144,3 +144,53 @@ test('an unclosed class block is warned, not silently dropped', () => {
   const { warnings } = parseClassDiagram('classDiagram\n  class Animal {\n    +String name');
   assert.ok(warnings.some((w) => w.includes('not closed')));
 });
+
+// The cases below come from Mermaid's official class examples, where our parser differed from Mermaid's own
+// (tools/mermaid-differential/).
+
+test('relations follow Mermaid grammar: optional end, solid or dotted line, optional end', () => {
+  const { ast, warnings } = parseClassDiagram(
+    'classDiagram\n  classA <|-- classB\n  classM <|.. classN\n  classK <.. classL\n  classC *-- classD\n  classE o-- classF\n  classI -- classJ\n  classO .. classP\n  A ..|> B\n  C --> D',
+  );
+  assert.deepEqual(
+    ast.relationships.map((r) => [r.from, r.type, r.markerEnd, r.to]),
+    [
+      ['classA', 'inheritance', 'from', 'classB'],
+      ['classM', 'realization', 'from', 'classN'],
+      ['classK', 'dependency', 'from', 'classL'],
+      ['classC', 'composition', 'from', 'classD'],
+      ['classE', 'aggregation', 'from', 'classF'],
+      ['classI', 'link', 'none', 'classJ'],
+      ['classO', 'dashedLink', 'none', 'classP'],
+      ['A', 'realization', 'to', 'B'],
+      ['C', 'association', 'to', 'D'],
+    ],
+  );
+  assert.equal(warnings.length, 0);
+});
+
+test('a two-way relation (<|--|>) carries its marker at both ends', () => {
+  const { ast, warnings } = parseClassDiagram('classDiagram\n  Animal <|--|> Zebra');
+  assert.deepEqual(ast.relationships.map((r) => [r.type, r.markerEnd]), [['inheritance', 'both']]);
+  assert.equal(warnings.length, 0);
+});
+
+test('backtick-quoted names with spaces in a relation; a name ending in o is not read as an aggregation', () => {
+  const { ast } = parseClassDiagram('classDiagram\n  `Animal Class!` --> `Car Class`\n  Foo--Bar');
+  assert.deepEqual(ast.relationships.map((r) => [r.from, r.type, r.to]), [
+    ['Animal Class!', 'association', 'Car Class'],
+    ['Foo', 'link', 'Bar'],
+  ]);
+});
+
+test('class header with :::style and an inline <<annotation>> still declares the class (each warned once)', () => {
+  const { ast, warnings } = parseClassDiagram(
+    'classDiagram\n  class Shape <<interface>>\n  class Animal:::someclass {\n    -int sizeInFeet\n    -canEat()\n  }\n  class Mineral:::pink',
+  );
+  assert.deepEqual(ast.classes.map((c) => [c.id, c.attributes.length, c.methods.length]), [
+    ['Shape', 0, 0],
+    ['Animal', 1, 1],
+    ['Mineral', 0, 0],
+  ]);
+  assert.equal(warnings.length, 2);
+});
