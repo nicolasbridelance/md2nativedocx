@@ -82,6 +82,20 @@ conformance assertions) and by `node scripts/generate-corpus.mjs` (standalone re
 `generated/*.docx` also serves as material for the MVP acceptance criterion (spec §9: manual
 tests in real Word before each release).
 
+**Mermaid's official examples** (`test-corpus/mermaid-official/`, every example block of the syntax pages of
+the Mermaid documentation at a pinned tag), in two stages:
+
+- *Stage 1*, `node scripts/mermaid-conformance.mjs --report`: each example through `renderDiagram()`, sorted
+  into clean, warned, not drawn, wrong type, failed (`REPORT.md`). Locked by
+  `packages/core/test/unit/mermaid-official.test.ts` against `expected-clean.json`. It only sees warnings.
+- *Stage 2*, `node tools/mermaid-differential/differential.mjs --report`: what Mermaid itself parsed (its
+  public `mermaidAPI.getDiagramFromText()`, under jsdom) against what our parser produced, fact by fact
+  (nodes, links, subgraph members, participants, messages, blocks, classes, states, entities). It catches a
+  node or a link one side has and the other does not, even without a warning (`DIFFERENTIAL.md`). Locked in
+  CI (job *Mermaid differential*) against `expected-match.json`. `mermaid` and `jsdom` are installed only
+  in `tools/mermaid-differential/` (`npm ci --prefix tools/mermaid-differential`), never in the workspaces
+  and never shipped. When moving to a new Mermaid tag, refresh the corpus and the tool's pin together.
+
 ## 4. Visual regression
 
 `test-corpus/visual/` — details, the LibreOffice height/ratio pitfall, and the procedure for

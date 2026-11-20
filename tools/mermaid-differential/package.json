@@ -1,0 +1,15 @@
+{
+  "name": "mermaid-differential",
+  "private": true,
+  "description": "Stage 2 of the Mermaid conformance work: compares Mermaid's own parse of the official examples with this project's (dev tool, never published). Outside the npm workspaces so its 200 MB stay out of every other install.",
+  "license": "CC0-1.0",
+  "type": "module",
+  "scripts": {
+    "check": "node differential.mjs --check",
+    "report": "node differential.mjs --report"
+  },
+  "dependencies": {
+    "jsdom": "29.1.1",
+    "mermaid": "12.3.0"
+  }
+}

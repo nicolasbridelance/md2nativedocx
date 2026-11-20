@@ -196,6 +196,35 @@ jobs:
       - name: Build the packaged extension (.vsix)
         run: npm run package --workspace=md2nativedocx
 
+  # Stage 2 of the Mermaid conformance work: Mermaid's own parse of the official examples against ours
+  # (tools/mermaid-differential/). Fails when an example that matched Mermaid no longer does
+  # (test-corpus/mermaid-official/expected-match.json). mermaid and jsdom live in that folder's own
+  # lockfile, outside the workspaces, so the other jobs never install them; they are never shipped.
+  mermaid-differential:
+    name: Mermaid differential (official examples)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tools/mermaid-differential/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix tools/mermaid-differential
+
+      - name: Build core
+        run: npm run build -w packages/core
+
+      - name: Compare with Mermaid
+        run: node tools/mermaid-differential/differential.mjs --check
+
   audit:
     name: npm audit (fail on high/critical)
     runs-on: ubuntu-latest

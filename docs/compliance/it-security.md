@@ -65,6 +65,7 @@ Source: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml),
 | Property-based tests | `fast-check` | Every push and PR | Yes |
 | Word schema validation of generated `.docx` | Microsoft's Open XML SDK | Every push and PR | Yes, for this project's own parts |
 | ODF schema validation of generated `.odt` | ODF Toolkit validator, pinned by SHA-256 | Every push and PR | Yes |
+| Our parser against Mermaid's own, on Mermaid's official examples | `mermaid` + `jsdom`, test-only, outside the workspaces | Every push and PR | Yes, for every example that matched before |
 | Published npm packages install and run in a clean folder | `verify:npm-packages` | Every push and PR | Yes |
 | Extension package builds | `vsce package`, with its own smoke tests | Every push and PR, Windows and macOS | Yes |
 | Dependency audit, shipped dependencies | `npm audit --omit=dev --audit-level=high` | Every push and PR | Yes, no exception possible |

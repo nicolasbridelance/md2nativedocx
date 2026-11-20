@@ -201,10 +201,16 @@ Ensuite, dans l'ordre :
               (vérifiés dans PowerPoint seulement).
             - Limite de l'étage 1 : il ne voit que les avertissements. Un faux nœud créé sans avertissement
               (comme `e1@{ … }` avant correction) n'est visible qu'à l'étage 2.
-      - [ ] **Étage 2 — différentiel contre `mermaid`** (dépendances de dev `mermaid` + `jsdom` accordées
-            par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime) : pour chaque exemple,
-            comparer ce que Mermaid comprend (nœuds, liens, messages, blocs) à notre AST. Recette jsdom :
-            `docs/adr/spikes/spike-gantt-parser/`. Rejouer à chaque montée de version de Mermaid.
+      - [~] **Étage 2 — différentiel contre `mermaid`** (dépendances de dev `mermaid` + `jsdom` accordées
+            par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime). Outil livré le 2026-11-20 :
+            `tools/mermaid-differential/` (hors workspaces, son propre lockfile, `mermaid@12.3.0` épinglé comme le
+            corpus), rapport `test-corpus/mermaid-official/DIFFERENTIAL.md`, verrou CI (job *Mermaid differential*,
+            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER. Premier passage :
+            252 exemples comparés, **217 identiques, 35 écarts, dont 7 sans avertissement** (à corriger d'abord :
+            `flowchart#95` flèche longue `---->` avec libellé, `#98`/`#99` nœud déjà vu ajouté à un sous-graphe,
+            `#104` id de sous-graphe entre backticks, `sequenceDiagram#12`/`#14` `participant X@{…}`, `#34`
+            entité nommée `#infin;`). Reste : comparateurs des autres types (mindmap, Gantt, C4, requirement…).
+            Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
       produit par un script resté hors dépôt. Aujourd'hui le `.md` est la source à éditer à la main.
