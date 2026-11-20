@@ -29,9 +29,10 @@ couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. Le 
    Décisions du mainteneur du même jour : héberger `pandoc.wasm`, ZIP et WASI écrits par le projet. Le
    post-traitement du CLI travaille désormais sur un paquet en mémoire (`docxPackage.mjs`). Restes, §4
    « Convertisseur navigateur ».
-3. **Documents de conformité à jour** (`docs/compliance/*`, `SECURITY.md`, inchangés depuis le
-   2026-09-04) : chiffres revérifiés (tests, dépendances runtime), serveur MCP, `.pptx` / `.odt`,
-   PlantUML (`!include` jamais suivi), publication npm par OIDC avec provenance, Open VSX, `--sandbox`.
+3. ~~**Documents de conformité à jour**~~ (fait le 2026-11-20) : `docs/compliance/*` et `SECURITY.md`
+   réécrits (canaux, licences par canal, flux réseau, CI, MCP, `.odt`/`.pptx`, PlantUML, OIDC). Trouvé au
+   passage et corrigé : le `.vsix` et la page web embarquaient du code MIT sans ses notices ; elles sont
+   désormais générées au build (`scripts/third-party-licenses.mjs`). Restes, §4 « Conformité, restes ».
 4. **Conformité syntaxique Mermaid 1:1** (§2, « Conformité Mermaid ») : étage 2 (différentiel contre
    `mermaid`), puis les avertissements de l'étage 1 par rendement (classes, ER, états).
 5. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
@@ -344,6 +345,14 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   - Pandoc 3.14 dans la page, 3.1.3 épinglé pour le CLI en CI : à rapprocher (§2bis « Pandoc comme contrat ») ;
   - la sélection des blocs de diagramme existe en Lua et en JS (`diagram-blocks.mjs`) : n'en garder qu'une
     si le CLI passe un jour par l'AST JSON.
+- **Conformité, restes** (revue du 2026-11-20, `docs/compliance/it-security.md` → *What is not covered yet*) :
+  - l'extension VS Code n'a pas de mode `--sandbox` : elle suppose que le Markdown ouvert est celui de
+    l'utilisateur et laisse Pandoc lire ou télécharger les images. Un réglage
+    `md2nativedocx.sandbox` serait simple (l'option existe dans `convert()`) ; à décider ;
+  - pas de hook local gitleaks avant commit (la CI bloque au push) ;
+  - le tableau Sécurité d'`AGENTS.md` n'a pas les lignes propres aux canaux que `it-security.md` ajoute
+    (sandbox Pandoc, limites MCP, binaires téléchargés, publication OIDC, PlantUML `!include`) : les y
+    reporter demande l'accord du mainteneur (escalade).
 - **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
   (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
 - **draw.io, dans les deux sens : décidé par le mainteneur le 2026-11-20** (point 7 de l'ordre de

@@ -3,7 +3,7 @@
 > This file exists because the test directory grew by successive additions rather than by
 > design, and that ended up being confusing — see `docs/history/TODO_ARCHIVE.md` (2026-08-07) for the history of
 > that finding and the cleanup that followed. This document gives the missing overview: the
-> project's seven test chapters, what each one guarantees, where it lives, and how to add a case.
+> project's eight test chapters, what each one guarantees, where it lives, and how to add a case.
 
 ## The eight chapters
 
