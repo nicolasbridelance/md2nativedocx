@@ -19,7 +19,7 @@ document to can edit in Word, without Markdown, Mermaid or you:
   SmartArt; add a step in one click.
 - **Send it with confidence:** every export is checked against Word's own file-format rules.
 
-All 29 Mermaid diagram types are supported, plus PlantUML sequence, class, state and activity diagrams (```` ```plantuml ```` blocks). (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
+All 32 Mermaid diagram types are supported, plus PlantUML sequence, class, state and activity diagrams (```` ```plantuml ```` blocks). (`md2nativedocx` = **M**ark**d**own **to native docx**: *native*
 means Word's own editable objects, not pictures.)
 
 <img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/wow.gif" width="720" alt="A Mermaid sankey, mindmap, Venn diagram, timeline and treemap being exported to native Word shapes with one click"/>
@@ -121,7 +121,7 @@ XML and still be a file real Word refuses to open; this check catches that class
 you do, and the result (a clean "0 errors", or exactly what and where otherwise) lands in the
 export's own `.log` file.
 
-## All 29 Mermaid diagram types
+## All 32 Mermaid diagram types
 
 <img src="https://raw.githubusercontent.com/nicolasbridelance/md2nativedocx/main/docs/showcase/preview.png" width="900" alt="Side-by-side gallery of all 29 supported Mermaid diagram types: Mermaid.js rendering on the left, md2nativedocx native Word shapes on the right"/>
 
@@ -141,8 +141,8 @@ SmartArt graphic (each node keeps its Mermaid shape): add a step or a branch fro
 **How do I convert a Mermaid diagram to an editable Word diagram?** Open the `.md` (or `.mmd`) file, click
 **Export to Word** above the diagram. The result is native Word shapes, not a PNG.
 
-**Which Mermaid diagrams are supported?** All 29 types: flowchart, sequence, class, state, ER, Gantt, pie, mindmap,
-timeline, journey, git graph, C4, and more. PlantUML sequence, class, state and activity diagrams too; other PlantUML types get a note for now.
+**Which Mermaid diagrams are supported?** All 32 types: flowchart, sequence, class, state, ER, Gantt, pie, mindmap,
+timeline, journey, git graph, C4, railroad, and more. PlantUML sequence, class, state and activity diagrams too; other PlantUML types get a note for now.
 
 **Do I need Pandoc, Word or Mermaid CLI?** No Word and no Mermaid CLI. Pandoc is downloaded automatically on first
 export if missing (see *Prerequisites*).

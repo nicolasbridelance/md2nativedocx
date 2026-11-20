@@ -29,8 +29,8 @@ so the people who own the document after you can change it in Word, without Mark
   become SmartArt, so adding a step or a branch is one click in Word.
 - **Send it with confidence:** every file is checked against Word's own file-format rules before you get it.
 
-All 29 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
-graph, …), plus PlantUML sequence, class, state and activity diagrams. A document without any diagram converts just as well. Use it from the
+All 32 Mermaid diagram types are covered (flowchart, sequence, class, state, ER, Gantt, mindmap, C4, git
+graph, railroad, …), plus PlantUML sequence, class, state and activity diagrams. A document without any diagram converts just as well. Use it from the
 [VS Code extension](https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx) (also on [Open VSX](https://open-vsx.org/extension/md2nativedocx/md2nativedocx) for VSCodium, Cursor, Windsurf…; one
 click), the CLI (`md2nativedocx report.md -o report.docx`, npm package `@md2nativedocx/cli`), or as a Pandoc filter. It can also write a
 `.pptx` deck, and a `.odt` for LibreOffice where flowcharts become native LibreOffice shapes (other types
@@ -82,10 +82,10 @@ diagram. See `docs/specs/cahier_des_charges.md` (French) for the full detail.
 
 ## Supported diagram types
 
-**All 29 Mermaid types export as native Word objects** (SmartArt, Word charts or editable shapes): flowchart, sequenceDiagram, classDiagram,
+**All 32 Mermaid types export as native Word objects** (SmartArt, Word charts or editable shapes): flowchart, sequenceDiagram, classDiagram,
 stateDiagram, erDiagram, gantt, pie, mindmap, timeline, journey, gitGraph, quadrantChart, requirementDiagram,
 C4, sankey, xychart, block, packet, kanban, architecture, radar, treemap, venn, ishikawa, wardley, cynefin,
-treeView, eventmodeling and zenuml. Anything unrecognised gets a clear in-document note, never a silently wrong guess.
+treeView, eventmodeling, zenuml, agentflow, usecase and railroad (EBNF, ABNF, PEG). Anything unrecognised gets a clear in-document note, never a silently wrong guess.
 (Fidelity detail is deepest for flowcharts; see below.)
 
 **PlantUML sequence, class, state and activity diagrams too.** A ```` ```plantuml ```` (or ```` ```puml ````) block holding a

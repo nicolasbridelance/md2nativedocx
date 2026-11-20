@@ -25,7 +25,7 @@
 | Licence | CC0 1.0 (domaine public) |
 | Dépôt | github.com/nicolasbridelance/md2nativedocx |
 | Sorties | `.docx` (via Pandoc) et `.pptx` |
-| Diagrammes | 29 types Mermaid, formes natives modifiables |
+| Diagrammes | 32 types Mermaid, formes natives modifiables |
 | Exécution | 100 % locale, sans référence distante |
 
 ```{=openxml}
@@ -244,6 +244,7 @@ Le tableau ci-dessous récapitule tous les types reconnus, leur mot-clé Mermaid
 | Cynefin | `cynefin-beta` | Couleurs fixes |
 | Wardley | `wardley-beta` | Couleurs fixes |
 | Event modeling | `eventmodeling` | Couleurs fixes |
+| Railroad (syntaxe) | `railroad-beta`, `railroad-ebnf-beta`, `railroad-abnf-beta`, `railroad-peg-beta` | Couleurs fixes |
 | Git graph | `gitGraph` | Couleurs fixes |
 
 ```{=openxml}
@@ -1642,6 +1643,50 @@ Cadres de temps, événements, données et scénarios.
 | gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded | gwt 03 given evt ItemAdded when cmd AddItem then evt ItemAdded                                              |
 | ```                                                            | ```                                                                                                         |
 +----------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+
+
+```{=openxml}
+<w:p><w:r><w:br w:type="page"/></w:r></w:p>
+```
+
+## Railroad (syntaxe)
+
+Diagrammes de syntaxe d’une grammaire : une voie par règle, avec ses choix, options et répétitions.
+
+| Rubrique | Détail |
+|:---------|:-------|
+| Mot-clé | `railroad-beta` (fonctions), `railroad-ebnf-beta`, `railroad-abnf-beta`, `railroad-peg-beta` |
+| Couleurs | Couleurs fixes |
+
+
+**Syntaxe**
+
+- EBNF : `regle = "a" | b , [ c ] { d } e? f* g+ h - i ;` (`::=` accepté, commentaires `(* *)`)
+- ABNF : `regle = "a" / b 1*( c ) [ d ] %x41-5A ;` (`;` termine la règle, la suite de la ligne est un commentaire)
+- PEG : `Regle <- "a" / B &C !D E? F* G+ .` (`;` facultatif, commentaires `#`)
+- Fonctions : `regle = sequence(terminal("a"), choice(nonterminal("b"), optional(special("c")))) ;`
+- `title`, `accTitle`, `accDescr`
+
+**Pris en charge :** Les quatre dialectes. Chaque règle a sa voie : le chemin principal reste droit, les alternatives se rangent dessous, une option passe par-dessus, une répétition boucle par-dessous (avec ses bornes ABNF, par exemple `2–5×`). Terminaux en pastilles bleues, règles en boîtes, séquences spéciales en pointillés.
+
+**Limites**
+
+- Exception EBNF (`a - b`) et prédicats PEG (`&a`, `!a`) : écrits en toutes lettres (« except b », « if a », « not a »)
+- Une erreur de syntaxe ne bloque pas : la règle garde ce qui a été lu, avec un avertissement
+- Plafonds : 200 règles, 3 000 éléments, 40 niveaux d’imbrication
+
+
++-------------------------------------------+------------------------------------------------------------+
+| Source Mermaid                            | Rendu dans Word                                            |
++===========================================+============================================================+
+| ```text                                   | ```mermaid                                                 |
+| railroad-abnf-beta                        | railroad-abnf-beta                                         |
+| title "Phone Number"                      | title "Phone Number"                                       |
+|                                           |                                                            |
+| phone = [ "+" country-code ] subscriber ; | phone = [ "+" country-code ] subscriber ;                  |
+| country-code = 1*DIGIT ;                  | country-code = 1*DIGIT ;                                   |
+| subscriber = 1*( DIGIT / "-" / " " ) ;    | subscriber = 1*( DIGIT / "-" / " " ) ;                     |
+| ```                                       | ```                                                        |
++-------------------------------------------+------------------------------------------------------------+
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>

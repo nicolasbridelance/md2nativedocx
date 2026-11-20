@@ -1,6 +1,6 @@
 # What each Mermaid diagram becomes in Word
 
-Status as of 2026-10-06. Every one of the 29 Mermaid diagram types that md2nativedocx recognises exports as
+Status as of 2026-10-06. Every one of the 32 Mermaid diagram types that md2nativedocx recognises exports as
 something you can edit in Word. A diagram becomes one of three things:
 
 - **SmartArt.** A real SmartArt graphic. You add a step or a branch from Word's Text Pane, switch the layout
@@ -64,6 +64,7 @@ SmartArt and charts are `.docx`-only.
 | `wardley-beta` | Shapes | — | Components placed by coordinates. |
 | `cynefin-beta` | Shapes | — | Five fixed domains with items. |
 | `eventmodeling` | Shapes | — | Lanes and frames. |
+| `railroad-beta`, `railroad-ebnf-beta`, `railroad-abnf-beta`, `railroad-peg-beta` | Shapes | — | Syntax diagrams: one track per rule, the main path straight, alternatives below, bypasses above, loops under (with ABNF bounds). No SmartArt or chart has branching tracks. |
 
 ### PlantUML
 

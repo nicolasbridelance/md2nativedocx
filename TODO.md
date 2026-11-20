@@ -158,9 +158,18 @@ Ensuite, dans l'ordre :
             - **séquence (11)**, **C4 (6)**, **architecture (5)**, **Gantt (7)**, **mindmap (4)**, **requirement (4)**,
               **treeView (4)**, divers (8) ;
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
-              `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; reste **railroad**
-              (14 exemples, une note aujourd'hui ; 3 mini-parseurs de grammaire + placement en voies, plusieurs
-              jours, usage de niche : attendre une demande).
+              `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; ~~railroad~~
+              (fait le 2026-11-20 : `diagrams/railroad/`, conception propre au projet, CC0 : la syntaxe vient de la doc
+              Mermaid, le code n'en reprend rien ; une première version traduite du code Mermaid (MIT) a été
+              remplacée le jour même, décision du mainteneur : rester 100 % CC0, on lit et on réinterprète, on ne
+              copie pas ; 4 dialectes, 14/14 exemples propres, rendu vérifié dans Word, 0 erreur de schéma dans
+              `document.xml`). Le corpus officiel n'a plus aucun type « pas encore dessiné » : **420 propres (78 %)**.
+              Ajout d'API publique : `DiagramType` `'railroad'` et les types/fonctions `Railroad*` (à publier avec
+              la prochaine release de `core`). Reste : baseline
+              `test:visual` pour railroad (à produire en CI, pas sur Windows) ; `.odt` (note, comme tous les types
+              non organigrammes) ; constat de rendu Word à suivre : une zone de texte `wrap="none"` remplie est
+              rétrécie à son texte par Word (vu sur railroad, corrigé là ; vérifier les autres traducteurs qui
+              combinent `noWrap` et un fond, ex. tête d'Ishikawa).
             - **Décision du mainteneur, 2026-11-19 : ajouts d'API publique de `core` acceptés** — `DiagramType`
               `'agentflow'` et `'usecase'` (+ `'mermaidUnsupported'`), `NodeShape` `'actor'`, `EdgeType`
               `'generalization'` et `'realization'`. Tous additifs ; à publier avec la prochaine release de
