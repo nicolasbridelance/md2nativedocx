@@ -341,7 +341,6 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
     par des métadonnées Pandoc, ce qui servirait aussi le CLI) ;
   - images du Markdown (déposer les fichiers avec le `.md`, passés à `pandoc.wasm`) ; `.odt` ;
   - avertissements du moteur en anglais seulement, même sur la page en français ;
-  - vérifier sur le site publié que GitHub Pages compresse `pandoc.wasm` (17 Mo au lieu de 62,5) ;
   - Pandoc 3.14 dans la page, 3.1.3 épinglé pour le CLI en CI : à rapprocher (§2bis « Pandoc comme contrat ») ;
   - la sélection des blocs de diagramme existe en Lua et en JS (`diagram-blocks.mjs`) : n'en garder qu'une
     si le CLI passe un jour par l'AST JSON.
