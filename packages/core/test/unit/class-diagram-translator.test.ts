@@ -138,3 +138,21 @@ test('a namespace is a dashed box behind its classes, titled and escaped, nested
   assert.ok(inner[1]! > outer[1]! && inner[1]! + inner[3]! <= outer[1]! + outer[3]!, 'vertically inside, below the title');
   assert.ok(xml.indexOf('>Outer</w:t>') < xml.indexOf('>A</w:t>'), 'boxes are drawn before the classes');
 });
+
+test('a styled class is filled and outlined with its colours, the text readable on a dark fill', () => {
+  const xml = translateClassDiagramToOoxml(parseClassDiagram('classDiagram\nclass A {\n  +x\n}\nstyle A fill:#333,stroke:#f00').ast);
+  assert.ok(xml.includes('<a:srgbClr val="333333"/>'), 'fill');
+  assert.ok(xml.includes('<a:srgbClr val="FF0000"/>'), 'stroke');
+  assert.ok(xml.includes('<w:color w:val="FFFFFF"/>'), 'white text on the dark fill');
+  assert.ok(!xml.includes('D9E2F3'), 'the styled fill replaces the title tint');
+});
+
+test('a colour that is not 6 hex digits never reaches the XML, even from a caller-made AST', () => {
+  // AGENTS.md rule 2: values that end up in an attribute are validated, not only escaped.
+  const xml = translateClassDiagramToOoxml({
+    direction: 'TD',
+    classes: [{ id: 'A', label: 'A', attributes: [], methods: [], fill: '"/><evil', stroke: 'red', textColor: '12' }],
+    relationships: [],
+  });
+  assert.ok(!xml.includes('evil') && !xml.includes('"red"'));
+});

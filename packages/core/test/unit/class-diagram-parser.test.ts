@@ -131,10 +131,7 @@ test('a namespace block groups its classes, which still parse', () => {
   assert.deepEqual(warnings, []);
 });
 
-test('classDef/style and note lines are recognized and warned, not silently dropped', () => {
-  const { warnings: w2 } = parseClassDiagram('classDiagram\n  classDef foo fill:#f00\n  class A');
-  assert.ok(w2.some((w) => w.includes('Styling')));
-
+test('note lines are recognized and warned, not silently dropped', () => {
   const { warnings: w3 } = parseClassDiagram('classDiagram\n  note "a note"\n  class A');
   assert.ok(w3.some((w) => w.includes('Notes')));
 });
@@ -182,7 +179,7 @@ test('backtick-quoted names with spaces in a relation; a name ending in o is not
   ]);
 });
 
-test('class header with :::style and an inline <<annotation>> still declares the class (the style warned once)', () => {
+test('class header with :::style and an inline <<annotation>> still declares the class', () => {
   const { ast, warnings } = parseClassDiagram(
     'classDiagram\n  class Shape <<interface>>\n  class Animal:::someclass {\n    -int sizeInFeet\n    -canEat()\n  }\n  class Mineral:::pink',
   );
@@ -192,7 +189,7 @@ test('class header with :::style and an inline <<annotation>> still declares the
     ['Mineral', 0, 0],
   ]);
   assert.deepEqual(ast.classes[0]!.annotations, ['interface']);
-  assert.equal(warnings.length, 1);
+  assert.deepEqual(warnings, ['classDef "someclass" referenced but not defined.', 'classDef "pink" referenced but not defined.']);
 });
 
 test('annotations are read in the body, in the header and on their own line, as Mermaid reads them', () => {
@@ -254,4 +251,27 @@ test('namespaces are qualified as Mermaid qualifies them: nested, dotted with im
     TechLead: 'Company.Engineering',
     Outside: '-',
   });
+});
+
+test('styles are layered as Mermaid layers them: classDef default, then each class, then style', () => {
+  const { ast, warnings } = parseClassDiagram(
+    [
+      'classDiagram',
+      'class Animal:::pink',
+      'class Mineral',
+      'class Plant',
+      'cssClass "Plant" pink',
+      'style Mineral stroke:#f66,color:#fff',
+      'style Ghost fill:#000',
+      'classDef default fill:#f96',
+      'classDef pink color:#f9f,fill:not-a-colour',
+    ].join('\n'),
+  );
+  assert.deepEqual(warnings, []);
+  const colours = Object.fromEntries(ast.classes.map((c) => [c.id, [c.fill, c.stroke, c.textColor]]));
+  assert.deepEqual(colours, {
+    Animal: ['FF9966', undefined, 'FF99FF'],
+    Mineral: ['FF9966', 'FF6666', 'FFFFFF'],
+    Plant: ['FF9966', undefined, 'FF99FF'],
+  }, '`style` on an unknown class creates nothing; a value that is not a colour is dropped');
 });

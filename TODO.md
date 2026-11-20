@@ -169,8 +169,17 @@ Ensuite, dans l'ordre :
               Mermaid (imbrication, noms pointés et ancêtres implicites, `["label"]`), identiques à Mermaid au
               différentiel ; cadres en pointillé dans un graphe Dagre composé, bande de titre réservée comme pour un
               sous-graphe ; pas de SmartArt avec un `namespace` ; vérifié dans Word, `test-corpus/word-verification/
-              class-namespaces.*` ; `hierarchicalNamespaces: false` (option YAML imbriquée) non lu), `class X:::style`
-              (avec ou sans corps), cardinalités, notes, styles ;
+              class-namespaces.*` ; `hierarchicalNamespaces: false` (option YAML imbriquée) non lu), ~~`class X:::style`
+              (avec ou sans corps), styles~~ (faits le 2026-11-20 : `style`, `classDef` + `:::` / `cssClass`, `classDef
+              default`, superposés comme Mermaid ; `ClassBox.fill` / `stroke` / `textColor`, validés avant le XML, repris
+              par le SmartArt ; lecture des styles partagée avec l'organigramme (`parser/css-style.ts`), `textColorFor`
+              mis en commun (`translator/text-color.ts`) ; vérifié dans Word, `test-corpus/word-verification/
+              class-styles.*`), cardinalités, notes ;
+            - **Couleurs nommées (`red`, `white`) ignorées sans avertissement**, dans l'organigramme comme dans les
+              classes (`parseHexColor`, `parser/css-style.ts`) : `classDiagram#35` (`color:red`) garde son texte noir.
+              Lire les noms CSS (une table de 148 entrées) ou au moins avertir ;
+            - **`classDef default` de l'organigramme** n'est toujours pas appliqué (manuel, limites) alors que les
+              classes l'appliquent depuis le 2026-11-20 : aligner ;
             - **Vu dans Word le 2026-11-20 :** un libellé de relation de classes est posé au milieu du trait, sans
               fond : il peut tomber sur la bordure d'un `namespace` (`classDiagram#20`) ou d'une autre classe. Même
               remarque que pour l'ER ; à traiter ensemble (fond blanc, ou position évitant les cadres) ;

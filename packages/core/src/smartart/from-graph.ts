@@ -76,7 +76,14 @@ export function classDiagramToFlowchart(diagram: ClassDiagram): Flowchart | null
     const tokens = lines(c.label, [...c.attributes, ...c.methods].map(member));
     // The annotation goes above the name, as in the shapes (only the first, as Mermaid does).
     const annotation = c.annotations?.[0];
-    return node(c.id, annotation === undefined ? tokens : [{ text: `«${annotation}»` }, { break: true }, ...tokens]);
+    const box = node(c.id, annotation === undefined ? tokens : [{ text: `«${annotation}»` }, { break: true }, ...tokens]);
+    // Colours from `style` / `classDef` carry over, as a flowchart node's do (validated by the SmartArt writer).
+    return {
+      ...box,
+      ...(c.fill !== undefined ? { fill: c.fill } : {}),
+      ...(c.stroke !== undefined ? { stroke: c.stroke } : {}),
+      ...(c.textColor !== undefined ? { textColor: c.textColor } : {}),
+    };
   });
   // The triangle marks the superclass: `Animal <|-- Duck` has its marker on `from`.
   const edges = diagram.relationships.map((r) => (r.markerEnd === 'to' ? edge(r.to, r.from, r.label) : edge(r.from, r.to, r.label)));

@@ -44,6 +44,8 @@ import dagre from 'dagre';
 import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassRelationType } from './types.js';
 import { boxShape } from '../../translator/boxes.js';
+import { validateHexColor } from '../../translator/xml-escape.js';
+import { textColorFor } from '../../translator/text-color.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
   createIdAllocator,
@@ -140,27 +142,36 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
   const totalH = titleH + attrH + methodH;
   const borderW = scaledLineWidthEmu(9525, s);
 
-  parts.push(rect(nextId(), bx, by, w, totalH, 'FFFFFF', LINE_COLOR, box.label));
-  parts.push(rect(nextId(), bx, by, w, titleH, TITLE_FILL, undefined, `${box.label} title`));
+  // Colours from `style` / `classDef`, validated before they reach the XML (AGENTS.md rule 2). A styled fill
+  // covers the whole box, title included, as in Mermaid; unstyled, the title band keeps its own tint. Text
+  // is the `color:` given, else black or white to suit what it sits on.
+  const styledFill = box.fill === undefined ? undefined : validateHexColor(box.fill, 'FFFFFF');
+  const bodyFill = styledFill ?? 'FFFFFF';
+  const titleFill = styledFill ?? TITLE_FILL;
+  const line = validateHexColor(box.stroke, LINE_COLOR);
+  const textOn = (fill: string): string => validateHexColor(box.textColor, textColorFor(fill));
+
+  parts.push(rect(nextId(), bx, by, w, totalH, bodyFill, line, box.label));
+  parts.push(rect(nextId(), bx, by, w, titleH, titleFill, undefined, `${box.label} title`));
 
   let dividerY = by + titleH;
   if (attrH > 0) {
-    parts.push(rect(nextId(), bx, dividerY - Math.round(borderW / 2), w, borderW, LINE_COLOR, undefined, 'Divider'));
+    parts.push(rect(nextId(), bx, dividerY - Math.round(borderW / 2), w, borderW, line, undefined, 'Divider'));
     dividerY += attrH;
   }
   if (methodH > 0) {
-    parts.push(rect(nextId(), bx, dividerY - Math.round(borderW / 2), w, borderW, LINE_COLOR, undefined, 'Divider'));
+    parts.push(rect(nextId(), bx, dividerY - Math.round(borderW / 2), w, borderW, line, undefined, 'Divider'));
   }
 
   const annotation = annotationLine(box);
   if (annotation === undefined) {
-    parts.push(textBoxLines(nextId(), bx, by, w, titleH, [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }));
+    parts.push(textBoxLines(nextId(), bx, by, w, titleH, [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr', color: textOn(titleFill) }));
   } else {
     // `«interface»` in the member size, then the name in bold, in the same title compartment.
     const annotationH = scalePt(ANNOTATION_H + 4, s);
-    parts.push(textBoxLines(nextId(), bx, by + scalePt(2, s), w, annotationH, [annotation], scaledFontSizeHalfPt(MEMBER_SIZE_HALFPT, s), { align: 'ctr' }));
+    parts.push(textBoxLines(nextId(), bx, by + scalePt(2, s), w, annotationH, [annotation], scaledFontSizeHalfPt(MEMBER_SIZE_HALFPT, s), { align: 'ctr', color: textOn(titleFill) }));
     parts.push(
-      textBoxLines(nextId(), bx, by + scalePt(ANNOTATION_H, s), w, titleH - scalePt(ANNOTATION_H, s), [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }),
+      textBoxLines(nextId(), bx, by + scalePt(ANNOTATION_H, s), w, titleH - scalePt(ANNOTATION_H, s), [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr', color: textOn(titleFill) }),
     );
   }
 
@@ -175,6 +186,7 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
         attrH,
         box.attributes.map(memberDisplay),
         scaledFontSizeHalfPt(MEMBER_SIZE_HALFPT, s),
+        { color: textOn(bodyFill) },
       ),
     );
   }
@@ -188,6 +200,7 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
         methodH,
         box.methods.map(memberDisplay),
         scaledFontSizeHalfPt(MEMBER_SIZE_HALFPT, s),
+        { color: textOn(bodyFill) },
       ),
     );
   }

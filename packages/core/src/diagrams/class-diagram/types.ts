@@ -34,6 +34,12 @@ export interface ClassBox {
   annotations?: string[];
   /** Qualified id of the {@link ClassNamespace} the class was declared in, if any. */
   namespace?: string;
+  /** Box fill (hex, no `#`) from `style`, `classDef` / `:::` / `cssClass`, or `classDef default`. */
+  fill?: string;
+  /** Border and divider colour (hex, no `#`), same sources as `fill`. */
+  stroke?: string;
+  /** Text colour (hex, no `#`) from `color:`, same sources; otherwise black or white to suit the fill. */
+  textColor?: string;
   attributes: ClassMember[];
   methods: ClassMember[];
 }

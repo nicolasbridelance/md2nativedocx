@@ -54,6 +54,7 @@ import type {
 import { escapeXml } from './xml-escape.js';
 import { HOLLOW_SIZE_PX, hollowMarker } from './graph-shapes.js';
 import { actorConnectBox, actorFigure, type FigurePoint } from './actor-figure.js';
+import { textColorFor } from './text-color.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
  * DPI that is 9525 EMU per pixel. */
@@ -360,21 +361,6 @@ function createIdAllocator(): () => number {
  */
 function hexColor(value: string | undefined, fallback: string): string {
   return value !== undefined && /^[0-9A-Fa-f]{6}$/.test(value) ? value.toUpperCase() : fallback;
-}
-
-/**
- * Pick a readable text color for a shape fill, so labels stay visible on both
- * light and dark fills. Word resolves shape text color from the theme
- * (`a:fontRef` -> `lt1`, i.e. white), which is invisible on the light default
- * fill; an explicit run color overrides it.
- */
-function textColorFor(fillHex: string): string {
-  const r = parseInt(fillHex.slice(0, 2), 16);
-  const g = parseInt(fillHex.slice(2, 4), 16);
-  const b = parseInt(fillHex.slice(4, 6), 16);
-  // Relative luminance (sRGB coefficients, WCAG's simplified form).
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luminance > 0.6 ? '000000' : 'FFFFFF';
 }
 
 /** Default node-text insets (EMU, unscaled): 0.1in left/right, 0.05in

@@ -28,6 +28,7 @@ import { escapeXml, validateHexColor } from './xml-escape.js';
 import { SUBGRAPH_TITLE_HEIGHT } from '../layout/layout.js';
 import { EMU_PER_PX, type CanvasOptions } from './canvas.js';
 import { actorFigure } from './actor-figure.js';
+import { textColorFor } from './text-color.js';
 
 /**
  * Names of the `office:styles` definitions the diagram styles refer to. The `reference.odt` handed to
@@ -226,14 +227,6 @@ function pt(value: number): string {
 
 function round3(value: number): number {
   return Math.round(value * 1000) / 1000;
-}
-
-/** Black or white text, whichever reads on `fillHex` (same rule as the `.docx` output). */
-function textColorFor(fillHex: string): string {
-  const r = parseInt(fillHex.slice(0, 2), 16);
-  const g = parseInt(fillHex.slice(2, 4), 16);
-  const b = parseInt(fillHex.slice(4, 6), 16);
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6 ? '000000' : 'FFFFFF';
 }
 
 /**

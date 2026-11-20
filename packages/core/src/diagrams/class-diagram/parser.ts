@@ -21,10 +21,11 @@
  *   the class header, `<<Interface>> Name` on its own line) into `ClassBox.annotations`.
  * - `namespace` blocks (nested, dotted, with a `["label"]`) into `ClassDiagram.namespaces`, each class
  *   declared inside one recording it (`ClassBox.namespace`), qualified as Mermaid qualifies them.
- * - `classDef`/`style`/`cssClass` styling and relationship cardinalities
- *   (`"1"`, `"0..1"`, ...) — cardinalities are stripped (quoted segments
- *   removed before relationship matching) with a warning; styling lines are
- *   warned and skipped entirely.
+ * - Styling: `style Id …`, `classDef name …` applied through `class Id:::name` or `cssClass "A,B" name`,
+ *   and `classDef default …` for every class, as Mermaid layers them (default, then each class in order,
+ *   then `style`). Only `fill`, `stroke` and `color` with a hex value are kept (`../../parser/css-style.ts`).
+ * - Relationship cardinalities (`"1"`, `"0..1"`, ...) — stripped (quoted segments removed before
+ *   relationship matching) with a warning.
  * - `note`/`note for` — warned and skipped.
  *
  * None of the above affects which classes/members/relationships end up in
@@ -34,6 +35,7 @@
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from '../../parser/interactive.js';
 import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassRelationType } from './types.js';
+import { extractNodeStyle, parseCssStyleProps, type NodeStylePatch } from '../../parser/css-style.js';
 
 export interface ClassDiagramParseResult {
   ast: ClassDiagram;
@@ -114,6 +116,33 @@ function parseNamespaceHeader(line: string): { name: string; label?: string } | 
   return label ? { name, label: (label[1] ?? '').trim() } : null;
 }
 
+/**
+ * `classDef a,b props`, `style Id props` or `cssClass "A,B" name`, or `null`. Read by splitting at the first
+ * spaces rather than with one regular expression (untrusted input, `security/detect-unsafe-regex`).
+ */
+function parseStyleStatement(
+  line: string,
+):
+  | { kind: 'classDef'; names: string[]; patch: NodeStylePatch }
+  | { kind: 'style'; id: string; patch: NodeStylePatch }
+  | { kind: 'cssClass'; ids: string[]; name: string }
+  | null {
+  const keyword = /^(classDef|style|cssClass)\s/i.exec(line)?.[1]?.toLowerCase();
+  if (keyword === undefined) return null;
+  const rest = line.slice(keyword.length).trim();
+  if (keyword === 'cssclass') {
+    const quoted = /^"([^"]*)"\s+([\w-]+)$/.exec(rest);
+    if (!quoted) return null;
+    return { kind: 'cssClass', ids: (quoted[1] ?? '').split(',').map((id) => stripIdQuotes(id)).filter((id) => id.length > 0), name: quoted[2]! };
+  }
+  const space = rest.search(/\s/);
+  if (space === -1) return null;
+  const target = rest.slice(0, space);
+  const patch = extractNodeStyle(parseCssStyleProps(rest.slice(space + 1)));
+  if (keyword === 'style') return { kind: 'style', id: stripIdQuotes(target), patch };
+  return { kind: 'classDef', names: target.split(',').map((n) => n.trim()).filter((n) => n.length > 0), patch };
+}
+
 function stripIdQuotes(id: string): string {
   return id.replace(/^`|`$/g, '').trim();
 }
@@ -162,7 +191,15 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
     if (label !== undefined) namespaces.get(id)!.label = label;
     return id;
   };
-  let warnedStyleClass = false;
+  // Styling, resolved once every line is read: a `classDef` may come after the class that uses it.
+  const classDefs = new Map<string, NodeStylePatch>();
+  const classNames = new Map<string, string[]>();
+  const inlineStyles = new Map<string, NodeStylePatch>();
+  const assignClasses = (id: string, names: string[]): void => {
+    const list = classNames.get(id) ?? [];
+    for (const name of names) if (name.length > 0) list.push(name);
+    classNames.set(id, list);
+  };
   const annotate = (box: ClassBox, annotation: string): void => {
     const text = annotation.trim();
     if (text.length > 0) (box.annotations ??= []).push(text);
@@ -220,10 +257,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       if (namespace !== undefined) box.namespace = namespace;
       const label = classMatch[3] ?? classMatch[4];
       if (label !== undefined) box.label = label.trim();
-      if (classMatch[5] && !warnedStyleClass) {
-        warnings.push('Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored.');
-        warnedStyleClass = true;
-      }
+      if (classMatch[5]) assignClasses(id, classMatch[5].slice(3).split(',').map((n) => n.trim()));
       if (classMatch[6]) annotate(box, classMatch[6].slice(2, -2));
       if (classMatch[7] === '{') stack.push({ kind: 'class', box });
       continue;
@@ -280,8 +314,16 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       continue;
     }
 
+    const styling = parseStyleStatement(line);
+    if (styling) {
+      if (styling.kind === 'classDef') for (const name of styling.names) classDefs.set(name, styling.patch);
+      // As in Mermaid, `style` on a class that does not exist does nothing (it does not create one).
+      else if (styling.kind === 'style') inlineStyles.set(styling.id, { ...inlineStyles.get(styling.id), ...styling.patch });
+      else for (const id of styling.ids) assignClasses(id, [styling.name]);
+      continue;
+    }
     if (/^(?:classDef|style|cssClass)\b/i.test(line)) {
-      warnings.push(`Styling directives are not yet supported for class diagrams, ignored: ${line}`);
+      warnings.push(`Unsupported line ignored: ${line}`);
       continue;
     }
     if (/^note\b/i.test(line)) {
@@ -301,6 +343,20 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   if (stack.length > 0) {
     warnings.push('One or more class/namespace blocks were not closed with a matching "}".');
   }
+  const undefinedNames = new Set<string>();
+  for (const box of classes.values()) {
+    const patch: NodeStylePatch = { ...classDefs.get('default') };
+    for (const name of classNames.get(box.id) ?? []) {
+      const def = classDefs.get(name);
+      if (def) Object.assign(patch, def);
+      else undefinedNames.add(name);
+    }
+    Object.assign(patch, inlineStyles.get(box.id));
+    if (patch.fill !== undefined) box.fill = patch.fill;
+    if (patch.stroke !== undefined) box.stroke = patch.stroke;
+    if (patch.color !== undefined) box.textColor = patch.color;
+  }
+  for (const name of undefinedNames) warnings.push(`classDef "${name}" referenced but not defined.`);
   for (const box of classes.values()) {
     if ((box.annotations?.length ?? 0) > 1) {
       warnings.push(`Class "${box.id}" has several annotations; only the first, «${box.annotations![0]}», is drawn (as in Mermaid).`);

@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 447 sans avertissement (83 %), 94 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 451 sans avertissement (83 %), 90 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -12,7 +12,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | architecture | 6 | 1 | 5 | 0 | 0 | 0 |
 | block | 30 | 29 | 1 | 0 | 0 | 0 |
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
-| classDiagram | 38 | 25 | 13 | 0 | 0 | 0 |
+| classDiagram | 38 | 29 | 9 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
 | entityRelationshipDiagram | 25 | 15 | 10 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
@@ -82,11 +82,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 - #22 warned: Relationship cardinalities are not yet supported, ignored: Customer "1" --> "*" Ticket \| Relationship cardinalities are not yet supported, ignored: Student "1" --> "1..*" Course \| Relationship cardinalities are not yet supported, ignored: Galaxy --> "many" Star : Contains
 - #27 warned: Relationship cardinalities are not yet supported, ignored: Student "1" --o "1" IdCard : carries \| Relationship cardinalities are not yet supported, ignored: Student "1" --o "1" Bike : rides
 - #28 warned: Notes are not yet supported for class diagrams, ignored: note "This is a general note" \| Notes are not yet supported for class diagrams, ignored: note for MyClass "This is a note for a class"
-- #32 warned: Styling directives are not yet supported for class diagrams, ignored: style Animal fill:#f9f,stroke:#333,stroke-width:4px \| Styling directives are not yet supported for class diagrams, ignored: style Mineral fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
-- #33 warned: Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored. \| Styling directives are not yet supported for class diagrams, ignored: classDef someclass fill:#f96
-- #34 warned: Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored. \| Styling directives are not yet supported for class diagrams, ignored: classDef someclass fill:#f96
-- #35 warned: Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored. \| Styling directives are not yet supported for class diagrams, ignored: classDef default fill:#f96,color:red \| Styling directives are not yet supported for class diagrams, ignored: classDef pink color:#f9f
-- #36 warned: Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored.
+- #36 warned: classDef "styleClass" referenced but not defined.
 
 ### entityRelationshipDiagram
 

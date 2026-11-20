@@ -466,7 +466,7 @@ Classes UML avec attributs, méthodes et relations.
 | Rubrique | Détail |
 |:---------|:-------|
 | Mot-clé | `classDiagram` |
-| Couleurs | Non (style ignoré) |
+| Couleurs | Oui : `style`, `classDef` avec `:::` ou `cssClass`, `classDef default` (fond, bordure, texte) |
 
 
 **Syntaxe**
@@ -481,7 +481,7 @@ Classes UML avec attributs, méthodes et relations.
 
 **Limites**
 
-- Pas de style (`style`, `classDef`, `cssClass`) : avertissement
+- Styles : seuls `fill`, `stroke` et `color` en hexadécimal (`#f96`, `#ff9966`) sont appliqués ; un nom de couleur (`red`) et les autres propriétés (`stroke-width`, `stroke-dasharray`) sont ignorés
 - Cardinalités (`"1"`, `"0..1"`) ignorées avec avertissement
 - Génériques `~T~` : retirés du nom, non affichés
 - `note` : avertissement, non rendue
