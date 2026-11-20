@@ -18,16 +18,18 @@ date; `git log` has anything newer. Earlier handovers live in this file's git hi
   `convert()` as the library entry point of `@md2nativedocx/cli`; size limits on every Dagre layout
   (`DiagramTooLargeError`, a visible note instead of a failed export); the MCP server runs each call in
   a child process killed at its deadline.
-- **Versions (2026-11-19).** Extension **0.12.1** on the Marketplace and Open VSX (tag `vscode-v0.12.1`).
-  npm: core 0.6.0, pandoc-filter 0.6.0, pptx 0.5.0, cli 0.6.1, mcp 0.4.1, all published by trusted
+- **Versions (2026-11-20).** Extension **0.13.0** on the Marketplace and Open VSX (tag `vscode-v0.13.0`).
+  npm: core 0.7.0, pandoc-filter 0.7.0, pptx 0.6.0, cli 0.7.0, mcp 0.5.0, all published by trusted
   publishing (OIDC) from `.github/workflows/publish.yml` (`workflow_dispatch`, dry run first); no npm
   token anywhere. The extension is published from the local build (`npm run publish`, `publish:ovsx`):
-  build it from a clean tree.
+  build it from a clean tree. Last step of a release: a GitHub Release on the `vscode-v*` tag, its notes
+  being that version's `packages/vscode-extension/CHANGELOG.md` section plus the install line
+  (`gh release create vscode-vX.Y.Z --verify-tag --notes-file …`); nothing creates it automatically
+  (0.8.3 to 0.13.0 were backfilled on 2026-11-20).
 
-## Current priority (2026-11-19)
+## Current priority (2026-11-20)
 
-Robustness first, since the `flux_arcs` incident on 0.8.0 (`TODO.md` §R): R1 to R3 are done, R4 (the
-Word template, checked in Word before changing) remains. LibreOffice / ODF below comes next.
+The robustness work (`TODO.md` §R) is closed. Order of work: `TODO.md` → « Ordre de travail ».
 
 ## LibreOffice / ODF (priority since 2026-10-08, after §R)
 

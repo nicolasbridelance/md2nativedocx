@@ -14,25 +14,33 @@
 
 ---
 
-## Ordre de travail (réévalué le 2026-11-19)
+## Ordre de travail (validé par le mainteneur le 2026-11-20)
 
 Le produit est complet pour son usage principal (Markdown + Mermaid/PlantUML → Word éditable) et
 publié partout (npm, Marketplace, Open VSX, MCP). Ce qui limite le projet aujourd'hui, ce n'est plus la
-couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. D'où cet ordre :
+couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. Le chantier robustesse
+(§R) est clos. D'où cet ordre :
 
-1. ~~R4.1, R4.2~~ : mesurés dans Word le 2026-11-19, rien à adopter (détail au §R). R4.3 n'a pas de
-   symptôme : le chantier robustesse est clos.
-2. **Conformité syntaxique Mermaid 1:1** (§2, « Conformité Mermaid ») : objectif 100 % de la syntaxe
-   officielle, mesuré et non supposé. Étage 1 (exemples officiels) en cours, étage 2 (différentiel contre
-   `mermaid`) ensuite.
-3. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
-   premiers utilisateurs. Tout ce qui en sort passe devant le reste de cette liste.
-4. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
-   trois types variés, puis décider. Ne pas étendre aux 28 types avant cette mesure.
-5. **Convertisseur dans le navigateur, spike** (§4, « Pistes de distribution ») : seule piste qui
-   touche des utilisateurs sans installation ni serveur. Une demi-journée pour savoir si Pandoc
+1. ~~**Ménage de la vitrine**~~ (fait le 2026-11-20) : releases GitHub 0.8.3 à 0.13.0 créées depuis le
+   CHANGELOG (étape ajoutée à la procédure de release, `HANDOVER.md`), Discussions activées, Dependabot
+   #39 mergé.
+2. **Convertisseur dans le navigateur, spike** (§4, « Pistes de distribution »), remonté à la demande du
+   mainteneur : seule piste qui touche des utilisateurs sans installation ni serveur. Savoir si Pandoc
    WebAssembly peut appeler le moteur JS ; décision du mainteneur ensuite (périmètre).
-6. **Entretien au fil de l'eau** (§2) : exception d'audit `braces` le 2026-12-31, manuel, défaut
+3. **Documents de conformité à jour** (`docs/compliance/*`, `SECURITY.md`, inchangés depuis le
+   2026-09-04) : chiffres revérifiés (tests, dépendances runtime), serveur MCP, `.pptx` / `.odt`,
+   PlantUML (`!include` jamais suivi), publication npm par OIDC avec provenance, Open VSX, `--sandbox`.
+4. **Conformité syntaxique Mermaid 1:1** (§2, « Conformité Mermaid ») : étage 2 (différentiel contre
+   `mermaid`), puis les avertissements de l'étage 1 par rendement (classes, ER, états).
+5. **Retours d'usage réels** (§1) : les diagrammes PlantUML et Mermaid du mainteneur, et ceux des
+   premiers utilisateurs. Tout ce qui en sort passe devant le reste de cette liste.
+6. **PlantUML, types suivants sur les moteurs existants** (§2) : use case, component (puis deployment),
+   mindmap / WBS ; ensuite object, gantt.
+7. **draw.io dans les deux sens** (§4, décision du mainteneur le 2026-11-20) : sortie `.drawio` d'abord,
+   import ensuite.
+8. **ODF phase 2, mesure seulement** (§0) : convertir les formes déjà produites pour Word vers ODF sur
+   trois types variés, puis décider. Ne pas étendre aux 28 types avant cette mesure.
+9. **Entretien au fil de l'eau** (§2) : exception d'audit `braces` le 2026-12-31, manuel, défaut
    `crossing-stress-bipartite`.
 
 Au second plan, sans date : V2 moteur (§2bis, seulement les ▶), pistes SmartArt (§3), idées (§4).
@@ -331,9 +339,12 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   se portent-ils sans toucher la règle 7 ? Premier test : un flowchart, réseau coupé après chargement.
 - **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
   (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
-- **draw.io** : sortie `.drawio` par diagramme d'abord (depuis le modèle positionné, avant DrawingML),
-  import `.drawio` → formes Word ensuite (lit un fichier extérieur : périmètre et sécurité à revoir).
-  SVG par diagramme en complément. VSDX seulement sur demande. Touche le périmètre (règle 1) : escalade.
+- **draw.io, dans les deux sens : décidé par le mainteneur le 2026-11-20** (point 7 de l'ordre de
+  travail ; extension du périmètre de la règle 1 accordée). Sortie `.drawio` par diagramme d'abord
+  (depuis le modèle positionné, avant DrawingML), import `.drawio` → formes Word ensuite. L'import lit un
+  fichier extérieur : avant d'écrire le lecteur, ajouter sa ligne au tableau de sécurité d'`AGENTS.md`
+  (XXE, et plafonds de taille et de ratio pour le contenu compressé, deflate + base64, d'un `.drawio`),
+  ce qui est une escalade à soumettre. SVG par diagramme en complément. VSDX seulement sur demande.
 
 Écartées après discussion (2026-09-08), à rouvrir seulement sur un besoin concret : binaire compilé
 par OS (coût récurrent de signature macOS/Windows), réécriture du moteur en Python (doublon sans
