@@ -24,9 +24,14 @@ couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. Le 
 1. ~~**Ménage de la vitrine**~~ (fait le 2026-11-20) : releases GitHub 0.8.3 à 0.13.0 créées depuis le
    CHANGELOG (étape ajoutée à la procédure de release, `HANDOVER.md`), Discussions activées, Dependabot
    #39 mergé.
-2. **Convertisseur dans le navigateur, spike** (§4, « Pistes de distribution »), remonté à la demande du
-   mainteneur : seule piste qui touche des utilisateurs sans installation ni serveur. Savoir si Pandoc
-   WebAssembly peut appeler le moteur JS ; décision du mainteneur ensuite (périmètre).
+2. **Convertisseur dans le navigateur** (§4, « Pistes de distribution »), remonté à la demande du
+   mainteneur. **Spike fait le 2026-11-20 : faisable** (`docs/adr/spikes/spike-browser-converter/spike.md`) :
+   `pandoc.wasm` officiel en deux passes (Markdown → AST JSON, diagrammes rendus par `core` dans la page,
+   AST → `.docx`), 0 erreur de schéma, rendu vérifié dans Word, conversion en ~0,5 s après ~6 s de
+   chargement. **Décisions du mainteneur avant de construire** : héberger `pandoc.wasm` (GPL, 62,5 Mo) sur
+   GitHub Pages (licence : escalade) ; ZIP (`zip.mjs` maison ou `fflate`) et colle WASI (maison ou
+   `browser_wasi_shim`) : dépendances, escalade. Ensuite : post-traitement du CLI sur des octets au lieu de
+   chemins (sert aussi le CLI), puis la page.
 3. **Documents de conformité à jour** (`docs/compliance/*`, `SECURITY.md`, inchangés depuis le
    2026-09-04) : chiffres revérifiés (tests, dépendances runtime), serveur MCP, `.pptx` / `.odt`,
    PlantUML (`!include` jamais suivi), publication npm par OIDC avec provenance, Open VSX, `--sandbox`.
@@ -335,8 +340,8 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   (`@md2nativedocx/mcp` en stdio, `.mcpb` pour Claude Desktop) reste prioritaire et ne coûte rien.
 - **Convertisseur 100 % navigateur sur GitHub Pages** (Pandoc WebAssembly + `core` en Web Worker, pont
   Lua → Node remplacé par un appel JS) : alternative au MCP distant sans serveur ni envoi du texte.
-  Spike d'abord : Pandoc wasm sait-il appeler un filtre JS, et `convert()`/postprocess (adm-zip, `node:fs`)
-  se portent-ils sans toucher la règle 7 ? Premier test : un flowchart, réseau coupé après chargement.
+  Spike fait le 2026-11-20 (point 2 de l'ordre de travail) : pas de filtre JS possible, mais deux passes
+  Pandoc autour de `core` suffisent, sans toucher la règle 7.
 - **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
   (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
 - **draw.io, dans les deux sens : décidé par le mainteneur le 2026-11-20** (point 7 de l'ordre de
