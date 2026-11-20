@@ -167,8 +167,13 @@ Ensuite, dans l'ordre :
             - **états (13)** : états composites en boîtes imbriquées, notes, styles ;
             - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
               cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;
-              vérifié dans Word et LibreOffice, `test-corpus/word-verification/subgraph-links.*`) ; titre d'en-tête à
-              dessiner ; `view: collapsed` (Mermaid dessine le sous-graphe replié en une boîte ; ici ouvert, avec
+              vérifié dans Word et LibreOffice, `test-corpus/word-verification/subgraph-links.*` ; le sens élargi
+              de `FlowEdge.from`/`to`, qui peut être un id de sous-graphe, accepté par le mainteneur le même jour) ;
+              ~~titre d'en-tête à dessiner~~ (fait le 2026-11-20 : un `title:` de frontmatter sur un type sans
+              instruction `title` (organigramme, classes, états, ER, et tous les autres) est un paragraphe en gras
+              au-dessus du dessin, aligné à gauche comme le dessin, `keepNext` ; aussi en `.odt` ; vérifié dans Word
+              et LibreOffice, `test-corpus/word-verification/frontmatter-titles.*` ; étage 1 à **437 propres
+              (81 %)**) ; `view: collapsed` (Mermaid dessine le sous-graphe replié en une boîte ; ici ouvert, avec
               avertissement) ;
             - **Écart de mise en page relevé le 2026-11-20, non traité :** Mermaid range à part tout sous-graphe
               qu'aucun lien ne traverse et, sans `direction` propre, **inverse** sa direction (TB ↔ LR,

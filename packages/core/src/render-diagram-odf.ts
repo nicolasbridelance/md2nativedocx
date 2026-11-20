@@ -10,6 +10,7 @@
  */
 
 import { prepareSource } from './parser/frontmatter.js';
+import { escapeXml } from './translator/xml-escape.js';
 import { detectDiagramType } from './parser/diagram-type.js';
 import { parseMermaid } from './parser/index.js';
 import { parsePlantUmlActivity } from './diagrams/plantuml/activity-parser.js';
@@ -38,7 +39,8 @@ export interface OdfRenderOptions extends CanvasOptions {
 /** One diagram rendered for a `.odt`. */
 export interface OdfRenderResult {
   /**
-   * One `<text:p>` holding one `draw:g` anchored as a character, or a note paragraph. Not a
+   * One `<text:p>` holding one `draw:g` anchored as a character (after a title paragraph when the
+   * source has a frontmatter `title:`), or a note paragraph. Not a
    * standalone document: it uses the `text:`, `draw:`, `svg:` and `xml:` prefixes the enclosing
    * `office:document-content` declares (Pandoc's `opendocument` writer declares them all).
    */
@@ -107,7 +109,18 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   const result = layout(parsed.ast, canvas);
   warnings.push(...result.warnings);
   const drawing = translateToOdf(parsed.ast, result, { ...canvas, idPrefix });
-  return { ...drawing, metadata: { diagramType: type, label, warnings } };
+  if (prepared.title === undefined) return { ...drawing, metadata: { diagramType: type, label, warnings } };
+  // A frontmatter `title:` is drawn above the diagram, as in the .docx: bold, aligned with the drawing's
+  // left edge, kept with it.
+  const titleStyle = `${idPrefix}-title`;
+  return {
+    fragment: `<text:p text:style-name="${titleStyle}">${escapeXml(prepared.title)}</text:p>${drawing.fragment}`,
+    automaticStyles: [
+      `<style:style style:name="${titleStyle}" style:family="paragraph"><style:paragraph-properties fo:text-align="start" fo:keep-with-next="always"/><style:text-properties fo:font-weight="bold" fo:font-size="14pt"/></style:style>`,
+      ...drawing.automaticStyles,
+    ],
+    metadata: { diagramType: type, label, warnings },
+  };
 }
 
 /**

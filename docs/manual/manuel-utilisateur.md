@@ -56,6 +56,7 @@ md2nativedocx transforme un document Markdown contenant des diagrammes Mermaid e
 - **Pas d'échec silencieux** : une construction non gérée produit un avertissement (affiché et noté dans le journal d'export), jamais un diagramme faux sans prévenir.
 - **Éditable, à sens unique** : les formes se modifient dans Word, mais ce qui est modifié dans Word n'est pas reporté dans le Markdown, qui reste la source de vérité.
 - **Plafonds** : les entrées très grandes sont plafonnées (voir les limites de chaque type). Un diagramme mis en page automatiquement (flowchart, classes, états, entité-relation, C4, architecture, exigences) est refusé au-delà de 500 nœuds, conteneurs de sous-graphes compris, ou de 800 arêtes ; une source Mermaid est refusée au-delà de 1 000 000 de caractères.
+- **En-tête YAML** (`---` … `---` avant le diagramme) : le `title:` est dessiné, comme dans Mermaid. Pour un type qui a sa propre instruction `title` (camembert, Gantt, séquence…), il en tient lieu ; pour les autres (flowchart, classes, états, entité-relation…), il devient un titre en gras au-dessus du diagramme, aligné sur son bord gauche et toujours sur la même page que lui. Les autres options (`config:`, thème, couleurs) ne sont pas appliquées, avec un avertissement : le document garde son propre style.
 - **Un diagramme trop grand ne bloque pas le document** : il est remplacé par une note grise qui dit pourquoi, le reste du document (ou, pour une présentation, les autres diapositives) est converti normalement, et l'avertissement figure dans le journal d'export.
 - **Utilisation par un assistant** : le paquet `@md2nativedocx/mcp` expose la conversion à un assistant compatible MCP (outils `render_diagram` et `convert_document`). Chaque appel a un délai maximal, après quoi le travail est interrompu ; le fichier produit reste dans un dossier racine choisi par l'administrateur et ne remplace jamais un fichier existant.
 
@@ -1324,7 +1325,7 @@ Rectangles imbriqués proportionnels aux valeurs.
 **Limites**
 
 - Les autres propriétés sont ignorées silencieusement
-- Frontmatter ignoré avec avertissement
+- Options du frontmatter ignorées avec avertissement (son `title:` est dessiné, voir Principes)
 
 
 +------------------------------------------------------+--------------------------------------------------------------------------------------------+

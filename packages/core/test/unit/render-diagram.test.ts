@@ -61,7 +61,7 @@ test('a merge stays shapes with SmartArt on; the reason is a warning, never a no
 test('timeline as SmartArt: the title goes in a paragraph above, escaped', () => {
   const result = renderDiagram('timeline\n  title Q1 & <Q2>\n  2024 : a\n  2025 : b', ON);
   assert.equal(result.kind, 'smartart');
-  assert.ok(result.fragment.startsWith('<w:p><w:pPr><w:jc w:val="center"/>'));
+  assert.ok(result.fragment.startsWith('<w:p><w:pPr><w:keepNext/><w:jc w:val="center"/>'));
   assert.ok(result.fragment.includes('Q1 &amp; &lt;Q2&gt;'));
   assert.ok(!result.fragment.includes('<Q2>'));
 });

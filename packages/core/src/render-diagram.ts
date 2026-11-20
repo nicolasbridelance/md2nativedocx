@@ -213,7 +213,8 @@ export interface RenderResult {
   kind: 'shapes' | 'smartart' | 'chart';
   /**
    * WordprocessingML to insert in `word/document.xml`: one or more `<w:p>` paragraphs (a title
-   * paragraph may precede a SmartArt, a note may follow a flowchart that SmartArt could not take).
+   * paragraph may precede the drawing: a SmartArt's own title, or a frontmatter `title:` on a type with
+   * no `title` statement; a note may follow a flowchart that SmartArt could not take).
    * Drawing ids (`wp:docPr/@id`, `cNvPr/@id`) restart at 1 in every fragment: renumber them across the
    * document.
    */
@@ -308,7 +309,7 @@ function smartArtOrShapes<T>(
       const ast = parsed(ctx, parse(source));
       const smartArt = ctx.smartArt((options) => generate(ast, options));
       if (!smartArt) return shapes(translate(ast, ctx.canvas));
-      return titleOf ? { ...smartArt, fragment: smartArtTitleXml(titleOf(ast)) + smartArt.fragment } : smartArt;
+      return titleOf ? { ...smartArt, fragment: titleParagraphXml(titleOf(ast)) + smartArt.fragment } : smartArt;
     },
     plan: (source) => {
       const smartArt = fits(parse(source).ast);
@@ -364,12 +365,19 @@ function treeShape(flowchart: Flowchart | null): SmartArtShape | undefined {
 const shapeOf = (layout: SmartArtGeneratedLayout | null): SmartArtShape | undefined => (layout ? { layout } : undefined);
 
 /**
- * The diagram title as a bold centred paragraph, for a SmartArt that has no place for it (timeline,
- * journey, gitGraph); empty when there is no title. Escaped: the title is untrusted text.
+ * The diagram title as a bold paragraph above the drawing: for a SmartArt that has no place for it
+ * (timeline, journey, gitGraph), and for a frontmatter `title:` on a type with no `title` statement
+ * (flowchart, class, state, ER…), which Mermaid draws above the diagram. Kept with the next paragraph,
+ * so a page break never separates it from its diagram. Empty when there is no title. Escaped: the title
+ * is untrusted text.
+ *
+ * `center` suits a SmartArt, whose frame spans the text width. A shape drawing sits at the left margin
+ * and is often narrower than the page: a title centred on the page would float away from it (seen in
+ * Word and LibreOffice, 2026-11-20), so a frontmatter title is aligned with the drawing's left edge.
  */
-function smartArtTitleXml(title: string | undefined): string {
+function titleParagraphXml(title: string | undefined, align: 'center' | 'left' = 'center'): string {
   return title
-    ? `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">${escapeXml(title)}</w:t></w:r></w:p>`
+    ? `<w:p><w:pPr><w:keepNext/><w:jc w:val="${align}"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">${escapeXml(title)}</w:t></w:r></w:p>`
     : '';
 }
 
@@ -621,5 +629,6 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
   const prepared = prepareSource(source, type);
   warnings.push(...prepared.warnings);
   const rendered = RENDERERS[type].render(prepared.source, ctx);
-  return { ...rendered, metadata: { diagramType: type, label, warnings } };
+  const fragment = titleParagraphXml(prepared.title, 'left') + rendered.fragment;
+  return { ...rendered, fragment, metadata: { diagramType: type, label, warnings } };
 }

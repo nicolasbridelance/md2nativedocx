@@ -5,7 +5,8 @@
  * `title:` names the diagram, `config:` carries theme and layout options (and `displayMode:` a Gantt
  * option). The parsers used to meet those lines as diagram statements and report them as unsupported.
  * {@link prepareSource} removes the block, turns `title:` into the type's own `title` statement when it
- * has one, and reports what is not applied.
+ * has one (otherwise returns it for the renderer to draw above the diagram), and reports what is not
+ * applied.
  */
 
 import type { DiagramType } from './diagram-type.js';
@@ -50,21 +51,25 @@ const TITLE_STATEMENT: ReadonlySet<DiagramType> = new Set<DiagramType>([
  *
  * - No frontmatter: `source` unchanged, no warning.
  * - `title:` on a type with a `title` statement and none in the body: inserted after the header line.
- *   On another type, a warning (the title is not drawn).
+ *   On another type, returned as `title`: the renderer draws it above the diagram, as Mermaid does.
  * - Any other key: a notice that frontmatter options (theme, colours, layout) are not applied; the
  *   Word output uses the document's own look.
  */
-export function prepareSource(source: string, type: DiagramType): { source: string; warnings: string[] } {
+export function prepareSource(
+  source: string,
+  type: DiagramType,
+): { source: string; warnings: string[]; title?: string } {
   const fm = splitFrontmatter(source);
   if (fm.body === source) return { source, warnings: [] };
   const warnings: string[] = [];
   let body = fm.body;
+  let title: string | undefined;
   if (fm.title !== undefined) {
     const lines = body.split(/\r?\n/);
     const header = lines.findIndex((l) => l.trim() !== '' && !l.trim().startsWith('%%'));
     const hasTitle = lines.some((l, i) => i > header && /^\s*title\b/i.test(l));
     if (!TITLE_STATEMENT.has(type)) {
-      warnings.push(`The frontmatter title "${fm.title}" is not drawn for this diagram type.`);
+      title = fm.title;
     } else if (header !== -1 && !hasTitle) {
       lines.splice(header + 1, 0, `title ${fm.title.replace(/[\r\n]+/g, ' ')}`);
       body = lines.join('\n');
@@ -73,5 +78,5 @@ export function prepareSource(source: string, type: DiagramType): { source: stri
   if (fm.hasOptions) {
     warnings.push('Frontmatter options (theme, colours, layout) are not applied: the Word output uses the document\'s own look.');
   }
-  return { source: body, warnings };
+  return { source: body, warnings, ...(title !== undefined ? { title } : {}) };
 }

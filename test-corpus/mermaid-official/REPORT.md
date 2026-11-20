@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 431 sans avertissement (80 %), 110 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 437 sans avertissement (81 %), 104 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -12,11 +12,11 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | architecture | 6 | 1 | 5 | 0 | 0 | 0 |
 | block | 30 | 29 | 1 | 0 | 0 | 0 |
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
-| classDiagram | 38 | 15 | 23 | 0 | 0 | 0 |
+| classDiagram | 38 | 16 | 22 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
-| entityRelationshipDiagram | 25 | 13 | 12 | 0 | 0 | 0 |
+| entityRelationshipDiagram | 25 | 15 | 10 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
-| flowchart | 116 | 112 | 4 | 0 | 0 | 0 |
+| flowchart | 116 | 114 | 2 | 0 | 0 | 0 |
 | gantt | 11 | 4 | 7 | 0 | 0 | 0 |
 | gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
 | ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
@@ -30,7 +30,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
 | sequenceDiagram | 38 | 25 | 13 | 0 | 0 | 0 |
-| stateDiagram | 22 | 10 | 12 | 0 | 0 | 0 |
+| stateDiagram | 22 | 11 | 11 | 0 | 0 | 0 |
 | swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
 | treemap | 8 | 8 | 0 | 0 | 0 | 0 |
@@ -74,10 +74,9 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### classDiagram
 
-- #0 warned: The frontmatter title "Animal example" is not drawn for this diagram type. \| Notes are not yet supported for class diagrams, ignored: note "From Duck till Zebra" \| Notes are not yet supported for class diagrams, ignored: note for Duck "can fly<br>can swim<br>can dive<br>can help in debugging"
+- #0 warned: Notes are not yet supported for class diagrams, ignored: note "From Duck till Zebra" \| Notes are not yet supported for class diagrams, ignored: note for Duck "can fly<br>can swim<br>can dive<br>can help in debugging"
 - #1 warned: Class annotations (e.g. <<Interface>>) are not yet rendered, ignored. \| Relationship cardinalities are not yet supported, ignored: Customer "1" --> "*" Order : places \| Relationship cardinalities are not yet supported, ignored: Order "1" *-- "*" LineItem : contains
 - #2 warned: Class annotations (e.g. <<Interface>>) are not yet rendered, ignored. \| Relationship cardinalities are not yet supported, ignored: Customer "1" --> "*" Order : places \| Relationship cardinalities are not yet supported, ignored: Order "1" *-- "*" LineItem : contains
-- #3 warned: The frontmatter title "Bank example" is not drawn for this diagram type.
 - #15 warned: Unsupported line ignored: bar ()-- foo
 - #16 warned: Unsupported line ignored: Class01 --() bar \| Unsupported line ignored: Class02 --() bar \| Unsupported line ignored: foo ()-- Class01
 - #17 warned: namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.
@@ -100,7 +99,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### entityRelationshipDiagram
 
-- #0 warned: The frontmatter title "Order example" is not drawn for this diagram type.
 - #14 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
 - #15 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
 - #16 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
@@ -111,12 +109,9 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 - #21 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef someclass fill:#f96
 - #22 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar stroke:#0f0 \| Styling directives are not yet supported for ER diagrams, ignored: classDef foobar stroke:#00f
 - #23 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef default fill:#f9f,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar st
-- #24 warned: The frontmatter title "Order example" is not drawn for this diagram type.
 
 ### flowchart
 
-- #0 warned: The frontmatter title "Node" is not drawn for this diagram type.
-- #1 warned: The frontmatter title "Node with text" is not drawn for this diagram type.
 - #102 warned: Subgraph "subgraph2" direction (TD) is ignored: something inside is linked to something outside, so it follows the flowchart's direction (same as Mermaid).
 - #103 warned: Subgraph "one" is drawn open: `view: collapsed` is not supported yet.
 
@@ -170,7 +165,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### stateDiagram
 
-- #0 warned: The frontmatter title "Simple sample" is not drawn for this diagram type.
 - #2 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
 - #3 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
 - #10 warned: Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.
