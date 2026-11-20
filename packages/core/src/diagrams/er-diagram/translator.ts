@@ -64,7 +64,7 @@ function attributeDisplay(a: ErAttribute): string {
 }
 
 function sizeForEntity(entity: ErEntity): EntitySize {
-  let width = estimateTextWidth(entity.id, TITLE_FONT_PX) + PAD_X * 2 + 16;
+  let width = estimateTextWidth(entity.label ?? entity.id, TITLE_FONT_PX) + PAD_X * 2 + 16;
   for (const a of entity.attributes) {
     width = Math.max(width, estimateTextWidth(attributeDisplay(a), ATTR_FONT_PX) + PAD_X * 2);
   }
@@ -83,13 +83,13 @@ function entityShapes(nextId: () => number, entity: ErEntity, size: EntitySize, 
   const totalH = titleH + attrH;
   const borderW = scaledLineWidthEmu(9525, s);
 
-  parts.push(rect(nextId(), bx, by, w, totalH, 'FFFFFF', LINE_COLOR, entity.id));
-  parts.push(rect(nextId(), bx, by, w, titleH, TITLE_FILL, undefined, `${entity.id} title`));
+  parts.push(rect(nextId(), bx, by, w, totalH, 'FFFFFF', LINE_COLOR, entity.label ?? entity.id));
+  parts.push(rect(nextId(), bx, by, w, titleH, TITLE_FILL, undefined, `${entity.label ?? entity.id} title`));
   if (attrH > 0) {
     parts.push(rect(nextId(), bx, by + titleH - Math.round(borderW / 2), w, borderW, LINE_COLOR, undefined, 'Divider'));
   }
 
-  parts.push(textBoxLines(nextId(), bx, by, w, titleH, [entity.id], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }));
+  parts.push(textBoxLines(nextId(), bx, by, w, titleH, [entity.label ?? entity.id], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }));
 
   const padX = scalePt(PAD_X, s);
   if (attrH > 0) {
@@ -127,7 +127,7 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
 
   const sizes = new Map<string, EntitySize>();
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: 'TB', nodesep: 50, ranksep: 70, marginx: 0, marginy: 0 });
+  g.setGraph({ rankdir: chart.direction === undefined || chart.direction === 'TD' ? 'TB' : chart.direction, nodesep: 50, ranksep: 70, marginx: 0, marginy: 0 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const entity of chart.entities) {
     const size = sizeForEntity(entity);

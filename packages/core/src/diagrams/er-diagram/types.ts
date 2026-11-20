@@ -7,11 +7,8 @@
  * V1 scope, deliberately (see `parser.ts`'s doc comment for the full list):
  * entities with a flat attribute list (type/name/key markers/comment) and
  * relationships with crow's-foot cardinality on both ends plus the
- * identifying (`--`) vs non-identifying (`..`) line style. Entity aliasing
- * is not implemented — no confirmed literal syntax example was found on the
- * source page, and this project does not guess undocumented grammar (see
- * `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md`'s header warning about
- * "New 🔥" types applying equally here to an unconfirmed feature).
+ * identifying (`--`) vs non-identifying (`..`) line style, and an entity
+ * alias (`p[Person]`), whose syntax Mermaid's official examples confirm.
  */
 
 /** The 4 crow's-foot cardinality states, independent of which literal
@@ -28,7 +25,10 @@ export interface ErAttribute {
 }
 
 export interface ErEntity {
+  /** The name relationships refer to. */
   id: string;
+  /** The alias drawn instead of the id (`p[Person]` gives id `p`, label `Person`); absent when none was given. */
+  label?: string;
   attributes: ErAttribute[];
 }
 
@@ -44,6 +44,8 @@ export interface ErRelationship {
 }
 
 export interface ErDiagram {
+  /** `direction TB|TD|BT|LR|RL`, TB written TD as for flowcharts; absent means top to bottom. */
+  direction?: 'TD' | 'BT' | 'LR' | 'RL';
   entities: ErEntity[];
   relationships: ErRelationship[];
 }

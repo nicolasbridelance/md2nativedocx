@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 418 sans avertissement (77 %), 123 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 425 sans avertissement (79 %), 116 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -14,7 +14,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
 | classDiagram | 38 | 12 | 26 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
-| entityRelationshipDiagram | 25 | 6 | 19 | 0 | 0 | 0 |
+| entityRelationshipDiagram | 25 | 13 | 12 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
 | flowchart | 116 | 110 | 6 | 0 | 0 | 0 |
 | gantt | 11 | 4 | 7 | 0 | 0 | 0 |
@@ -104,23 +104,16 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 ### entityRelationshipDiagram
 
 - #0 warned: The frontmatter title "Order example" is not drawn for this diagram type.
-- #4 warned: Unsupported line ignored: "This ❤ Unicode"
-- #5 warned: Unsupported line ignored: "This **is** _Markdown_"
-- #7 warned: Unsupported line ignored: CAR 1 to zero or more NAMED-DRIVER : allows \| Unsupported line ignored: PERSON many(0) optionally to 0+ NAMED-DRIVER : is
-- #10 warned: Unsupported line ignored: a["Customer Account"] { \| Unsupported line ignored: string email \| Unsupported line ignored: }
-- #11 warned: Unsupported line ignored: MANUFACTURER only one to zero or more CAR : makes
-- #12 warned: Unsupported line ignored: direction TB
-- #13 warned: Unsupported line ignored: direction LR
-- #14 warned: Unsupported line ignored: subgraph title1 \| Unsupported line ignored: CUSTOMER \| Unsupported line ignored: end \| Unsupported line ignored: subgraph title2 \| Unsupported line ignored: subgraph title3 \| Unsupported line ignored: PERSON \| Unsupported line ignored: end \| Unsupported line ignored: end
-- #15 warned: Unsupported line ignored: subgraph title1 \| Unsupported line ignored: CUSTOMER \| Unsupported line ignored: end
-- #16 warned: Unsupported line ignored: subgraph "Customer Domain" \| Unsupported line ignored: CUSTOMER \| Unsupported line ignored: end
-- #17 warned: Unsupported line ignored: subgraph id1 [title 1] \| Unsupported line ignored: CUSTOMER \| Unsupported line ignored: end
-- #18 warned: Unsupported line ignored: subgraph title1 \| Unsupported line ignored: end \| Unsupported line ignored: subgraph title2 \| Unsupported line ignored: end \| Unsupported line ignored: subgraph title3 \| Unsupported line ignored: end
-- #19 warned: Unsupported line ignored: direction LR \| Unsupported line ignored: subgraph TOP \| Unsupported line ignored: direction TB \| Unsupported line ignored: subgraph B1 \| Unsupported line ignored: direction RL \| Unsupported line ignored: end \| Unsupported line ignored: subgraph B2 \| Unsupported line ignored: direction BT \| Unsupported line ignored: end \| Unsupported line ignored: end
-- #20 warned: Unsupported line ignored: id1\|\|--\|\|id2 : label \| Styling directives are not yet supported for ER diagrams, ignored: style id1 fill:#f9f,stroke:#333,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: style id2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
-- #21 warned: Unsupported line ignored: direction TB \| Unsupported line ignored: HOUSE:::someclass \| Styling directives are not yet supported for ER diagrams, ignored: classDef someclass fill:#f96
-- #22 warned: Unsupported line ignored: PERSON o{--\|\| HOUSE:::bar : has \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar stroke:#0f0 \| Styling directives are not yet supported for ER diagrams, ignored: classDef foobar stroke:#00f
-- #23 warned: Unsupported line ignored: PERSON o{--\|\| HOUSE:::bar : has \| Styling directives are not yet supported for ER diagrams, ignored: classDef default fill:#f9f,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar stroke:#0f0 \| Styling directives ar
+- #14 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
+- #15 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
+- #16 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
+- #17 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
+- #18 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
+- #19 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
+- #20 warned: Styling directives are not yet supported for ER diagrams, ignored: style id1 fill:#f9f,stroke:#333,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: style id2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+- #21 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef someclass fill:#f96
+- #22 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar stroke:#0f0 \| Styling directives are not yet supported for ER diagrams, ignored: classDef foobar stroke:#00f
+- #23 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef default fill:#f9f,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar st
 - #24 warned: The frontmatter title "Order example" is not drawn for this diagram type.
 
 ### flowchart

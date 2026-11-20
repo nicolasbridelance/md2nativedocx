@@ -72,3 +72,68 @@ test('a relationship with an unrecognized cardinality token is warned, not silen
   assert.equal(ast.relationships.length, 0);
   assert.ok(warnings.some((w) => w.includes('Unsupported line')));
 });
+
+// The cases below come from Mermaid's official ER examples, where our parser differed from Mermaid's own
+// (tools/mermaid-differential/).
+
+test('relationships in words: cardinality aliases and `to` / `optionally to`', () => {
+  const { ast, warnings } = parseErDiagram(
+    'erDiagram\n  CAR 1 to zero or more NAMED-DRIVER : allows\n  PERSON many(0) optionally to 0+ NAMED-DRIVER : is\n  MANUFACTURER only one to one or many CAR : makes',
+  );
+  assert.deepEqual(
+    ast.relationships.map((r) => [r.from, r.fromCardinality, r.identifying, r.toCardinality, r.to, r.label]),
+    [
+      ['CAR', 'exactly-one', true, 'zero-or-many', 'NAMED-DRIVER', 'allows'],
+      ['PERSON', 'zero-or-many', false, 'zero-or-many', 'NAMED-DRIVER', 'is'],
+      ['MANUFACTURER', 'exactly-one', true, 'one-or-many', 'CAR', 'makes'],
+    ],
+  );
+  assert.equal(warnings.length, 0);
+});
+
+test('symbols without spaces, and a right-side spelling on the left (o{--||)', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  id1||--||id2 : label\n  PERSON o{--|| HOUSE : has');
+  assert.deepEqual(
+    ast.relationships.map((r) => [r.from, r.fromCardinality, r.toCardinality, r.to]),
+    [
+      ['id1', 'exactly-one', 'exactly-one', 'id2'],
+      ['PERSON', 'zero-or-many', 'exactly-one', 'HOUSE'],
+    ],
+  );
+  assert.equal(warnings.length, 0);
+});
+
+test('an alias is drawn instead of the id; quoted and Unicode names; bare declarations', () => {
+  const { ast, warnings } = parseErDiagram(
+    'erDiagram\n  p[Person] {\n    string firstName\n  }\n  a["Customer Account"] {\n    string email\n  }\n  p ||--o| a : has\n  "This ❤ Unicode"\n  CUSTOMER',
+  );
+  assert.deepEqual(
+    ast.entities.map((e) => [e.id, e.label, e.attributes.length]),
+    [
+      ['p', 'Person', 1],
+      ['a', 'Customer Account', 1],
+      ['This ❤ Unicode', undefined, 0],
+      ['CUSTOMER', undefined, 0],
+    ],
+  );
+  assert.equal(warnings.length, 0);
+});
+
+test('`:::class` suffixes are stripped from the entity name and warned once', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  PERSON:::foo ||--|| CAR : owns\n  HOUSE:::a,b');
+  assert.deepEqual(ast.entities.map((e) => e.id), ['PERSON', 'CAR', 'HOUSE']);
+  assert.equal(warnings.filter((w) => w.includes(':::class')).length, 1);
+});
+
+test('direction is kept; a subgraph keeps its entities and warns that the box is not drawn', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  direction LR\n  subgraph id1 [title 1]\n    CUSTOMER\n  end\n  CUSTOMER ||--o{ ORDER : places');
+  assert.equal(ast.direction, 'LR');
+  assert.deepEqual(ast.entities.map((e) => e.id), ['CUSTOMER', 'ORDER']);
+  assert.deepEqual(warnings, ['ER groups (`subgraph`) are not drawn as boxes; their entities are kept.']);
+});
+
+test('a line that is not a statement is still warned, not guessed', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  CAR ||-- NAMED-DRIVER\n  CAR <> TRUCK');
+  assert.equal(ast.relationships.length, 0);
+  assert.equal(warnings.length, 2);
+});

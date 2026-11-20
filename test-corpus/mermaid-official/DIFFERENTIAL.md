@@ -5,7 +5,7 @@ exemple de `examples.json`, ce que Mermaid a compris (sa base après analyse, sa
 analyseur a compris. Un écart est un nœud, un lien, un message ou un bloc qu'un seul des deux côtés voit, même
 sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**252 exemples comparés : 225 identiques, 27 avec écart, dont 0 sans avertissement** (l'étage 1 les
+**252 exemples comparés : 237 identiques, 15 avec écart, dont 0 sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 289 d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états et ER en ont un).
@@ -13,7 +13,7 @@ aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|
 | classDiagram | 38 | 28 | 10 | 0 |
-| entityRelationshipDiagram | 25 | 13 | 12 | 0 |
+| entityRelationshipDiagram | 25 | 25 | 0 | 0 |
 | flowchart | 116 | 112 | 4 | 0 |
 | sequenceDiagram | 38 | 38 | 0 | 0 |
 | stateDiagram | 22 | 21 | 1 | 0 |
@@ -68,77 +68,6 @@ aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 ### classDiagram#36
 
 - Mermaid seulement : `class Animal "Animal" 0a 0m`
-
-### entityRelationshipDiagram#4
-
-- Mermaid seulement : `entity This ❤ Unicode 0 attributes`
-
-### entityRelationshipDiagram#5
-
-- Mermaid seulement : `entity This **is** _Markdown_ 0 attributes`
-
-### entityRelationshipDiagram#7
-
-- Mermaid seulement : `entity CAR 0 attributes`
-- Mermaid seulement : `entity NAMED-DRIVER 0 attributes`
-- Mermaid seulement : `entity PERSON 0 attributes`
-- Mermaid seulement : `relation CAR -- NAMED-DRIVER "allows"`
-- Mermaid seulement : `relation PERSON -- NAMED-DRIVER "is"`
-
-### entityRelationshipDiagram#10
-
-- Mermaid seulement : `entity p 2 attributes`
-- Mermaid seulement : `entity a 1 attributes`
-- nous seulement : `entity p[Person] 2 attributes`
-- nous seulement : `entity p 0 attributes`
-- nous seulement : `entity a 0 attributes`
-
-### entityRelationshipDiagram#11
-
-- Mermaid seulement : `entity MANUFACTURER 0 attributes`
-- Mermaid seulement : `relation MANUFACTURER -- CAR "makes"`
-
-### entityRelationshipDiagram#15
-
-- Mermaid seulement : `entity CUSTOMER 0 attributes`
-
-### entityRelationshipDiagram#16
-
-- Mermaid seulement : `entity CUSTOMER 0 attributes`
-
-### entityRelationshipDiagram#17
-
-- Mermaid seulement : `entity CUSTOMER 0 attributes`
-
-### entityRelationshipDiagram#20
-
-- Mermaid seulement : `entity id1 0 attributes`
-- Mermaid seulement : `entity id2 0 attributes`
-- Mermaid seulement : `relation id1 -- id2 "label"`
-
-### entityRelationshipDiagram#21
-
-- Mermaid seulement : `entity CAR 3 attributes`
-- Mermaid seulement : `entity PERSON 3 attributes`
-- Mermaid seulement : `entity HOUSE 0 attributes`
-- nous seulement : `entity CAR:::someclass 3 attributes`
-- nous seulement : `entity PERSON:::someclass 3 attributes`
-
-### entityRelationshipDiagram#22
-
-- Mermaid seulement : `entity HOUSE 0 attributes`
-- Mermaid seulement : `relation PERSON -- CAR "owns"`
-- Mermaid seulement : `relation PERSON -- HOUSE "has"`
-- nous seulement : `entity PERSON:::foo 0 attributes`
-- nous seulement : `relation PERSON:::foo -- CAR "owns"`
-
-### entityRelationshipDiagram#23
-
-- Mermaid seulement : `entity HOUSE 0 attributes`
-- Mermaid seulement : `relation PERSON -- CAR "owns"`
-- Mermaid seulement : `relation PERSON -- HOUSE "has"`
-- nous seulement : `entity PERSON:::foo 0 attributes`
-- nous seulement : `relation PERSON:::foo -- CAR "owns"`
 
 ### flowchart#100
 

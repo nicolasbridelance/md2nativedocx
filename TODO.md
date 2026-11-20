@@ -212,6 +212,9 @@ Ensuite, dans l'ordre :
             par organigrammes et séquence, ce qui a aussi supprimé un `RangeError` sur `#99999999;`) : **225
             identiques, 27 écarts, tous avec avertissement** (classes, ER, liens vers un sous-graphe, état seul). Vu
             dans Word au passage : deux sous-graphes empilés (`flowchart#104`) se touchent, sans marge entre eux.
+            ER refait le 2026-11-20 (cardinalités en toutes lettres, symboles collés ou inversés, alias `p[Person]`,
+            noms entre guillemets, déclarations seules, `direction`, `:::classe`) : **25/25 ER identiques à Mermaid**,
+            237/252 au total. Vu dans Word : les libellés de relation ER sont posés sur le trait, sans fond.
             Reste : comparateurs des autres types (mindmap, Gantt, C4, requirement…).
             Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 

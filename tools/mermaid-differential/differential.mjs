@@ -207,14 +207,21 @@ const COMPARATORS = {
     theirs(db) {
       const entities = [...db.getEntities().entries()];
       const byInternalId = new Map(entities.map(([name, e]) => [e.id, name]));
-      const facts = entities.map(([name, e]) => `entity ${name} ${e.attributes.length} attributes`);
-      for (const r of db.getRelationships()) facts.push(`relation ${byInternalId.get(r.entityA) ?? r.entityA} -- ${byInternalId.get(r.entityB) ?? r.entityB} "${normText(mermaidEntities(r.roleA))}"`);
+      const facts = entities.map(([name, e]) => `entity ${name} "${normText(mermaidEntities(e.alias || name))}" ${e.attributes.length} attributes`);
+      // Mermaid's relSpec names the cardinalities oddly: cardB sits next to entityA, cardA next to entityB.
+      const card = { ZERO_OR_ONE: 'zero-or-one', ONLY_ONE: 'exactly-one', ZERO_OR_MORE: 'zero-or-many', ONE_OR_MORE: 'one-or-many' };
+      for (const r of db.getRelationships()) {
+        const kind = `${card[r.relSpec.cardB] ?? r.relSpec.cardB} ${r.relSpec.relType === 'IDENTIFYING' ? '--' : '..'} ${card[r.relSpec.cardA] ?? r.relSpec.cardA}`;
+        facts.push(`relation ${byInternalId.get(r.entityA) ?? r.entityA} ${kind} ${byInternalId.get(r.entityB) ?? r.entityB} "${normText(mermaidEntities(r.roleA))}"`);
+      }
       return facts;
     },
     ours(source) {
       const { ast } = parseErDiagram(source);
-      const facts = ast.entities.map((e) => `entity ${e.id} ${e.attributes.length} attributes`);
-      for (const r of ast.relationships) facts.push(`relation ${r.from} -- ${r.to} "${ourText(r.label)}"`);
+      const facts = ast.entities.map((e) => `entity ${e.id} "${ourText(e.label ?? e.id)}" ${e.attributes.length} attributes`);
+      for (const r of ast.relationships) {
+        facts.push(`relation ${r.from} ${r.fromCardinality} ${r.identifying ? '--' : '..'} ${r.toCardinality} ${r.to} "${ourText(r.label)}"`);
+      }
       return facts;
     },
   },
