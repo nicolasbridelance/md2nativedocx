@@ -226,7 +226,9 @@ export function parsePlantUmlClass(source: string): PlantUmlClassParseResult {
       }
       rest = rest.replace(/^<(?!<)[^>]*>\s*/, ''); // generics (`Foo<T>`): not displayed; `<<` is a stereotype
       if (!/^(class|entity)$/.test(kind)) warnOnce('kinds', 'Interfaces, enums, abstract classes and other element kinds are drawn as plain class boxes.');
-      if (/<<.*?>>/.test(rest)) warnOnce('stereotype', 'Stereotypes (`<<...>>`) are not displayed.');
+      // Stereotypes (`<<Serializable>>`) become the box's annotations, drawn `«Serializable»` above its name
+      // like a Mermaid annotation (the first only; PlantUML's `(S,#color)` spot inside one is not drawn).
+      const stereotypes = [...rest.matchAll(/<<(.*?)>>/g)].map((s) => (s[1] as string).replace(/^\s*\([^)]*\)\s*/, '').trim()).filter((s) => s.length > 0);
       // Stereotypes, `$tags`, then colours and inline styles (`#red-green`, `##[dashed]blue`, `#line:red;back:x`).
       rest = rest
         .replace(/<<.*?>>/g, '')
@@ -236,6 +238,7 @@ export function parsePlantUmlClass(source: string): PlantUmlClassParseResult {
         .trim();
       const box = ensure(id, label);
       if (!box) continue;
+      if (stereotypes.length > 0) (box.annotations ??= []).push(...stereotypes);
       let ext: RegExpExecArray | null;
       while ((ext = /^(extends|implements)\s+(.+?)(?=\s+(?:extends|implements)\s|\s*\{?\s*$)/i.exec(rest))) {
         const realization = (ext[1] as string).toLowerCase() === 'implements';

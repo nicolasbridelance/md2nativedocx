@@ -70,7 +70,12 @@ function member(m: ClassMember): string {
  */
 export function classDiagramToFlowchart(diagram: ClassDiagram): Flowchart | null {
   if (diagram.relationships.length === 0 || diagram.relationships.some((r) => r.type !== 'inheritance' || r.markerEnd === 'both')) return null;
-  const nodes = diagram.classes.map((c) => node(c.id, lines(c.label, [...c.attributes, ...c.methods].map(member))));
+  const nodes = diagram.classes.map((c) => {
+    const tokens = lines(c.label, [...c.attributes, ...c.methods].map(member));
+    // The annotation goes above the name, as in the shapes (only the first, as Mermaid does).
+    const annotation = c.annotations?.[0];
+    return node(c.id, annotation === undefined ? tokens : [{ text: `«${annotation}»` }, { break: true }, ...tokens]);
+  });
   // The triangle marks the superclass: `Animal <|-- Duck` has its marker on `from`.
   const edges = diagram.relationships.map((r) => (r.markerEnd === 'to' ? edge(r.to, r.from, r.label) : edge(r.from, r.to, r.label)));
   return { direction: diagram.direction, nodes, edges, subgraphs: [] };

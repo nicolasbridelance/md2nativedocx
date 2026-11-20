@@ -110,3 +110,12 @@ test('an empty class diagram renders a visible note, not a silent blank canvas',
 test('is a pure function: identical input produces byte-identical output', () => {
   assert.equal(translate(BASIC), translate(BASIC));
 });
+
+test('an annotation is drawn as «…» above the class name, escaped', () => {
+  // Injection case (AGENTS.md): the annotation is user text.
+  const { ast } = parseClassDiagram('classDiagram\nclass Shape {\n  <<a & <b>>>\n}');
+  const xml = translateClassDiagramToOoxml(ast);
+  assert.ok(xml.includes('«a &amp; &lt;b&gt;»'), 'escaped');
+  assert.ok(!xml.includes('<b>'));
+  assert.ok(xml.indexOf('«a &amp;') < xml.indexOf('>Shape</w:t>'), 'the annotation comes before the name');
+});

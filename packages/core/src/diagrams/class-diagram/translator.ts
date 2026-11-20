@@ -59,6 +59,8 @@ const MEMBER_SIZE_HALFPT = 18;
 const LABEL_SIZE_HALFPT = 16;
 
 const TITLE_H = 32;
+/** Extra title height for an annotation line (`«interface»`) above the name. */
+const ANNOTATION_H = 16;
 const ROW_H = 22;
 const COMPARTMENT_PAD_Y = 6;
 const PAD_X = 10;
@@ -94,15 +96,24 @@ function memberDisplay(m: ClassMember): string {
   return m.visibility ? `${m.visibility}${m.text}` : m.text;
 }
 
+/** The annotation line drawn above the name, `«interface»`, or `undefined`: only the first, as Mermaid does. */
+function annotationLine(box: ClassBox): string | undefined {
+  const first = box.annotations?.[0];
+  return first === undefined ? undefined : `«${first}»`;
+}
+
 function boxSizeFor(box: ClassBox): BoxSize {
   let width = estimateTextWidth(box.label, TITLE_FONT_PX) + PAD_X * 2 + 16;
+  const annotation = annotationLine(box);
+  if (annotation !== undefined) width = Math.max(width, estimateTextWidth(annotation, MEMBER_FONT_PX) + PAD_X * 2);
   for (const m of [...box.attributes, ...box.methods]) {
     width = Math.max(width, estimateTextWidth(memberDisplay(m), MEMBER_FONT_PX) + PAD_X * 2);
   }
   width = Math.max(90, width);
   const attrH = box.attributes.length > 0 ? box.attributes.length * ROW_H + COMPARTMENT_PAD_Y : 0;
   const methodH = box.methods.length > 0 ? box.methods.length * ROW_H + COMPARTMENT_PAD_Y : 0;
-  return { width, height: TITLE_H + attrH + methodH, titleH: TITLE_H, attrH, methodH };
+  const titleH = TITLE_H + (annotation === undefined ? 0 : ANNOTATION_H);
+  return { width, height: titleH + attrH + methodH, titleH, attrH, methodH };
 }
 
 function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: number, y: number, s: number): string[] {
@@ -128,7 +139,17 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
     parts.push(rect(nextId(), bx, dividerY - Math.round(borderW / 2), w, borderW, LINE_COLOR, undefined, 'Divider'));
   }
 
-  parts.push(textBoxLines(nextId(), bx, by, w, titleH, [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }));
+  const annotation = annotationLine(box);
+  if (annotation === undefined) {
+    parts.push(textBoxLines(nextId(), bx, by, w, titleH, [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }));
+  } else {
+    // `«interface»` in the member size, then the name in bold, in the same title compartment.
+    const annotationH = scalePt(ANNOTATION_H + 4, s);
+    parts.push(textBoxLines(nextId(), bx, by + scalePt(2, s), w, annotationH, [annotation], scaledFontSizeHalfPt(MEMBER_SIZE_HALFPT, s), { align: 'ctr' }));
+    parts.push(
+      textBoxLines(nextId(), bx, by + scalePt(ANNOTATION_H, s), w, titleH - scalePt(ANNOTATION_H, s), [box.label], scaledFontSizeHalfPt(TITLE_SIZE_HALFPT, s), { bold: true, align: 'ctr' }),
+    );
+  }
 
   const padX = scalePt(PAD_X, s);
   if (attrH > 0) {

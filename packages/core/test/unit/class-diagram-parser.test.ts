@@ -129,10 +129,7 @@ test('a namespace block is warned but its nested classes still parse', () => {
   assert.ok(warnings.some((w) => w.includes('namespace')));
 });
 
-test('class annotations, classDef/style, and note lines are recognized and warned, not silently dropped', () => {
-  const { warnings: w1 } = parseClassDiagram('classDiagram\n  class Shape {\n    <<interface>>\n    +area() double\n  }');
-  assert.ok(w1.some((w) => w.includes('annotations')));
-
+test('classDef/style and note lines are recognized and warned, not silently dropped', () => {
   const { warnings: w2 } = parseClassDiagram('classDiagram\n  classDef foo fill:#f00\n  class A');
   assert.ok(w2.some((w) => w.includes('Styling')));
 
@@ -183,7 +180,7 @@ test('backtick-quoted names with spaces in a relation; a name ending in o is not
   ]);
 });
 
-test('class header with :::style and an inline <<annotation>> still declares the class (each warned once)', () => {
+test('class header with :::style and an inline <<annotation>> still declares the class (the style warned once)', () => {
   const { ast, warnings } = parseClassDiagram(
     'classDiagram\n  class Shape <<interface>>\n  class Animal:::someclass {\n    -int sizeInFeet\n    -canEat()\n  }\n  class Mineral:::pink',
   );
@@ -192,5 +189,30 @@ test('class header with :::style and an inline <<annotation>> still declares the
     ['Animal', 1, 1],
     ['Mineral', 0, 0],
   ]);
-  assert.equal(warnings.length, 2);
+  assert.deepEqual(ast.classes[0]!.annotations, ['interface']);
+  assert.equal(warnings.length, 1);
+});
+
+test('annotations are read in the body, in the header and on their own line, as Mermaid reads them', () => {
+  const { ast, warnings } = parseClassDiagram(
+    [
+      'classDiagram',
+      'class Shape {',
+      '  <<interface>>',
+      '  noOfVertices',
+      '}',
+      'class Color <<enumeration>>',
+      '<<service>> Api',
+      'class Multi {',
+      '  <<abstract>>',
+      '  <<entity>>',
+      '}',
+    ].join('\n'),
+  );
+  const byId = new Map(ast.classes.map((c) => [c.id, c]));
+  assert.deepEqual(byId.get('Shape')?.annotations, ['interface']);
+  assert.deepEqual(byId.get('Shape')?.attributes.map((a) => a.text), ['noOfVertices'], 'the annotation is not a member');
+  assert.deepEqual(byId.get('Color')?.annotations, ['enumeration']);
+  assert.deepEqual(byId.get('Api')?.annotations, ['service']);
+  assert.deepEqual(warnings, ['Class "Multi" has several annotations; only the first, «abstract», is drawn (as in Mermaid).']);
 });

@@ -27,6 +27,11 @@ export interface ClassBox {
   id: string;
   /** Display label — the bracket label if given, `id` otherwise. */
   label: string;
+  /**
+   * UML annotations (stereotypes) from `<<interface>>` and the like, in source order, without the
+   * brackets. Drawn as `«interface»` above the name; like Mermaid, only the first one is drawn.
+   */
+  annotations?: string[];
   attributes: ClassMember[];
   methods: ClassMember[];
 }

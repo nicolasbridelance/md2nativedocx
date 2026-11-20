@@ -161,9 +161,16 @@ Ensuite, dans l'ordre :
             - **ER (19)** : relations en toutes lettres (`1 to zero or more`, `only one to`, `many(0) optionally
               to 0+`), alias d'entité `a["Customer Account"] { … }`, `direction`, `subgraph`, `:::classe`,
               relation sans espaces (`id1||--||id2`), noms d'entité entre guillemets ;
-            - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, sucettes `()--`/`--()`, annotations
-              `<<interface>>` (en ligne ou seules), `class X:::style` (avec ou sans corps), cardinalités, notes,
-              `namespace`, styles ;
+            - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, sucettes `()--`/`--()`, ~~annotations
+              `<<interface>>` (en ligne ou seules)~~ (faites le 2026-11-20 : `ClassBox.annotations`, `«interface»`
+              au-dessus du nom, la première seulement comme Mermaid ; aussi les stéréotypes PlantUML et le
+              SmartArt ; comparées au différentiel ; vérifié dans Word, `test-corpus/word-verification/
+              class-annotations.*`), `class X:::style` (avec ou sans corps), cardinalités, notes, `namespace`,
+              styles ;
+            - **Vu dans Word le 2026-11-20, pas encore corrigé :** les compartiments de membres d'une classe
+              réservent 22 px par ligne (`ROW_H`, `class-diagram/translator.ts`) alors que Word en écrit environ
+              18 : un vide grandit sous les membres (5 lignes : ~20 px, `classDiagram#25`). Mesurer la hauteur de
+              ligne réelle (police de membre à 9 pt) avant de changer `ROW_H` : toutes les classes bougent ;
             - **états (13)** : états composites en boîtes imbriquées, notes, styles ;
             - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
               cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;

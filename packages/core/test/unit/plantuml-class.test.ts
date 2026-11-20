@@ -76,6 +76,7 @@ test('declarations: kinds, aliases, generics, stereotypes, colours, extends/impl
   const byId = new Map(ast.classes.map((c) => [c.id, c]));
   assert.equal(byId.get('L')?.label, 'Long name');
   assert.equal(byId.get('S')?.label, 'Shown name');
+  assert.deepEqual(byId.get('Shape')?.annotations, ['Entity']);
   assert.deepEqual(byId.get('Shape')?.methods, [{ visibility: '+', text: 'area() : double' }]);
   assert.deepEqual(byId.get('Shape')?.attributes, [{ visibility: '#', text: 'count : int' }]);
   assert.deepEqual(byId.get('Color')?.attributes.map((a) => a.text), ['RED', 'GREEN']);

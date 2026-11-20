@@ -17,12 +17,11 @@
  * - Generics (`List~int~`) — the `~...~` suffix is stripped from the id
  *   with no warning (harmless: the base id is exactly what relationships
  *   reference too), but the generic itself is not displayed.
- * - Annotations (`<<Interface>>`), inline or on their own line outside a
- *   class block, and `namespace` blocks — recognized (a `namespace ... {`
- *   line, or a class body's own `<<...>>` first line) and warned, not
- *   parsed. `namespace` grouping is lost but the `class` declarations
- *   nested inside one are still parsed correctly (see the generic brace
- *   stack below) — only the visual grouping/label is dropped.
+ * - Annotations (`<<Interface>>`) are read in all three places Mermaid takes them (a class body's line,
+ *   the class header, `<<Interface>> Name` on its own line) into `ClassBox.annotations`.
+ * - `namespace` blocks — recognized and warned, not parsed. The grouping is lost but the `class`
+ *   declarations nested inside one are still parsed correctly (see the generic brace stack below) —
+ *   only the visual grouping/label is dropped.
  * - `classDef`/`style`/`cssClass` styling and relationship cardinalities
  *   (`"1"`, `"0..1"`, ...) — cardinalities are stripped (quoted segments
  *   removed before relationship matching) with a warning; styling lines are
@@ -126,8 +125,11 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   type Frame = { kind: 'class'; box: ClassBox } | { kind: 'other' };
   const stack: Frame[] = [];
   let warnedNamespace = false;
-  let warnedAnnotation = false;
   let warnedStyleClass = false;
+  const annotate = (box: ClassBox, annotation: string): void => {
+    const text = annotation.trim();
+    if (text.length > 0) (box.annotations ??= []).push(text);
+  };
 
   for (const rawLine of splitLines(text).flatMap((l) => splitStatements(l))) {
     const line = rawLine.trim();
@@ -148,11 +150,9 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
     }
 
     if (top?.kind === 'class') {
-      if (/^<<.*>>$/.test(line)) {
-        if (!warnedAnnotation) {
-          warnings.push('Class annotations (e.g. <<Interface>>) are not yet rendered, ignored.');
-          warnedAnnotation = true;
-        }
+      const bodyAnnotation = /^<<(.*)>>$/.exec(line);
+      if (bodyAnnotation) {
+        annotate(top.box, bodyAnnotation[1] ?? '');
         continue;
       }
       const visMatch = line.match(/^([+\-#~])\s*(.+)$/);
@@ -185,10 +185,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
         warnings.push('Styling directives are not yet supported for class diagrams: `:::class` on a class is ignored.');
         warnedStyleClass = true;
       }
-      if (classMatch[6] && !warnedAnnotation) {
-        warnings.push('Class annotations (e.g. <<Interface>>) are not yet rendered, ignored.');
-        warnedAnnotation = true;
-      }
+      if (classMatch[6]) annotate(box, classMatch[6].slice(2, -2));
       if (classMatch[7] === '{') stack.push({ kind: 'class', box });
       continue;
     }
@@ -255,11 +252,10 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       warnings.push(`Notes are not yet supported for class diagrams, ignored: ${line}`);
       continue;
     }
-    if (/^<<.*>>$/.test(line)) {
-      if (!warnedAnnotation) {
-        warnings.push('Class annotations (e.g. <<Interface>>) are not yet rendered, ignored.');
-        warnedAnnotation = true;
-      }
+    // `<<interface>> Shape`: an annotation for a class declared elsewhere (or not yet).
+    const lineAnnotation = /^<<([^>]*)>>\s*(?:`([^`]+)`|([A-Za-z_$][\w$]*))\s*$/.exec(line);
+    if (lineAnnotation) {
+      annotate(getOrCreateClass(stripIdQuotes(lineAnnotation[2] ?? lineAnnotation[3] ?? '')), lineAnnotation[1] ?? '');
       continue;
     }
 
@@ -268,6 +264,11 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
 
   if (stack.length > 0) {
     warnings.push('One or more class/namespace blocks were not closed with a matching "}".');
+  }
+  for (const box of classes.values()) {
+    if ((box.annotations?.length ?? 0) > 1) {
+      warnings.push(`Class "${box.id}" has several annotations; only the first, «${box.annotations![0]}», is drawn (as in Mermaid).`);
+    }
   }
 
   return {
