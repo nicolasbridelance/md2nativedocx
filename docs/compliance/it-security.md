@@ -40,7 +40,7 @@ requirements*, binding on every change; it is reproduced here to save a round tr
 | Downloaded binaries | Extension (Pandoc, .NET runtime) | Official publisher only, pinned SHA-256 (Pandoc) or SHA-512 (.NET), checked before extraction or execution; an internal mirror can replace the URL, never the hash check |
 | Supply chain | Whole repository | `npm audit` in CI, weekly Dependabot, every new dependency justified, notices of bundled code generated and license-checked at build time |
 | Release tampering | npm packages | Published only by a GitHub Actions workflow with npm trusted publishing (short-lived OIDC credential, no stored token) and provenance attestation |
-| Secret leakage | Whole repository, public since its first commit | gitleaks on every push and PR |
+| Secret leakage | Whole repository, public since its first commit | gitleaks on staged changes before each commit (local hook) and on every push and PR (CI) |
 | Untested input | The Mermaid parser, the most exposed boundary | Property-based tests (`fast-check`) on that boundary, not only examples |
 | Malicious dev-container config in an external PR | Codespaces | Never open an unreviewed external PR branch in a Codespace; review `.devcontainer/` and `.vscode/` diffs on github.com first |
 
@@ -70,6 +70,7 @@ Source: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml),
 | Dependency audit, shipped dependencies | `npm audit --omit=dev --audit-level=high` | Every push and PR | Yes, no exception possible |
 | Dependency audit, whole tree | `npm audit` with dated, justified exceptions (`audit-exceptions.json`, empty on 2026-11-20) | Every push and PR | Yes; an expired exception blocks again |
 | Secret scanning | gitleaks | Every push and PR | Yes |
+| Secret scanning before commit | gitleaks pre-commit hook on staged changes (`npm run hooks:install`) | Every commit on a machine where it is installed | Yes, the commit is stopped |
 | Static analysis (SAST) | CodeQL, JavaScript/TypeScript | Every push and PR, and weekly | Alerts in the *Security* tab |
 | DCO sign-off | `git` | Every PR | Yes |
 | Visual regression (real rendering) | LibreOffice headless, pixel diff | Weekly, on release branches, and whenever a change touches the drawing code or the visual test setup | Yes when it runs |
@@ -112,8 +113,6 @@ test:fuzz && npm audit --omit=dev --audit-level=high`. `test:ci` writes the same
 
 ## What is not covered yet
 
-- **No local pre-commit secret scan.** CI blocks a secret at push time, but it would already be in the
-  local history.
 - **No required second review.** Single-maintainer project: no `CODEOWNERS` and no branch protection
   requiring another person's approval yet (see [`SECURITY.md`](../../SECURITY.md)).
 - **Real Word is checked by hand.** CI validates against Word's schema and renders with LibreOffice; the

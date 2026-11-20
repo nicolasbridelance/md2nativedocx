@@ -21,7 +21,8 @@
     "test:odf-validate": "node scripts/test-odf-validate.mjs",
     "test:odf-connectors": "node scripts/test-odf-connectors.mjs",
     "verify:npm-packages": "node scripts/verify-npm-packages.mjs",
-    "audit:gate": "node scripts/audit-gate.mjs"
+    "audit:gate": "node scripts/audit-gate.mjs",
+    "hooks:install": "node scripts/install-git-hooks.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

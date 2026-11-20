@@ -21,6 +21,12 @@ Before anything else:
 
 ## Branching and commits
 
+- **Install the pre-commit secret scan once per clone:** `npm run hooks:install`, with
+  [gitleaks](https://github.com/gitleaks/gitleaks#installing) on your `PATH`. It stops a commit whose
+  staged changes look like a secret (token, key, password); CI scans again on every push. The hook is
+  copied into `.git/hooks/`, so a branch you check out cannot change what runs on your commits; after a
+  change to `scripts/git-hooks/`, read the diff, then run the command again.
+
 - Branch names: `feat/<short-desc>`, `fix/<short-desc>`, `security/<short-desc>`,
   `docs/<short-desc>`.
 - Commit messages follow Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `security:`).

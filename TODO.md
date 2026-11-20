@@ -345,9 +345,8 @@ protégée, `--reference-doc`/`--toc`/`--version`, journal non bloquant, README 
   - Pandoc 3.14 dans la page, 3.1.3 épinglé pour le CLI en CI : à rapprocher (§2bis « Pandoc comme contrat ») ;
   - la sélection des blocs de diagramme existe en Lua et en JS (`diagram-blocks.mjs`) : n'en garder qu'une
     si le CLI passe un jour par l'AST JSON.
-- **Conformité, restes** (revue du 2026-11-20, `docs/compliance/it-security.md` → *What is not covered yet*) :
-  - pas de hook local gitleaks avant commit (la CI bloque au push), alors que la ligne « Secret leakage » du
-    tableau Sécurité d'`AGENTS.md` le demande : écart à combler ou ligne à reformuler.
+- **Conformité, restes** : le hook gitleaks n'est pas installé d'office dans un Codespace (installer gitleaks et
+  lancer `npm run hooks:install` depuis `.devcontainer/setup.sh` touche `.devcontainer/`, donc escalade).
 - **Mesure d'usage** (seulement si le site navigateur existe) : compteurs agrégés sans cookie
   (`page_view`, `docx_generated`, `docx_generated_with_native_diagram`), jamais de contenu.
 - **draw.io, dans les deux sens : décidé par le mainteneur le 2026-11-20** (point 7 de l'ordre de

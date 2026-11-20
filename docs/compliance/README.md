@@ -48,7 +48,7 @@ The badges at the top of the [`README`](../../README.md) show the live state of 
 | Automated tests | 1,276 on 2026-11-20 (commit `605b50f`), on Linux, Windows and macOS; property-based tests on the input boundary |
 | Output validation | Every CI run checks generated `.docx` against Microsoft's Open XML schema and `.odt` against the ODF schema |
 | Static analysis (SAST) | CodeQL on every push and PR, and weekly |
-| Secret scanning | gitleaks on every push and PR |
+| Secret scanning | gitleaks on every push and PR, and before each commit with the local hook |
 | Known vulnerabilities | `npm audit` on every push and PR; shipped dependencies: no exception allowed |
 | Dependency updates | Dependabot, weekly (npm and GitHub Actions) |
 | npm releases | Built and published by GitHub Actions with npm trusted publishing (no long-lived token) and provenance |

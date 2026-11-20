@@ -1,0 +1,19 @@
+#!/bin/sh
+# Secret scan of the staged changes before each commit (AGENTS.md → Security requirements, "Secret leakage").
+# CI scans again with gitleaks on every push and PR; this hook stops a secret before it even enters the
+# local history. Installed by `npm run hooks:install`, which copies this file into .git/hooks/: see
+# scripts/install-git-hooks.mjs for why it is a copy and not core.hooksPath.
+#
+# Bypass for one commit, only for a false positive you have checked: git commit --no-verify
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed, staged changes were NOT scanned for secrets." >&2
+  echo "pre-commit: install it (https://github.com/gitleaks/gitleaks#installing); CI still scans at push." >&2
+  exit 0
+fi
+
+if ! gitleaks git --pre-commit --staged --redact --no-banner --verbose; then
+  echo "pre-commit: gitleaks found what looks like a secret in the staged changes; commit stopped." >&2
+  echo "pre-commit: remove it (and rotate it if it was real). The finding above is redacted." >&2
+  exit 1
+fi
