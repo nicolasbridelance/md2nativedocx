@@ -119,14 +119,16 @@ test('direction is parsed with the same TB->TD normalization as flowchart', () =
   assert.equal(parseClassDiagram('classDiagram\n  class A').ast.direction, 'TD');
 });
 
-test('a namespace block is warned but its nested classes still parse', () => {
+test('a namespace block groups its classes, which still parse', () => {
   const { ast, warnings } = parseClassDiagram(
     'classDiagram\n  namespace Shapes {\n    class Circle {\n      +radius: int\n    }\n  }',
   );
   assert.equal(ast.classes.length, 1);
   assert.equal(ast.classes[0]?.id, 'Circle');
   assert.deepEqual(ast.classes[0]?.attributes.map((m) => m.text), ['radius: int']);
-  assert.ok(warnings.some((w) => w.includes('namespace')));
+  assert.equal(ast.classes[0]?.namespace, 'Shapes');
+  assert.deepEqual(ast.namespaces, [{ id: 'Shapes', label: 'Shapes' }]);
+  assert.deepEqual(warnings, []);
 });
 
 test('classDef/style and note lines are recognized and warned, not silently dropped', () => {
@@ -215,4 +217,41 @@ test('annotations are read in the body, in the header and on their own line, as 
   assert.deepEqual(byId.get('Color')?.annotations, ['enumeration']);
   assert.deepEqual(byId.get('Api')?.annotations, ['service']);
   assert.deepEqual(warnings, ['Class "Multi" has several annotations; only the first, «abstract», is drawn (as in Mermaid).']);
+});
+
+test('namespaces are qualified as Mermaid qualifies them: nested, dotted with implicit ancestors, labelled', () => {
+  const { ast, warnings } = parseClassDiagram(
+    [
+      'classDiagram',
+      'namespace Platform {',
+      '  namespace Auth["Authentication"] {',
+      '    class UserService',
+      '  }',
+      '  class Gateway',
+      '}',
+      'namespace Company.Engineering.Backend {',
+      '  class Developer',
+      '}',
+      'namespace Company.Engineering {',
+      '  class TechLead',
+      '}',
+      'class Outside',
+    ].join('\n'),
+  );
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.namespaces, [
+    { id: 'Platform', label: 'Platform' },
+    { id: 'Platform.Auth', label: 'Authentication', parent: 'Platform' },
+    { id: 'Company', label: 'Company' },
+    { id: 'Company.Engineering', label: 'Engineering', parent: 'Company' },
+    { id: 'Company.Engineering.Backend', label: 'Backend', parent: 'Company.Engineering' },
+  ]);
+  const where = Object.fromEntries(ast.classes.map((c) => [c.id, c.namespace ?? '-']));
+  assert.deepEqual(where, {
+    UserService: 'Platform.Auth',
+    Gateway: 'Platform',
+    Developer: 'Company.Engineering.Backend',
+    TechLead: 'Company.Engineering',
+    Outside: '-',
+  });
 });

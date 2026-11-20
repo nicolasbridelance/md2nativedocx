@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 442 sans avertissement (82 %), 99 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 447 sans avertissement (83 %), 94 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -12,7 +12,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | architecture | 6 | 1 | 5 | 0 | 0 | 0 |
 | block | 30 | 29 | 1 | 0 | 0 | 0 |
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
-| classDiagram | 38 | 20 | 18 | 0 | 0 | 0 |
+| classDiagram | 38 | 25 | 13 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
 | entityRelationshipDiagram | 25 | 15 | 10 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
@@ -79,11 +79,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 - #2 warned: Relationship cardinalities are not yet supported, ignored: Customer "1" --> "*" Order : places \| Relationship cardinalities are not yet supported, ignored: Order "1" *-- "*" LineItem : contains
 - #15 warned: Unsupported line ignored: bar ()-- foo
 - #16 warned: Unsupported line ignored: Class01 --() bar \| Unsupported line ignored: Class02 --() bar \| Unsupported line ignored: foo ()-- Class01
-- #17 warned: namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.
-- #18 warned: namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.
-- #19 warned: namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.
-- #20 warned: namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.
-- #21 warned: namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.
 - #22 warned: Relationship cardinalities are not yet supported, ignored: Customer "1" --> "*" Ticket \| Relationship cardinalities are not yet supported, ignored: Student "1" --> "1..*" Course \| Relationship cardinalities are not yet supported, ignored: Galaxy --> "many" Star : Contains
 - #27 warned: Relationship cardinalities are not yet supported, ignored: Student "1" --o "1" IdCard : carries \| Relationship cardinalities are not yet supported, ignored: Student "1" --o "1" Bike : rides
 - #28 warned: Notes are not yet supported for class diagrams, ignored: note "This is a general note" \| Notes are not yet supported for class diagrams, ignored: note for MyClass "This is a note for a class"

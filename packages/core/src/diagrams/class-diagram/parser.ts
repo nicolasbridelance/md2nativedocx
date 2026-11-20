@@ -19,9 +19,8 @@
  *   reference too), but the generic itself is not displayed.
  * - Annotations (`<<Interface>>`) are read in all three places Mermaid takes them (a class body's line,
  *   the class header, `<<Interface>> Name` on its own line) into `ClassBox.annotations`.
- * - `namespace` blocks — recognized and warned, not parsed. The grouping is lost but the `class`
- *   declarations nested inside one are still parsed correctly (see the generic brace stack below) —
- *   only the visual grouping/label is dropped.
+ * - `namespace` blocks (nested, dotted, with a `["label"]`) into `ClassDiagram.namespaces`, each class
+ *   declared inside one recording it (`ClassBox.namespace`), qualified as Mermaid qualifies them.
  * - `classDef`/`style`/`cssClass` styling and relationship cardinalities
  *   (`"1"`, `"0..1"`, ...) — cardinalities are stripped (quoted segments
  *   removed before relationship matching) with a warning; styling lines are
@@ -34,7 +33,7 @@
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from '../../parser/interactive.js';
-import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
+import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassRelationType } from './types.js';
 
 export interface ClassDiagramParseResult {
   ast: ClassDiagram;
@@ -118,13 +117,35 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
     return box;
   }
 
-  // Generic brace-nesting stack so a `namespace X { class A { ... } }` still
-  // parses `A`'s members correctly even though the namespace grouping itself
-  // is dropped (see module doc comment) — only 'class' frames get their
-  // lines treated as member declarations.
-  type Frame = { kind: 'class'; box: ClassBox } | { kind: 'other' };
+  // Brace-nesting stack: a `namespace` frame gives its qualified id to the classes declared in it; only
+  // 'class' frames get their lines treated as member declarations.
+  type Frame = { kind: 'class'; box: ClassBox } | { kind: 'namespace'; id: string };
   const stack: Frame[] = [];
-  let warnedNamespace = false;
+  const namespaces = new Map<string, ClassNamespace>();
+  const currentNamespace = (): string | undefined => {
+    for (let i = stack.length - 1; i >= 0; i--) {
+      const frame = stack[i]!;
+      if (frame.kind === 'namespace') return frame.id;
+    }
+    return undefined;
+  };
+  // As Mermaid's classDb does: qualify the name with the enclosing namespace, then create every missing
+  // ancestor of a dotted id, labelled with its own last segment; a declared `["label"]` names the leaf.
+  const declareNamespace = (name: string, label: string | undefined): string => {
+    const enclosing = currentNamespace();
+    const id = enclosing === undefined ? name : `${enclosing}.${name}`;
+    const parts = id.split('.');
+    let parent: string | undefined;
+    for (let i = 0; i < parts.length; i++) {
+      const partial = parts.slice(0, i + 1).join('.');
+      if (!namespaces.has(partial)) {
+        namespaces.set(partial, { id: partial, label: parts[i]!, ...(parent !== undefined ? { parent } : {}) });
+      }
+      parent = partial;
+    }
+    if (label !== undefined) namespaces.get(id)!.label = label;
+    return id;
+  };
   let warnedStyleClass = false;
   const annotate = (box: ClassBox, annotation: string): void => {
     const text = annotation.trim();
@@ -179,6 +200,8 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
         continue;
       }
       const box = getOrCreateClass(id);
+      const namespace = currentNamespace();
+      if (namespace !== undefined) box.namespace = namespace;
       const label = classMatch[3] ?? classMatch[4];
       if (label !== undefined) box.label = label.trim();
       if (classMatch[5] && !warnedStyleClass) {
@@ -190,12 +213,9 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       continue;
     }
 
-    if (/^namespace\b/i.test(line)) {
-      if (!warnedNamespace) {
-        warnings.push('namespace grouping is not yet supported; contained classes are still parsed, the grouping itself is dropped.');
-        warnedNamespace = true;
-      }
-      if (line.endsWith('{')) stack.push({ kind: 'other' });
+    const namespaceMatch = /^namespace\s+([\w.$-]+)\s*(?:\[\s*"([^"]*)"\s*\])?\s*\{\s*$/i.exec(line);
+    if (namespaceMatch) {
+      stack.push({ kind: 'namespace', id: declareNamespace(namespaceMatch[1]!, namespaceMatch[2]?.trim()) });
       continue;
     }
 
@@ -272,7 +292,12 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   }
 
   return {
-    ast: { direction, classes: [...classes.values()], relationships },
+    ast: {
+      direction,
+      classes: [...classes.values()],
+      relationships,
+      ...(namespaces.size > 0 ? { namespaces: [...namespaces.values()] } : {}),
+    },
     warnings,
   };
 }

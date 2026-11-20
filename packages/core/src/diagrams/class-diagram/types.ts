@@ -32,6 +32,8 @@ export interface ClassBox {
    * brackets. Drawn as `«interface»` above the name; like Mermaid, only the first one is drawn.
    */
   annotations?: string[];
+  /** Qualified id of the {@link ClassNamespace} the class was declared in, if any. */
+  namespace?: string;
   attributes: ClassMember[];
   methods: ClassMember[];
 }
@@ -65,8 +67,24 @@ export interface ClassRelationship {
   label?: string;
 }
 
+/**
+ * A `namespace` block, drawn as a titled box around its classes. Ids are qualified as Mermaid qualifies
+ * them: a `namespace Auth` inside `namespace Platform` is `Platform.Auth`, and a dotted name
+ * (`Company.Engineering`) also stands for its ancestors (`Company`), created when not declared.
+ */
+export interface ClassNamespace {
+  /** Qualified id (`Platform.Auth`). */
+  id: string;
+  /** Title: the `["label"]` of its declaration, else the last segment of its id. */
+  label: string;
+  /** Qualified id of the enclosing namespace, if any. */
+  parent?: string;
+}
+
 export interface ClassDiagram {
   direction: 'TD' | 'LR' | 'BT' | 'RL';
   classes: ClassBox[];
   relationships: ClassRelationship[];
+  /** Namespaces, a parent before its children. Absent when the diagram declares none. */
+  namespaces?: ClassNamespace[];
 }

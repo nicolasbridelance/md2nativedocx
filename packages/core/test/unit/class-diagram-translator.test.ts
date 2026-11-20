@@ -119,3 +119,22 @@ test('an annotation is drawn as «…» above the class name, escaped', () => {
   assert.ok(!xml.includes('<b>'));
   assert.ok(xml.indexOf('«a &amp;') < xml.indexOf('>Shape</w:t>'), 'the annotation comes before the name');
 });
+
+test('a namespace is a dashed box behind its classes, titled and escaped, nested inside its parent', () => {
+  // Injection case (AGENTS.md): the namespace label is user text.
+  const { ast } = parseClassDiagram(
+    'classDiagram\nnamespace Outer {\n  namespace Inner["a <b> & c"] {\n    class A\n  }\n  class B\n}\nnamespace Empty {\n}\nA --> B',
+  );
+  const xml = translateClassDiagramToOoxml(ast);
+  assert.equal((xml.match(/<a:prstDash val="dash"\/>/g) ?? []).length, 2, 'Outer and Inner, not the empty namespace');
+  assert.ok(xml.includes('>a &lt;b&gt; &amp; c</w:t>'));
+  assert.ok(!xml.includes('<b>'));
+  // Boxes in emission order: Outer, Inner; Inner lies within Outer, below Outer's title band.
+  const boxes = [...xml.matchAll(/<a:off x="(\d+)" y="(\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>[\s\S]{0,400}?<a:prstDash val="dash"\/>/g)].map((m) =>
+    m.slice(1, 5).map(Number),
+  );
+  const [outer, inner] = boxes as [number[], number[]];
+  assert.ok(inner[0]! >= outer[0]! && inner[0]! + inner[2]! <= outer[0]! + outer[2]!, 'horizontally inside');
+  assert.ok(inner[1]! > outer[1]! && inner[1]! + inner[3]! <= outer[1]! + outer[3]!, 'vertically inside, below the title');
+  assert.ok(xml.indexOf('>Outer</w:t>') < xml.indexOf('>A</w:t>'), 'boxes are drawn before the classes');
+});

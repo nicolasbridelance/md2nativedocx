@@ -165,8 +165,15 @@ Ensuite, dans l'ordre :
               `<<interface>>` (en ligne ou seules)~~ (faites le 2026-11-20 : `ClassBox.annotations`, `«interface»`
               au-dessus du nom, la première seulement comme Mermaid ; aussi les stéréotypes PlantUML et le
               SmartArt ; comparées au différentiel ; vérifié dans Word, `test-corpus/word-verification/
-              class-annotations.*`), `class X:::style` (avec ou sans corps), cardinalités, notes, `namespace`,
-              styles ;
+              class-annotations.*`), ~~`namespace`~~ (fait le 2026-11-20 : `ClassDiagram.namespaces`, qualifiés comme
+              Mermaid (imbrication, noms pointés et ancêtres implicites, `["label"]`), identiques à Mermaid au
+              différentiel ; cadres en pointillé dans un graphe Dagre composé, bande de titre réservée comme pour un
+              sous-graphe ; pas de SmartArt avec un `namespace` ; vérifié dans Word, `test-corpus/word-verification/
+              class-namespaces.*` ; `hierarchicalNamespaces: false` (option YAML imbriquée) non lu), `class X:::style`
+              (avec ou sans corps), cardinalités, notes, styles ;
+            - **Vu dans Word le 2026-11-20 :** un libellé de relation de classes est posé au milieu du trait, sans
+              fond : il peut tomber sur la bordure d'un `namespace` (`classDiagram#20`) ou d'une autre classe. Même
+              remarque que pour l'ER ; à traiter ensemble (fond blanc, ou position évitant les cadres) ;
             - **Vu dans Word le 2026-11-20, pas encore corrigé :** les compartiments de membres d'une classe
               réservent 22 px par ligne (`ROW_H`, `class-diagram/translator.ts`) alors que Word en écrit environ
               18 : un vide grandit sous les membres (5 lignes : ~20 px, `classDiagram#25`). Mesurer la hauteur de

@@ -29,6 +29,11 @@
  * composition (filled diamond) and association/dependency (small triangle) stay line ends. A class box is
  * itself several separate shapes and its lines are not attached to it, so a detached marker loses nothing.
  *
+ * Namespaces are Dagre clusters (a compound graph), drawn as dashed boxes behind their classes with the
+ * look of a flowchart subgraph, the title in a band Dagre does not know about: as for a subgraph
+ * (`layout.ts`'s `reserveSubgraphTitleSpace`), each box grows by {@link NAMESPACE_TITLE_H} and what it holds
+ * moves down by as much.
+ *
  * `edgePoint`/`connector`/`rect`/`textBoxLines` live in
  * `../../translator/graph-shapes.ts`, not here — extracted once
  * `../state-diagram/translator.ts` needed the exact same primitives (see
@@ -37,7 +42,8 @@
 
 import dagre from 'dagre';
 import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
-import type { ClassBox, ClassDiagram, ClassMember, ClassRelationType } from './types.js';
+import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassRelationType } from './types.js';
+import { boxShape } from '../../translator/boxes.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
   createIdAllocator,
@@ -64,6 +70,13 @@ const ANNOTATION_H = 16;
 const ROW_H = 22;
 const COMPARTMENT_PAD_Y = 6;
 const PAD_X = 10;
+
+/** Namespace box: a flowchart subgraph's look (its E8E8E8 fill at 40 % over white, grey dashed border). */
+const NAMESPACE_FILL = 'F6F6F6';
+const NAMESPACE_LINE = '999999';
+/** Height of a namespace's title band, added above what Dagre laid out. */
+const NAMESPACE_TITLE_H = 24;
+const NAMESPACE_TITLE_SIZE_HALFPT = 20;
 
 const RANKDIR: Readonly<Record<ClassDiagram['direction'], 'TB' | 'BT' | 'LR' | 'RL'>> = {
   TD: 'TB',
@@ -181,6 +194,25 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
   return parts;
 }
 
+/** The Dagre key of a namespace cluster: apart from {@link nodeKey}'s, so a class and a namespace may share a name. */
+function namespaceKey(id: string): string {
+  return `ns:${id}`;
+}
+
+/** The namespaces holding at least one class, directly or in a namespace below: the boxes to draw. */
+function drawnNamespaces(chart: ClassDiagram): ClassNamespace[] {
+  const all = chart.namespaces ?? [];
+  const holding = new Set<string>();
+  for (const box of chart.classes) {
+    // A class in `A.B` makes `A.B` and every ancestor hold something.
+    for (let id = box.namespace; id !== undefined; id = all.find((ns) => ns.id === id)?.parent) {
+      if (holding.has(id)) break;
+      holding.add(id);
+    }
+  }
+  return all.filter((ns) => holding.has(ns.id));
+}
+
 /** Translate a parsed class diagram into a self-contained WordprocessingML
  * paragraph. An empty diagram renders a visible note, matching
  * `../venn/translator.ts`'s zero-sets convention — never a silent blank
@@ -199,7 +231,9 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   }
 
   const sizes = new Map<string, BoxSize>();
-  const g = new dagre.graphlib.Graph();
+  // Only the namespaces that hold a class, directly or below: an empty one has no box to draw.
+  const namespaces = drawnNamespaces(chart);
+  const g = new dagre.graphlib.Graph({ compound: namespaces.length > 0 });
   g.setGraph({ rankdir: RANKDIR[chart.direction], nodesep: 50, ranksep: 70, marginx: 0, marginy: 0 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const box of chart.classes) {
@@ -207,6 +241,11 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     sizes.set(box.id, size);
     g.setNode(nodeKey(box.id), { width: size.width, height: size.height });
   }
+  // Every cluster exists before any parent link (a parent is listed before its children anyway).
+  for (const ns of namespaces) g.setNode(namespaceKey(ns.id), { width: 0, height: 0 });
+  const drawnIds = new Set(namespaces.map((ns) => ns.id));
+  for (const ns of namespaces) if (ns.parent !== undefined && drawnIds.has(ns.parent)) g.setParent(namespaceKey(ns.id), namespaceKey(ns.parent));
+  for (const box of chart.classes) if (box.namespace !== undefined && drawnIds.has(box.namespace)) g.setParent(nodeKey(box.id), namespaceKey(box.namespace));
   const linked = new Set<string>();
   for (const rel of chart.relationships) {
     if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) {
@@ -224,17 +263,47 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   }
   layoutWithinLimits(g, options);
 
+  // Class centres and namespace boxes (top-left), then the title band of every namespace: it grows by
+  // NAMESPACE_TITLE_H and everything inside moves down by as much, once per enclosing namespace.
+  const centres = new Map<string, { x: number; y: number }>();
+  for (const box of chart.classes) {
+    const n = g.node(nodeKey(box.id)) as { x: number; y: number };
+    centres.set(box.id, { x: n.x, y: n.y });
+  }
+  const nsBoxes = new Map<string, { x: number; y: number; width: number; height: number }>();
+  for (const ns of namespaces) {
+    const c = g.node(namespaceKey(ns.id)) as { x: number; y: number; width: number; height: number } | undefined;
+    if (c && c.width > 0) nsBoxes.set(ns.id, { x: c.x - c.width / 2, y: c.y - c.height / 2, width: c.width, height: c.height });
+  }
+  for (const ns of namespaces) {
+    const box = nsBoxes.get(ns.id);
+    if (!box) continue;
+    box.height += NAMESPACE_TITLE_H;
+    const inside = (id: string | undefined): boolean => id !== undefined && (id === ns.id || id.startsWith(`${ns.id}.`)) && drawnIds.has(id);
+    for (const cls of chart.classes) if (inside(cls.namespace)) centres.get(cls.id)!.y += NAMESPACE_TITLE_H;
+    for (const other of namespaces) if (other.id !== ns.id && inside(other.id)) {
+      const child = nsBoxes.get(other.id);
+      if (child) child.y += NAMESPACE_TITLE_H;
+    }
+  }
+
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
   for (const box of chart.classes) {
-    const n = g.node(nodeKey(box.id)) as { x: number; y: number };
+    const n = centres.get(box.id)!;
     const size = sizes.get(box.id)!;
     minX = Math.min(minX, n.x - size.width / 2);
     maxX = Math.max(maxX, n.x + size.width / 2);
     minY = Math.min(minY, n.y - size.height / 2);
     maxY = Math.max(maxY, n.y + size.height / 2);
+  }
+  for (const box of nsBoxes.values()) {
+    minX = Math.min(minX, box.x);
+    maxX = Math.max(maxX, box.x + box.width);
+    minY = Math.min(minY, box.y);
+    maxY = Math.max(maxY, box.y + box.height);
   }
   const PAD = 24;
   const canvasW = maxX - minX + 2 * PAD;
@@ -246,11 +315,21 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   const nextId = createIdAllocator();
   const parts: string[] = [];
 
-  // Relationships first (z-order = emission order), so class boxes always
-  // render on top of the lines feeding into them.
+  // Namespace boxes first, outer before inner (a parent is listed first), so they stay behind; then
+  // relationships (z-order = emission order), so class boxes always render on top of the lines feeding into them.
+  for (const ns of namespaces) {
+    const box = nsBoxes.get(ns.id);
+    if (!box) continue;
+    const x = scalePt(box.x + dx, s);
+    const y = scalePt(box.y + dy, s);
+    const w = scalePt(box.width, s);
+    parts.push(boxShape(nextId(), x, y, w, scalePt(box.height, s), [''], { fill: NAMESPACE_FILL, line: NAMESPACE_LINE, color: '000000', dashed: true }, MEMBER_FONT_PX, s));
+    parts.push(textBoxLines(nextId(), x, y, w, scalePt(NAMESPACE_TITLE_H, s), [ns.label], scaledFontSizeHalfPt(NAMESPACE_TITLE_SIZE_HALFPT, s), { align: 'ctr' }));
+  }
+
   for (const rel of chart.relationships) {
-    const nFrom = g.node(nodeKey(rel.from)) as { x: number; y: number } | undefined;
-    const nTo = g.node(nodeKey(rel.to)) as { x: number; y: number } | undefined;
+    const nFrom = centres.get(rel.from);
+    const nTo = centres.get(rel.to);
     if (!nFrom || !nTo) continue;
     const sizeFrom = sizes.get(rel.from)!;
     const sizeTo = sizes.get(rel.to)!;
@@ -315,7 +394,7 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   }
 
   for (const box of chart.classes) {
-    const n = g.node(nodeKey(box.id)) as { x: number; y: number };
+    const n = centres.get(box.id)!;
     const size = sizes.get(box.id)!;
     parts.push(...classBoxShapes(nextId, box, size, n.x - size.width / 2 + dx, n.y - size.height / 2 + dy, s));
   }
