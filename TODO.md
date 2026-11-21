@@ -305,7 +305,7 @@ Ensuite, dans l'ordre :
               LibreOffice (`test-corpus/word-verification/c4-boundaries.*`), 0 erreur de schéma dans `document.xml`.
               Ajouts d'API, optionnels : `C4Diagram.boundaries` / `level` / `layout`, `style` sur élément et relation,
               types `C4Boundary`, `C4ElementStyle`, `C4RelationshipStyle`, `C4LayoutConfig`, `C4Level` ; retrait :
-              `C4Category` `'node'` (un nœud de déploiement est un cadre). Restent, connus : traits droits (Mermaid
+              `C4Category` `'node'` (un nœud de déploiement est un cadre ; accepté par le mainteneur le 2026-11-21). Restent, connus : traits droits (Mermaid
               courbe ceux après le premier), qui peuvent passer sur une forme ou sur le libellé d'un cadre
               (`c4#5`) ; `$shape`, `$sprite`, `$tags`, `$link` non appliqués (avertis pour `UpdateElementStyle`).
               Baseline `test:visual` `c4` rafraîchie depuis la CI Linux, revue (seule image modifiée) ;
