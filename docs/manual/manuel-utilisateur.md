@@ -476,6 +476,7 @@ Classes UML avec attributs, méthodes et relations.
 - Annotations `<<interface>>`, `<<enumeration>>`… (dans le bloc, après `class Nom` ou sur une ligne `<<interface>> Nom`) : affichées `«interface»` au-dessus du nom ; la première seulement, comme Mermaid
 - 8 familles de relations : héritage, réalisation, composition, agrégation, association, dépendance, lien, lien pointillé, avec `: libellé`
 - Cardinalités `Client "1" --> "*" Commande` : écrites près de l'extrémité à côté de laquelle elles sont notées
+- Interfaces fournies (« sucettes ») `Classe --() nom`, `nom ()-- Classe` : petit cercle au bout d'un trait partant de la classe, le nom au-delà
 - Notes `note "texte"` et `note for Classe "texte"` (`<br>` pour aller à la ligne) : note jaune à coin replié, reliée à sa classe par un trait pointillé
 - `direction TD|LR|BT|RL`
 

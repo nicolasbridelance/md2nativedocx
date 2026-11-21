@@ -193,7 +193,7 @@ const COMPARATORS = {
     ours(source) {
       const { ast } = parseClassDiagram(source);
       const facts = ast.classes.map((c) => `class ${c.id} "${ourText(c.label)}" ${c.attributes.length}a ${c.methods.length}m <<${(c.annotations ?? []).join(',')}>>`);
-      const kind = { inheritance: 'triangle', realization: 'triangle', composition: 'composition', aggregation: 'aggregation', association: 'arrow', dependency: 'arrow' };
+      const kind = { inheritance: 'triangle', realization: 'triangle', composition: 'composition', aggregation: 'aggregation', association: 'arrow', dependency: 'arrow', lollipop: 'lollipop' };
       const dotted = new Set(['realization', 'dependency', 'dashedLink']);
       for (const r of ast.relationships) {
         const atFrom = r.markerEnd === 'from' || r.markerEnd === 'both' ? (kind[r.type] ?? 'none') : 'none';

@@ -161,7 +161,12 @@ Ensuite, dans l'ordre :
             - **ER (19)** : relations en toutes lettres (`1 to zero or more`, `only one to`, `many(0) optionally
               to 0+`), alias d'entité `a["Customer Account"] { … }`, `direction`, `subgraph`, `:::classe`,
               relation sans espaces (`id1||--||id2`), noms d'entité entre guillemets ;
-            - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, sucettes `()--`/`--()`, ~~annotations
+            - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, ~~sucettes `()--`/`--()`~~ (faites le
+              2026-11-21 : relation `lollipop` et `ClassDiagram.interfaces`, une interface par relation comme Mermaid ;
+              cercle creux au bout du trait, nom au-delà ; vérifié dans Word, `test-corpus/word-verification/
+              class-lollipops.*` ; **différentiel : 252/252 identiques à Mermaid**, étage 1 : les 38 exemples de classes
+              propres sauf #36, dont la classe CSS vit dans une feuille de style externe. Les ends `()` de PlantUML restent
+              des lignes simples, avec avertissement : à brancher sur la même relation), ~~annotations
               `<<interface>>` (en ligne ou seules)~~ (faites le 2026-11-20 : `ClassBox.annotations`, `«interface»`
               au-dessus du nom, la première seulement comme Mermaid ; aussi les stéréotypes PlantUML et le
               SmartArt ; comparées au différentiel ; vérifié dans Word, `test-corpus/word-verification/

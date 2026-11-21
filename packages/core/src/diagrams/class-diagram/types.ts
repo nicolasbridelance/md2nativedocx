@@ -60,7 +60,9 @@ export type ClassRelationType =
   | 'association'
   | 'dependency'
   | 'link'
-  | 'dashedLink';
+  | 'dashedLink'
+  /** A provided interface (`Class --() name`): the end carrying the marker is a {@link ClassInterface}. */
+  | 'lollipop';
 
 export interface ClassRelationship {
   from: string;
@@ -91,6 +93,19 @@ export interface ClassNamespace {
   parent?: string;
 }
 
+/**
+ * An interface a class provides, drawn as a small circle on a line from the class (`Class --() name`,
+ * `name ()-- Class`). As in Mermaid, each such relation makes its own interface, even with the same name.
+ */
+export interface ClassInterface {
+  /** `interface0`, `interface1`…, in source order: the id the `lollipop` relation names. */
+  id: string;
+  /** The name written beside `()`. */
+  label: string;
+  /** Id of the class providing it. */
+  classId: string;
+}
+
 /** A `note "text"`, or a `note for Class "text"` attached to a class by a dotted line. */
 export interface ClassNote {
   /** Text, one line per `\n` (Mermaid's `<br>` is read as a line break). */
@@ -107,4 +122,6 @@ export interface ClassDiagram {
   namespaces?: ClassNamespace[];
   /** Notes, in source order. Absent when the diagram has none. */
   notes?: ClassNote[];
+  /** Provided interfaces (lollipops), in source order. Absent when the diagram has none. */
+  interfaces?: ClassInterface[];
 }

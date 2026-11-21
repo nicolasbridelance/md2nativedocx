@@ -187,3 +187,14 @@ test('a note keeps an inheritance tree out of SmartArt, which has no place for i
   assert.ok(classDiagramToFlowchart(parseClassDiagram(tree).ast));
   assert.equal(classDiagramToFlowchart(parseClassDiagram(`${tree}\nnote for Duck "can fly"`).ast), null);
 });
+
+test('a lollipop is a hollow circle on a line from its class, its name escaped', () => {
+  // Injection case (AGENTS.md): the interface name is user text.
+  const { ast, warnings } = parseClassDiagram('classDiagram\nclass A\nA --() `I <x> &`\n`J` ()-- A');
+  assert.deepEqual(warnings, []);
+  const xml = translateClassDiagramToOoxml(ast);
+  assert.equal((xml.match(/<a:prstGeom prst="ellipse">/g) ?? []).length, 2, 'one circle per interface');
+  assert.ok(xml.includes('>I &lt;x&gt; &amp;</w:t>') && xml.includes('>J</w:t>'));
+  assert.ok(!xml.includes('<x>'));
+  assert.ok(!xml.includes('>I <x> &</w:t>') && !/name="I /.test(xml), 'the interface is not a class box');
+});

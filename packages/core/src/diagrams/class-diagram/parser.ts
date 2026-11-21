@@ -34,7 +34,7 @@
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from '../../parser/interactive.js';
-import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassNote, ClassRelationType } from './types.js';
+import type { ClassBox, ClassDiagram, ClassInterface, ClassMember, ClassNamespace, ClassNote, ClassRelationType } from './types.js';
 import { extractNodeStyle, parseCssStyleProps, type NodeStylePatch } from '../../parser/css-style.js';
 
 export interface ClassDiagramParseResult {
@@ -45,28 +45,29 @@ export interface ClassDiagramParseResult {
 /**
  * A relation as Mermaid's grammar writes it: an optional end on the left, a solid `--` or dotted `..` line, an
  * optional end on the right, each endpoint a plain id or a backtick-quoted one (which may contain spaces):
- * `A <|-- B`, `A ..|> B`, `classM <|.. classN`, `Animal <|--|> Zebra` (two-way). The `()` lollipop ends
- * (an interface drawn as a small circle) are not matched here; they fall through to the unsupported-line warning.
+ * `A <|-- B`, `A ..|> B`, `classM <|.. classN`, `Animal <|--|> Zebra` (two-way), and the `()` lollipop end
+ * (`Class --() name`: an interface the class provides, see {@link ClassInterface}).
  */
 // An unquoted id stops at a relation symbol; it is greedy, so `Foo--Bar` keeps `Foo` whole rather than reading
 // its last `o` as an aggregation end, as Mermaid's own lexer does.
 const ENDPOINT = '(`[^`]+`|[^\\s`<>|*.:"-]+)';
 // Mermaid's lexer reads an end symbol whichever side it is on (`A |>.. B` is `A <|.. B`), so both ends accept
 // every spelling.
-const END = '(<\\||\\|>|\\*|o|<|>)?';
+const END = '(<\\||\\|>|\\*|o|<|>|\\(\\))?';
 const REL_LINE = new RegExp(`^${ENDPOINT}\\s*${END}(--|\\.\\.)${END}\\s*${ENDPOINT}\\s*(?::\\s*(.+))?$`);
 
 /** What an end symbol means, on whichever side it sits. */
-const END_KIND: Readonly<Record<string, 'triangle' | 'composition' | 'aggregation' | 'arrow'>> = {
+const END_KIND: Readonly<Record<string, 'triangle' | 'composition' | 'aggregation' | 'arrow' | 'lollipop'>> = {
   '<|': 'triangle',
   '|>': 'triangle',
   '*': 'composition',
   o: 'aggregation',
   '<': 'arrow',
   '>': 'arrow',
+  '()': 'lollipop',
 };
 
-function relationType(kind: 'triangle' | 'composition' | 'aggregation' | 'arrow' | undefined, dotted: boolean): ClassRelationType {
+function relationType(kind: 'triangle' | 'composition' | 'aggregation' | 'arrow' | 'lollipop' | undefined, dotted: boolean): ClassRelationType {
   switch (kind) {
     case 'triangle':
       return dotted ? 'realization' : 'inheritance';
@@ -76,6 +77,8 @@ function relationType(kind: 'triangle' | 'composition' | 'aggregation' | 'arrow'
       return 'aggregation';
     case 'arrow':
       return dotted ? 'dependency' : 'association';
+    case 'lollipop':
+      return 'lollipop';
     default:
       return dotted ? 'dashedLink' : 'link';
   }
@@ -221,6 +224,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   const stack: Frame[] = [];
   const namespaces = new Map<string, ClassNamespace>();
   const notes: ClassNote[] = [];
+  const interfaces: ClassInterface[] = [];
   const currentNamespace = (): string | undefined => {
     for (let i = stack.length - 1; i >= 0; i--) {
       const frame = stack[i]!;
@@ -332,6 +336,28 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       const toKind = relMatch[4] ? END_KIND[relMatch[4]] : undefined;
       const toId = stripIdQuotes(relMatch[5] ?? '');
       if (fromId.length > 0 && toId.length > 0) {
+        // A lollipop end names an interface, not a class (Mermaid's rule): the other end must be a plain
+        // line end, and the relation then runs from the class to an interface of its own.
+        const lollipopFrom = fromKind === 'lollipop' && toKind === undefined;
+        const lollipopTo = toKind === 'lollipop' && fromKind === undefined;
+        if (lollipopFrom || lollipopTo) {
+          const classId = lollipopFrom ? toId : fromId;
+          getOrCreateClass(classId);
+          const id = `interface${interfaces.length}`;
+          interfaces.push({ id, label: lollipopFrom ? fromId : toId, classId });
+          relationships.push({
+            from: lollipopFrom ? id : fromId,
+            to: lollipopFrom ? toId : id,
+            type: 'lollipop',
+            markerEnd: lollipopFrom ? 'from' : 'to',
+            ...(relMatch[6] ? { label: relMatch[6].trim() } : {}),
+          });
+          if (dotted) warnings.push(`A dotted lollipop is drawn with a solid line: ${line}`);
+          continue;
+        }
+        if (fromKind === 'lollipop' || toKind === 'lollipop') {
+          warnings.push(`A lollipop end facing another end is not drawn; the relation is a plain line: ${line}`);
+        }
         getOrCreateClass(fromId);
         getOrCreateClass(toId);
         if (fromKind && toKind && fromKind !== toKind) {
@@ -341,7 +367,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
         relationships.push({
           from: fromId,
           to: toId,
-          type: relationType(toKind ?? fromKind, dotted),
+          type: relationType([toKind, fromKind].find((k) => k !== undefined && k !== 'lollipop'), dotted),
           markerEnd,
           ...(relMatch[6] ? { label: relMatch[6].trim() } : {}),
           ...relationCardinalities(line),
@@ -427,6 +453,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       relationships,
       ...(namespaces.size > 0 ? { namespaces: [...namespaces.values()] } : {}),
       ...(notes.length > 0 ? { notes } : {}),
+      ...(interfaces.length > 0 ? { interfaces } : {}),
     },
     warnings,
   };

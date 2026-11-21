@@ -88,6 +88,9 @@ const NOTE_LINE = 'AAAA33';
 const NOTE_FONT_PX = 11;
 const NOTE_LINE_H = 18;
 const NOTE_PAD = 10;
+/** Diameter of a lollipop's circle, and the gap between it and its name. */
+const LOLLIPOP_D = 14;
+const LOLLIPOP_LABEL_GAP = 6;
 
 const RANKDIR: Readonly<Record<ClassDiagram['direction'], 'TB' | 'BT' | 'LR' | 'RL'>> = {
   TD: 'TB',
@@ -105,6 +108,8 @@ const STYLE_BY_TYPE: Readonly<Record<ClassRelationType, { dash: 'solid' | 'dash'
   association: { dash: 'solid', marker: 'triangle', size: 'sm' },
   dependency: { dash: 'dash', marker: 'triangle', size: 'sm' },
   link: { dash: 'solid', marker: 'none', size: 'sm' },
+  // Drawn apart (a circle at the interface's end, see `lollipopShapes`); never through this table.
+  lollipop: { dash: 'solid', marker: 'none', size: 'sm' },
   dashedLink: { dash: 'dash', marker: 'none', size: 'sm' },
 };
 
@@ -216,6 +221,11 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
   return parts;
 }
 
+/** The Dagre key of a provided interface: apart from classes, namespaces and notes. */
+function interfaceKey(id: string): string {
+  return `itf:${id}`;
+}
+
 /** The Dagre key of a note: apart from classes and namespaces. */
 function noteKey(index: number): string {
   return `note:${index}`;
@@ -299,8 +309,17 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     g.setNode(noteKey(i), noteSizes[i]!);
     if (note.for !== undefined && g.hasNode(nodeKey(note.for))) g.setEdge(noteKey(i), nodeKey(note.for));
   });
+  // A provided interface is a small node of its own, pulled next to its class by the relation's edge.
+  const interfaces = chart.interfaces ?? [];
+  for (const itf of interfaces) {
+    if (!g.hasNode(nodeKey(itf.classId))) continue;
+    g.setNode(interfaceKey(itf.id), { width: LOLLIPOP_D, height: LOLLIPOP_D });
+    g.setEdge(nodeKey(itf.classId), interfaceKey(itf.id));
+  }
   const linked = new Set<string>();
+  for (const itf of interfaces) linked.add(itf.classId);
   for (const rel of chart.relationships) {
+    if (rel.type === 'lollipop') continue;
     if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) {
       // A relation with a label or cardinalities tells Dagre the room its texts take (Dagre gives it an
       // intermediate rank), so they do not pile up on a short line: the flowchart does the same for its
@@ -327,6 +346,11 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     const n = g.node(nodeKey(box.id)) as { x: number; y: number };
     centres.set(box.id, { x: n.x, y: n.y });
   }
+  const interfaceCentres = new Map<string, { x: number; y: number }>();
+  for (const itf of interfaces) {
+    const n = g.node(interfaceKey(itf.id)) as { x: number; y: number } | undefined;
+    if (n) interfaceCentres.set(itf.id, { x: n.x, y: n.y });
+  }
   const noteCentres = notes.map((_, i) => {
     const n = g.node(noteKey(i)) as { x: number; y: number };
     return { x: n.x, y: n.y };
@@ -352,6 +376,14 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
+  for (const c of interfaceCentres.values()) {
+    // The name may sit on any side of the circle: leave room for it all round.
+    const room = LOLLIPOP_D / 2 + LOLLIPOP_LABEL_GAP + 60;
+    minX = Math.min(minX, c.x - room);
+    maxX = Math.max(maxX, c.x + room);
+    minY = Math.min(minY, c.y - room);
+    maxY = Math.max(maxY, c.y + room);
+  }
   for (const box of chart.classes) {
     const n = centres.get(box.id)!;
     const size = sizes.get(box.id)!;
@@ -423,7 +455,33 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     );
   });
 
+  // Lollipops: a line from the class to a hollow circle, the interface's name just beyond it.
+  for (const itf of interfaces) {
+    const c = interfaceCentres.get(itf.id);
+    const owner = centres.get(itf.classId);
+    if (!c || !owner) continue;
+    const ownerSize = sizes.get(itf.classId)!;
+    const length = Math.hypot(c.x - owner.x, c.y - owner.y) || 1;
+    const ux = (c.x - owner.x) / length;
+    const uy = (c.y - owner.y) / length;
+    const start = edgePoint(owner.x, owner.y, ownerSize.width / 2, ownerSize.height / 2, c.x, c.y);
+    const end = { x: c.x - (ux * LOLLIPOP_D) / 2, y: c.y - (uy * LOLLIPOP_D) / 2 };
+    parts.push(
+      connector(nextId(), scalePt(start.x + dx, s), scalePt(start.y + dy, s), scalePt(end.x + dx, s), scalePt(end.y + dy, s), LINE_COLOR, scaledLineWidthEmu(9525, s), 'solid', 'none', 'sm', 'none', 'sm'),
+    );
+    const d = scalePt(LOLLIPOP_D, s);
+    parts.push(boxShape(nextId(), scalePt(c.x - LOLLIPOP_D / 2 + dx, s), scalePt(c.y - LOLLIPOP_D / 2 + dy, s), d, d, [''], { fill: 'FFFFFF', line: LINE_COLOR, color: '000000', prst: 'ellipse' }, MEMBER_FONT_PX, s));
+    const width = estimateTextWidth(itf.label, MEMBER_FONT_PX) + 8;
+    const beyond = LOLLIPOP_D / 2 + LOLLIPOP_LABEL_GAP;
+    const lx = c.x + ux * (beyond + width / 2);
+    const ly = c.y + uy * (beyond + 10);
+    parts.push(
+      textBoxLines(nextId(), scalePt(lx - width / 2 + dx, s), scalePt(ly - 10 + dy, s), scalePt(width, s), scalePt(20, s), [itf.label], scaledFontSizeHalfPt(MEMBER_SIZE_HALFPT, s), { align: 'ctr' }),
+    );
+  }
+
   for (const rel of chart.relationships) {
+    if (rel.type === 'lollipop') continue;
     const nFrom = centres.get(rel.from);
     const nTo = centres.get(rel.to);
     if (!nFrom || !nTo) continue;
