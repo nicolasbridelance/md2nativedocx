@@ -66,6 +66,8 @@ const { parseStateDiagram } = await core('diagrams/state-diagram/parser.js');
 const { parseErDiagram } = await core('diagrams/er-diagram/parser.js');
 const { parseGanttChart } = await core('diagrams/gantt/parser.js');
 const { parseMindmap } = await core('diagrams/mindmap/parser.js');
+const { parseRequirementDiagram } = await core('diagrams/requirement-diagram/parser.js');
+const { parseLabel } = await core('parser/label.js');
 const { extractNodeStyle, parseCssStyleProps } = await core('parser/css-style.js');
 
 /** A style as one comparable string (`fill=FF0000 bold`), or '' when it sets nothing. */
@@ -109,7 +111,8 @@ export function normText(text, markdown = false) {
     value = value.slice(1, -1);
     markdown = true;
   }
-  if (markdown) value = value.replace(/\*\*|__|\*|_/g, '');
+  // `_` inside a word is a plain character for `marked` too (CommonMark), so `test_req` keeps its underscore.
+  if (markdown) value = value.replace(/\*\*|\*|(?<![\p{L}\p{N}_])__?|__?(?![\p{L}\p{N}_])/gu, '');
   return decodeEntities(value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ''))
     .replace(/\\n/g, ' ')
     .replace(/\s+/g, ' ')
@@ -379,6 +382,65 @@ COMPARATORS.mindmap = {
   },
 };
 
+// Mermaid's db stores each requirement type as it displays it (`requirementDb.ts`), ours the keyword.
+const REQUIREMENT_TYPE_DISPLAY = {
+  requirement: 'Requirement',
+  functionalRequirement: 'Functional Requirement',
+  interfaceRequirement: 'Interface Requirement',
+  performanceRequirement: 'Performance Requirement',
+  physicalRequirement: 'Physical Requirement',
+  designConstraint: 'Design Constraint',
+};
+
+/**
+ * A requirement diagram as facts: each box with its fields as the box shows them (Mermaid reads every line of
+ * a box as Markdown when it draws it; our translator reads ours the same way, `parseLabel`), each
+ * relationship, the direction, and each box's resolved style.
+ */
+COMPARATORS.requirement = {
+  theirs(db) {
+    const md = (text) => normText(mermaidEntities(text), true);
+    const facts = [`direction ${db.getDirection() === 'TB' ? 'TD' : db.getDirection()}`];
+    const classes = db.getClasses();
+    const style = (node) => {
+      // Class styles in the order the node got its classes (`default` first), then its own inline list, which
+      // `requirementDb.ts` fills in statement order.
+      const classStyles = node.classes.flatMap((c) => classes.get(c)?.styles ?? []);
+      const fact = styleFact(extractNodeStyle(parseCssStyleProps([...classStyles, ...node.cssStyles].join(','))));
+      if (fact) facts.push(`style ${node.name} ${fact}`);
+    };
+    for (const r of db.getRequirements().values()) {
+      facts.push(`requirement "${md(r.name)}" «${r.type}» id="${md(r.requirementId)}" text="${md(r.text)}" risk="${r.risk}" verify="${r.verifyMethod}"`);
+      style(r);
+    }
+    for (const e of db.getElements().values()) {
+      facts.push(`element "${md(e.name)}" type="${md(e.type)}" docref="${md(e.docRef)}"`);
+      style(e);
+    }
+    for (const rel of db.getRelationships()) facts.push(`relationship ${rel.src} ${rel.type} ${rel.dst}`);
+    return facts;
+  },
+  ours(source) {
+    const { ast } = parseRequirementDiagram(source);
+    const md = (text) => ourText(text === undefined ? '' : parseLabel(text, { markdown: true }).text);
+    const facts = [`direction ${ast.direction ?? 'TD'}`];
+    const style = (box) => {
+      const fact = styleFact({ fill: box.fill, stroke: box.stroke, color: box.textColor, bold: box.bold, italic: box.italic });
+      if (fact) facts.push(`style ${box.name} ${fact}`);
+    };
+    for (const r of ast.requirements) {
+      facts.push(`requirement "${md(r.name)}" «${REQUIREMENT_TYPE_DISPLAY[r.type] ?? r.type}» id="${md(r.id)}" text="${md(r.text)}" risk="${r.risk ?? ''}" verify="${r.verifyMethod ?? ''}"`);
+      style(r);
+    }
+    for (const e of ast.elements) {
+      facts.push(`element "${md(e.name)}" type="${md(e.type)}" docref="${md(e.docRef)}"`);
+      style(e);
+    }
+    for (const rel of ast.relationships) facts.push(`relationship ${rel.from} ${rel.type} ${rel.to}`);
+    return facts;
+  },
+};
+
 /** One Gantt task as a comparable fact: id, text, section, resolved dates, tags. */
 function ganttFact(id, text, section, start, end, tags) {
   return `task ${id} "${text}" in "${section}" ${start} -> ${end} [${[...tags].sort().join(' ')}]`;
@@ -459,7 +521,7 @@ sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (\`LICENSE\`
 **${compared.length} exemples comparés : ${count('match')} identiques, ${count('diff')} avec écart, dont ${silent.length} sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 ${silent.map((r) => `\`${r.id}\``).join(', ') || 'aucun'}). Hors comparaison : ${count('mermaid-rejects')} refusé(s) par Mermaid lui-même${rejected},
-${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt et cartes mentales en ont un).
+${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales et exigences en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|
