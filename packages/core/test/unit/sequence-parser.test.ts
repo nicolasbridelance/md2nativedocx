@@ -38,7 +38,8 @@ end
 
 test('parses participants, arrows, activation shorthand, notes, blocks and autonumber', () => {
   const { ast, warnings } = parseSequence(src);
-  assert.deepEqual(warnings, ['Participant `box` groups are not drawn; their participants are kept.']);
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.boxes, [{ label: 'Group', color: '00FFFF', participants: ['C'] }]);
   assert.equal(ast.title, 'Demo <b>');
   assert.deepEqual(ast.participants.map((p) => [p.id, p.label, p.actor]), [
     ['A', 'Alice', false],
@@ -67,9 +68,8 @@ test('parses participants, arrows, activation shorthand, notes, blocks and auton
 });
 
 test('warns on unsupported constructs without throwing and closes open blocks', () => {
-  const { ast, warnings } = parseSequence('sequenceDiagram\nA/|-B: half\nA()->>B: central\nlink A: x @ https://e.com\nloop forever\nA->>B: m\nnonsense');
+  const { ast, warnings } = parseSequence('sequenceDiagram\nA/|-B: half\nlink A: x @ https://e.com\nloop forever\nA->>B: m\nnonsense');
   assert.ok(warnings.some((w) => w.includes('Half-arrow')));
-  assert.ok(warnings.some((w) => w.includes('Central connections')));
   assert.ok(warnings.some((w) => w.includes('Actor menus')));
   assert.ok(warnings.some((w) => w.includes('never closed')));
   assert.ok(warnings.some((w) => w.includes('Unsupported line ignored: nonsense')));
@@ -156,4 +156,63 @@ test('an unknown participant type is a plain box, with a warning that names it',
   assert.equal(ast.participants[0]?.kind, undefined);
   assert.equal(warnings.length, 1);
   assert.ok(warnings[0]?.includes('<rocket>'));
+});
+
+test('box: a leading CSS colour is the fill, the rest the title; participants declared inside belong to it', () => {
+  const { ast, warnings } = parseSequence(`sequenceDiagram
+box Purple Alice & John
+participant A
+participant J
+end
+box Another Group
+participant B
+end
+box rgb(33,66,99)
+participant C
+end
+box hsl(120, 100%, 25%) Green
+participant D
+end
+box transparent Aqua
+participant E
+end
+box #fff Hex
+participant F
+end
+participant G
+A->>G: hi`);
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.boxes, [
+    { label: 'Alice & John', color: '800080', participants: ['A', 'J'] },
+    { label: 'Another Group', participants: ['B'] },
+    { label: '', color: '214263', participants: ['C'] },
+    { label: 'Green', color: '008000', participants: ['D'] },
+    { label: 'Aqua', participants: ['E'] },
+    // As in Mermaid, a #hex is not read as a box colour: it is part of the title.
+    { label: '#fff Hex', participants: ['F'] },
+  ]);
+  // `end` closes the box: G, declared after it, belongs to none; the message after the boxes still parses.
+  assert.equal(ast.items.length, 1);
+});
+
+test('box: an `end` closes the box, not an enclosing block; a participant named box still sends messages', () => {
+  const { ast, warnings } = parseSequence('sequenceDiagram\nbox G\nparticipant A\nend\nbox->>A: hi\nloop x\nA->>box: back\nend');
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.boxes?.map((b) => b.participants), [['A']]);
+  assert.deepEqual(ast.items.map((i) => i.type), ['message', 'blockStart', 'message', 'blockEnd']);
+});
+
+test('central connections: `()` at the sender, the receiver or both, with activation shorthand', () => {
+  const { ast, warnings } = parseSequence('sequenceDiagram\nA->>()B: to\nA()->>B: from\nB()->>()A: both\nA->>+()B: act\nA->>()+B: act2\nA->>B: none');
+  assert.deepEqual(warnings, []);
+  const msgs = ast.items.filter((i) => i.type === 'message');
+  assert.deepEqual(msgs.map((m) => (m.type === 'message' ? [m.from, m.to, m.central, m.activate] : [])), [
+    ['A', 'B', 'to', false],
+    ['A', 'B', 'from', false],
+    ['B', 'A', 'both', false],
+    ['A', 'B', 'to', true],
+    ['A', 'B', 'to', true],
+    ['A', 'B', undefined, false],
+  ]);
+  assert.deepEqual(ast.participants.map((p) => p.id), ['A', 'B']);
 });

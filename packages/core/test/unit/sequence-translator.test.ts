@@ -90,3 +90,47 @@ test('a created participant keeps its symbol, and the creating message stops at 
   assert.ok(arrow, 'message arrow drawn');
   assert.ok(Math.abs(Number(arrow[1]) + Number(arrow[2]) - Number(shape[1])) <= 1, 'arrow ends at the symbol');
 });
+
+test('box: a band behind its columns, tinted when coloured, outlined when not, title escaped', () => {
+  const xml = tr('sequenceDiagram\nbox Purple <G&1>\nparticipant A\nparticipant B\nend\nbox Plain\nparticipant C\nend\nA->>C: hi');
+  assert.ok(xml.includes('&lt;G&amp;1&gt;') && !xml.includes('<G&1>'));
+  const bands = [...xml.matchAll(/name="Participant group"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>[\s\S]*?(<a:solidFill><a:srgbClr val="([0-9A-F]{6})"\/><\/a:solidFill>|<a:noFill\/>)/g)];
+  assert.equal(bands.length, 2);
+  const [purple, plain] = bands as RegExpMatchArray[];
+  // Purple (800080) is tinted like a `rect` background; the uncoloured band has no fill.
+  assert.equal(purple?.[6], 'C68CC6');
+  assert.equal(plain?.[5], '<a:noFill/>');
+  // Bands do not overlap.
+  assert.ok(Number(purple?.[1]) + Number(purple?.[3]) < Number(plain?.[1]));
+  // The bands are the bottom layer: drawn before any participant head.
+  assert.ok(xml.indexOf('Participant group') < xml.indexOf('Participant A'));
+});
+
+test('box: an invalid colour from a hand-built AST never reaches the XML', () => {
+  const xml = translateSequenceToOoxml({
+    participants: [{ id: 'A', label: 'A', actor: false }],
+    items: [],
+    boxes: [{ label: 'x', color: '"/><evil/>', participants: ['A', 'missing'] }, { label: 'empty', participants: [] }],
+  });
+  assert.ok(!xml.includes('evil'));
+  assert.equal([...xml.matchAll(/name="Participant group"/g)].length, 1);
+});
+
+test('box: a title wider than its column widens the band, which keeps clear of the next head', () => {
+  const title = 'A very long group title that is much wider than its column';
+  const xml = tr(`sequenceDiagram\nbox ${title}\nparticipant A\nend\nparticipant B\nA->>B: x`);
+  const band = /name="Participant group"\/>[\s\S]*?<a:off x="(\d+)" y="\d+"\/><a:ext cx="(\d+)"/.exec(xml);
+  const headB = /name="Participant B"\/>[\s\S]*?<a:off x="(\d+)"/.exec(xml);
+  assert.ok(band && headB);
+  assert.ok(Number(band[2]) >= (estimateTextWidth(title, 11) / 3) * EMU_PER_PX, 'band at least as wide as one wrapped line');
+  assert.ok(Number(band[1]) + Number(band[2]) < Number(headB[1]));
+});
+
+test('central connection: a dot on the lifeline at each marked end', () => {
+  const dots = (t: string): number => [...tr(t).matchAll(/prst="ellipse"/g)].length;
+  assert.equal(dots('sequenceDiagram\nA->>B: none'), 0);
+  assert.equal(dots('sequenceDiagram\nA->>()B: to'), 1);
+  assert.equal(dots('sequenceDiagram\nA()->>B: from'), 1);
+  assert.equal(dots('sequenceDiagram\nA()->>()B: both'), 2);
+  assert.equal(dots('sequenceDiagram\nA()->>()A: self'), 2);
+});

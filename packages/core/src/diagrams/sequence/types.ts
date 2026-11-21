@@ -44,6 +44,11 @@ export type SequenceItem =
       deactivate: boolean;
       /** Set when `autonumber` is on. */
       number?: number;
+      /**
+       * Central connection (Mermaid `A->>()B`, `A()->>B`, `A()->>()B`): a dot on the lifeline at that end,
+       * where the message leaves or joins it. Absent when neither end has one.
+       */
+      central?: 'from' | 'to' | 'both';
     }
   | { type: 'note'; placement: 'left' | 'right' | 'over'; actors: string[]; text: string }
   | { type: 'activate' | 'deactivate'; actor: string }
@@ -53,9 +58,21 @@ export type SequenceItem =
   | { type: 'blockElse'; label: string }
   | { type: 'blockEnd' };
 
+/** A participant group (Mermaid `box ... end`, PlantUML `box ... end box`): a band behind its columns. */
+export interface SequenceBox {
+  /** Title drawn at the top of the band; empty when the box has none. */
+  label: string;
+  /** Bare 6-digit hex fill; absent for a transparent box (drawn as an outline). */
+  color?: string;
+  /** Ids of the participants declared inside it, in column order; a box with none is not drawn. */
+  participants: string[];
+}
+
 export interface SequenceDiagram {
   title?: string;
   /** In order of declaration / first appearance (the left-to-right column order). */
   participants: SequenceParticipant[];
   items: SequenceItem[];
+  /** Participant groups; absent when the diagram has none. */
+  boxes?: SequenceBox[];
 }

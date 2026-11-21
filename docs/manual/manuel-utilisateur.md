@@ -371,15 +371,15 @@ Variante du flowchart : les `subgraph` de premier niveau deviennent des couloirs
 - Dix flèches : `->`, `-->`, `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)`, avec `+`/`-` pour l’activation
 - `activate`/`deactivate`, `Note left of|right of|over`, `autonumber`, `title`
 - Blocs `loop`, `alt`/`else`, `opt`, `par`/`and`, `critical`/`option`, `break`, `rect`
+- Groupes `box [couleur] [titre]` … `end` : un bandeau derrière les participants du groupe, teinté si une couleur CSS est donnée (`box Purple Équipe`, `box rgb(33,66,99)`), sinon simplement encadré, le titre en haut
+- Connexions centrales `()` : `A->>()B`, `A()->>B`, `A()->>()B` posent un point sur la ligne de vie, à l'extrémité marquée
 
 **Pris en charge :** Tous les éléments ci-dessus.
 
 **Limites**
 
-- Demi-flèches, connexions centrales `()`, `link`/`links`, `properties` : reconnus, avertissement, non dessinés
-- `box` : lu mais non dessiné
+- Demi-flèches, `link`/`links`, `properties` : reconnus, avertissement, non dessinés (un menu `link` produirait un lien vers une adresse web, ce que le projet n'écrit jamais)
 - Plafonds : 50 participants, 500 éléments, 20 blocs imbriqués
-- Le cadre d’un bloc ne s’élargit pas pour un message d’un participant vers lui-même
 
 > **À savoir :** les 38 exemples officiels sont comparés à l’analyseur de Mermaid lui-même (`test-corpus/mermaid-official/DIFFERENTIAL.md`) : mêmes participants, messages et blocs.
 

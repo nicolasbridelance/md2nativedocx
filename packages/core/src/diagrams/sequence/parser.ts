@@ -6,17 +6,19 @@
  * `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)`) with `+`/`-`
  * activation shorthand, `activate`/`deactivate`, `Note left of|right of|over`,
  * `loop`/`alt`/`opt`/`par`/`critical`/`break`/`rect` blocks with
- * `else`/`and`/`option` dividers, `box` groups (parsed, not drawn),
+ * `else`/`and`/`option` dividers, `box [colour] [title]` participant groups,
+ * central connections `()` at either end of a message,
  * `autonumber [start [step]]`, `title`, `<br/>` line breaks and `#NN;` entity
- * codes. Half-arrows, central connections `()`, actor menus (`link`/`links`)
- * and `properties` are recognized and warned about. Capped (hostile input) at
- * 50 participants, 500 items and 20 nested blocks.
+ * codes. Half-arrows, actor menus (`link`/`links`) and `properties` are
+ * recognized and warned about. Capped (hostile input) at 50 participants,
+ * 500 items and 20 nested blocks.
  */
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import { decodeMermaidEntities } from '../../parser/entities.js';
+import { CSS_NAMED_COLORS } from '../../parser/css-named-colors.js';
 import { participantKind } from './participant-kind.js';
-import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant, SequenceParticipantKind } from './types.js';
+import type { SequenceBlockKind, SequenceBox, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant, SequenceParticipantKind } from './types.js';
 
 export interface SequenceParseResult {
   ast: SequenceDiagram;
@@ -69,14 +71,54 @@ function parseColor(text: string): string | undefined {
   return [m[1], m[2], m[3]].map((v) => Math.min(255, Number(v)).toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
+/** `hsl(h, s%, l%)` / `hsla(...)` -> hex (the CSS Color 4 conversion), otherwise undefined. */
+function parseHsl(text: string): string | undefined {
+  const inner = /^hsla?\(([^)]*)\)/.exec(text.trim())?.[1];
+  const [hue, s, l] = (inner ?? '').trim().split(/[\s,/]+/);
+  if (hue === undefined || !/^\d{1,3}(?:deg)?$/.test(hue) || !/^\d{1,3}%$/.test(s ?? '') || !/^\d{1,3}%$/.test(l ?? '')) return undefined;
+  const h = parseInt(hue, 10) % 360;
+  const sat = Math.min(100, parseInt(s as string, 10)) / 100;
+  const light = Math.min(100, parseInt(l as string, 10)) / 100;
+  const a = sat * Math.min(light, 1 - light);
+  const channel = (n: number): number => {
+    const k = (n + h / 30) % 12;
+    return Math.round(255 * (light - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+  };
+  return [channel(0), channel(8), channel(4)].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+/**
+ * `box` header text -> title and fill, Mermaid's reading: a leading CSS colour (a name, `transparent`,
+ * `rgb()`/`rgba()`/`hsl()`/`hsla()`) is the fill and the rest the title; anything else is all title, on a
+ * transparent box. A `#hex` is not a colour here, as in Mermaid: it starts the title.
+ */
+function parseBoxHeader(rest: string): Omit<SequenceBox, 'participants'> {
+  const text = rest.trim();
+  const fn = /^((?:rgba?|hsla?)\s*\([^)]*\))\s*(.*)$/i.exec(text);
+  if (fn) {
+    const color = parseColor(fn[1] as string) ?? parseHsl(fn[1] as string);
+    return color ? { label: cleanText(fn[2] as string), color } : { label: cleanText(text) };
+  }
+  const word = /^(\w+)\b\s*(.*)$/.exec(text);
+  if (word) {
+    const name = (word[1] as string).toLowerCase();
+    if (name === 'transparent') return { label: cleanText(word[2] as string) };
+    const color = CSS_NAMED_COLORS.get(name);
+    if (color) return { label: cleanText(word[2] as string), color };
+  }
+  return { label: cleanText(text) };
+}
+
 export function parseSequence(text: string): SequenceParseResult {
   const warnings: string[] = [];
   const ast: SequenceDiagram = { participants: [], items: [] };
   const warned = new Set<string>();
   let sawHeader = false;
   let inFrontmatter = false;
-  // 'box' groups share `end` with blocks; only blocks produce items.
-  const stack: Array<'box' | 'block'> = [];
+  // `box` groups and blocks share `end`; only blocks produce items. 'skipped' is a block past MAX_DEPTH.
+  const stack: Array<'box' | 'block' | 'skipped'> = [];
+  /** The open `box`: participants first declared while it is open belong to it. */
+  let openBox: SequenceBox | undefined;
   let blockDepth = 0;
   let auto: { next: number; step: number } | undefined;
 
@@ -100,6 +142,7 @@ export function parseSequence(text: string): SequenceParseResult {
     }
     if (ast.participants.length >= MAX_PARTICIPANTS) return warnOnce('participants', `Sequence diagram limited to ${MAX_PARTICIPANTS} participants; the rest were ignored.`);
     ast.participants.push({ id, label: label ?? id, actor, ...(kind ? { kind } : {}) });
+    openBox?.participants.push(id);
   };
   const known = (id: string): boolean => find(id) !== undefined;
 
@@ -175,21 +218,25 @@ export function parseSequence(text: string): SequenceParseResult {
       const actors = (m[2] as string).split(',').map((a) => a.trim()).filter((a) => a.length > 0);
       for (const a of actors) declare(a, undefined, false);
       push({ type: 'note', placement, actors: placement === 'over' ? actors.slice(0, 2) : actors.slice(0, 1), text: cleanText(m[3] as string) });
-    } else if (/^box\b/.test(line)) {
+    } else if ((m = line.match(/^box\b\s*(.*)$/)) && !splitArrow(line.split(':')[0] as string)) {
+      // A box holds participant declarations only; one opened inside another simply takes over.
+      openBox = { ...parseBoxHeader(m[1] as string), participants: [] };
+      (ast.boxes ??= []).push(openBox);
       stack.push('box');
-      warnOnce('box', 'Participant `box` groups are not drawn; their participants are kept.');
     } else if (/^end$/.test(line)) {
       const top = stack.pop();
       if (top === 'block') {
         blockDepth--;
         push({ type: 'blockEnd' });
+      } else if (top === 'box') {
+        openBox = undefined;
       } else if (top === undefined) {
         warnings.push('`end` without an open block ignored.');
       }
     } else if ((m = line.match(/^(\w+)\b\s*(.*)$/)) && BLOCKS.has(m[1] as string) && !splitArrow(line.split(':')[0] as string)) {
       if (blockDepth >= MAX_DEPTH) {
         warnOnce('depth', `Sequence blocks nested deeper than ${MAX_DEPTH} levels were ignored.`);
-        stack.push('box');
+        stack.push('skipped');
         continue;
       }
       const kind = m[1] as SequenceBlockKind;
@@ -207,14 +254,18 @@ export function parseSequence(text: string): SequenceParseResult {
       const found = splitArrow(line.slice(0, colon)) as NonNullable<ReturnType<typeof splitArrow>>;
       let from = found.left.trim();
       let to = found.right.trim();
-      if (from.endsWith('()') || to.startsWith('()')) {
-        warnOnce('central', 'Central connections `()` are not supported; the message is drawn lifeline to lifeline.');
-        from = from.replace(/\(\)$/, '').trim();
-        to = to.replace(/^\(\)/, '').trim();
-      }
+      // `()` right after the sender or right before the receiver (either side of a `+`/`-`): a central connection.
+      const centralFrom = from.endsWith('()');
+      if (centralFrom) from = from.slice(0, -2).trim();
+      let centralTo = to.startsWith('()');
+      if (centralTo) to = to.slice(2).trim();
       const activate = to.startsWith('+');
       const deactivate = to.startsWith('-');
       if (activate || deactivate) to = to.slice(1).trim();
+      if (!centralTo && to.startsWith('()')) {
+        centralTo = true;
+        to = to.slice(2).trim();
+      }
       if (from === '' || to === '') {
         warnings.push(`Unsupported line ignored: ${line}`);
         continue;
@@ -232,6 +283,7 @@ export function parseSequence(text: string): SequenceParseResult {
         both: found.arrow.both,
         activate,
         deactivate,
+        ...(centralFrom || centralTo ? { central: centralFrom && centralTo ? 'both' : centralFrom ? 'from' : 'to' } : {}),
       };
       if (auto) {
         message.number = auto.next;

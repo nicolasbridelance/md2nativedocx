@@ -221,9 +221,11 @@ Ensuite, dans l'ordre :
               traverse le bord d'un composite est tracée droite, sans routage ;
             - **séquence** : ~~types de participant~~ (faits le 2026-11-21 : `SequenceParticipant.kind`, chaque type
               dessiné par son symbole UML, `diagrams/sequence/participant-glyph.ts`, aussi pour PlantUML et ZenUML ;
-              vu dans Word, LibreOffice et en `.pptx`) : **34/38**, étage 1 à **480 propres (89 %)**. Restent les
-              groupes `box` (#16) et les connexions centrales `()` (#17) ; les menus `link` (#36, #37) restent
-              ignorés exprès (un lien vers une URL, règle 3) ;
+              vu dans Word, LibreOffice et en `.pptx`) ; ~~groupes `box` (#16) et connexions centrales `()` (#17)~~
+              (faits le 2026-11-21 : `SequenceDiagram.boxes`, bandeau derrière les colonnes, aussi `box` PlantUML ;
+              `central` sur le message, un point sur la ligne de vie ; vus dans Word et LibreOffice, `.pptx`
+              validé) : **36/38**, étage 1 à **482 propres (89 %)**. Les menus `link` (#36, #37) restent ignorés
+              exprès (un lien vers une URL, règle 3) ;
             - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
               cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;
               vérifié dans Word et LibreOffice, `test-corpus/word-verification/subgraph-links.*` ; le sens élargi

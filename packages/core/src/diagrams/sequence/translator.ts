@@ -14,8 +14,10 @@
  * the async open arrow as a small triangle). Participants are drawn as their
  * UML symbol (`participant-glyph.ts`): a box, a stick figure for an actor, the
  * boundary / control / entity circles, a database cylinder, a `collections`
- * stack, a `queue` lying cylinder. `box` groups, central connections,
- * half-arrows and theme styling are ignored.
+ * stack, a `queue` lying cylinder. `box` groups are a band behind their
+ * columns (tinted when coloured, else an outline) with the title on top; a
+ * central connection `()` is a dot where the message meets the lifeline.
+ * Half-arrows and theme styling are ignored.
  */
 
 import type { SequenceDiagram, SequenceItem } from './types.js';
@@ -44,6 +46,11 @@ const PART_FILL = 'ECECFF';
 const PART_LINE = '9370DB';
 /** How far a `collections` box's back copy sits from its front one. */
 const STACK = 6;
+/** Space between a participant group's band and the heads inside it. */
+const BAND_M = 12;
+/** Radius of a central connection's dot. */
+const DOT_R = 5;
+const isHex = (v: string | undefined): v is string => v !== undefined && /^[0-9A-Fa-f]{6}$/.test(v);
 
 interface Frame {
   kind: string;
@@ -123,6 +130,30 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
       else if (i === n - 1) rightNeed = Math.max(rightNeed, NOTE_W / 2);
     }
   }
+  // Participant groups (`box`): the columns each spans, its title, and how far its band reaches past the
+  // outer lifelines; a title wider than its columns widens the band evenly. Gaps then keep neighbouring
+  // bands (or a band and a lone head) apart.
+  const bands = (ast.boxes ?? []).flatMap((b) => {
+    const cols = b.participants.map((id) => idx.get(id)).filter((i): i is number => i !== undefined);
+    if (cols.length === 0) return [];
+    const lo = Math.min(...cols);
+    const hi = Math.max(...cols);
+    let inner = (bw[lo] as number) / 2 + (bw[hi] as number) / 2 + 2 * BAND_M;
+    for (let g = lo; g < hi; g++) inner += gap[g] as number;
+    const title = b.label === '' ? [] : wrapText(b.label, FONT, Math.max(inner - 16, 160)).slice(0, 3);
+    const extra = Math.max(0, (widest(title, FONT) + 16 - inner) / 2);
+    return [{ lo, hi, title, color: isHex(b.color) ? tint(b.color, 0.55) : undefined, left: (bw[lo] as number) / 2 + BAND_M + extra, right: (bw[hi] as number) / 2 + BAND_M + extra }];
+  });
+  const reachRight = (i: number): number => bands.find((b) => b.hi === i)?.right ?? (bw[i] as number) / 2;
+  const reachLeft = (i: number): number => bands.find((b) => b.lo === i)?.left ?? (bw[i] as number) / 2;
+  for (const b of bands) {
+    if (b.lo > 0) gap[b.lo - 1] = Math.max(gap[b.lo - 1] as number, reachRight(b.lo - 1) + b.left + 10);
+    else leftNeed = Math.max(leftNeed, b.left);
+    if (b.hi < n - 1) gap[b.hi] = Math.max(gap[b.hi] as number, b.right + reachLeft(b.hi + 1) + 10);
+    else rightNeed = Math.max(rightNeed, b.right);
+  }
+  const bandTitleH = bands.length === 0 ? 0 : Math.max(0, ...bands.map((b) => b.title.length)) * LINE_H + 10;
+
   const cx: number[] = [PAD + leftNeed];
   for (let i = 1; i < n; i++) cx.push((cx[i - 1] as number) + (gap[i - 1] as number));
   const W = (cx[n - 1] as number) + rightNeed + PAD;
@@ -149,6 +180,7 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   });
 
   // Draw layers, assembled bottom to top once the total height is known.
+  const groups: string[] = [];
   const bg: string[] = [];
   const framesXml: string[] = [];
   // Block tags and guards (`alt`, `[paid]`, an `else` divider's `[failed]`) sit above the activation bars,
@@ -185,7 +217,8 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
 
   const titleH = ast.title ? 30 : 0;
   if (ast.title) text(msgs, 0, 6, W, [ast.title], { bold: true, fontPx: FONT + 3, lineH: 18 });
-  const topY = titleH + PAD / 2;
+  const bandTop = titleH + PAD / 2;
+  const topY = bandTop + bandTitleH;
   let y = topY + boxH + 24;
 
   const starts: Array<number[]> = ast.participants.map(() => []);
@@ -281,8 +314,12 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
           createTop.set(b, arrowY - headAnchor(b));
           pendingCreate.delete(b);
         }
-        const xFrom = (cx[a] as number) + dir * edge(a);
-        const xTo = created ? (cx[b] as number) - dir * headReach(b, dir) : (cx[b] as number) - dir * edge(b);
+        // A central connection's dot sits on the lifeline itself; the arrow stops at its rim.
+        const dotFrom = item.central === 'from' || item.central === 'both';
+        const dotTo = (item.central === 'to' || item.central === 'both') && !created;
+        const xFrom = (cx[a] as number) + dir * (dotFrom ? DOT_R : edge(a));
+        const xTo = created ? (cx[b] as number) - dir * headReach(b, dir) : (cx[b] as number) - dir * (dotTo ? DOT_R : edge(b));
+        const dot = (x: number, at: number): void => later((emu) => void msgs.push(ellipse(nextId(), emu(x - DOT_R), emu(at - DOT_R), emu(2 * DOT_R), emu(2 * DOT_R), INK)));
         const dash = item.dashed ? 'dash' : 'solid';
         const headKind = item.head === 'arrow' || item.head === 'open' ? 'triangle' : 'none';
         const headSize = item.head === 'open' ? 'sm' : 'lg';
@@ -292,6 +329,8 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
           line(msgs, x0 + 30, arrowY, x0 + 30, arrowY + 20, { dash });
           line(msgs, x0 + 30, arrowY + 20, x0, arrowY + 20, { dash, tail: headKind, tailSize: headSize });
           if (item.head === 'cross') cross(msgs, x0 + 4, arrowY + 20, 4);
+          if (dotFrom) dot(cx[a] as number, arrowY);
+          if (dotTo) dot(cx[a] as number, arrowY + 20);
           if (lines.length > 0) {
             const textW = Math.max(...lines.map((l) => estimateTextWidth(l, FONT))) + 4;
             text(msgs, x0 + 36, y, textW, lines, { align: 'left' });
@@ -301,6 +340,8 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
         } else {
           line(msgs, xFrom, arrowY, xTo, arrowY, { dash, tail: headKind, tailSize: headSize, head: item.both ? 'triangle' : 'none', headSize });
           if (item.head === 'cross') cross(msgs, xTo - dir * 5, arrowY, 4);
+          if (dotFrom) dot(cx[a] as number, arrowY);
+          if (dotTo) dot(cx[b] as number, arrowY);
           if (lines.length > 0) {
             // A short arrow (e.g. to a late-created box) must not clip its label: widen the text box around the midpoint.
             const w = Math.max(Math.abs(xTo - xFrom) - 8, widest(lines, FONT) + 8);
@@ -308,7 +349,8 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
           }
         }
         if (item.number !== undefined) {
-          const bx = self ? xFrom + 8 : xFrom + dir * 10;
+          // Clear of a central connection's dot at the sender.
+          const bx = self ? xFrom + 8 : xFrom + dir * (dotFrom ? 14 : 10);
           later((emu) => void msgs.push(ellipse(nextId(), emu(bx - 7), emu(arrowY - 7), emu(14), emu(14), INK)));
           text(msgs, bx - 7, arrowY - 7, 14, [String(item.number)], { bold: true, color: 'FFFFFF', fontPx: 8, lineH: 14 });
         }
@@ -328,7 +370,15 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   while (frames.length > 0) closeFrame();
 
   const bottomY = y + 6;
-  const H = bottomY + boxH + PAD;
+  const bandBottom = bottomY + boxH + (bands.length > 0 ? 8 : 0);
+  const H = bandBottom + PAD;
+
+  for (const b of bands) {
+    const x0 = (cx[b.lo] as number) - b.left;
+    const x1 = (cx[b.hi] as number) + b.right;
+    box(groups, x0, bandTop, x1 - x0, bandBottom - bandTop, b.color, b.color ? undefined : 'BFBFBF', 'Participant group');
+    if (b.title.length > 0) text(groups, x0, bandTop + 5, x1 - x0, b.title);
+  }
 
   /** Participant `i`'s head (box, stacked boxes, queue or symbol and label) from `top` down, `headH[i]` tall. */
   const head = (p: (typeof ast.participants)[number], i: number, top: number): void => {
@@ -376,5 +426,5 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   const emu = (v: number): number => scalePt(v, s);
   const thin = scaledLineWidthEmu(9525, s);
   for (const op of ops) op(emu, s, thin);
-  return wrapDrawingCanvas([...bg, ...framesXml, ...lifelines, ...bars, ...frameText, ...notes, ...msgs, ...boxes].join('\n'), W, H, nextId(), 'Sequence diagram', options);
+  return wrapDrawingCanvas([...groups, ...bg, ...framesXml, ...lifelines, ...bars, ...frameText, ...notes, ...msgs, ...boxes].join('\n'), W, H, nextId(), 'Sequence diagram', options);
 }

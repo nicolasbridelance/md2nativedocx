@@ -14,13 +14,15 @@
  * (a group); multi-line participant names (`participant X [ ... ]`); an inline `A -> "Name" as B`; a colour
  * after the receiver (`B #red : text`, ignored). Drawn with a warning: slanted arrows `->(10)` (flat),
  * teoz parallel `&` messages (one after the other), `{anchor}` prefixes (kept, durations dropped), `/ note`
- * (as a plain note). Ignored with a warning: `box`, `skinparam`, `<style>`, `!theme`, `!include` (never
+ * (as a plain note). `box ["title"] [#colour]` ... `end box` groups its participants on a band. Ignored
+ * with a warning: `skinparam`, `<style>`, `!theme`, `!include` (never
  * followed: it would read a file or a URL), other preprocessor lines, `newpage`, incoming / outgoing
  * messages (`[->`, `->]`, `?->`). Delays (`...`) and spaces (`|||`) are skipped. Capped like the Mermaid parser (hostile input): 50 participants, 500 items, 20 nested blocks.
  */
 
 import { cleanText } from '../sequence/parser.js';
-import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant, SequenceParticipantKind } from '../sequence/types.js';
+import { parseHexColor } from '../../parser/css-style.js';
+import type { SequenceBlockKind, SequenceBox, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant, SequenceParticipantKind } from '../sequence/types.js';
 import { participantKind } from '../sequence/participant-kind.js';
 
 export interface PlantUmlSequenceParseResult {
@@ -80,7 +82,10 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
   const warnings: string[] = [];
   const ast: SequenceDiagram = { participants: [], items: [] };
   const warned = new Set<string>();
-  const stack: Array<'group' | 'box'> = [];
+  // 'skipped' is a group past MAX_DEPTH: its `end` is consumed without an item.
+  const stack: Array<'group' | 'box' | 'skipped'> = [];
+  /** The open `box`: participants first declared while it is open belong to it. */
+  let openBox: SequenceBox | undefined;
   let groupDepth = 0;
   let auto: { next: number; step: number } | undefined;
   let lastMessage: Extract<SequenceItem, { type: 'message' }> | undefined;
@@ -115,6 +120,7 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       return false;
     }
     ast.participants.push({ id, label: label ?? id, actor, ...(kind ? { kind } : {}) });
+    openBox?.participants.push(id);
     return true;
   };
 
@@ -297,23 +303,33 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       noteAcross(m[1] as string);
     } else if (/^\.\.\./.test(line) || /^\|\|\d*\|*$/.test(line)) {
       // A delay or extra space: no vertical gap of its own here, the diagram just goes on.
-    } else if (/^box\b/i.test(line)) {
+    } else if ((m = line.match(/^box\b\s*(.*)$/i)) && !/^box\s*[-<]/i.test(line)) {
+      // `box "Title" #colour`, both optional; the colour a name or hex PlantUML and CSS share, else no fill.
+      const header = (m[1] as string).trim();
+      const colour = /(?:^|\s)#(\w+)\s*$/.exec(header);
+      const fill = colour ? parseHexColor(colour[1] as string) : null;
+      openBox = { label: text(unquote(colour ? header.slice(0, colour.index) : header)), ...(fill ? { color: fill } : {}), participants: [] };
+      (ast.boxes ??= []).push(openBox);
       stack.push('box');
-      warnOnce('box', 'Participant `box` groups are not drawn; their participants are kept.');
     } else if (/^end\s*box$/i.test(line)) {
-      if (stack[stack.length - 1] === 'box') stack.pop();
+      if (stack[stack.length - 1] === 'box') {
+        stack.pop();
+        openBox = undefined;
+      }
     } else if (/^end$/i.test(line)) {
       const top = stack.pop();
       if (top === 'group') {
         groupDepth--;
         push({ type: 'blockEnd' });
+      } else if (top === 'box') {
+        openBox = undefined;
       } else if (top === undefined) {
         warnings.push('`end` without an open group ignored.');
       }
     } else if ((m = line.match(/^(\w+)\b\s*(.*)$/)) && GROUPS.has((m[1] as string).toLowerCase()) && !/^\w+\s*-/.test(line)) {
       if (groupDepth >= MAX_DEPTH) {
         warnOnce('depth', `Sequence groups nested deeper than ${MAX_DEPTH} levels were ignored.`);
-        stack.push('box');
+        stack.push('skipped');
         continue;
       }
       stack.push('group');

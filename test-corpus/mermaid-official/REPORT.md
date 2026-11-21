@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 480 sans avertissement (89 %), 61 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 482 sans avertissement (89 %), 59 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -29,7 +29,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | railroad | 14 | 14 | 0 | 0 | 0 | 0 |
 | requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
-| sequenceDiagram | 38 | 34 | 4 | 0 | 0 | 0 |
+| sequenceDiagram | 38 | 36 | 2 | 0 | 0 | 0 |
 | stateDiagram | 22 | 22 | 0 | 0 | 0 | 0 |
 | swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
@@ -127,8 +127,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### sequenceDiagram
 
-- #16 warned: Participant `box` groups are not drawn; their participants are kept.
-- #17 warned: Central connections `()` are not supported; the message is drawn lifeline to lifeline.
 - #36 warned: Actor menus (`link`, `links`, `properties`) are not supported and were ignored.
 - #37 warned: Actor menus (`link`, `links`, `properties`) are not supported and were ignored.
 

@@ -17,6 +17,11 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   the boundary, control and entity circles, a database cylinder, stacked boxes for `collections` and a lying
   cylinder for `queue` (Mermaid `participant X@{ "type": "database" }`, PlantUML `database X`, ZenUML
   `@Database X`). They used to be plain boxes, with a warning.
+- **Sequence diagram `box` groups are drawn**: a band behind the grouped participants with its title on top,
+  tinted when a colour is given (Mermaid `box Purple Team`, `box rgb(33,66,99)`; PlantUML `box "Team" #LightBlue`
+  ... `end box`), outlined otherwise. They used to be ignored, with a warning.
+- **Central connections** (Mermaid `A->>()B`, `A()->>B`) are drawn as a dot on the lifeline at the marked end,
+  as in Mermaid, instead of being ignored with a warning.
 
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,

@@ -175,3 +175,13 @@ test('official-page syntax: slanted arrows, teoz &, anchors, / note, partition a
   assert.equal(ast.items.filter((i) => i.type === 'blockStart').length, 1);
   for (const w of ['Slanted arrows', 'Parallel messages', 'Duration anchors', '`<style>`']) assert.ok(warnings.some((x) => x.includes(w)), w);
 });
+
+test('box: title and colour optional, participants declared inside belong to it', () => {
+  const { ast, warnings } = parsePlantUmlSequence(uml('box "Internal Service" #LightBlue\nparticipant Bob\nparticipant Alice\nend box\nbox #FF0000\nparticipant C\nend box\nbox Plain\nparticipant D\nend box\nparticipant Other\nBob -> Other : hi'));
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.boxes, [
+    { label: 'Internal Service', color: 'ADD8E6', participants: ['Bob', 'Alice'] },
+    { label: '', color: 'FF0000', participants: ['C'] },
+    { label: 'Plain', participants: ['D'] },
+  ]);
+});
