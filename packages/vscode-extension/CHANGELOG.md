@@ -13,6 +13,12 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   (user, workspace, folder), it stays on: a repository's `.vscode/settings.json` cannot turn it off.
 
 ### Changed
+- **C4 diagrams are drawn as Mermaid draws them.** Boundaries (`Boundary`, `Enterprise_Boundary`,
+  `System_Boundary`, `Container_Boundary`) are dashed frames and deployment nodes solid ones, nested, around
+  what they hold; elements sit on a grid in the order they are written (`UpdateLayoutConfig` sets how many per
+  row). Mermaid's colours, a person with a head, `Db` as a cylinder, `Queue` as a lying cylinder; relations
+  numbered in a `C4Dynamic`. `UpdateElementStyle` and `UpdateRelStyle` (colours, label offset) are applied.
+  Boundaries used to be flattened and the style directives ignored, each with a warning.
 - **Sequence diagrams draw each participant as its UML symbol**, as Mermaid does: a stick figure for an actor,
   the boundary, control and entity circles, a database cylinder, stacked boxes for `collections` and a lying
   cylinder for `queue` (Mermaid `participant X@{ "type": "database" }`, PlantUML `database X`, ZenUML

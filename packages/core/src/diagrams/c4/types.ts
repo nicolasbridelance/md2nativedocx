@@ -1,50 +1,54 @@
 /**
  * Intermediate AST for a Mermaid C4 diagram (`C4Context`/`C4Container`/
- * `C4Component`/`C4Dynamic`/`C4Deployment` — Family B,
- * `docs/specs/FUTURE_full_mermaid_coverage_SPEC.md` §3: "proche flowchart
- * mais notation fonctionnelle `Rel(a,b,\"...\")`"). All 5 header keywords
- * produce the same AST shape: this project has no notion of C4's "levels"
- * beyond which element types happen to appear, since layout/rendering don't
- * differ between them. Grammar verified against the real
- * `mermaid-js/mermaid` docs source (`docs/syntax/c4.md`, fetched 2026-09-11
- * via raw.githubusercontent.com — the rendered mermaid.js.org page embeds
- * its example code in an interactive editor that a text-only fetch can't
- * read) — a PlantUML-compatible function-call syntax, itself still marked
- * "experimental" by Mermaid's own docs.
+ * `C4Component`/`C4Dynamic`/`C4Deployment`). The grammar is a PlantUML-
+ * compatible function-call syntax (`Type(alias, "label", ...)`), marked
+ * "experimental" by Mermaid's own docs; this AST follows what Mermaid 12.3
+ * itself reads and draws (its parser and its C4 renderer, read against the
+ * official examples of `test-corpus/mermaid-official/`).
  *
- * V1 scope, deliberately (see `parser.ts`'s doc comment for the rest):
  * - Every element type (`Person(_Ext)`, `System(Db/Queue)(_Ext)`,
- *   `Container(Db/Queue)(_Ext)`, `Component(Db/Queue)(_Ext)`,
- *   `Deployment_Node`/`Node`/`Node_L`/`Node_R`) collapses onto one
- *   `C4Element` shape: a `category` (person/system/container/component/
- *   node), an `external` flag, and an optional `variant` (db/queue) — the
- *   `_Ext` suffix and the `Db`/`Queue` infix are the only two orthogonal
- *   axes Mermaid's naming scheme actually varies; alignment hints
- *   (`Node_L`/`Node_R`) and sprite/tag/link decorations are parsed away
- *   with no AST effect (unsupported even in real Mermaid — see the docs'
- *   own "unfinished features" list).
+ *   `Container(Db/Queue)(_Ext)`, `Component(Db/Queue)(_Ext)`) is one
+ *   `C4Element`: a `category`, an `external` flag and an optional `variant`
+ *   (db/queue), the only axes Mermaid's naming scheme varies.
  * - `Boundary`/`Enterprise_Boundary`/`System_Boundary`/`Container_Boundary`
- *   nesting, and a `Deployment_Node` used as a wrapper, are tracked only as
- *   `parent` on the elements declared inside — same flattened-with-warning
- *   shape as `architecture-beta`'s `in <parent>` and `classDiagram`'s
- *   `namespace` (see `translator.ts`'s doc comment for why real nested
- *   containment isn't v1).
- * - `Rel`/`BiRel`/`Rel_Back`/`Rel_U`/`Rel_Up`/`Rel_D`/`Rel_Down`/`Rel_L`/
- *   `Rel_Left`/`Rel_R`/`Rel_Right`/`RelIndex` all collapse onto one
- *   `C4Relationship` shape — the directional variants exist in real C4-
- *   PlantUML only as a manual-layout hint (mermaid's own docs: "there is no
- *   plan to support" `Lay_*` statements, and these `Rel_*` suffixes don't
- *   affect Mermaid's own rendering either), and `RelIndex`'s leading
- *   `index` argument is dropped (Mermaid's own docs: "ignores the index
- *   parameter").
- * - `UpdateElementStyle`/`UpdateRelStyle`/`UpdateLayoutConfig`/
- *   `AddElementTag`/`AddRelTag` are recognized and warned once, never
- *   silently dropped, but have no AST/rendering effect in v1 (pure styling/
- *   layout-density directives, not structure).
+ *   and `Deployment_Node`/`Node`/`Node_L`/`Node_R` are `C4Boundary` frames:
+ *   Mermaid draws a deployment node as a frame around what it holds, never as
+ *   a box of its own. Nesting is `parent` on elements and frames.
+ * - Every `Rel*` variant is one `C4Relationship`. The `_U`/`_D`/`_L`/`_R`
+ *   suffixes are manual-layout hints that Mermaid's own renderer ignores too;
+ *   `RelIndex`'s leading index is dropped, as in Mermaid.
+ * - `UpdateElementStyle` (on an element or a frame), `UpdateRelStyle` and
+ *   `UpdateLayoutConfig` are applied: `style` on the element, frame or
+ *   relationship they name, `layout` on the diagram.
  */
 
-export type C4Category = 'person' | 'system' | 'container' | 'component' | 'node';
+export type C4Category = 'person' | 'system' | 'container' | 'component';
 export type C4Variant = 'db' | 'queue';
+
+/** Which of the five C4 headers opened the diagram. Only `dynamic` changes
+ * the drawing: its relationships are numbered in statement order, as in Mermaid. */
+export type C4Level = 'context' | 'container' | 'component' | 'dynamic' | 'deployment';
+
+/** Colours set by `UpdateElementStyle`, as bare 6-digit uppercase hex (validated by the parser). */
+export interface C4ElementStyle {
+  /** `$bgColor`: the fill. */
+  fill?: string;
+  /** `$borderColor`: the outline. */
+  line?: string;
+  /** `$fontColor`: the text. */
+  text?: string;
+}
+
+/** What `UpdateRelStyle` sets on a relationship. */
+export interface C4RelationshipStyle {
+  /** `$lineColor`, bare 6-digit uppercase hex. */
+  line?: string;
+  /** `$textColor`, bare 6-digit uppercase hex. */
+  text?: string;
+  /** `$offsetX` / `$offsetY`: shift of the label from the middle of the line, in px (whole numbers, as Mermaid reads them). */
+  offsetX?: number;
+  offsetY?: number;
+}
 
 export interface C4Element {
   id: string;
@@ -52,15 +56,34 @@ export interface C4Element {
   external: boolean;
   variant?: C4Variant;
   label: string;
-  /** The `?techn`/`?type` positional argument (technology for Container/
-   * Component, OS/platform for a Deployment_Node) — same display slot for
-   * every category, so one field suffices. */
+  /** The `?techn` positional argument of a Container/Component. */
   techn?: string;
   description?: string;
-  /** The enclosing `Boundary`/`Enterprise_Boundary`/`System_Boundary`/
-   * `Container_Boundary`/`Deployment_Node` id, if any. Not rendered as
-   * visual containment in v1 — see `translator.ts`. */
+  /** The id of the enclosing {@link C4Boundary}, if any. */
   parent?: string;
+  style?: C4ElementStyle;
+}
+
+/** A frame drawn around the elements and frames declared inside its `{ ... }`. */
+export interface C4Boundary {
+  id: string;
+  label: string;
+  /**
+   * `boundary` for the four `*Boundary` calls (dashed outline), `deployment` for
+   * `Deployment_Node`/`Node`/`Node_L`/`Node_R` (solid outline), as Mermaid draws them.
+   */
+  kind: 'boundary' | 'deployment';
+  /**
+   * The line shown as `[type]` under the label: `ENTERPRISE`, `SYSTEM` or `CONTAINER` for the
+   * dedicated calls, the third argument of `Boundary(...)` (default `system`), a deployment node's
+   * `?type` (default `node`).
+   */
+  type: string;
+  /** A deployment node's `?descr`. */
+  description?: string;
+  /** The id of the enclosing frame, if any. */
+  parent?: string;
+  style?: C4ElementStyle;
 }
 
 export interface C4Relationship {
@@ -69,10 +92,25 @@ export interface C4Relationship {
   label: string;
   techn?: string;
   bidirectional: boolean;
+  style?: C4RelationshipStyle;
+}
+
+/** `UpdateLayoutConfig`: how many elements, and how many frames, sit side by side before a new row starts. */
+export interface C4LayoutConfig {
+  /** `$c4ShapeInRow` (Mermaid's default: 4). */
+  shapesPerRow?: number;
+  /** `$c4BoundaryInRow` (Mermaid's default: 2). */
+  boundariesPerRow?: number;
 }
 
 export interface C4Diagram {
   title?: string;
+  /** The header keyword; absent on an AST built by hand (drawn as `context`). */
+  level?: C4Level;
+  /** Elements in declaration order, which is the order Mermaid lays them out in. */
   elements: C4Element[];
+  /** Frames in declaration order; absent or empty when the diagram has none. */
+  boundaries?: C4Boundary[];
   relationships: C4Relationship[];
+  layout?: C4LayoutConfig;
 }

@@ -226,7 +226,7 @@ Le tableau ci-dessous récapitule tous les types reconnus, leur mot-clé Mermaid
 | Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Oui : `style`, `classDef` (fond, bordure, texte, gras, italique) |
 | Entité-relation | `erDiagram` | Oui : `style`, `classDef` (fond, bordure, texte), aussi sur les groupes |
 | Diagramme d’exigences | `requirementDiagram` | Oui : `style`, `classDef`, `class`, `:::` (fond, bordure, texte, gras, italique) |
-| C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Couleurs fixes |
+| C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Oui : `UpdateElementStyle` (fond, bordure, texte), `UpdateRelStyle` (trait, texte, décalage du libellé) |
 | Architecture | `architecture-beta` | Couleurs fixes |
 | Block | `block-beta` | Oui : style, classDef, class |
 | Sankey | `sankey-beta` | Couleurs fixes |
@@ -685,20 +685,23 @@ Modèle C4 en notation d’appels de fonction.
 | Rubrique | Détail |
 |:---------|:-------|
 | Mot-clé | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` |
-| Couleurs | Couleurs fixes |
+| Couleurs | Celles de Mermaid par catégorie ; `UpdateElementStyle`, `UpdateRelStyle` |
 
 
 **Syntaxe**
 
 - `Person(alias, "libellé", "description")`, `System`, `Container`, `Component`, variantes `_Ext`, `Db`, `Queue`
-- `Rel(a, b, "libellé", "techno")`
+- `Rel(a, b, "libellé", "techno")`, `BiRel`, `Rel_Back`, `Rel_U` / `_D` / `_L` / `_R`, `RelIndex`
+- Cadres : `Boundary`, `Enterprise_Boundary`, `System_Boundary`, `Container_Boundary`, `Deployment_Node` (et `Node`), avec `{ ... }`
+- `UpdateElementStyle(alias, $bgColor, $fontColor, $borderColor)`, `UpdateRelStyle(a, b, $textColor, $lineColor, $offsetX, $offsetY)`, `UpdateLayoutConfig($c4ShapeInRow, $c4BoundaryInRow)`
 
-**Pris en charge :** Boîtes à 2 compartiments, couleur par catégorie.
+**Pris en charge :** le dessin de Mermaid. Les éléments sont rangés en grille dans l’ordre où ils sont écrits (4 par ligne par défaut), les cadres sous eux (2 par ligne), chaque cadre autour de ce qu’il contient : pointillés pour une frontière, trait plein pour un nœud de déploiement, avec son libellé et son `[type]`. Une personne a une tête au-dessus du corps, `Db` est un cylindre, `Queue` un cylindre couché, un élément externe est gris. Les relations d’un `C4Dynamic` sont numérotées. Les 6 exemples officiels de Mermaid sont lus comme Mermaid les lit et convertis sans avertissement.
 
 **Limites**
 
-- Frontières (`Boundary`, `Deployment_Node`) : éléments dessinés à plat avec avertissement
-- Externe / base de données / file : indiqués dans le texte, pas par une forme
+- Les traits sont droits : un trait peut passer sur une forme ou sur le libellé d’un cadre (Mermaid ne les contourne pas non plus)
+- `$shadowing`, `$shape`, `$sprite`, `$tags`, `$link` ne sont pas appliqués ; un lien n’est jamais écrit dans le document
+- `AddElementTag`, `AddRelTag` (C4-PlantUML, absents de Mermaid) : ignorés avec avertissement
 - Un appel sur une seule ligne
 
 
