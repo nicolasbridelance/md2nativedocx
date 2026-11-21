@@ -1,6 +1,12 @@
 {
  "mermaid": "12.3.0",
  "match": [
+  "c4#0",
+  "c4#1",
+  "c4#2",
+  "c4#3",
+  "c4#4",
+  "c4#5",
   "classDiagram#0",
   "classDiagram#1",
   "classDiagram#2",

@@ -68,9 +68,10 @@ const { parseGanttChart } = await core('diagrams/gantt/parser.js');
 const { parseMindmap } = await core('diagrams/mindmap/parser.js');
 const { parseRequirementDiagram } = await core('diagrams/requirement-diagram/parser.js');
 const { parseTreeView } = await core('diagrams/tree-view/parser.js');
+const { parseC4Diagram } = await core('diagrams/c4/parser.js');
 const { withImplicitRoot } = await core('diagrams/tree-view/implicit-root.js');
 const { parseLabel } = await core('parser/label.js');
-const { extractNodeStyle, parseCssStyleProps } = await core('parser/css-style.js');
+const { extractNodeStyle, parseCssStyleProps, parseHexColor } = await core('parser/css-style.js');
 
 /** A style as one comparable string (`fill=FF0000 bold`), or '' when it sets nothing. */
 function styleFact({ fill, stroke, color, bold, italic }) {
@@ -476,6 +477,76 @@ COMPARATORS.treeView = {
   },
 };
 
+/** A C4 colour as both sides compare it: our hex, or Mermaid's raw value when it is not one we read. */
+const c4Color = (value) => (value === undefined || value === null || value === '' ? '' : (parseHexColor(String(value)) ?? String(value)));
+
+/** A C4 style (element, frame or relationship) as one fact, or none when nothing is set. */
+function c4StyleFact(kind, id, parts) {
+  const set = Object.entries(parts).filter(([, v]) => v !== '' && v !== undefined);
+  return set.length ? [`${kind} ${id} ${set.map(([k, v]) => `${k}=${v}`).join(' ')}`] : [];
+}
+
+/**
+ * A C4 diagram as facts: the header, the layout config, each element (Mermaid's shape type, texts, frame),
+ * each frame (boundary or deployment node, texts, enclosing frame), each relationship in Mermaid's sense
+ * (a `Rel_Back` points at its first argument), and every style the `Update*` directives set.
+ */
+COMPARATORS.c4 = {
+  theirs(db) {
+    const t = (field) => normText(mermaidEntities(field?.text ?? ''));
+    const parent = (p) => (!p || p === 'global' ? '-' : p);
+    const facts = [`level ${db.getC4Type()}`, `layout ${db.getC4ShapeInRow()} ${db.getC4BoundaryInRow()}`];
+    for (const e of db.getC4ShapeArray()) {
+      facts.push(`element ${e.alias} ${e.typeC4Shape.text} "${t(e.label)}" techn="${t(e.techn)}" descr="${t(e.descr)}" in ${parent(e.parentBoundary)}`);
+      facts.push(...c4StyleFact('style', e.alias, { fill: c4Color(e.bgColor), line: c4Color(e.borderColor), text: c4Color(e.fontColor) }));
+    }
+    for (const b of db.getBoundaries()) {
+      if (b.alias === 'global') continue;
+      facts.push(`frame ${b.alias} ${b.nodeType ? 'deployment' : 'boundary'} "${t(b.label)}" type="${t(b.type)}" descr="${t(b.descr)}" in ${parent(b.parentBoundary)}`);
+      facts.push(...c4StyleFact('style', b.alias, { fill: c4Color(b.bgColor), line: c4Color(b.borderColor), text: c4Color(b.fontColor) }));
+    }
+    for (const r of db.getRels()) {
+      const [from, to] = r.type === 'rel_b' ? [r.to, r.from] : [r.from, r.to];
+      facts.push(`rel ${from} -> ${to} "${t(r.label)}" techn="${t(r.techn)}"${r.type === 'birel' ? ' both' : ''}`);
+      facts.push(
+        ...c4StyleFact('relstyle', `${from}->${to}`, {
+          line: c4Color(r.lineColor),
+          text: c4Color(r.textColor),
+          dx: r.offsetX ? String(r.offsetX) : '',
+          dy: r.offsetY ? String(r.offsetY) : '',
+        }),
+      );
+    }
+    return facts;
+  },
+  ours(source) {
+    const { ast } = parseC4Diagram(source);
+    const level = { context: 'C4Context', container: 'C4Container', component: 'C4Component', dynamic: 'C4Dynamic', deployment: 'C4Deployment' };
+    const facts = [`level ${level[ast.level ?? 'context']}`, `layout ${ast.layout?.shapesPerRow ?? 4} ${ast.layout?.boundariesPerRow ?? 2}`];
+    for (const e of ast.elements) {
+      const type = `${e.external ? 'external_' : ''}${e.category}${e.variant ? `_${e.variant}` : ''}`;
+      facts.push(`element ${e.id} ${type} "${ourText(e.label)}" techn="${ourText(e.techn)}" descr="${ourText(e.description)}" in ${e.parent ?? '-'}`);
+      facts.push(...c4StyleFact('style', e.id, { fill: e.style?.fill ?? '', line: e.style?.line ?? '', text: e.style?.text ?? '' }));
+    }
+    for (const b of ast.boundaries ?? []) {
+      facts.push(`frame ${b.id} ${b.kind} "${ourText(b.label)}" type="${ourText(b.type)}" descr="${ourText(b.description)}" in ${b.parent ?? '-'}`);
+      facts.push(...c4StyleFact('style', b.id, { fill: b.style?.fill ?? '', line: b.style?.line ?? '', text: b.style?.text ?? '' }));
+    }
+    for (const r of ast.relationships) {
+      facts.push(`rel ${r.from} -> ${r.to} "${ourText(r.label)}" techn="${ourText(r.techn)}"${r.bidirectional ? ' both' : ''}`);
+      facts.push(
+        ...c4StyleFact('relstyle', `${r.from}->${r.to}`, {
+          line: r.style?.line ?? '',
+          text: r.style?.text ?? '',
+          dx: r.style?.offsetX ? String(r.style.offsetX) : '',
+          dy: r.style?.offsetY ? String(r.style.offsetY) : '',
+        }),
+      );
+    }
+    return facts;
+  },
+};
+
 /** One Gantt task as a comparable fact: id, text, section, resolved dates, tags. */
 function ganttFact(id, text, section, start, end, tags) {
   return `task ${id} "${text}" in "${section}" ${start} -> ${end} [${[...tags].sort().join(' ')}]`;
@@ -556,7 +627,7 @@ sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (\`LICENSE\`
 **${compared.length} exemples comparés : ${count('match')} identiques, ${count('diff')} avec écart, dont ${silent.length} sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 ${silent.map((r) => `\`${r.id}\``).join(', ') || 'aucun'}). Hors comparaison : ${count('mermaid-rejects')} refusé(s) par Mermaid lui-même${rejected},
-${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales, exigences et arborescences en ont un).
+${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales, exigences, arborescences et C4 en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|

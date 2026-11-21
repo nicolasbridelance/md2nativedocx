@@ -286,8 +286,29 @@ Ensuite, dans l'ordre :
               `extractor` de son rendu dagre). Ici, seuls les sous-graphes à direction propre ou visés par un lien
               sont rangés à part, dans la direction du diagramme. Adopter la règle de Mermaid changerait le rendu
               de la plupart des diagrammes à sous-graphes (baselines `test:visual`) : décision du mainteneur ;
-            - **séquence (11)**, **C4 (6)**, **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
+            - ~~**séquence (11)**~~ (fait : 36/38, les 2 restants voulus, voir plus haut), ~~**C4 (6)**~~ (fait le 2026-11-21, voir
+              ci-dessous), **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
               ~~**treeView (4)**~~ (fait le 2026-11-21, voir ci-dessous), divers (8) ;
+            - ~~**C4 (6)**~~ (fait le 2026-11-21) : dessiné comme Mermaid 12.3 le dessine (son moteur C4 lu sur les
+              exemples officiels, code propre au projet). Pas de Dagre : grille dans l'ordre de déclaration, 4 éléments
+              puis 2 cadres par ligne (`UpdateLayoutConfig`), cadres imbriqués autour de ce qu'ils contiennent
+              (`C4Diagram.boundaries`) : pointillés pour `*Boundary`, trait plein pour `Deployment_Node` / `Node*`, qui
+              n'est plus une boîte ; libellé, `[ENTERPRISE]` / `[SYSTEM]` / `[CONTAINER]` / type du nœud. Couleurs de
+              Mermaid par catégorie et pour l'externe, texte blanc, stéréotype `[Software System]` ; personne à tête
+              (proportions de Mermaid), `Db` en cylindre, `Queue` en cylindre couché (`translator/custom-geometry.ts`,
+              extrait de `participant-glyph.ts`). `UpdateElementStyle` (élément ou cadre) et `UpdateRelStyle`
+              (couleurs, décalage du libellé) appliqués, couleurs validées ; relations numérotées en `C4Dynamic` ; un
+              second `Rel` entre les mêmes extrémités remplace le premier, un `Rel` sans libellé est écarté (averti),
+              comme dans Mermaid. Le texte est mesuré à la taille arrondie au demi-point que Word reçoit une fois le
+              dessin réduit à la page (sinon une ligne débordait d'un cylindre de `c4#0`). Comparateur au
+              différentiel : **6/6 identiques** ; étage 1 : **6/6 propres**, **510 propres (94 %)**. Vu dans Word et
+              LibreOffice (`test-corpus/word-verification/c4-boundaries.*`), 0 erreur de schéma dans `document.xml`.
+              Ajouts d'API, optionnels : `C4Diagram.boundaries` / `level` / `layout`, `style` sur élément et relation,
+              types `C4Boundary`, `C4ElementStyle`, `C4RelationshipStyle`, `C4LayoutConfig`, `C4Level` ; retrait :
+              `C4Category` `'node'` (un nœud de déploiement est un cadre). Restent, connus : traits droits (Mermaid
+              courbe ceux après le premier), qui peuvent passer sur une forme ou sur le libellé d'un cadre
+              (`c4#5`) ; `$shape`, `$sprite`, `$tags`, `$link` non appliqués (avertis pour `UpdateElementStyle`).
+              Baseline `test:visual` `c4` à rafraîchir depuis la CI Linux ;
             - ~~**treeView (4)**~~ (fait le 2026-11-21) : parseur refait sur la grammaire de Mermaid 12.3
               (`treeView.langium` et sa lecture des arbres en traits : niveau par colonne de branche et pas de
               l'arbre ; tabulation = 1 colonne hors traits ; noms entre `"…"` ou `'…'` ; annotation reconnue après
@@ -347,7 +368,7 @@ Ensuite, dans l'ordre :
             par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime). Outil livré le 2026-11-20 :
             `tools/mermaid-differential/` (hors workspaces, son propre lockfile, `mermaid@12.3.0` épinglé comme le
             corpus), rapport `test-corpus/mermaid-official/DIFFERENTIAL.md`, verrou CI (job *Mermaid differential*,
-            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes), exigences (ajouté le 2026-11-21 : boîtes, champs affichés, relations, direction, styles). Premier passage :
+            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes), exigences (ajouté le 2026-11-21 : boîtes, champs affichés, relations, direction, styles), arborescences, C4 (ajouté le 2026-11-21 : éléments, cadres et leur imbrication, relations, styles, configuration de grille). Premier passage :
             252 exemples comparés, 217 identiques, 35 écarts dont 7 sans avertissement ; **les 7 corrigés le
             2026-11-20** (flèche longue avec libellé, membres de sous-graphe à la règle de Mermaid, titre de
             sous-graphe lu comme un libellé, `participant X@{…} as …` et `"alias"`, entités nommées HTML 4 partagées
@@ -363,7 +384,7 @@ Ensuite, dans l'ordre :
             sous-graphe le même jour (#100 à #103) : **250/252**, étage 1 à **431 propres (80 %)**. Restent les
             « sucettes » `()--` / `--()` (#15, #16) : une interface dessinée en petit cercle, forme à ajouter au
             traducteur, pas une lecture à corriger.
-            Reste : comparateurs des autres types (C4, architecture…).
+            Reste : comparateurs des autres types (architecture…). Au 2026-11-21 : **306/306 identiques**.
             Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
