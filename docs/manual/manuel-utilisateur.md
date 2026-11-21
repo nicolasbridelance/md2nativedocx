@@ -1233,13 +1233,17 @@ Arbre radial à partir d’une racine.
 
 - Hiérarchie par indentation, une seule racine
 - 6 formes : `[ ]`, `( )`, `(( ))`, `)) ((`, `) (`, `{{ }}`
+- Tout libellé est lu en Markdown, comme dans Mermaid : `**gras**`, `*italique*`, `<br/>` pour passer à la
+  ligne ; un libellé entre guillemets (`"…"` ou `` "`…`" ``) peut tenir sur plusieurs lignes
 
-**Pris en charge :** Toutes les formes nommées, profondeur illimitée.
+**Pris en charge :** Toutes les formes nommées, profondeur illimitée, gras, italique, libellés sur plusieurs
+lignes ; un libellé trop long passe à la ligne au lieu d'élargir le nœud.
 
 **Limites**
 
-- `::icon(...)` et `:::classe` : retirés avec avertissement
-- Racines multiples : la première est gardée
+- `::icon(...)` et `:::classe` : non dessinés, avec un avertissement (ils dépendent de la police d'icônes et
+  de la feuille de style de la page web où Mermaid s'affiche, qu'un document n'a pas)
+- Racines multiples : la première est gardée (Mermaid refuse le diagramme)
 
 
 +------------------------------------+-------------------------------------------------------------+

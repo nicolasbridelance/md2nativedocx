@@ -25,8 +25,11 @@
  */
 
 import type { MindmapChart, MindmapNode, MindmapShape } from './types.js';
+import type { LabelToken } from '../../types.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import { escapeXml } from '../../translator/xml-escape.js';
+import { renderLabelRuns } from '../../translator/label-runs.js';
+import { wrapText } from '../../translator/boxes.js';
 import {
   createIdAllocator,
   EMU_PER_PX,
@@ -75,35 +78,92 @@ function fontSizeForDepth(depth: number): number {
 }
 
 /**
- * A non-rectangular preset (hexagon, ellipse, the seal/cloud shapes) has
- * meaningfully less usable interior width than its bounding box at the same
- * text width estimate — its slanted/curved edges cut into the space text
- * actually has to sit in, so a box sized like a plain rect's still clips
- * text inside it. Found by real-render audit (2026-09-04): `roundRect`/
- * `rect` labels rendered in full while `hexagon`/`circle`/`bang` labels on
- * the same diagram were visibly cut short even after the font-size-scaling
- * fix above. Extra width factor per shape, tuned against that same render.
+ * Share of a preset's box that Word lays text out in, per axis: the preset's text rectangle
+ * (`a:rect` in ECMA-376 Part 1, `presetShapeDefinitions.xml`). A curved or spiked preset keeps its
+ * text well inside its outline: `ellipse` in the inscribed square (cos 45° of each axis), `cloud` in
+ * 2977..17087 x 3262..17337 of a 21600 grid, `irregularSeal2` (the bang) in 5333..16733 x 7267..14783.
+ * Sizing such a shape like a rectangle cut its text (seen in Word, 2026-11-21: the root ellipse showed
+ * "mindma", a bang lost its third line). `hexagon` is computed apart ({@link shapeBox}): its text width
+ * depends on its height. `roundRect` insets its text by a few px only, absorbed by the padding.
  */
-const WIDTH_PADDING_BY_SHAPE: Readonly<Record<MindmapShape, number>> = {
-  default: 1,
-  square: 1,
-  rounded: 1,
-  circle: 1.45,
-  bang: 1.9,
-  cloud: 1.5,
-  hexagon: 1.35,
+const TEXT_AREA_SHARE: Readonly<Record<Exclude<MindmapShape, 'hexagon'>, { x: number; y: number }>> = {
+  default: { x: 1, y: 1 },
+  square: { x: 1, y: 1 },
+  rounded: { x: 1, y: 1 },
+  circle: { x: Math.SQRT1_2, y: Math.SQRT1_2 },
+  cloud: { x: (17087 - 2977) / 21600, y: (17337 - 3262) / 21600 },
+  bang: { x: (16733 - 5333) / 21600, y: (14783 - 7267) / 21600 },
 };
 
-function boxSizeFor(label: string, depth: number, shape: MindmapShape): { width: number; height: number } {
-  const fontPx = depth === 0 ? 16 : depth === 1 ? 13 : 11;
-  // +36, not +24: found still-too-tight for a plain rect/roundRect box on a
-  // real render (e.g. "Research", "Launch" both lost their last letter) even
-  // after the per-shape factor above — a flat estimation-safety margin, not
-  // shape-specific.
-  const padded = estimateTextWidth(label, fontPx) * WIDTH_PADDING_BY_SHAPE[shape] + 36;
-  const width = Math.max(60, padded);
-  const height = depth === 0 ? 48 : 32;
-  return { width, height };
+/** Mermaid's `mindmap.maxNodeWidth`: a label wider than this wraps onto several lines. */
+const MAX_TEXT_WIDTH_PX = 200;
+/** Bold glyphs are wider than the regular ones `estimateTextWidth` is calibrated on. */
+const BOLD_WIDTH_FACTOR = 1.1;
+/**
+ * `estimateTextWidth` is an average per character class; Word's real glyphs run wider on some words
+ * (a label one letter short of fitting wraps, then overflows its box). Same role as the +36 px margin the
+ * rectangles had before 2026-11-21, made proportional so a long line gets more room than a short one.
+ */
+const TEXT_WIDTH_SAFETY = 1.15;
+/** The node's text insets (`bodyPr` `lIns`/`rIns` 45720 EMU, `tIns`/`bIns` 22860 EMU), in px. */
+const INSET_X_PX = 4.8;
+const INSET_Y_PX = 2.4;
+/** Room between the text area and a rectangle's border, each side, in px. */
+const PAD_X_PX = 10;
+const PAD_Y_PX = 6;
+/** Word's single line spacing, as a multiple of the font size. */
+const LINE_SPACING = 1.2;
+
+/** The label as rich text: the parser's runs, or the plain label of a node built by hand. */
+function runsOf(node: MindmapNode): LabelToken[] {
+  return node.labelRuns ?? [{ text: node.label }];
+}
+
+/** The label's lines as Word will wrap them: one per forced break, each wrapped at `MAX_TEXT_WIDTH_PX`. */
+function labelLines(runs: LabelToken[], fontPx: number): string[] {
+  const forced: string[] = [''];
+  for (const token of runs) {
+    if ('break' in token) forced.push('');
+    else forced[forced.length - 1] += token.text;
+  }
+  return forced.flatMap((line) => wrapText(line, fontPx, MAX_TEXT_WIDTH_PX));
+}
+
+/** The size of a node's text in px: the half-points written into its runs, at 96 px per inch. */
+function fontPxForDepth(depth: number): number {
+  return (fontSizeForDepth(depth) / 2) * (96 / 72);
+}
+
+/** The preset's box around a text area of `textWidth` x `textHeight` px ({@link TEXT_AREA_SHARE}). */
+function shapeBox(shape: MindmapShape, textWidth: number, textHeight: number): { width: number; height: number } {
+  if (shape === 'hexagon') {
+    // Text rectangle of a hexagon wider than tall, default adjust: full height, each side point taking
+    // (w + h) / 12 of the width. Solved for w: w = (textWidth + h / 6) * 6 / 5.
+    const height = textHeight + 2 * PAD_Y_PX;
+    return { width: ((textWidth + 2 * PAD_X_PX + height / 6) * 6) / 5, height };
+  }
+  const share = TEXT_AREA_SHARE[shape];
+  // A rectangle needs some room between its text and its border; a curved preset's outline already
+  // lies outside its text rectangle.
+  const padX = share.x === 1 ? PAD_X_PX : 0;
+  const padY = share.y === 1 ? PAD_Y_PX : 0;
+  return { width: (textWidth + 2 * padX) / share.x, height: (textHeight + 2 * padY) / share.y };
+}
+
+/**
+ * A node's box: its label wrapped like Mermaid's (at `MAX_TEXT_WIDTH_PX`), measured at the font size the
+ * runs are written at, then the preset's box around that text.
+ */
+function boxSizeFor(node: MindmapNode, depth: number): { width: number; height: number } {
+  const fontPx = fontPxForDepth(depth);
+  const runs = runsOf(node);
+  const boldFactor = runs.some((t) => !('break' in t) && t.bold) ? BOLD_WIDTH_FACTOR : 1;
+  const lines = labelLines(runs, fontPx);
+  const widest = Math.max(0, ...lines.map((line) => estimateTextWidth(line, fontPx)));
+  const textWidth = widest * boldFactor * TEXT_WIDTH_SAFETY + 2 * INSET_X_PX;
+  const textHeight = Math.max(1, lines.length) * fontPx * LINE_SPACING + 2 * INSET_Y_PX;
+  const box = shapeBox(node.shape, textWidth, textHeight);
+  return { width: Math.max(60, box.width), height: Math.max(depth === 0 ? 48 : 32, box.height) };
 }
 
 /** Assign every node a position (polar from the root), a size, and a branch
@@ -111,7 +171,7 @@ function boxSizeFor(label: string, depth: number, shape: MindmapShape): { width:
  * `translateMindmapToOoxml` call — the AST is not shared/mutated). */
 function layoutTree(root: MindmapNode): Map<MindmapNode, NodeLayout> {
   const layout = new Map<MindmapNode, NodeLayout>();
-  const rootSize = boxSizeFor(root.label, 0, root.shape);
+  const rootSize = boxSizeFor(root, 0);
   layout.set(root, { x: 0, y: 0, depth: 0, width: rootSize.width, height: rootSize.height, color: ROOT_COLOR });
 
   function place(node: MindmapNode, depth: number, startAngle: number, endAngle: number, color: string): void {
@@ -122,7 +182,7 @@ function layoutTree(root: MindmapNode): Map<MindmapNode, NodeLayout> {
       const span = ((endAngle - startAngle) * (weights[i] ?? 1)) / totalWeight;
       const childAngle = angle + span / 2;
       const radius = depth * RING_GAP;
-      const size = boxSizeFor(child.label, depth, child.shape);
+      const size = boxSizeFor(child, depth);
       // depth === 1 here means `node` is the root itself (place() is called
       // with depth=1 for root's own children, see the initial call below) --
       // that's the one point where a fresh branch color is picked; every
@@ -169,6 +229,7 @@ function nodeShape(
   prst: string,
   colorHex: string,
   label: string,
+  runs: LabelToken[],
   sizeHalfPt: number,
   borderWidthEmu: number,
 ): string {
@@ -186,15 +247,12 @@ function nodeShape(
     '  <wps:txbx>',
     '    <w:txbxContent>',
     '      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
-    '        <w:r>',
-    `          <w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>`,
-    `          <w:t xml:space="preserve">${escapeXml(label)}</w:t>`,
-    '        </w:r>',
+    renderLabelRuns(runs, 'FFFFFF', sizeHalfPt),
     '      </w:p>',
     '    </w:txbxContent>',
     '  </wps:txbx>',
     // `wrap="square"`, never `"none"`: real Word shrinks a `wrap="none"` box to its text (see
-    // `unwrappedTextFrame` in `canvas.ts`); `boxSizeFor` leaves enough margin for the text to stay on one line.
+    // `unwrappedTextFrame` in `canvas.ts`); `boxSizeFor` sizes the box to the lines Word will wrap the text to.
     '  <wps:bodyPr lIns="45720" tIns="22860" rIns="45720" bIns="22860" anchor="ctr" wrap="square"/>',
     '</wps:wsp>',
   ].join('\n');
@@ -313,6 +371,7 @@ export function translateMindmapToOoxml(chart: MindmapChart, options: CanvasOpti
           PRST_BY_SHAPE[node.shape],
           p.color,
           node.label,
+          runsOf(node),
           scaledFontSizeHalfPt(fontSizeForDepth(p.depth), s),
           scaledLineWidthEmu(9525, s),
         ),

@@ -17,7 +17,7 @@
  * left to the shape-built translator.
  */
 
-import type { FlowEdge, FlowNode, Flowchart } from '../types.js';
+import type { FlowEdge, FlowNode, Flowchart, LabelToken } from '../types.js';
 import type { MindmapChart, MindmapNode } from '../diagrams/mindmap/types.js';
 import type { TreeViewDiagram } from '../diagrams/tree-view/types.js';
 import type { SmartArtGenerated } from './dispatch.js';
@@ -26,8 +26,8 @@ import { generateTree } from './tree.js';
 import { generateDeepTree } from './tree-deep.js';
 import type { SmartArtGenerateOptions } from './generate-options.js';
 
-function node(id: string, label: string, fill?: string): FlowNode {
-  return { id, label, labelRuns: [{ text: label }], shape: 'roundRect', ...(fill ? { fill } : {}) };
+function node(id: string, label: string, fill?: string, labelRuns: LabelToken[] = [{ text: label }]): FlowNode {
+  return { id, label, labelRuns, shape: 'roundRect', ...(fill ? { fill } : {}) };
 }
 
 function edge(from: string, to: string): FlowEdge {
@@ -42,7 +42,7 @@ export function mindmapToFlowchart(chart: MindmapChart): Flowchart | null {
   // Ids are positional: mindmap ids are optional and may repeat.
   const walk = (n: MindmapNode, parent: string | undefined): void => {
     const id = `m${nodes.length}`;
-    nodes.push(node(id, n.label));
+    nodes.push(node(id, n.label, undefined, n.labelRuns));
     if (parent !== undefined) edges.push(edge(parent, id));
     for (const child of n.children) walk(child, id);
   };

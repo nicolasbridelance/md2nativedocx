@@ -34,6 +34,11 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   Excluded days are shaded; a milestone sits on the middle of its span; `vert` draws a dated vertical line.
   These used to be ignored or to drop the task, with a warning. An invalid duration now gives a task with no
   duration (as in Mermaid) instead of dropping it.
+- **Mind maps: Markdown labels.** Every label is read as Markdown, as Mermaid reads it: bold, italic, `<br/>`,
+  and a quoted label may run over several lines (the official example with a three-line root used to lose two
+  of its nodes). A long label wraps instead of widening its node. In the radial (shapes) layout, a circle,
+  cloud, bang or hexagon is now sized to the text area of its shape: a root circle or a bang used to cut its
+  text. `::icon(…)` and `:::classes` stay undrawn, with a clearer warning that names the node.
 
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,

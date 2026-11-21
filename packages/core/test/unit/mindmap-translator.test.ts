@@ -89,3 +89,34 @@ test('a single-node mindmap (root only, no children) still renders', () => {
 test('is a pure function: identical input produces byte-identical output', () => {
   assert.equal(translate(SAMPLE), translate(SAMPLE));
 });
+
+test('Markdown runs are drawn bold, italic and on separate lines, each run XML-escaped', () => {
+  const xml = translate('mindmap\n  root["`**<b>** & *x*\nnext`"]');
+  assert.ok(xml.includes('<w:b/>'));
+  assert.ok(xml.includes('<w:i/>'));
+  assert.ok(xml.includes('<w:br/>'));
+  assert.ok(xml.includes('&lt;b&gt;'));
+  assert.ok(!xml.includes('<b>'));
+  assert.ok(xml.includes('&amp;'));
+});
+
+/** Height in EMU of the shape named `name`. */
+function shapeHeight(xml: string, name: string): number {
+  const at = xml.indexOf(`name="${name}"`);
+  assert.ok(at >= 0, `shape ${name}`);
+  return Number(/<a:ext cx="\d+" cy="(\d+)"/.exec(xml.slice(at))?.[1]);
+}
+
+test('a label over several lines (a break, or longer than 200 px) gets a taller box; a one-line label keeps its size', () => {
+  const xml = translate(
+    'mindmap\n  root\n    Short\n    two<br/>lines\n    A label long enough to wrap past the maximum node width of Mermaid',
+  );
+  const short = shapeHeight(xml, 'Short');
+  assert.ok(shapeHeight(xml, 'two lines') > short);
+  assert.ok(shapeHeight(xml, 'A label long enough to wrap past the maximum node width of Mermaid') > short);
+});
+
+test('a node built by hand without labelRuns is drawn from its plain label', () => {
+  const chart: MindmapChart = { root: { id: 'r', label: 'Plain & simple', shape: 'default', children: [] } };
+  assert.ok(translateMindmapToOoxml(chart).includes('Plain &amp; simple'));
+});

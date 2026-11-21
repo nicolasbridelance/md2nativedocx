@@ -73,17 +73,97 @@ test('inconsistent indentation is compensated by picking the nearest ancestor wi
   assert.equal(ast.root?.children[1]?.label, 'B');
 });
 
-test('::icon(...) is recognized and stripped with a warning, not left in the label', () => {
+test('an icon at the end of a node line is kept on that node, out of its label, with a warning', () => {
   const { ast, warnings } = parseMindmap('mindmap\n  root\n    [Idea]::icon(fa fa-book)');
-  assert.equal(ast.root?.children[0]?.label, 'Idea');
+  const idea = ast.root?.children[0];
+  assert.equal(idea?.label, 'Idea');
+  assert.equal(idea?.icon, 'fa fa-book');
   assert.equal(warnings.length, 1);
-  assert.match(warnings[0] ?? '', /::icon/);
+  assert.match(warnings[0] ?? '', /icons are not drawn.*"Idea".*::icon\(fa fa-book\)/);
 });
 
-test(':::className is recognized and stripped with a warning', () => {
-  const { warnings } = parseMindmap('mindmap\n  root\n    [Idea]:::urgent');
+test('classes at the end of a node line are kept on that node, with a warning', () => {
+  const { ast, warnings } = parseMindmap('mindmap\n  root\n    [Idea]:::urgent');
+  assert.equal(ast.root?.children[0]?.className, 'urgent');
   assert.equal(warnings.length, 1);
-  assert.match(warnings[0] ?? '', /:::className/);
+  assert.match(warnings[0] ?? '', /classes are not applied.*"Idea".*:::urgent/);
+});
+
+test('an ::icon or ::: line of its own decorates the node added just before it, as in Mermaid', () => {
+  // Mermaid's decorateNode() takes the last node added, whatever the decoration's indentation.
+  const { ast, warnings } = parseMindmap(
+    'mindmap\n  Root\n    A\n      Deep\n    ::icon(fa fa-book)\n    B(B)\n    :::urgent large',
+  );
+  const [a, b] = ast.root?.children ?? [];
+  assert.equal(a?.icon, undefined);
+  assert.equal(a?.children[0]?.icon, 'fa fa-book');
+  assert.equal(b?.className, 'urgent large');
+  assert.deepEqual(ast.root?.children.map((c) => c.label), ['A', 'B']);
+  assert.equal(warnings.length, 2);
+});
+
+test('a decoration before any node is warned and ignored', () => {
+  const { ast, warnings } = parseMindmap('mindmap\n  ::icon(fa fa-book)\n  Root');
+  assert.equal(ast.root?.label, 'Root');
+  assert.equal(ast.root?.icon, undefined);
+  assert.match(warnings[0] ?? '', /before any node/);
+});
+
+test('a quoted Markdown label may run over several lines; each line break is kept', () => {
+  // Official example (mermaid@12.3.0 docs, mindmap #14): the label's lines start at column 0, and must
+  // neither become nodes of their own nor be read as extra roots.
+  const { ast, warnings } = parseMindmap(
+    'mindmap\n    id1["`**Root** with\na second line\nUnicode works too: 🤓`"]\n      id2["`The dog in **the** hog... a *very long text*`"]\n      id3[Regular labels still works]',
+  );
+  assert.deepEqual(warnings, []);
+  assert.equal(ast.root?.id, 'id1');
+  assert.equal(ast.root?.shape, 'square');
+  assert.equal(ast.root?.label, 'Root with a second line Unicode works too: 🤓');
+  assert.deepEqual(ast.root?.labelRuns, [
+    { text: 'Root', bold: true },
+    { text: ' with' },
+    { break: true },
+    { text: 'a second line' },
+    { break: true },
+    { text: 'Unicode works too: 🤓' },
+  ]);
+  assert.deepEqual(ast.root?.children.map((c) => c.id), ['id2', 'id3']);
+  assert.deepEqual(ast.root?.children[0]?.labelRuns?.filter((r) => 'text' in r && (r.bold || r.italic)), [
+    { text: 'the', bold: true },
+    { text: 'very long text', italic: true },
+  ]);
+});
+
+test('a plain double-quoted label may also run over several lines', () => {
+  const { ast } = parseMindmap('mindmap\n  root["first\n  second"]\n    child');
+  assert.equal(ast.root?.label, 'first second');
+  assert.deepEqual(ast.root?.children.map((c) => c.label), ['child']);
+});
+
+test('an unclosed quoted label is warned and kept as plain text, never swallowing the next lines', () => {
+  const { ast, warnings } = parseMindmap('mindmap\n  root["never closed\n    child');
+  assert.match(warnings[0] ?? '', /Unclosed quoted label/);
+  assert.equal(ast.root?.label, 'root["never closed');
+  assert.deepEqual(ast.root?.children.map((c) => c.label), ['child']);
+});
+
+test('every label is Markdown, as in Mermaid; an underscore inside a word stays literal', () => {
+  const { ast } = parseMindmap('mindmap\n  root\n    **Bold** and *it*\n    snake_case_name\n    a<br/>b');
+  const [bold, snake, broken] = ast.root?.children ?? [];
+  assert.deepEqual(bold?.labelRuns, [{ text: 'Bold', bold: true }, { text: ' and ' }, { text: 'it', italic: true }]);
+  assert.equal(bold?.label, 'Bold and it');
+  assert.deepEqual(snake?.labelRuns, [{ text: 'snake_case_name' }]);
+  assert.deepEqual(broken?.labelRuns, [{ text: 'a' }, { break: true }, { text: 'b' }]);
+});
+
+test('a node whose text starts with the word mindmap is a node, not a second header', () => {
+  const { ast } = parseMindmap('mindmap\n  root\n    mindmap tools');
+  assert.deepEqual(ast.root?.children.map((c) => c.label), ['mindmap tools']);
+});
+
+test('XML-special characters in a label stay plain text in the AST, for the translator to escape', () => {
+  const { ast } = parseMindmap(`mindmap\n  root["<a> & 'b'"]`);
+  assert.equal(ast.root?.label, "<a> & 'b'");
 });
 
 test('a second top-level node is warned and ignored (mindmaps have exactly one root)', () => {
@@ -108,4 +188,5 @@ test('an empty mindmap (header only) has a null root', () => {
 test('a multi-class `:::a b` line is stripped whole and never becomes a node', () => {
   const { ast } = parseMindmap('mindmap\n  Root\n    A[A]\n    :::urgent large\n    B(B)\n    C');
   assert.deepEqual(ast.root?.children.map((c) => c.label), ['A', 'B', 'C']);
+  assert.equal(ast.root?.children[0]?.className, 'urgent large');
 });

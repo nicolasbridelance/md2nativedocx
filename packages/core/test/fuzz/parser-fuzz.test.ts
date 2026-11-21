@@ -238,3 +238,26 @@ test('property: railroad input (any dialect) never throws and always gives well-
     { numRuns: 400 },
   );
 });
+
+test('property: mindmap input never throws and always gives well-formed, escaped XML, as shapes and as SmartArt', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  // Shape delimiters, quotes left open or closed over several lines, decorations, Markdown and hostile text.
+  const token = fc.oneof(
+    hostileText,
+    nodeId,
+    fc.constantFrom('[', ']', '(', ')', '((', '))', '{{', '}}', '"', '"`', '`"', '**', '*', '_', '<br/>', '#quot;'),
+    fc.constantFrom('::icon(', '::icon(fa fa-book)', ':::', ':::urgent large', '%% c', 'mindmap'),
+  );
+  const line = fc.tuple(fc.integer({ min: 0, max: 8 }), fc.array(token, { maxLength: 6 })).map(([indent, toks]) => ' '.repeat(indent) + toks.join(''));
+  fc.assert(
+    fc.property(fc.array(line, { maxLength: 25 }), fc.boolean(), (lines, smartArt) => {
+      const result = renderDiagram(`mindmap\n${lines.join('\n')}`, { smartArt });
+      assertWellFormedXml(result.fragment);
+      for (const part of result.parts) {
+        // A part starts with an XML declaration, which the element-balance check does not model.
+        if (part.kind === 'smartart') assertWellFormedXml(part.dataXml.replace(/^<\?xml[^>]*\?>/, ''));
+      }
+    }),
+    { numRuns: 400 },
+  );
+});

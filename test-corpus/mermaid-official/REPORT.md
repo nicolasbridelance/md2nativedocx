@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 498 sans avertissement (92 %), 43 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 499 sans avertissement (92 %), 42 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -21,7 +21,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
 | ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
 | kanban | 3 | 3 | 0 | 0 | 0 | 0 |
-| mindmap | 15 | 11 | 4 | 0 | 0 | 0 |
+| mindmap | 15 | 12 | 3 | 0 | 0 | 0 |
 | packet | 4 | 4 | 0 | 0 | 0 | 0 |
 | pie | 2 | 2 | 0 | 0 | 0 | 0 |
 | quadrantChart | 3 | 2 | 1 | 0 | 0 | 0 |
@@ -90,10 +90,9 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### mindmap
 
-- #0 warned: ::icon(...) is not yet supported for mindmaps, ignored: ::icon(fa fa-book)
-- #11 warned: ::icon(...) is not yet supported for mindmaps, ignored: ::icon(fa fa-book) \| ::icon(...) is not yet supported for mindmaps, ignored: ::icon(mdi mdi-skull-outline)
-- #12 warned: :::className is not yet supported for mindmaps, ignored: :::urgent large
-- #14 warned: Mermaid mindmaps support exactly one root; extra top-level node ignored: a second line \| Mermaid mindmaps support exactly one root; extra top-level node ignored: Unicode works too: 🤓`"]
+- #0 warned: Mindmap icons are not drawn (they need the icon font of the page Mermaid runs in), ignored on "Long history": ::icon(fa fa-book)
+- #11 warned: Mindmap icons are not drawn (they need the icon font of the page Mermaid runs in), ignored on "A": ::icon(fa fa-book) \| Mindmap icons are not drawn (they need the icon font of the page Mermaid runs in), ignored on "B": ::icon(mdi mdi-skull-outline)
+- #12 warned: Mindmap classes are not applied (they refer to the stylesheet of the page Mermaid runs in), ignored on "A": :::urgent large
 
 ### quadrantChart
 

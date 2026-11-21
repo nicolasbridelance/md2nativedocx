@@ -174,6 +174,18 @@ Ensuite, dans l'ordre :
               `GanttChart.axisFormat` / `tickInterval` / `weekday` / `shadedDays`, type `GanttTickInterval`.
               Reste : `displayMode: compact` (en-tête YAML, non transmis au parseur ; couvert par la notice
               « options non appliquées »).
+            - ~~**mindmap (4)**~~ (fait le 2026-11-21) : parseur refait sur la grammaire de Mermaid 12.3 (libellé
+              entre guillemets sur plusieurs lignes, `::icon` / `:::` rattachés au dernier nœud ajouté comme
+              `decorateNode()`), tout libellé lu en Markdown comme Mermaid (`parser/label.ts`, partagé avec les
+              organigrammes ; `_` dans un mot n'ouvre plus d'italique, règle CommonMark) ; rendu gras / italique /
+              lignes en formes et en SmartArt, retour à la ligne à 200 px ; chaque forme dimensionnée sur la zone de
+              texte de son preset OOXML (la racine en cercle affichait « mindma », un `))bang((` perdait sa troisième
+              ligne dans Word). Comparateur au différentiel : **15/15 identiques** ; étage 1 à **499 propres (92 %)**.
+              Vu dans Word et LibreOffice (`test-corpus/word-verification/mindmap-labels*`). Restent, voulus :
+              `::icon` (#0, #11) et `:::` (#12), non dessinables dans un document (police d'icônes et feuille de
+              style de la page web), avertis. Ajouts d'API, optionnels : `MindmapNode.labelRuns` / `icon` /
+              `className`. Reste : `colorBy: depth` (en-tête YAML `config.mindmap`, non transmis ; couvert par la
+              notice « options non appliquées »). Baseline `test:visual` `mindmap` à rafraîchir (boîtes élargies).
             - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, ~~sucettes `()--`/`--()`~~ (faites le
               2026-11-21 : relation `lollipop` et `ClassDiagram.interfaces`, une interface par relation comme Mermaid ;
               cercle creux au bout du trait, nom au-delà ; vérifié dans Word, `test-corpus/word-verification/
@@ -258,7 +270,7 @@ Ensuite, dans l'ordre :
               `extractor` de son rendu dagre). Ici, seuls les sous-graphes à direction propre ou visés par un lien
               sont rangés à part, dans la direction du diagramme. Adopter la règle de Mermaid changerait le rendu
               de la plupart des diagrammes à sous-graphes (baselines `test:visual`) : décision du mainteneur ;
-            - **séquence (11)**, **C4 (6)**, **architecture (5)**, ~~**Gantt (7)**~~ (fait), **mindmap (4)**, **requirement (4)**,
+            - **séquence (11)**, **C4 (6)**, **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), **requirement (4)**,
               **treeView (4)**, divers (8) ;
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
               `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; ~~railroad~~
@@ -297,7 +309,7 @@ Ensuite, dans l'ordre :
             par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime). Outil livré le 2026-11-20 :
             `tools/mermaid-differential/` (hors workspaces, son propre lockfile, `mermaid@12.3.0` épinglé comme le
             corpus), rapport `test-corpus/mermaid-official/DIFFERENTIAL.md`, verrou CI (job *Mermaid differential*,
-            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC). Premier passage :
+            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes). Premier passage :
             252 exemples comparés, 217 identiques, 35 écarts dont 7 sans avertissement ; **les 7 corrigés le
             2026-11-20** (flèche longue avec libellé, membres de sous-graphe à la règle de Mermaid, titre de
             sous-graphe lu comme un libellé, `participant X@{…} as …` et `"alias"`, entités nommées HTML 4 partagées
@@ -313,7 +325,7 @@ Ensuite, dans l'ordre :
             sous-graphe le même jour (#100 à #103) : **250/252**, étage 1 à **431 propres (80 %)**. Restent les
             « sucettes » `()--` / `--()` (#15, #16) : une interface dessinée en petit cercle, forme à ajouter au
             traducteur, pas une lecture à corriger.
-            Reste : comparateurs des autres types (mindmap, C4, requirement…).
+            Reste : comparateurs des autres types (C4, requirement…).
             Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été
