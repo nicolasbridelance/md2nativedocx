@@ -11,14 +11,13 @@
 
 import { splitLines, splitStatements } from './normalize-statements.js';
 import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from './interactive.js';
-import { decodeMermaidEntities } from './entities.js';
+import { parseLabel } from './label.js';
 import { extractNodeStyle, parseCssStyleProps, parseHexColor, type NodeStylePatch } from './css-style.js';
 import type {
   EdgeType,
   FlowEdge,
   FlowNode,
   Flowchart,
-  LabelRun,
   LabelToken,
   NodeShape,
   Subgraph,
@@ -375,72 +374,6 @@ function stripQuotedLabel(text: string): string {
     return text.slice(1, -1);
   }
   return text;
-}
-
-/**
- * Parse the small set of inline-text conveniences Mermaid supports (found via
- * `docs/markdown-mermaid-compliance-table.md` §5, logged in `TODO.md`) into
- * both a flattened plain-text fallback (`text`, used for box-name attributes
- * and `layout.ts`'s width/height estimation — neither needs to know about a
- * bold/italic span) and a structured rich-text body (`runs`, `types.ts`'s
- * `LabelToken[]` — what the translator actually renders):
- *  - Mermaid's entity codes (`#quot;`, `#9829;`, `#infin;`, ...) are decoded to
- *    their character first ({@link decodeMermaidEntities}), regardless of the
- *    two cases below.
- *  - `<br/>` (and `<br>`, `<br />`, case-insensitive) becomes a real line
- *    break: a `{ break: true }` token in `runs` (`text` flattens it to a
- *    single space instead, same as before this function could produce real
- *    breaks — a fallback string has nowhere to put a second line).
- *  - A "Markdown string" (a label wrapped in backticks) has its delimiters
- *    stripped, and `**bold**`/`__bold__`/`*italic*`/`_italic_` spans become
- *    real `LabelRun.bold`/`.italic` tokens instead of literal asterisks or a
- *    stripped-to-plain-text approximation. Emphasis markers are only
- *    recognized inside a Markdown string — Mermaid's classic (non-backtick)
- *    label syntax never interprets them, so a literal `**` in an ordinary
- *    label stays literal, unchanged from before.
- */
-function parseLabel(text: string): { text: string; runs: LabelToken[] } {
-  let decoded = decodeMermaidEntities(text);
-  const isMarkdownString = decoded.length >= 2 && decoded.startsWith('`') && decoded.endsWith('`');
-  if (isMarkdownString) decoded = decoded.slice(1, -1);
-
-  const segments = decoded.split(/<br\s*\/?>/gi);
-  const runs: LabelToken[] = [];
-  const plainSegments: string[] = [];
-  segments.forEach((segment, i) => {
-    if (i > 0) runs.push({ break: true });
-    const segmentRuns = isMarkdownString
-      ? parseEmphasis(segment)
-      : segment.length > 0
-        ? [{ text: segment }]
-        : [];
-    runs.push(...segmentRuns);
-    plainSegments.push(segmentRuns.map((r) => r.text).join(''));
-  });
-  return { text: plainSegments.join(' '), runs };
-}
-
-/**
- * Split a Markdown-string segment (no `<br/>` in it — {@link parseLabel}
- * already split those out) into plain/bold/italic {@link LabelRun}s.
- * Non-nested and non-overlapping — CommonMark's full emphasis-resolution
- * algorithm is out of scope here (V1 tolerance, same spirit as the rest of
- * this parser); `**`/`__` (bold) is tried before `*`/`_` (italic) at each
- * position so a bold span is never misread as two italic markers.
- */
-function parseEmphasis(text: string): LabelRun[] {
-  const runs: LabelRun[] = [];
-  const re = /(\*\*|__)([\s\S]+?)\1|(\*|_)([\s\S]+?)\3/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) runs.push({ text: text.slice(last, m.index) });
-    if (m[1] !== undefined) runs.push({ text: m[2]!, bold: true });
-    else runs.push({ text: m[4]!, italic: true });
-    last = re.lastIndex;
-  }
-  if (last < text.length) runs.push({ text: text.slice(last) });
-  return runs;
 }
 
 /**

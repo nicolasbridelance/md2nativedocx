@@ -52,6 +52,7 @@ import type {
   Subgraph,
 } from '../types.js';
 import { escapeXml } from './xml-escape.js';
+import { renderLabelRuns } from './label-runs.js';
 import { HOLLOW_SIZE_PX, hollowMarker } from './graph-shapes.js';
 import { actorConnectBox, actorFigure, type FigurePoint } from './actor-figure.js';
 import { textColorFor } from './text-color.js';
@@ -909,37 +910,6 @@ function renderNode(
     bodyPr(scale),
     '  </wps:wsp>',
   ].join('\n');
-}
-
-/**
- * Render a label's rich-text body (`types.ts`'s `LabelToken[]` — bold/italic
- * runs and `<br/>` line breaks, spec follow-up "rich-text runs") as the
- * `w:r`/`w:br` children of one `w:p`, shared by {@link renderNode} and
- * {@link renderEdgeLabel} (identical shape, only color/size differ). A break
- * token is its own run holding a bare `w:br` — WordprocessingML requires the
- * break element inside a run, but that run carries no `w:rPr`/`w:t` of its
- * own — so a `<br/>` moves to a new line within this same paragraph instead
- * of starting a new (differently-spaced) paragraph.
- */
-function renderLabelRuns(tokens: LabelToken[], color: string, sizeHalfPt: number): string {
-  return tokens
-    .map((token) => {
-      if ('break' in token) {
-        return ['          <w:r>', '            <w:br/>', '          </w:r>'].join('\n');
-      }
-      // CT_RPr is an ordered sequence (ECMA-376 §17.3.2.28): b, i, color, sz.
-      const rPr: string[] = [];
-      if (token.bold) rPr.push('<w:b/>');
-      if (token.italic) rPr.push('<w:i/>');
-      rPr.push(`<w:color w:val="${color}"/>`, `<w:sz w:val="${sizeHalfPt}"/>`);
-      return [
-        '          <w:r>',
-        `            <w:rPr>${rPr.join('')}</w:rPr>`,
-        `            <w:t xml:space="preserve">${escapeXml(token.text)}</w:t>`,
-        '          </w:r>',
-      ].join('\n');
-    })
-    .join('\n');
 }
 
 /**
