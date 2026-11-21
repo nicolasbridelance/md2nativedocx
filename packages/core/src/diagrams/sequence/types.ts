@@ -8,13 +8,21 @@
 /** Arrowhead drawn at the receiving end of a message. */
 export type SequenceHead = 'none' | 'arrow' | 'cross' | 'open';
 
+/**
+ * A participant's UML symbol other than the plain box and the actor: Mermaid's `@{ "type": ... }` config,
+ * PlantUML's `boundary X` / `database X` ... declarations.
+ */
+export type SequenceParticipantKind = 'boundary' | 'control' | 'entity' | 'database' | 'collections' | 'queue';
+
 export interface SequenceParticipant {
   /** Identifier used in messages. */
   id: string;
   /** Display text (the `as` alias when given, otherwise the id). */
   label: string;
-  /** Drawn as a stick-figure box (`actor`) rather than a plain `participant` box. */
+  /** Drawn as a stick figure (`actor`) rather than a plain `participant` box. */
   actor: boolean;
+  /** Symbol drawn instead of the plain box; absent for a plain participant or an actor. */
+  kind?: SequenceParticipantKind;
 }
 
 /** `group` comes from PlantUML: a labelled frame with no meaning of its own. */

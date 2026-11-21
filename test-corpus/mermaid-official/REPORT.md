@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 470 sans avertissement (87 %), 71 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 480 sans avertissement (89 %), 61 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -29,7 +29,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | railroad | 14 | 14 | 0 | 0 | 0 | 0 |
 | requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
-| sequenceDiagram | 38 | 25 | 13 | 0 | 0 | 0 |
+| sequenceDiagram | 38 | 34 | 4 | 0 | 0 | 0 |
 | stateDiagram | 22 | 22 | 0 | 0 | 0 | 0 |
 | swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
@@ -40,7 +40,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | venn | 8 | 7 | 1 | 0 | 0 | 0 |
 | wardley | 19 | 19 | 0 | 0 | 0 | 0 |
 | xyChart | 8 | 8 | 0 | 0 | 0 | 0 |
-| zenuml | 16 | 15 | 1 | 0 | 0 | 0 |
+| zenuml | 16 | 16 | 0 | 0 | 0 | 0 |
 
 ## Détail des écarts
 
@@ -127,15 +127,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### sequenceDiagram
 
-- #5 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #6 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #7 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #8 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #9 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #10 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #12 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #13 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
-- #14 warned: Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.
 - #16 warned: Participant `box` groups are not drawn; their participants are kept.
 - #17 warned: Central connections `()` are not supported; the message is drawn lifeline to lifeline.
 - #36 warned: Actor menus (`link`, `links`, `properties`) are not supported and were ignored.
@@ -167,8 +158,4 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 ### venn
 
 - #7 warned: Union-specific fill styling is not yet supported for Venn diagrams, ignored (overlap color derives from each set's own fill): style A,B color:#333 \| Unsupported line ignored (style targets unknown set): style A1 color:red
-
-### zenuml
-
-- #2 warned: ZenUML participant annotators other than @Actor are drawn as plain participant boxes.
 

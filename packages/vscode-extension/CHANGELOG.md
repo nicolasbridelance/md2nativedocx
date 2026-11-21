@@ -12,6 +12,12 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   identity to a `\\server\share` path. Images are left out, each with a warning. Turned on at any level
   (user, workspace, folder), it stays on: a repository's `.vscode/settings.json` cannot turn it off.
 
+### Changed
+- **Sequence diagrams draw each participant as its UML symbol**, as Mermaid does: a stick figure for an actor,
+  the boundary, control and entity circles, a database cylinder, stacked boxes for `collections` and a lying
+  cylinder for `queue` (Mermaid `participant X@{ "type": "database" }`, PlantUML `database X`, ZenUML
+  `@Database X`). They used to be plain boxes, with a warning.
+
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,
   zip and XML libraries, the Open XML SDK of the Word compatibility check) in `dist/licenses/`; before, only

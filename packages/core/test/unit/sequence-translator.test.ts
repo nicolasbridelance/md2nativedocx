@@ -66,3 +66,27 @@ test('a block frame widens to hold the text of a self-message inside it', () => 
   const textRight = Number(last[1]) + Math.round(widest * EMU_PER_PX);
   assert.ok(textRight <= frameRight, `text ends at ${textRight}, past the frame (${frameRight})`);
 });
+
+test('participant symbols: one shape per head, top and bottom, with the label below it and escaped', () => {
+  const kinds = ['boundary', 'control', 'entity', 'database'];
+  const src = kinds.map((k) => `participant ${k}@{ "type": "${k}" } as <${k}> & co`).join('\n');
+  const xml = tr(`sequenceDiagram\nactor U\n${src}\nparticipant Q@{ "type": "queue" }\nparticipant C@{ "type": "collections" }\nU->>Q: m`);
+  // Actor + 4 kinds: a symbol each at the top and the bottom.
+  assert.equal(xml.match(/name="Participant symbol /g)?.length, 2 * 6, 'actor, 4 symbols and the queue cylinder');
+  assert.equal(xml.match(/<a:custGeom>/g)?.length, 2 * 5, 'all but the database cylinder (a preset) are drawn paths');
+  assert.equal(xml.match(/prst="can"/g)?.length, 2);
+  // collections: two boxes per head.
+  assert.equal(xml.match(/name="Participant C"/g)?.length, 4);
+  for (const k of kinds) assert.ok(xml.includes(`&lt;${k}&gt; &amp; co`), k);
+  assert.ok(!xml.includes('<boundary>'));
+});
+
+test('a created participant keeps its symbol, and the creating message stops at the symbol', () => {
+  const xml = tr('sequenceDiagram\nparticipant A\ncreate participant D@{ "type": "database" }\nA->>D: open');
+  const shape = /<a:off x="(\d+)" y="\d+"\/><a:ext cx="\d+" cy="\d+"\/><\/a:xfrm>\s*<a:prstGeom prst="can">/.exec(xml);
+  assert.ok(shape, 'database cylinder drawn');
+  // The message is the connector carrying the arrowhead; its right end is the cylinder's left edge.
+  const arrow = /<a:off x="(\d+)" y="\d+"\/><a:ext cx="(\d+)" cy="1"\/><\/a:xfrm>(?:(?!<\/wps:wsp>)[\s\S])*?tailEnd type="triangle"/.exec(xml);
+  assert.ok(arrow, 'message arrow drawn');
+  assert.ok(Math.abs(Number(arrow[1]) + Number(arrow[2]) - Number(shape[1])) <= 1, 'arrow ends at the symbol');
+});

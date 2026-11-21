@@ -4,8 +4,8 @@
  * as `../sequence/parser.ts`, so `translateSequenceToOoxml` renders it unchanged.
  * Grammar transcribed from Mermaid's `docs/syntax/zenuml.md` (not verified
  * against the plugin's own ANTLR parser). Supported: `title`, participant
- * declarations (`Name`, `A as Alias`, `@Actor`/`@Database`/... annotators — only
- * `@Actor` changes the drawing), async messages `A->B: text`, sync calls
+ * declarations (`Name`, `A as Alias`, `@Actor`/`@Database`/... annotators — the UML
+ * ones draw their symbol, cloud icons such as `@EC2` a plain box), async messages `A->B: text`, sync calls
  * `A.method(args)` / `Client->A.method()` with `{ ... }` nesting (drawn with an
  * activation bar), `new A(args)`, replies (`a = A.m()`, `return x`, `@return`),
  * and the fragments `while|for|foreach|forEach|loop(...)`, `if(...)`/`else if`/
@@ -14,7 +14,8 @@
  * are ignored. Capped (hostile input) at 50 participants, 500 items, 20 nested levels.
  */
 
-import type { SequenceBlockKind, SequenceDiagram, SequenceItem, SequenceParticipant } from '../sequence/types.js';
+import type { SequenceBlockKind, SequenceDiagram, SequenceItem, SequenceParticipant, SequenceParticipantKind } from '../sequence/types.js';
+import { participantKind } from '../sequence/participant-kind.js';
 import { cleanText } from '../sequence/parser.js';
 
 export interface ZenumlParseResult {
@@ -57,18 +58,19 @@ export function parseZenuml(text: string): ZenumlParseResult {
     if (ast.items.length >= MAX_ITEMS) return warnOnce('items', `ZenUML diagram limited to ${MAX_ITEMS} items; the rest were ignored.`);
     ast.items.push(item);
   };
-  const declare = (id: string, label?: string, actor = false): boolean => {
+  const declare = (id: string, label?: string, actor = false, kind?: SequenceParticipantKind): boolean => {
     const existing = ast.participants.find((p) => p.id === id);
     if (existing) {
       if (label !== undefined) existing.label = label;
       if (actor) existing.actor = true;
+      if (kind !== undefined) existing.kind = kind;
       return true;
     }
     if (ast.participants.length >= MAX_PARTICIPANTS) {
       warnOnce('participants', `ZenUML diagram limited to ${MAX_PARTICIPANTS} participants; the rest were ignored.`);
       return false;
     }
-    const p: SequenceParticipant = { id, label: label ?? id, actor };
+    const p: SequenceParticipant = { id, label: label ?? id, actor, ...(kind ? { kind } : {}) };
     if (id === STARTER) ast.participants.unshift(p);
     else ast.participants.push(p);
     return true;
@@ -138,8 +140,12 @@ export function parseZenuml(text: string): ZenumlParseResult {
     } else if (/^@(?:return|reply)$/.test(line)) {
       pendingReply = true;
     } else if ((m = line.match(new RegExp(String.raw`^@(\w+)\s+(${ID})(?:\s+as\s+(.+))?$`)))) {
-      if (m[1]?.toLowerCase() !== 'actor') warnOnce('annotator', 'ZenUML participant annotators other than @Actor are drawn as plain participant boxes.');
-      declare(m[2] as string, m[3] === undefined ? undefined : cleanText(m[3]), m[1]?.toLowerCase() === 'actor');
+      const annotator = m[1] as string;
+      const kind = participantKind(annotator);
+      const actor = annotator.toLowerCase() === 'actor';
+      // Cloud-service icons (`@EC2`, `@Lambda`...) have no UML symbol: a plain box, said once.
+      if (!actor && !kind) warnOnce('annotator', 'ZenUML icon annotators (@EC2, @Lambda, ...) are drawn as plain participant boxes.');
+      declare(m[2] as string, m[3] === undefined ? undefined : cleanText(m[3]), actor, kind);
     } else if ((m = line.match(new RegExp(String.raw`^new\s+(${ID})\s*(\(.*\))?$`)))) {
       const from = context();
       if (declare(m[1] as string)) {

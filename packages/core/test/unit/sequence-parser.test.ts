@@ -124,7 +124,7 @@ test('participant config @{...} before `as`: no bogus participant, the `as` text
     ['API', 'Public API'],
     ['DB', 'User Database'],
   ]);
-  assert.ok(warnings.some((w) => w.includes('Participant types')));
+  assert.deepEqual(warnings, []);
 });
 
 test('participant config "alias" is the label when there is no `as`', () => {
@@ -136,4 +136,24 @@ test('named entities are decoded like Mermaid (#infin;, #hearts;), unknown names
   const { ast } = parseSequence('sequenceDiagram\n  A->>B: I #hearts; you #infin; times #foo; #99999999;');
   const message = ast.items.find((i) => i.type === 'message');
   assert.equal(message?.type === 'message' ? message.text : '', 'I ♥ you ∞ times #foo; #99999999;');
+});
+
+test('participant types: the config type sets the symbol, and wins over the `actor` keyword as in Mermaid', () => {
+  const kinds = ['boundary', 'control', 'entity', 'database', 'collections', 'queue'];
+  const src = kinds.map((k, i) => `participant P${i}@{ "type": "${k}" }`).join('\n');
+  const { ast, warnings } = parseSequence(`sequenceDiagram\n${src}\nactor DB@{ "type": "database" }\nactor U@{ "type": "actor" }\nparticipant X@{ "type": "participant" }`);
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.participants.map((p) => [p.id, p.kind, p.actor]), [
+    ...kinds.map((k, i) => [`P${i}`, k, false]),
+    ['DB', 'database', false],
+    ['U', undefined, true],
+    ['X', undefined, false],
+  ]);
+});
+
+test('an unknown participant type is a plain box, with a warning that names it', () => {
+  const { ast, warnings } = parseSequence('sequenceDiagram\nparticipant A@{ "type": "<rocket>" }\nA->>A: go');
+  assert.equal(ast.participants[0]?.kind, undefined);
+  assert.equal(warnings.length, 1);
+  assert.ok(warnings[0]?.includes('<rocket>'));
 });

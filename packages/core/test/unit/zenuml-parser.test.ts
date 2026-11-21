@@ -44,8 +44,9 @@ B->Client: late
 
 test('parses participants, annotators, sync/async/creation/reply messages and fragments', () => {
   const { ast, warnings } = parseZenuml(src);
-  assert.deepEqual(warnings, ['ZenUML participant annotators other than @Actor are drawn as plain participant boxes.']);
+  assert.deepEqual(warnings, []);
   assert.equal(ast.title, 'Demo');
+  assert.equal(ast.participants.find((p) => p.id === 'DB')?.kind, 'database');
   assert.deepEqual(ast.participants.map((p) => [p.id, p.label, p.actor]), [
     ['_starter', 'Starter', false], // from the top-level `B.audit()`
     ['Client', 'Client', true],
@@ -94,4 +95,18 @@ test('renders through the sequence translator with XML escaping', () => {
   for (const raw of ['<t>', '<m>', '<x>', '<r>']) assert.ok(!xml.includes(raw), raw);
   assert.ok(xml.includes('&lt;m&gt;') && xml.includes('&amp;'));
   assert.ok(!xml.includes('TargetMode'));
+});
+
+test('UML annotators draw their symbol; a cloud icon annotator is a plain box, said once', () => {
+  const { ast, warnings } = parseZenuml('zenuml\n@Boundary A\n@Control B\n@Entity C\n@Collection D\n@Queue E\n@EC2 F\n@Lambda G');
+  assert.deepEqual(ast.participants.map((p) => [p.id, p.kind]), [
+    ['A', 'boundary'],
+    ['B', 'control'],
+    ['C', 'entity'],
+    ['D', 'collections'],
+    ['E', 'queue'],
+    ['F', undefined],
+    ['G', undefined],
+  ]);
+  assert.deepEqual(warnings, ['ZenUML icon annotators (@EC2, @Lambda, ...) are drawn as plain participant boxes.']);
 });

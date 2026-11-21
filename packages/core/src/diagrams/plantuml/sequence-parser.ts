@@ -4,7 +4,7 @@
  * forgiving like the other parsers: an unrecognized line is a warning, never a throw.
  *
  * Supported: participant kinds (`participant`, `actor`, `boundary`, `control`, `entity`, `database`,
- * `collections`, `queue`; all but `actor` drawn as boxes) with `as` aliases on either side, quoted names,
+ * `collections`, `queue`, each drawn as its UML symbol) with `as` aliases on either side, quoted names,
  * colours and `order` stripped; messages with `->`, `-->`, `->>` (async), `->x`, `->o`, `-\`, `-/`,
  * reversed `<-` / `<--`, two-way `<->`, an inline `[#colour]` (ignored), and the `++` / `--` / `**` / `!!`
  * shorthands; `return`; `activate` / `deactivate` / `create` / `destroy`; notes (`note left of|right of|over`,
@@ -20,7 +20,8 @@
  */
 
 import { cleanText } from '../sequence/parser.js';
-import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from '../sequence/types.js';
+import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant, SequenceParticipantKind } from '../sequence/types.js';
+import { participantKind } from '../sequence/participant-kind.js';
 
 export interface PlantUmlSequenceParseResult {
   ast: SequenceDiagram;
@@ -101,18 +102,19 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
     ast.items.push(item);
   };
   const find = (id: string): SequenceParticipant | undefined => ast.participants.find((p) => p.id === id);
-  const declare = (id: string, label?: string, actor = false): boolean => {
+  const declare = (id: string, label?: string, actor = false, kind?: SequenceParticipantKind): boolean => {
     const existing = find(id);
     if (existing) {
       if (label !== undefined) existing.label = label;
       if (actor) existing.actor = true;
+      if (kind !== undefined) existing.kind = kind;
       return true;
     }
     if (ast.participants.length >= MAX_PARTICIPANTS) {
       warnOnce('participants', `Sequence diagram limited to ${MAX_PARTICIPANTS} participants; the rest were ignored.`);
       return false;
     }
-    ast.participants.push({ id, label: label ?? id, actor });
+    ast.participants.push({ id, label: label ?? id, actor, ...(kind ? { kind } : {}) });
     return true;
   };
 
@@ -123,9 +125,6 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
       .replace(/\s+order\s+-?\d+\s*$/i, '')
       .replace(/\s+#\S+\s*$/, '')
       .trim();
-    if (!/^(participant|actor)$/i.test(kind)) {
-      warnOnce('ptype', 'Participant kinds (boundary, control, entity, database, collections, queue) are drawn as plain participant boxes.');
-    }
     const m = new RegExp(String.raw`^(${NAME})(?:\s+as\s+(${NAME}))?$`).exec(body);
     if (!m) {
       warnings.push(`Participant ignored: ${rest}`);
@@ -133,7 +132,7 @@ export function parsePlantUmlSequence(source: string): PlantUmlSequenceParseResu
     }
     // `"Long name" as Id`: the quoted side is the label. `Id as "Long name"` / `Id as Label`: the first is the id.
     const [id, label] = idAndLabel(m[1] as string, m[2]);
-    return declare(id, label === undefined ? undefined : text(label), kind.toLowerCase() === 'actor') ? id : undefined;
+    return declare(id, label === undefined ? undefined : text(label), kind.toLowerCase() === 'actor', participantKind(kind)) ? id : undefined;
   };
 
   const message = (from: string, to: string, msgText: string, dashed: boolean, head: SequenceHead, both: boolean, activate: boolean, deactivate: boolean): void => {

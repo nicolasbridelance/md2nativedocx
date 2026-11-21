@@ -1,8 +1,8 @@
 /**
  * Parser for Mermaid `sequenceDiagram`. Line-oriented and forgiving like the
  * other parsers: an unrecognized line is a warning, never a throw. Supported:
- * `participant`/`actor` (with `as` alias and an `@{...}` config that is
- * stripped), `create`/`destroy`, the ten standard message arrows (`->`, `-->`,
+ * `participant`/`actor` (with `as` alias and an `@{...}` config whose `type`
+ * and `alias` are read), `create`/`destroy`, the ten standard message arrows (`->`, `-->`,
  * `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)`) with `+`/`-`
  * activation shorthand, `activate`/`deactivate`, `Note left of|right of|over`,
  * `loop`/`alt`/`opt`/`par`/`critical`/`break`/`rect` blocks with
@@ -15,7 +15,8 @@
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import { decodeMermaidEntities } from '../../parser/entities.js';
-import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant } from './types.js';
+import { participantKind } from './participant-kind.js';
+import type { SequenceBlockKind, SequenceDiagram, SequenceHead, SequenceItem, SequenceParticipant, SequenceParticipantKind } from './types.js';
 
 export interface SequenceParseResult {
   ast: SequenceDiagram;
@@ -89,15 +90,16 @@ export function parseSequence(text: string): SequenceParseResult {
     ast.items.push(item);
   };
   const find = (id: string): SequenceParticipant | undefined => ast.participants.find((p) => p.id === id);
-  const declare = (id: string, label: string | undefined, actor: boolean): void => {
+  const declare = (id: string, label: string | undefined, actor: boolean, kind?: SequenceParticipantKind): void => {
     const existing = find(id);
     if (existing) {
       if (label !== undefined) existing.label = label;
       if (actor) existing.actor = true;
+      if (kind !== undefined) existing.kind = kind;
       return;
     }
     if (ast.participants.length >= MAX_PARTICIPANTS) return warnOnce('participants', `Sequence diagram limited to ${MAX_PARTICIPANTS} participants; the rest were ignored.`);
-    ast.participants.push({ id, label: label ?? id, actor });
+    ast.participants.push({ id, label: label ?? id, actor, ...(kind ? { kind } : {}) });
   };
   const known = (id: string): boolean => find(id) !== undefined;
 
@@ -110,13 +112,17 @@ export function parseSequence(text: string): SequenceParseResult {
     const cfg = /@\{[^}]*\}/.exec(body);
     let isActor = actor;
     let configAlias: string | undefined;
+    let kind: SequenceParticipantKind | undefined;
     if (cfg) {
       body = `${body.slice(0, cfg.index)} ${body.slice(cfg.index + cfg[0].length)}`.trim();
       configAlias = /"alias"\s*:\s*"([^"]*)"/.exec(cfg[0])?.[1];
       const type = /"type"\s*:\s*"([^"]*)"/.exec(cfg[0])?.[1];
+      // The config's type wins over the keyword, as in Mermaid: `actor X@{ "type": "database" }` is a database.
       if (type === 'actor') isActor = true;
       else if (type !== undefined && type !== 'participant') {
-        warnOnce('ptype', 'Participant types (boundary, control, entity, database, ...) are drawn as plain participant boxes.');
+        kind = participantKind(type);
+        if (kind) isActor = false;
+        else warnings.push(`Unknown participant type \`${type}\` drawn as a plain participant box.`);
       }
     }
     const as = /\s+as\s+/.exec(body);
@@ -126,7 +132,7 @@ export function parseSequence(text: string): SequenceParseResult {
       return;
     }
     const label = as ? body.slice(as.index + as[0].length) : configAlias;
-    declare(id, label !== undefined ? cleanText(label) : undefined, isActor);
+    declare(id, label !== undefined ? cleanText(label) : undefined, isActor, kind);
   };
 
   for (const rawLine of sequenceStatements(text)) {

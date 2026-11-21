@@ -11,9 +11,11 @@
  * Differences from Mermaid: column spacing is derived from label widths with a
  * simple per-gap rule rather than Mermaid's own algorithm; arrowhead variety is
  * limited to what DrawingML line ends offer (a cross is drawn as two strokes,
- * the async open arrow as a small triangle); actors are plain colored boxes
- * (no stick figure); `box` groups, central connections, half-arrows and theme
- * styling are ignored.
+ * the async open arrow as a small triangle). Participants are drawn as their
+ * UML symbol (`participant-glyph.ts`): a box, a stick figure for an actor, the
+ * boundary / control / entity circles, a database cylinder, a `collections`
+ * stack, a `queue` lying cylinder. `box` groups, central connections,
+ * half-arrows and theme styling are ignored.
  */
 
 import type { SequenceDiagram, SequenceItem } from './types.js';
@@ -27,6 +29,7 @@ import {
   type CanvasOptions,
 } from '../../translator/canvas.js';
 import { connector, ellipse, rect } from '../../translator/graph-shapes.js';
+import { GLYPH_BAND, QUEUE_CAP, glyph, glyphKind, glyphShape, queueGlyph, type Glyph } from './participant-glyph.js';
 
 const PAD = 20;
 const FONT = 11;
@@ -37,6 +40,10 @@ const BAR_W = 10;
 const GAP_MIN = 140;
 const MSG_MAX_W = 240;
 const INK = '333333';
+const PART_FILL = 'ECECFF';
+const PART_LINE = '9370DB';
+/** How far a `collections` box's back copy sits from its front one. */
+const STACK = 6;
 
 interface Frame {
   kind: string;
@@ -61,10 +68,27 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   const idx = new Map(ast.participants.map((p, i) => [p.id, i] as const));
   const at = (id: string): number => idx.get(id) ?? 0;
 
-  // Participant boxes: a shared height, widths from their labels.
+  // Participant heads: widths from their labels; a box holds its label, a symbol (stick figure, boundary...)
+  // stands above it. Heads share the band of the tallest; each sits on the lifeline's top end.
   const bw = ast.participants.map((p) => Math.min(180, Math.max(90, widest(wrapText(p.label, FONT, 160), FONT) + 24)));
   const boxLines = ast.participants.map((p, i) => wrapText(p.label, FONT, (bw[i] as number) - 12).slice(0, 3));
-  const boxH = Math.max(34, ...boxLines.map((l) => l.length * 14 + 14));
+  const glyphs: Array<Glyph | undefined> = ast.participants.map((p) => {
+    const kind = glyphKind(p);
+    return kind ? glyph(kind) : undefined;
+  });
+  const headH = boxLines.map((l, i) => (glyphs[i] ? GLYPH_BAND + 4 + l.length * 14 : Math.max(34, l.length * 14 + 14) + (ast.participants[i]?.kind === 'collections' ? STACK : 0)));
+  const boxH = Math.max(...headH);
+  /** Where in its head a creating message points: a symbol's middle, a box's middle. */
+  const headAnchor = (i: number): number => {
+    const g = glyphs[i];
+    return g ? GLYPH_BAND - g.h / 2 : (headH[i] as number) / 2;
+  };
+  /** Horizontal reach of a head from its lifeline, toward a message arriving from the left (`dir` 1) or the right. */
+  const headReach = (i: number, dir: number): number => {
+    const g = glyphs[i];
+    if (!g) return (bw[i] as number) / 2;
+    return dir > 0 ? g.axis : g.w - g.axis;
+  };
 
   const msgLines = (text: string, maxW: number): string[] => (text === '' ? [] : wrapText(text, FONT, maxW).slice(0, 5));
 
@@ -254,11 +278,11 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
         if (item.activate) starts[b]?.push(arrowY);
         const created = pendingCreate.has(b) && !self;
         if (created) {
-          createTop.set(b, arrowY - boxH / 2);
+          createTop.set(b, arrowY - headAnchor(b));
           pendingCreate.delete(b);
         }
         const xFrom = (cx[a] as number) + dir * edge(a);
-        const xTo = created ? (cx[b] as number) - dir * ((bw[b] as number) / 2) : (cx[b] as number) - dir * edge(b);
+        const xTo = created ? (cx[b] as number) - dir * headReach(b, dir) : (cx[b] as number) - dir * edge(b);
         const dash = item.dashed ? 'dash' : 'solid';
         const headKind = item.head === 'arrow' || item.head === 'open' ? 'triangle' : 'none';
         const headSize = item.head === 'open' ? 'sm' : 'lg';
@@ -296,7 +320,7 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
             cross(msgs, cx[who] as number, arrowY, 7);
           }
         }
-        y = Math.max(self ? arrowY + 20 + 14 : arrowY + 14, created ? arrowY + boxH / 2 + 8 : 0);
+        y = Math.max(self ? arrowY + 20 + 14 : arrowY + 14, created ? arrowY - headAnchor(b) + (headH[b] as number) + 8 : 0);
         break;
       }
     }
@@ -306,20 +330,45 @@ export function translateSequenceToOoxml(ast: SequenceDiagram, options: CanvasOp
   const bottomY = y + 6;
   const H = bottomY + boxH + PAD;
 
-  ast.participants.forEach((p, i) => {
-    const x = (cx[i] as number) - (bw[i] as number) / 2;
-    const fill = p.actor ? 'DDEBF7' : 'ECECFF';
-    const stroke = p.actor ? '5B9BD5' : '9370DB';
+  /** Participant `i`'s head (box, stacked boxes, queue or symbol and label) from `top` down, `headH[i]` tall. */
+  const head = (p: (typeof ast.participants)[number], i: number, top: number): void => {
+    const w = bw[i] as number;
+    const h = headH[i] as number;
+    const x = (cx[i] as number) - w / 2;
     const lines = boxLines[i] as string[];
-    const topBoxY = createTop.get(i) ?? topY;
-    box(bg, x, topBoxY, bw[i] as number, boxH, fill, stroke, `Participant ${p.id}`);
-    text(boxes, x, topBoxY + (boxH - lines.length * 14) / 2, bw[i] as number, lines, { lineH: 14 });
-    const destroyed = destroyAt.get(i);
-    if (destroyed === undefined) {
-      box(bg, x, bottomY, bw[i] as number, boxH, fill, stroke, `Participant ${p.id}`);
-      text(boxes, x, bottomY + (boxH - lines.length * 14) / 2, bw[i] as number, lines, { lineH: 14 });
+    const g = glyphs[i];
+    if (g) {
+      const gx = (cx[i] as number) - g.axis;
+      const gy = top + GLYPH_BAND - g.h;
+      later((emu, _s, thin) => void bg.push(glyphShape(nextId(), emu(gx), emu(gy), emu(g.w), emu(g.h), g, PART_FILL, PART_LINE, thin)));
+      text(boxes, x, top + GLYPH_BAND + 4, w, lines, { lineH: 14 });
+      return;
     }
-    line(lifelines, cx[i] as number, topBoxY + boxH, cx[i] as number, destroyed ?? bottomY, { color: '999999', dash: 'dash' });
+    if (p.kind === 'collections') {
+      // Two boxes, the back one up and to the right: a stack of instances.
+      box(bg, x + STACK, top, w - STACK, h - STACK, PART_FILL, PART_LINE, `Participant ${p.id}`);
+      box(bg, x, top + STACK, w - STACK, h - STACK, PART_FILL, PART_LINE, `Participant ${p.id}`);
+      text(boxes, x, top + STACK + (h - STACK - lines.length * 14) / 2, w - STACK, lines, { lineH: 14 });
+      return;
+    }
+    if (p.kind === 'queue') {
+      // A cylinder lying on its side; the label is centred on its body, clear of the end cap.
+      const drum = queueGlyph(w, h);
+      later((emu, _s, thin) => void bg.push(glyphShape(nextId(), emu(x), emu(top), emu(w), emu(h), drum, PART_FILL, PART_LINE, thin)));
+      text(boxes, x, top + (h - lines.length * 14) / 2, w - 2 * QUEUE_CAP, lines, { lineH: 14 });
+      return;
+    }
+    box(bg, x, top, w, h, PART_FILL, PART_LINE, `Participant ${p.id}`);
+    text(boxes, x, top + (h - lines.length * 14) / 2, w, lines, { lineH: 14 });
+  };
+
+  ast.participants.forEach((p, i) => {
+    // At the top, every head ends where the lifelines start; a late-created one where its message points.
+    const topBoxY = createTop.get(i) ?? topY + boxH - (headH[i] as number);
+    head(p, i, topBoxY);
+    const destroyed = destroyAt.get(i);
+    if (destroyed === undefined) head(p, i, bottomY);
+    line(lifelines, cx[i] as number, topBoxY + (headH[i] as number), cx[i] as number, destroyed ?? bottomY, { color: '999999', dash: 'dash' });
     for (const start of starts[i] ?? []) box(bars, barX(i, 0), start, BAR_W, Math.max(6, bottomY - 10 - start), 'F2F2F2', INK, 'Activation');
   });
 

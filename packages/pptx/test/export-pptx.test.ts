@@ -24,7 +24,7 @@ test('a failing provider surfaces as an error', async () => {
 });
 
 test('bridge warnings are reported with their slide number', async () => {
-  const result = await exportPptx('```mermaid\nzenuml\n  @Database D\n  D.x()\n```');
+  const result = await exportPptx('```mermaid\nzenuml\n  @EC2 D\n  D.x()\n```');
   assert.ok(result.warnings.some((w) => w.startsWith('slide 1: ')), result.warnings.join('|'));
 });
 

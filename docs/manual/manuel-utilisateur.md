@@ -367,6 +367,7 @@ Variante du flowchart : les `subgraph` de premier niveau deviennent des couloirs
 **Syntaxe**
 
 - `participant` / `actor` (avec `as`), `create` / `destroy`
+- Types de participant `participant X@{ "type": "database" }` (aussi `"alias"`) : chacun a son symbole UML, comme dans Mermaid. Bonhomme pour `actor` ; cercles `boundary`, `control`, `entity` ; cylindre pour `database` ; boîtes empilées pour `collections` ; cylindre couché pour `queue`
 - Dix flèches : `->`, `-->`, `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)`, avec `+`/`-` pour l’activation
 - `activate`/`deactivate`, `Note left of|right of|over`, `autonumber`, `title`
 - Blocs `loop`, `alt`/`else`, `opt`, `par`/`and`, `critical`/`option`, `break`, `rect`
@@ -375,13 +376,12 @@ Variante du flowchart : les `subgraph` de premier niveau deviennent des couloirs
 
 **Limites**
 
-- Grammaire transcrite de la documentation, non vérifiée contre un analyseur Mermaid réel
 - Demi-flèches, connexions centrales `()`, `link`/`links`, `properties` : reconnus, avertissement, non dessinés
 - `box` : lu mais non dessiné
 - Plafonds : 50 participants, 500 éléments, 20 blocs imbriqués
 - Le cadre d’un bloc ne s’élargit pas pour un message d’un participant vers lui-même
 
-> **À savoir :** grammaire transcrite de la documentation, jamais comparée à un analyseur Mermaid réel.
+> **À savoir :** les 38 exemples officiels sont comparés à l’analyseur de Mermaid lui-même (`test-corpus/mermaid-official/DIFFERENTIAL.md`) : mêmes participants, messages et blocs.
 
 
 +------------------------------------+-------------------------------------------------------------+
@@ -430,7 +430,7 @@ Syntaxe de séquence « façon code » (plugin Mermaid externe), rendue avec le 
 **Limites**
 
 - Grammaire transcrite de la documentation, non vérifiée contre le plugin
-- Seul `@Actor` change le dessin, les autres annotations sont dessinées comme un participant simple
+- `@Actor`, `@Boundary`, `@Control`, `@Entity`, `@Database`, `@Collection`, `@Queue` dessinent leur symbole UML ; les icônes de services cloud (`@EC2`, `@Lambda`…) sont dessinées comme un participant simple, avec un avertissement
 - Un appel de premier niveau part d’un participant implicite `Starter`
 
 > **À savoir :** grammaire transcrite de la documentation, jamais comparée au plugin ZenUML.

@@ -28,12 +28,12 @@ test('participants: kinds, quoted names and aliases on either side', () => {
     uml('actor Client\nparticipant "Boutique web" as Web\ndatabase DB as "Base commandes" #yellow\nqueue Q order 10'),
   );
   assert.deepEqual(
-    ast.participants.map((p) => [p.id, p.label, p.actor]),
+    ast.participants.map((p) => [p.id, p.label, p.actor, p.kind]),
     [
-      ['Client', 'Client', true],
-      ['Web', 'Boutique web', false],
-      ['DB', 'Base commandes', false],
-      ['Q', 'Q', false],
+      ['Client', 'Client', true, undefined],
+      ['Web', 'Boutique web', false, undefined],
+      ['DB', 'Base commandes', false, 'database'],
+      ['Q', 'Q', false, 'queue'],
     ],
   );
 });
