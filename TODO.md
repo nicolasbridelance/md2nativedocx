@@ -185,7 +185,7 @@ Ensuite, dans l'ordre :
               `::icon` (#0, #11) et `:::` (#12), non dessinables dans un document (police d'icônes et feuille de
               style de la page web), avertis. Ajouts d'API, optionnels : `MindmapNode.labelRuns` / `icon` /
               `className`. Reste : `colorBy: depth` (en-tête YAML `config.mindmap`, non transmis ; couvert par la
-              notice « options non appliquées »). Baseline `test:visual` `mindmap` à rafraîchir (boîtes élargies).
+              notice « options non appliquées »). Baselines `test:visual` `mindmap` (docx, pptx) rafraîchies depuis la CI Linux, revues (boîtes un peu plus larges, « Marketing » enfin lisible dans son `bang`).
             - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, ~~sucettes `()--`/`--()`~~ (faites le
               2026-11-21 : relation `lollipop` et `ClassDiagram.interfaces`, une interface par relation comme Mermaid ;
               cercle creux au bout du trait, nom au-delà ; vérifié dans Word, `test-corpus/word-verification/
