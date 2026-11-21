@@ -60,6 +60,20 @@ const { parseSequence } = await core('diagrams/sequence/parser.js');
 const { parseClassDiagram } = await core('diagrams/class-diagram/parser.js');
 const { parseStateDiagram } = await core('diagrams/state-diagram/parser.js');
 const { parseErDiagram } = await core('diagrams/er-diagram/parser.js');
+const { extractNodeStyle, parseCssStyleProps } = await core('parser/css-style.js');
+
+/** A style as one comparable string (`fill=FF0000 bold`), or '' when it sets nothing. */
+function styleFact({ fill, stroke, color, bold, italic }) {
+  return [
+    fill !== undefined ? `fill=${fill}` : '',
+    stroke !== undefined ? `stroke=${stroke}` : '',
+    color !== undefined ? `color=${color}` : '',
+    bold !== undefined ? `bold=${bold}` : '',
+    italic !== undefined ? `italic=${italic}` : '',
+  ]
+    .filter((p) => p !== '')
+    .join(' ');
+}
 
 // --- Text normalization: what both sides would show as the same words -----------------------------------
 
@@ -223,6 +237,11 @@ const COMPARATORS = {
       const where = (n) => (n.parentId === undefined ? '' : ` in ${regionName.get(n.parentId) ?? n.parentId}`);
       const facts = nodes.filter((n) => !pseudo.has(n.id) && !layoutOnly.has(n.id)).map((n) => `state ${n.id}${where(n)}`);
       for (const n of nodes.filter((p) => pseudo.has(p.id))) facts.push(`${pseudo.get(n.id)}${where(n)}`);
+      // Styles: the classes in order, then `style`, read through our own CSS reader, so only the layering is compared.
+      for (const n of nodes.filter((p) => !pseudo.has(p.id) && !layoutOnly.has(p.id))) {
+        const fact = styleFact(extractNodeStyle(parseCssStyleProps([...(n.cssCompiledStyles ?? []), ...(n.cssStyles ?? [])].join(','))));
+        if (fact) facts.push(`style ${n.id} ${fact}`);
+      }
       // A note is a `note` node joined to its state by an edge, either way round.
       for (const n of nodes.filter((p) => p.shape === 'note')) {
         const link = edges.find((e) => e.start === n.id || e.end === n.id);
@@ -246,6 +265,10 @@ const COMPARATORS = {
       const where = (s) => (s.parent === undefined ? '' : ` in ${regionName.get(s.parent) ?? s.parent}`);
       const facts = ast.states.filter((s) => !pseudo.has(s.id)).map((s) => `state ${s.id}${where(s)}`);
       for (const s of ast.states.filter((p) => pseudo.has(p.id))) facts.push(`${pseudo.get(s.id)}${where(s)}`);
+      for (const s of ast.states.filter((p) => !pseudo.has(p.id))) {
+        const fact = styleFact({ fill: s.fill, stroke: s.stroke, color: s.textColor, bold: s.bold, italic: s.italic });
+        if (fact) facts.push(`style ${s.id} ${fact}`);
+      }
       for (const note of ast.notes ?? []) facts.push(`note ${note.side} of ${note.for} "${ourText(note.lines.join(' '))}"`);
       for (const t of ast.transitions) facts.push(`transition ${pseudo.get(t.from) ?? t.from} -> ${pseudo.get(t.to) ?? t.to}${t.label ? ` "${ourText(t.label)}"` : ''}`);
       return facts;

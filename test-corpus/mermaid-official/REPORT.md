@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 467 sans avertissement (86 %), 74 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 470 sans avertissement (87 %), 71 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -30,7 +30,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
 | sequenceDiagram | 38 | 25 | 13 | 0 | 0 | 0 |
-| stateDiagram | 22 | 19 | 3 | 0 | 0 | 0 |
+| stateDiagram | 22 | 22 | 0 | 0 | 0 | 0 |
 | swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
 | treemap | 8 | 8 | 0 | 0 | 0 | 0 |
@@ -140,12 +140,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 - #17 warned: Central connections `()` are not supported; the message is drawn lifeline to lifeline.
 - #36 warned: Actor menus (`link`, `links`, `properties`) are not supported and were ignored.
 - #37 warned: Actor menus (`link`, `links`, `properties`) are not supported and were ignored.
-
-### stateDiagram
-
-- #19 warned: Styling directives are not yet supported for state diagrams, ignored: classDef notMoving fill:white \| Styling directives are not yet supported for state diagrams, ignored: classDef movement font-style:italic \| Styling directives are not yet supported for state diagrams, ignored: classDef badBadEvent fill:#f00,color:white,font-weight:bold,stroke-width:2px,stroke:yellow \| Styling dire
-- #20 warned: Styling directives are not yet supported for state diagrams, ignored: classDef notMoving fill:white \| Styling directives are not yet supported for state diagrams, ignored: classDef movement font-style:italic \| Styling directives are not yet supported for state diagrams, ignored: classDef badBadEvent fill:#f00,color:white,font-weight:bold,stroke-width:2px,stroke:yellow \| State diagra
-- #21 warned: Styling directives are not yet supported for state diagrams, ignored: classDef yourState font-style:italic,font-weight:bold,fill:white \| State diagram :::className styling is not supported and was ignored.
 
 ### swimlanes
 

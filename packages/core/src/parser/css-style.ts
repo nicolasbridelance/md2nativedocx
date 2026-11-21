@@ -1,7 +1,8 @@
 /**
  * Mermaid's CSS-like style lists (`classDef`, `style`, `linkStyle`), read the same way for every diagram
- * that takes them: a flowchart and a class diagram. Only `fill`, `stroke` and `color` with a hex value are
- * kept, so nothing but a validated colour can reach the XML (AGENTS.md rule 2).
+ * that takes them: a flowchart, a class diagram and a state diagram. Only `fill`, `stroke` and `color` with a
+ * hex value are kept, so nothing but a validated colour can reach the XML (AGENTS.md rule 2), and
+ * `font-weight` / `font-style` as booleans (read by the state diagram only, for now).
  */
 
 /**
@@ -50,6 +51,10 @@ export interface NodeStylePatch {
   fill?: string;
   stroke?: string;
   color?: string;
+  /** `font-weight: bold` (or `bolder`, or a weight of 600 and up); `false` for `normal` and lighter. */
+  bold?: boolean;
+  /** `font-style: italic` (or `oblique`); `false` for `normal`. */
+  italic?: boolean;
 }
 
 /** Extract `fill`/`stroke`/`color` from a parsed property map, dropping anything not
@@ -71,5 +76,14 @@ export function extractNodeStyle(props: Map<string, string>): NodeStylePatch {
     const hex = parseHexColor(colorValue);
     if (hex) patch.color = hex;
   }
+  const weight = props.get('font-weight')?.toLowerCase();
+  if (weight !== undefined) {
+    const numeric = Number(weight);
+    if (weight === 'bold' || weight === 'bolder' || (Number.isFinite(numeric) && numeric >= 600)) patch.bold = true;
+    else if (weight === 'normal' || weight === 'lighter' || Number.isFinite(numeric)) patch.bold = false;
+  }
+  const fontStyle = props.get('font-style')?.toLowerCase();
+  if (fontStyle === 'italic' || fontStyle === 'oblique') patch.italic = true;
+  else if (fontStyle === 'normal') patch.italic = false;
   return patch;
 }

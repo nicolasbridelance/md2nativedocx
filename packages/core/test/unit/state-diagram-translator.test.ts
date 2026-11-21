@@ -187,6 +187,44 @@ test('note text is XML-escaped', () => {
   assert.ok(xml.includes('&lt;/w:t&gt;&lt;w:evil/&gt; &amp;'));
 });
 
+test('a styled state draws its fill, border, text colour, bold and italic; composites too (Mermaid #20)', () => {
+  const xml = translate(
+    'stateDiagram-v2\n  classDef bad fill:#f00,color:#fff,font-weight:bold,font-style:italic,stroke:#ff0\n  A --> Crash:::bad\n  state Box {\n    x --> y\n  }\n  style Box fill:#00ff00',
+  );
+  const crash = xml.slice(xml.indexOf('name="Crash"'));
+  assert.ok(crash.includes('<a:srgbClr val="FF0000"/>'), 'fill');
+  assert.ok(crash.includes('<a:srgbClr val="FFFF00"/>'), 'border');
+  assert.match(crash, /<w:rPr><w:b\/><w:i\/><w:color w:val="FFFFFF"\/>/);
+  assert.ok(xml.slice(xml.indexOf('name="Box"')).includes('<a:srgbClr val="00FF00"/>'));
+});
+
+test('a colour in a hand-built AST is validated before it reaches the XML (AGENTS rule 2)', () => {
+  const xml = translateStateDiagramToOoxml({
+    direction: 'TD',
+    states: [{ id: 'A', label: 'A', kind: 'normal', fill: '"/><evil', stroke: 'zz', textColor: 'red' }],
+    transitions: [],
+  });
+  assert.ok(!xml.includes('<evil'));
+  assert.ok(xml.includes('<a:srgbClr val="D9E2F3"/>'), 'falls back to the default fill');
+});
+
+test('a transition whose straight line would cross another state follows a route around it (Mermaid #20)', () => {
+  const xml = translate('stateDiagram\n  [*] --> Still\n  Still --> [*]\n  Still --> Moving\n  Moving --> Crash\n  Crash --> [*]');
+  // 5 transitions; Still --> [*] is drawn as several segments, only the last with an arrowhead.
+  const segments = [...xml.matchAll(/<wps:cNvCnPr\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>[\s\S]*?<a:ln /g)];
+  assert.ok(segments.length > 5, 'at least one transition is routed');
+  assert.equal((xml.match(/<a:tailEnd type="triangle"/g) ?? []).length, 5, 'one arrowhead per transition');
+  const moving = box(xml, 'Moving');
+  for (const m of segments) {
+    const [x, y, w, h] = m.slice(1, 5).map(Number) as [number, number, number, number];
+    const crossesX = x + w > moving.x + 9525 && x < moving.x + moving.w - 9525;
+    const crossesY = y + h > moving.y + 9525 && y < moving.y + moving.h - 9525;
+    // A segment's bounding box overlapping the box in both directions would mean a line through it (they are
+    // near vertical here).
+    assert.ok(!(crossesX && crossesY && w < moving.w / 2), 'no segment runs through Moving');
+  }
+});
+
 test('a parent cycle in a hand-built AST is cut rather than recursing for ever', () => {
   const xml = translateStateDiagramToOoxml({
     direction: 'TD',

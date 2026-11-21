@@ -151,9 +151,37 @@ test('an unclosed note block is kept and warned', () => {
   assert.ok(warnings.some((w) => w.includes('end note')));
 });
 
-test('classDef/class/style lines are recognized and warned, not silently dropped', () => {
-  const { warnings } = parseStateDiagram('stateDiagram-v2\n  classDef foo fill:#f00\n  [*] --> A');
-  assert.ok(warnings.some((w) => w.includes('Styling')));
+test('styles layer as in Mermaid: classes in the order given (class or :::), then style (Mermaid #19, #20)', () => {
+  const { ast, warnings } = parseStateDiagram(
+    [
+      'stateDiagram',
+      '  classDef movement font-style:italic',
+      '  classDef bad fill:#f00,color:#fff,font-weight:bold,stroke:#ff0',
+      '  [*] --> Still',
+      '  Still --> Moving:::movement',
+      '  Crash:::bad --> [*]',
+      '  Moving --> Crash',
+      '  class Moving, Crash movement',
+      '  style Crash fill:#00ff00',
+      '  class end bad',
+    ].join('\n'),
+  );
+  assert.deepEqual(warnings, []);
+  const st = (id: string) => ast.states.find((s) => s.id === id)!;
+  assert.equal(st('Moving').italic, true);
+  assert.equal(st('Moving').fill, undefined);
+  const crash = st('Crash');
+  assert.deepEqual([crash.fill, crash.stroke, crash.textColor, crash.bold, crash.italic], ['00FF00', 'FFFF00', 'FFFFFF', true, true]);
+  assert.equal(st('Still').fill, undefined);
+  assert.ok(!ast.states.some((s) => s.id === 'end'), 'a class on an unknown state creates none, as in Mermaid');
+});
+
+test('classDef default styles every state first; an undefined class is warned', () => {
+  const { ast, warnings } = parseStateDiagram('stateDiagram-v2\n  classDef default fill:#eeeeee\n  classDef hot fill:#f00\n  [*] --> A\n  A --> B\n  class B hot\n  class A nope');
+  assert.equal(ast.states.find((s) => s.id === 'A')?.fill, 'EEEEEE');
+  assert.equal(ast.states.find((s) => s.id === 'B')?.fill, 'FF0000');
+  assert.equal(ast.states.find((s) => s.kind === 'start')?.fill, undefined, 'the start dot stays black');
+  assert.ok(warnings.some((w) => w.includes('"nope"')));
 });
 
 test('an unclosed composite state block is warned, not silently dropped', () => {
@@ -168,7 +196,7 @@ test('accTitle/accDescr, frontmatter, trailing %% comments and :::class suffixes
   assert.deepEqual(ast.states.filter((st) => st.kind === 'normal').map((st) => st.id), ['Still', 'Moving']);
   assert.deepEqual(ast.transitions.map((t) => t.label), [undefined, undefined, 'go']);
   assert.equal(warnings.filter((w) => /frontmatter/.test(w)).length, 1);
-  assert.equal(warnings.filter((w) => /:::className/.test(w)).length, 1);
+  assert.ok(warnings.some((w) => w.includes('"cls" referenced but not defined')));
 });
 
 test('a state declared by its name alone is kept (Mermaid official example stateDiagram#4)', () => {

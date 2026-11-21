@@ -60,7 +60,13 @@ export function stateDiagramToFlowchart(diagram: StateDiagram): Flowchart | null
   if ((diagram.notes?.length ?? 0) > 0) return null;
   const normal = diagram.states.filter((s) => s.kind === 'normal');
   const ids = new Set(normal.map((s) => s.id));
-  const nodes = normal.map((s) => node(s.id, [{ text: s.label }]));
+  // Colours from `style` / `classDef` carry over, as a flowchart node's do (validated by the SmartArt writer).
+  const nodes = normal.map((s) => ({
+    ...node(s.id, [{ text: s.label }]),
+    ...(s.fill !== undefined ? { fill: s.fill } : {}),
+    ...(s.stroke !== undefined ? { stroke: s.stroke } : {}),
+    ...(s.textColor !== undefined ? { textColor: s.textColor } : {}),
+  }));
   const edges = diagram.transitions.filter((t) => ids.has(t.from) && ids.has(t.to)).map((t) => edge(t.from, t.to, t.label));
   return { direction: diagram.direction, nodes, edges, subgraphs: [] };
 }

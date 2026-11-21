@@ -177,17 +177,17 @@ export function textBoxLines(
   h: number,
   lines: string[],
   sizeHalfPt: number,
-  opts: { bold?: boolean; align?: 'l' | 'ctr'; color?: string } = {},
+  opts: { bold?: boolean; italic?: boolean; align?: 'l' | 'ctr'; color?: string } = {},
 ): string {
   const align = opts.align ?? 'l';
   const frame = unwrappedTextFrame(x, w, WORD_JC[align]);
-  const boldAttr = opts.bold ? '<w:b/>' : '';
+  const emphasis = (opts.bold ? '<w:b/>' : '') + (opts.italic ? '<w:i/>' : '');
   const color = opts.color ?? '000000';
   const paragraphs = lines
     .map(
       (line) =>
         `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${WORD_JC[align]}"/></w:pPr>` +
-        `<w:r><w:rPr>${boldAttr}<w:color w:val="${color}"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
+        `<w:r><w:rPr>${emphasis}<w:color w:val="${color}"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
         `<w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`,
     )
     .join('\n');

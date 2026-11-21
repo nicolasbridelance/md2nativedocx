@@ -17,12 +17,13 @@
  *   {@link StateRegion}s.
  * - Notes, `note left|right of X` up to `end note` or `note left|right of X : text`, into
  *   {@link StateDiagram.notes}; as in Mermaid, a note names its state into existence.
- *
- * NOT implemented yet, degrading to "recognized and warned", never silently dropped: `classDef`/`class`/
- * `style` styling (only cosmetic extras lost).
+ * - Styling: `classDef`, given through `class A, B name` or `A:::name`, and `style A props`, layered as
+ *   Mermaid does (see the end of {@link parseStateDiagram}). Only `fill`, `stroke`, `color` (hex) and
+ *   `font-weight` / `font-style` are kept (`../../parser/css-style.ts`).
  */
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
+import { extractNodeStyle, parseCssStyleProps, type NodeStylePatch } from '../../parser/css-style.js';
 import type { StateDiagram, StateNode, StateNodeKind, StateNote, StateRegion } from './types.js';
 
 export interface StateDiagramParseResult {
@@ -59,6 +60,44 @@ function noteLines(text: string): string[] {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 }
+/** `State:::className`: the state (anything up to the `:::`) and the class name. */
+const CLASS_SUFFIX = /([^\s:]+):::([\w-]+)/g;
+/** The kinds a style is drawn on (start/end dots and fork/join bars keep their black). */
+const STYLED_KINDS: ReadonlySet<StateNodeKind> = new Set(['normal', 'choice']);
+
+/**
+ * `classDef a,b props`, `class A, B name` or `style A props`, or `null`. Read by splitting at spaces rather
+ * than with one regular expression (untrusted input, `security/detect-unsafe-regex`).
+ */
+function parseStyleStatement(
+  line: string,
+):
+  | { kind: 'classDef'; names: string[]; patch: NodeStylePatch }
+  | { kind: 'class'; ids: string[]; name: string }
+  | { kind: 'style'; id: string; patch: NodeStylePatch }
+  | null {
+  const keyword = /^(classDef|class|style)\s/i.exec(line)?.[1]?.toLowerCase();
+  if (keyword === undefined) return null;
+  const rest = line.slice(keyword.length).trim();
+  if (keyword === 'class') {
+    // The class name is the last word; the states before it, separated by commas (spaces allowed).
+    const lastSpace = rest.search(/\s\S+$/);
+    if (lastSpace === -1) return null;
+    const ids = rest
+      .slice(0, lastSpace)
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    return ids.length > 0 ? { kind: 'class', ids, name: rest.slice(lastSpace).trim() } : null;
+  }
+  const space = rest.search(/\s/);
+  if (space === -1) return null;
+  const target = rest.slice(0, space);
+  const patch = extractNodeStyle(parseCssStyleProps(rest.slice(space + 1)));
+  if (keyword === 'style') return { kind: 'style', id: target, patch };
+  return { kind: 'classDef', names: target.split(',').map((n) => n.trim()).filter((n) => n.length > 0), patch };
+}
+
 /** Deepest nesting of composite states kept; a block deeper than this holds its states in the last one kept. */
 export const MAX_DEPTH = 32;
 
@@ -163,7 +202,11 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
   let inAccDescrBlock = false;
   let sawHeader = false;
   let warnedFrontmatter = false;
-  let warnedClassRef = false;
+  // Styling, resolved once every line is read: a `classDef` may come after the state that uses it.
+  const classDefs = new Map<string, NodeStylePatch>();
+  /** `class` / `:::` assignments, in source order (the order Mermaid layers them in). */
+  const classRefs: Array<{ id: string; name: string }> = [];
+  const inlineStyles = new Map<string, NodeStylePatch>();
 
   for (const rawLine of splitLines(text).flatMap((l) => splitStatements(l))) {
     let line = rawLine.trim();
@@ -214,16 +257,25 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       continue;
     }
 
-    // A trailing `%% comment` is not part of a label, and `:::className` suffixes on endpoints are
-    // styling (not supported) - drop both before the transition/description rules read the line.
+    // A trailing `%% comment` is not part of a label, and a `:::className` suffix on a state (`A:::hot`)
+    // gives it a class: both come off before the transition/description rules read the line.
     const commentAt = line.indexOf('%%');
     if (commentAt > 0) line = line.slice(0, commentAt).trim();
     if (line.includes(':::')) {
+      for (const m of line.matchAll(CLASS_SUFFIX)) if (m[1] !== '[*]') classRefs.push({ id: m[1]!, name: m[2]! });
       line = line.replace(/:::[\w-]+/g, '').trim();
-      if (!warnedClassRef) {
-        warnings.push('State diagram :::className styling is not supported and was ignored.');
-        warnedClassRef = true;
-      }
+    }
+
+    const styling = parseStyleStatement(line);
+    if (styling) {
+      if (styling.kind === 'classDef') for (const name of styling.names) classDefs.set(name, { ...classDefs.get(name), ...styling.patch });
+      else if (styling.kind === 'class') for (const id of styling.ids) classRefs.push({ id, name: styling.name });
+      else inlineStyles.set(styling.id, { ...inlineStyles.get(styling.id), ...styling.patch });
+      continue;
+    }
+    if (/^(?:classDef|class|style)\s/i.test(line)) {
+      warnings.push(`Malformed styling statement ignored: ${line}`);
+      continue;
     }
 
     if (line === '}') {
@@ -290,11 +342,6 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       }
     }
 
-    if (/^(?:classDef|class|style)\b/i.test(line)) {
-      warnings.push(`Styling directives are not yet supported for state diagrams, ignored: ${line}`);
-      continue;
-    }
-
     const descMatch = line.match(DESCRIPTION);
     if (descMatch) {
       const id = descMatch[1] ?? '';
@@ -319,6 +366,34 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
     warnings.push(`A note for "${openNote.for}" was not closed with "end note"; it is kept up to the end of the diagram.`);
     notes.push(openNote);
   }
+
+  // Styles, layered as Mermaid does: each class in the order it was given, then `style`. A class or a
+  // `style` naming no state does nothing (it does not create one), as in Mermaid. `classDef default` (which
+  // Mermaid 12.3's state parser rejects) applies first to every state that can be styled, as it does in a
+  // flowchart or a class diagram.
+  const undefinedNames = new Set<string>();
+  const patches = new Map<string, NodeStylePatch>();
+  const defaults = classDefs.get('default');
+  if (defaults) for (const node of states.values()) if (STYLED_KINDS.has(node.kind)) patches.set(node.id, { ...defaults });
+  for (const { id, name } of classRefs) {
+    if (!states.has(id)) continue;
+    const def = classDefs.get(name);
+    if (!def) {
+      undefinedNames.add(name);
+      continue;
+    }
+    patches.set(id, { ...patches.get(id), ...def });
+  }
+  for (const [id, patch] of inlineStyles) if (states.has(id)) patches.set(id, { ...patches.get(id), ...patch });
+  for (const [id, patch] of patches) {
+    const node = states.get(id)!;
+    if (patch.fill !== undefined) node.fill = patch.fill;
+    if (patch.stroke !== undefined) node.stroke = patch.stroke;
+    if (patch.color !== undefined) node.textColor = patch.color;
+    if (patch.bold !== undefined) node.bold = patch.bold;
+    if (patch.italic !== undefined) node.italic = patch.italic;
+  }
+  for (const name of undefinedNames) warnings.push(`classDef "${name}" referenced but not defined.`);
 
   return {
     ast: {

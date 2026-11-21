@@ -39,6 +39,19 @@ export interface StateNode {
    * top to bottom whatever the diagram's direction, as Mermaid does (its database gives every composite `TB`).
    */
   direction?: StateDiagram['direction'];
+  /**
+   * Fill (hex, no `#`), layered as Mermaid does: `classDef default`, then each class given by `class` or `:::`
+   * in order, then `style`. Drawn on ordinary, choice and composite states.
+   */
+  fill?: string;
+  /** Border colour (hex, no `#`), same sources as `fill`. */
+  stroke?: string;
+  /** Text colour (hex, no `#`), same sources; otherwise black or white to suit the fill. */
+  textColor?: string;
+  /** Bold name, from `font-weight` (same sources). */
+  bold?: boolean;
+  /** Italic name, from `font-style` (same sources). */
+  italic?: boolean;
 }
 
 /**

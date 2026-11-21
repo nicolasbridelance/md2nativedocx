@@ -188,7 +188,8 @@ Ensuite, dans l'ordre :
               une note garde le diagramme hors SmartArt ; vérifié dans Word, `test-corpus/word-verification/
               class-notes.*`. Les notes PlantUML restent avertis : à brancher sur le même champ) ;
             - **Couleurs nommées (`red`, `white`) ignorées sans avertissement**, dans l'organigramme comme dans les
-              classes (`parseHexColor`, `parser/css-style.ts`) : `classDiagram#35` (`color:red`) garde son texte noir.
+              classes et les états (`parseHexColor`, `parser/css-style.ts`) : `classDiagram#35` (`color:red`) garde son
+              texte noir, `stateDiagram#19` perd `fill:white` et `stroke:yellow`.
               Lire les noms CSS (une table de 148 entrées) ou au moins avertir ;
             - **`classDef default` de l'organigramme** n'est toujours pas appliqué (manuel, limites) alors que les
               classes l'appliquent depuis le 2026-11-20 : aligner ;
@@ -210,7 +211,14 @@ Ensuite, dans l'ordre :
               en Mermaid, aussi haut/bas en PlantUML ; chaque note agrandit la boîte de mise en page de son état, donc
               Dagre la tient à l'écart des autres boîtes ; une note du côté où arrivent les transitions est décalée hors
               de l'axe de l'état ; différentiel étendu aux notes ; vérifié dans Word, `test-corpus/word-verification/
-              state-notes.*`). Reste : styles. Une transition qui
+              state-notes.*`), ~~styles~~ (faits le 2026-11-21 : `classDef` + `class` / `:::`, `style`, superposés comme Mermaid ;
+              `fill` / `stroke` / `textColor` / `bold` / `italic` sur `StateNode`, repris par le SmartArt (couleurs) ;
+              `classDef default` appliqué à tous les états, que le parseur de Mermaid 12.3 refuse pourtant dans ce type ;
+              `font-weight` / `font-style` lus par `parser/css-style.ts`, **pas encore dessinés pour l'organigramme ni les
+              classes** ; différentiel étendu aux styles, **22/22** ; vérifié dans Word, `test-corpus/word-verification/
+              state-styles.*`). Au passage, une transition dont le trait droit traverserait une autre boîte suit la route
+              de Dagre (visible depuis la fusion des `[*]` : `Still --> [*]` traversait deux états, `stateDiagram#20`).
+              Les 22 exemples d'états officiels sont propres ; étage 1 à **470 propres (87 %)** Une transition qui
               traverse le bord d'un composite est tracée droite, sans routage ;
             - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
               cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;

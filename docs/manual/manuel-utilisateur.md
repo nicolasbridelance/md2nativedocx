@@ -222,8 +222,8 @@ Le tableau ci-dessous récapitule tous les types reconnus, leur mot-clé Mermaid
 | Swimlane (couloirs) | `swimlane-beta` | Oui : comme le flowchart |
 | Diagramme de séquence | `sequenceDiagram` | Couleurs fixes |
 | ZenUML | `zenuml` | Couleurs fixes |
-| Diagramme de classes | `classDiagram` | Non (style ignoré) |
-| Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Non (style ignoré) |
+| Diagramme de classes | `classDiagram` | Oui : `style`, `classDef` (fond, bordure, texte) |
+| Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Oui : `style`, `classDef` (fond, bordure, texte, gras, italique) |
 | Entité-relation | `erDiagram` | Non (style ignoré) |
 | Diagramme d’exigences | `requirementDiagram` | Non (style ignoré) |
 | C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Couleurs fixes |
@@ -523,7 +523,7 @@ Classes UML avec attributs, méthodes et relations.
 | Rubrique | Détail |
 |:---------|:-------|
 | Mot-clé | `stateDiagram` / `stateDiagram-v2` |
-| Couleurs | Non (style ignoré) |
+| Couleurs | Oui : `classDef` avec `class` ou `:::`, `style` (couleurs en hexadécimal) |
 
 
 **Syntaxe**
@@ -534,6 +534,7 @@ Classes UML avec attributs, méthodes et relations.
 - `direction` (dans un bloc `state X { … }`, celle de cet état seul)
 - `state X { … }` (états composites, imbriqués), `--` (régions concurrentes)
 - `note left of X : texte`, ou `note right of X` … `end note`
+- `classDef chaud fill:#f00,color:#fff,font-weight:bold`, puis `class A, B chaud` ou `A:::chaud` ; `style A fill:#0f0`
 
 **Pris en charge :** Transitions, pseudo-états, choix/fork/join, états composites dessinés en cadres titrés
 autour de leurs états, régions concurrentes côte à côte séparées par un pointillé, notes jaunes à coin replié à côté de leur état. Comme dans Mermaid, tous
@@ -542,8 +543,9 @@ en bas sauf `direction` dans son bloc.
 
 **Limites**
 
-- Styles : ignorés avec avertissement
-- Une transition qui traverse le bord d'un composite (`Dehors --> Dedans`) est tracée en ligne droite
+- Couleurs nommées (`red`, `white`) : pas encore lues, seules les couleurs hexadécimales comptent
+- Une transition qui traverse le bord d'un composite (`Dehors --> Dedans`) va droit vers l'état intérieur, sans
+  contourner les états du composite ; les autres contournent les boîtes qu'un trait droit traverserait
 
 
 +------------------------------------+-------------------------------------------------------------+

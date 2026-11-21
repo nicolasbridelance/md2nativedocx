@@ -33,6 +33,8 @@ import dagre from 'dagre';
 import { assertWithinLimits, layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
 import type { StateDiagram, StateNode, StateNote, StateRegion } from './types.js';
 import { boxShape } from '../../translator/boxes.js';
+import { validateHexColor } from '../../translator/xml-escape.js';
+import { textColorFor } from '../../translator/text-color.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
   createIdAllocator,
@@ -116,6 +118,21 @@ function sizeForNode(node: StateNode, direction: StateDiagram['direction']): Nod
   }
 }
 
+/**
+ * A state's colours and emphasis: its `style` / `classDef` values, validated before they reach the XML
+ * (AGENTS.md rule 2), else the default look. Text is the `color:` given, else black or white to suit the fill.
+ */
+function stateLook(node: StateNode): { fill: string; line: string; text: string; bold?: boolean; italic?: boolean } {
+  const fill = validateHexColor(node.fill, FILL);
+  return {
+    fill,
+    line: validateHexColor(node.stroke, LINE_COLOR),
+    text: validateHexColor(node.textColor, textColorFor(fill)),
+    ...(node.bold !== undefined ? { bold: node.bold } : {}),
+    ...(node.italic !== undefined ? { italic: node.italic } : {}),
+  };
+}
+
 function nodeShapes(nextId: () => number, node: StateNode, size: NodeSize, x: number, y: number, s: number): string[] {
   const bx = scalePt(x, s);
   const by = scalePt(y, s);
@@ -132,25 +149,40 @@ function nodeShapes(nextId: () => number, node: StateNode, size: NodeSize, x: nu
         ellipse(nextId(), bx + innerPad, by + innerPad, w - 2 * innerPad, h - 2 * innerPad, '000000'),
       ];
     }
-    case 'choice':
-      return [diamond(nextId(), bx, by, w, h, FILL, LINE_COLOR)];
+    case 'choice': {
+      const look = stateLook(node);
+      return [diamond(nextId(), bx, by, w, h, look.fill, look.line)];
+    }
     case 'fork':
     case 'join':
       return [rect(nextId(), bx, by, w, h, '000000', undefined, node.id)];
     default: {
       const lines = node.description ?? [];
+      const look = stateLook(node);
       if (lines.length === 0) {
         return [
-          rect(nextId(), bx, by, w, h, FILL, LINE_COLOR, node.label, true),
-          textBoxLines(nextId(), bx, by, w, h, [node.label], scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s), { align: 'ctr' }),
+          rect(nextId(), bx, by, w, h, look.fill, look.line, node.label, true),
+          textBoxLines(nextId(), bx, by, w, h, [node.label], scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s), {
+            align: 'ctr',
+            color: look.text,
+            bold: look.bold ?? false,
+            italic: look.italic ?? false,
+          }),
         ];
       }
-      // Label in the top band, description lines below it, inside the same rounded box.
+      // Label in the top band (bold unless a style says otherwise), description lines below it, in the same box.
       const titleH = scalePt(NORMAL_H, s);
       return [
-        rect(nextId(), bx, by, w, h, FILL, LINE_COLOR, node.label, true),
-        textBoxLines(nextId(), bx, by, w, titleH, [node.label], scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s), { align: 'ctr', bold: true }),
-        textBoxLines(nextId(), bx + scalePt(PAD_X / 2, s), by + titleH, w - scalePt(PAD_X, s), h - titleH, lines, scaledFontSizeHalfPt(DESC_SIZE_HALFPT, s)),
+        rect(nextId(), bx, by, w, h, look.fill, look.line, node.label, true),
+        textBoxLines(nextId(), bx, by, w, titleH, [node.label], scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s), {
+          align: 'ctr',
+          color: look.text,
+          bold: look.bold ?? true,
+          italic: look.italic ?? false,
+        }),
+        textBoxLines(nextId(), bx + scalePt(PAD_X / 2, s), by + titleH, w - scalePt(PAD_X, s), h - titleH, lines, scaledFontSizeHalfPt(DESC_SIZE_HALFPT, s), {
+          color: look.text,
+        }),
       ];
     }
   }
@@ -204,6 +236,8 @@ interface BlockLayout {
   dividers: Array<{ x1: number; y1: number; x2: number; y2: number }>;
   /** Centre of the room Dagre kept for a transition's label, by the transition's index. */
   labels: Map<number, { x: number; y: number }>;
+  /** Dagre's route for a transition laid out in a block (its points, end to end), by the transition's index. */
+  routes: Map<number, Array<{ x: number; y: number }>>;
   /** Every note in the block, at any depth, by the note's index in `StateDiagram.notes`. */
   notes: Map<number, Frame>;
 }
@@ -221,11 +255,12 @@ function mergeInto(outer: BlockLayout, inner: BlockLayout, dx: number, dy: numbe
   for (const [id, f] of inner.frames) outer.frames.set(id, offsetFrame(f, dx, dy));
   for (const d of inner.dividers) outer.dividers.push({ x1: d.x1 + dx, y1: d.y1 + dy, x2: d.x2 + dx, y2: d.y2 + dy });
   for (const [i, p] of inner.labels) outer.labels.set(i, { x: p.x + dx, y: p.y + dy });
+  for (const [i, points] of inner.routes) outer.routes.set(i, points.map((p) => ({ x: p.x + dx, y: p.y + dy })));
   for (const [i, f] of inner.notes) outer.notes.set(i, offsetFrame(f, dx, dy));
 }
 
 function emptyLayout(): BlockLayout {
-  return { width: 0, height: 0, frames: new Map(), dividers: [], labels: new Map(), notes: new Map() };
+  return { width: 0, height: 0, frames: new Map(), dividers: [], labels: new Map(), routes: new Map(), notes: new Map() };
 }
 
 /** The diagram's nesting: what each block holds. The key of the diagram itself is `undefined`. */
@@ -277,6 +312,13 @@ class Nesting {
 
   isComposite(id: string): boolean {
     return (this.children.get(id)?.length ?? 0) > 0 || this.regions.has(id);
+  }
+
+  /** The composite states and regions that hold `id`, at any depth. */
+  ancestorsOf(id: string): string[] {
+    const out: string[] = [];
+    for (let at = this.parentOf.get(id); at !== undefined && !out.includes(at); at = this.parentOf.get(at)) out.push(at);
+    return out;
   }
 
   /** The member of block `block` that holds `id` (`id` itself when it is one), or `undefined` if none does. */
@@ -441,8 +483,9 @@ class StateLayout {
     }
     // Where Dagre put each label: a spot it kept clear of every box, beside the transition's route.
     for (const e of g.edges()) {
-      const label = g.edge(e) as { x?: number; y?: number; width?: number };
+      const label = g.edge(e) as { x?: number; y?: number; width?: number; points?: Array<{ x: number; y: number }> };
       if (label.width !== undefined && label.x !== undefined && label.y !== undefined) out.labels.set(Number(e.name), { x: label.x, y: label.y });
+      if (label.points && label.points.length >= 2) out.routes.set(Number(e.name), label.points);
     }
     const graph = g.graph() as { width?: number; height?: number };
     out.width = graph.width ?? 0;
@@ -532,6 +575,54 @@ function labelBeside(
   return { x: cx - width / 2, y: cy - LABEL_H / 2, align: side * nx > 0.9 ? 'l' : 'ctr' };
 }
 
+/**
+ * Whether the segment `a`-`b` passes through the inside of `f` (shrunk by a pixel, so a line that only grazes
+ * a box does not count). Liang-Barsky clipping.
+ */
+function segmentCrosses(a: { x: number; y: number }, b: { x: number; y: number }, f: Frame): boolean {
+  const x0 = f.x + 1;
+  const x1 = f.x + f.width - 1;
+  const y0 = f.y + 1;
+  const y1 = f.y + f.height - 1;
+  if (x1 <= x0 || y1 <= y0) return false;
+  let t0 = 0;
+  let t1 = 1;
+  const clip = (p: number, q: number): boolean => {
+    if (p === 0) return q >= 0;
+    const r = q / p;
+    if (p < 0) {
+      if (r > t1) return false;
+      t0 = Math.max(t0, r);
+    } else {
+      if (r < t0) return false;
+      t1 = Math.min(t1, r);
+    }
+    return true;
+  };
+  const ddx = b.x - a.x;
+  const ddy = b.y - a.y;
+  return clip(-ddx, a.x - x0) && clip(ddx, x1 - a.x) && clip(-ddy, a.y - y0) && clip(ddy, y1 - a.y) && t0 < t1;
+}
+
+/** The segment of `path` nearest to `p`. */
+function nearestSegment(path: Array<{ x: number; y: number }>, p: { x: number; y: number }): [{ x: number; y: number }, { x: number; y: number }] {
+  let best: [{ x: number; y: number }, { x: number; y: number }] = [path[0]!, path[1]!];
+  let bestDistance = Infinity;
+  for (let k = 0; k + 1 < path.length; k++) {
+    const a = path[k]!;
+    const b = path[k + 1]!;
+    const lx = b.x - a.x;
+    const ly = b.y - a.y;
+    const t = lx === 0 && ly === 0 ? 0 : Math.min(1, Math.max(0, ((p.x - a.x) * lx + (p.y - a.y) * ly) / (lx * lx + ly * ly)));
+    const distance = Math.hypot(a.x + t * lx - p.x, a.y + t * ly - p.y);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = [a, b];
+    }
+  }
+  return best;
+}
+
 /** The shapes of a composite state: its box and title band, the white content area below the title. */
 function compositeShapes(nextId: () => number, node: StateNode, f: Frame, dx: number, dy: number, s: number): string[] {
   const x = scalePt(f.x + dx, s);
@@ -540,10 +631,18 @@ function compositeShapes(nextId: () => number, node: StateNode, f: Frame, dx: nu
   const h = scalePt(f.height, s);
   const titleH = scalePt(COMPOSITE_TITLE_H, s);
   const inset = scalePt(COMPOSITE_INSET, s);
+  // A style colours the box and its title band; the content area stays white, so the states inside keep
+  // their own look.
+  const look = stateLook(node);
   return [
-    rect(nextId(), x, y, w, h, FILL, LINE_COLOR, node.label, true, (COMPOSITE_RADIUS / Math.max(1, Math.min(f.width, f.height))) * 100000),
-    rect(nextId(), x + inset, y + titleH, w - 2 * inset, h - titleH - inset, 'FFFFFF', LINE_COLOR, `${node.label} content`),
-    textBoxLines(nextId(), x, y, w, titleH, [node.label], scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s), { align: 'ctr', bold: true }),
+    rect(nextId(), x, y, w, h, look.fill, look.line, node.label, true, (COMPOSITE_RADIUS / Math.max(1, Math.min(f.width, f.height))) * 100000),
+    rect(nextId(), x + inset, y + titleH, w - 2 * inset, h - titleH - inset, 'FFFFFF', look.line, `${node.label} content`),
+    textBoxLines(nextId(), x, y, w, titleH, [node.label], scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s), {
+      align: 'ctr',
+      color: look.text,
+      bold: look.bold ?? true,
+      italic: look.italic ?? false,
+    }),
   ];
 }
 
@@ -651,15 +750,37 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
     const to = shiftPoint(cTo, ux, uy, offset);
     const p1 = edgePoint(from.x, from.y, fFrom.width / 2, fFrom.height / 2, to.x, to.y);
     const p2 = edgePoint(to.x, to.y, fTo.width / 2, fTo.height / 2, from.x, from.y);
-    parts.push(
-      connector(nextId(), scalePt(p1.x + dx, s), scalePt(p1.y + dy, s), scalePt(p2.x + dx, s), scalePt(p2.y + dy, s), LINE_COLOR, lineWidth, 'solid', 'none', MARKER_SIZE, 'triangle', MARKER_SIZE),
-    );
+    // A straight line, unless it would cross another box (a state, a composite that holds neither end, a
+    // note): then Dagre's route around the boxes, its ends brought onto the two states.
+    const skip = new Set([t.from, t.to, ...nesting.ancestorsOf(t.from), ...nesting.ancestorsOf(t.to)]);
+    const obstacles = [...[...frames].filter(([id]) => !skip.has(id)).map(([, f]) => f), ...laid.notes.values()];
+    const route = laid.routes.get(transitionIndex);
+    const routed = route !== undefined && route.length >= 3 && obstacles.some((f) => segmentCrosses(p1, p2, f));
+    let path = [p1, p2];
+    let away = { x: ux * offset, y: uy * offset };
+    if (routed) {
+      const inner = route.slice(1, -1);
+      const firstBend = inner[0]!;
+      const lastBend = inner[inner.length - 1]!;
+      path = [edgePoint(cFrom.x, cFrom.y, fFrom.width / 2, fFrom.height / 2, firstBend.x, firstBend.y), ...inner, edgePoint(cTo.x, cTo.y, fTo.width / 2, fTo.height / 2, lastBend.x, lastBend.y)];
+      away = { x: 0, y: 0 };
+    }
+    // One connector per segment, the arrowhead on the last.
+    for (let k = 0; k + 1 < path.length; k++) {
+      const a = path[k]!;
+      const b = path[k + 1]!;
+      const last = k + 2 === path.length;
+      parts.push(
+        connector(nextId(), scalePt(a.x + dx, s), scalePt(a.y + dy, s), scalePt(b.x + dx, s), scalePt(b.y + dy, s), LINE_COLOR, lineWidth, 'solid', 'none', MARKER_SIZE, last ? 'triangle' : 'none', MARKER_SIZE),
+      );
+    }
     if (t.label) {
-      // In the room Dagre kept for it, set against the drawn line (`labelBeside`). A transition no single block
-      // laid out (between two regions of one composite) starts from the middle of its line instead.
+      // In the room Dagre kept for it, set against the drawn segment nearest to it (`labelBeside`). A transition
+      // no single block laid out (between two regions of one composite) starts from the middle of its line.
       const kept = laid.labels.get(transitionIndex) ?? { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
       const labelWidth = estimateTextWidth(t.label, 8) + 12;
-      const at = labelBeside(kept, p1, p2, labelWidth, { x: ux * offset, y: uy * offset });
+      const [segA, segB] = nearestSegment(path, kept);
+      const at = labelBeside(kept, segA, segB, labelWidth, away);
       parts.push(
         textBoxLines(nextId(), scalePt(at.x + dx, s), scalePt(at.y + dy, s), scalePt(labelWidth, s), scalePt(LABEL_H, s), [t.label], scaledFontSizeHalfPt(EDGE_LABEL_SIZE_HALFPT, s), {
           align: at.align,

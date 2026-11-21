@@ -1,0 +1,19 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { extractNodeStyle, parseCssStyleProps } from '../../src/parser/css-style.js';
+
+const read = (text: string) => extractNodeStyle(parseCssStyleProps(text));
+
+test('fill, stroke and color are kept only as hex colours', () => {
+  assert.deepEqual(read('fill:#f00,stroke:#336699,color:#FFF'), { fill: 'FF0000', stroke: '336699', color: 'FFFFFF' });
+  assert.deepEqual(read('fill:url(javascript:x),stroke:"/><evil'), {});
+});
+
+test('font-weight and font-style become booleans', () => {
+  assert.deepEqual(read('font-weight:bold,font-style:italic'), { bold: true, italic: true });
+  assert.deepEqual(read('font-weight:700'), { bold: true });
+  assert.deepEqual(read('font-weight:bolder,font-style:oblique'), { bold: true, italic: true });
+  assert.deepEqual(read('font-weight:normal,font-style:normal'), { bold: false, italic: false });
+  assert.deepEqual(read('font-weight:400'), { bold: false });
+  assert.deepEqual(read('font-weight:heavy,font-style:slanted'), {}, 'an unknown value sets nothing');
+});
