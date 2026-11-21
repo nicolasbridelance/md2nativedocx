@@ -92,8 +92,8 @@ test('a chart Word cannot draw falls back to shapes with a warning, never an err
 });
 
 test('parser warnings reach metadata.warnings, without a prefix', () => {
-  const result = renderDiagram('stateDiagram-v2\n  A --> B\n  note right of A : hi');
-  assert.ok(result.metadata.warnings.some((w) => w.startsWith('Notes are not yet supported for state diagrams')));
+  const result = renderDiagram('stateDiagram-v2\n  A --> B\n  state C {\n    D');
+  assert.ok(result.metadata.warnings.some((w) => w.startsWith('One or more composite state blocks were not closed')));
   assert.ok(result.metadata.warnings.every((w) => !w.startsWith('md2nativedocx')));
 });
 

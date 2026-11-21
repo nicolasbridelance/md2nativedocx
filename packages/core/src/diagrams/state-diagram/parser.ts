@@ -15,15 +15,15 @@
  *   it first appears in ({@link StateNode.parent}), as Mermaid does.
  * - Concurrency separators (a lone `--` inside a composite state): the block is split into
  *   {@link StateRegion}s.
+ * - Notes, `note left|right of X` up to `end note` or `note left|right of X : text`, into
+ *   {@link StateDiagram.notes}; as in Mermaid, a note names its state into existence.
  *
- * NOT implemented yet, each degrading to "recognized and warned", never silently dropped:
- * - Notes (`note left|right of X` block or one-line `: text` form) and `classDef`/`class`/`style` styling —
- *   recognized and warned, skipped entirely (no positional/structural information lost, only cosmetic
- *   extras).
+ * NOT implemented yet, degrading to "recognized and warned", never silently dropped: `classDef`/`class`/
+ * `style` styling (only cosmetic extras lost).
  */
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
-import type { StateDiagram, StateNode, StateNodeKind, StateRegion } from './types.js';
+import type { StateDiagram, StateNode, StateNodeKind, StateNote, StateRegion } from './types.js';
 
 export interface StateDiagramParseResult {
   ast: StateDiagram;
@@ -34,8 +34,31 @@ const STATE_ALIAS = /^state\s+"([^"]*)"\s+as\s+(\S+?)\s*(\{)?\s*$/i;
 const STATE_DECL = /^state\s+(\S+)\s*(?:<<(choice|fork|join)>>)?\s*(\{)?\s*$/i;
 const DESCRIPTION = /^(\S+)\s*:\s*(.+)$/;
 const BARE_STATE = /^[\p{L}\p{N}_][\p{L}\p{N}_-]*$/u;
-const NOTE_BLOCK_OPEN = /^note\s+(?:left|right)\s+of\s+\S+\s*$/i;
-const NOTE_ONE_LINE = /^note\s+(?:left|right)\s+of\s+\S+\s*:\s*.+$/i;
+const NOTE_START = /^note\s+(left|right)\s+of\s+/i;
+
+/**
+ * `note left|right of X` (a block up to `end note`, `text` undefined) or `note left|right of X : text`, or
+ * `null`. The state and the text are split at the first `:` rather than by one regular expression
+ * (untrusted input, `security/detect-unsafe-regex`).
+ */
+function parseNoteStart(line: string): { side: 'left' | 'right'; for: string; text?: string } | null {
+  const start = NOTE_START.exec(line);
+  if (!start) return null;
+  const side = start[1]!.toLowerCase() as 'left' | 'right';
+  const rest = line.slice(start[0].length);
+  const colon = rest.indexOf(':');
+  const target = (colon === -1 ? rest : rest.slice(0, colon)).trim();
+  if (target.length === 0 || /\s/.test(target)) return null;
+  return colon === -1 ? { side, for: target } : { side, for: target, text: rest.slice(colon + 1) };
+}
+
+/** A note's text as lines: `<br>` breaks a line, as in Mermaid; each line trimmed, empty ones dropped. */
+function noteLines(text: string): string[] {
+  return text
+    .split(/<br\s*\/?>/i)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+}
 /** Deepest nesting of composite states kept; a block deeper than this holds its states in the last one kept. */
 export const MAX_DEPTH = 32;
 
@@ -132,7 +155,9 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
     block.scope = region().id;
   }
 
-  let inNoteBlock = false;
+  const notes: StateNote[] = [];
+  /** A `note … of X` block being read, up to `end note`. */
+  let openNote: StateNote | undefined;
 
   let inFrontmatter = false;
   let inAccDescrBlock = false;
@@ -171,6 +196,24 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       continue;
     }
 
+    // A note's text is taken as written, before comments and `:::` suffixes are stripped from the line.
+    if (openNote) {
+      if (/^end\s+note$/i.test(line)) {
+        notes.push(openNote);
+        openNote = undefined;
+      } else {
+        openNote.lines.push(...noteLines(line));
+      }
+      continue;
+    }
+    const note = parseNoteStart(line);
+    if (note) {
+      getOrCreateState(note.for);
+      if (note.text === undefined) openNote = { lines: [], for: note.for, side: note.side };
+      else notes.push({ lines: noteLines(note.text), for: note.for, side: note.side });
+      continue;
+    }
+
     // A trailing `%% comment` is not part of a label, and `:::className` suffixes on endpoints are
     // styling (not supported) - drop both before the transition/description rules read the line.
     const commentAt = line.indexOf('%%');
@@ -181,20 +224,6 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
         warnings.push('State diagram :::className styling is not supported and was ignored.');
         warnedClassRef = true;
       }
-    }
-
-    if (inNoteBlock) {
-      if (/^end\s+note$/i.test(line)) inNoteBlock = false;
-      continue;
-    }
-    if (NOTE_BLOCK_OPEN.test(line)) {
-      inNoteBlock = true;
-      warnings.push(`Notes are not yet supported for state diagrams, ignored: ${line}`);
-      continue;
-    }
-    if (NOTE_ONE_LINE.test(line)) {
-      warnings.push(`Notes are not yet supported for state diagrams, ignored: ${line}`);
-      continue;
     }
 
     if (line === '}') {
@@ -286,9 +315,19 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
   if (blocks.length > 0) {
     warnings.push('One or more composite state blocks were not closed with a matching "}".');
   }
+  if (openNote) {
+    warnings.push(`A note for "${openNote.for}" was not closed with "end note"; it is kept up to the end of the diagram.`);
+    notes.push(openNote);
+  }
 
   return {
-    ast: { direction, states: [...states.values()], transitions, ...(regions.length > 0 ? { regions } : {}) },
+    ast: {
+      direction,
+      states: [...states.values()],
+      transitions,
+      ...(regions.length > 0 ? { regions } : {}),
+      ...(notes.length > 0 ? { notes } : {}),
+    },
     warnings,
   };
 }

@@ -128,17 +128,27 @@ test('-- outside a composite is warned; nesting past the depth cap is kept in th
   assert.equal(deep.ast.states.find((s) => s.id === 'after')?.parent, undefined);
 });
 
-test('note blocks (multi-line and one-line) are recognized and warned, contents skipped', () => {
+test('notes: a block up to end note and the one-line form, each line trimmed (Mermaid #15)', () => {
   const { ast, warnings } = parseStateDiagram(
-    'stateDiagram-v2\n  state Active {\n    note right of Active\n      this is a note\n    end note\n  }\n  [*] --> Active',
+    'stateDiagram-v2\n  State1: The state with a note\n  note right of State1\n    Important information! You can write\n    notes. %% a comment, as everywhere in Mermaid\n  end note\n  State1 --> State2\n  note left of State2 : This is the note<br>to the left.',
   );
-  assert.equal(ast.states.length, 2); // Active + the start pseudostate
-  assert.ok(warnings.some((w) => w.includes('Notes')));
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.notes, [
+    { lines: ['Important information! You can write', 'notes.'], for: 'State1', side: 'right' },
+    { lines: ['This is the note', 'to the left.'], for: 'State2', side: 'left' },
+  ]);
 });
 
-test('a one-line note is recognized and warned', () => {
-  const { warnings } = parseStateDiagram('stateDiagram-v2\n  note right of Active : a note\n  [*] --> Active');
-  assert.ok(warnings.some((w) => w.includes('Notes')));
+test('a note names its state into existence, in the block it is written in', () => {
+  const { ast } = parseStateDiagram('stateDiagram-v2\n  state Outer {\n    note left of Inner : here\n  }');
+  assert.equal(ast.states.find((s) => s.id === 'Inner')?.parent, 'Outer');
+  assert.equal(ast.notes?.[0]?.for, 'Inner');
+});
+
+test('an unclosed note block is kept and warned', () => {
+  const { ast, warnings } = parseStateDiagram('stateDiagram-v2\n  A --> B\n  note right of A\n    dangling');
+  assert.deepEqual(ast.notes?.[0]?.lines, ['dangling']);
+  assert.ok(warnings.some((w) => w.includes('end note')));
 });
 
 test('classDef/class/style lines are recognized and warned, not silently dropped', () => {

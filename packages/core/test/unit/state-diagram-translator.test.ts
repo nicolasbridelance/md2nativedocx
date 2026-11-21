@@ -163,6 +163,30 @@ test('two transitions between the same states are drawn apart, not on top of eac
   assert.notEqual(lines[0], lines[1]);
 });
 
+test('a note is a folded-corner box on its side of the state, joined by a dotted line, clear of other boxes (Mermaid #15)', () => {
+  const xml = translate(
+    'stateDiagram-v2\n  State1: The state with a note\n  note right of State1\n    Important information!\n  end note\n  State1 --> State2\n  note left of State2 : To the left',
+  );
+  assert.equal((xml.match(/prst="foldedCorner"/g) ?? []).length, 2);
+  const all = boxes(xml);
+  const notes = all.filter((b) => xml.includes(`name="${b.name}"`) && /^Box /.test(b.name));
+  assert.equal(notes.length, 2);
+  const [right, left] = notes as [(typeof notes)[0], (typeof notes)[0]];
+  const s1 = box(xml, 'The state with a note');
+  const s2 = box(xml, 'State2');
+  assert.ok(right.x >= s1.x + s1.w, 'right of State1');
+  assert.ok(left.x + left.w <= s2.x, 'left of State2');
+  const overlaps = (a: typeof s1, b: typeof s1): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  for (const n of notes) for (const st of [s1, s2]) assert.ok(!overlaps(n, st), 'a note never covers a state');
+  assert.ok(xml.includes('Important information!'));
+});
+
+test('note text is XML-escaped', () => {
+  const xml = translate('stateDiagram-v2\n  A --> B\n  note right of A : </w:t><w:evil/> & "q"');
+  assert.ok(!xml.includes('<w:evil'));
+  assert.ok(xml.includes('&lt;/w:t&gt;&lt;w:evil/&gt; &amp;'));
+});
+
 test('a parent cycle in a hand-built AST is cut rather than recursing for ever', () => {
   const xml = translateStateDiagramToOoxml({
     direction: 'TD',

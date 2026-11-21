@@ -113,6 +113,18 @@ test('composite states and their regions kept; notes, skinparam, style, json and
   assert.equal(ast.states.find((s) => s.id === 'Outer')?.direction, 'LR', 'PlantUML lays composites out in the diagram direction');
 });
 
+test('notes on four sides, one-line and block, colour dropped; floating notes still warned', () => {
+  const { ast, warnings } = parsePlantUmlState(
+    uml('A --> B\nnote left of A : one\\ntwo\nnote top of B #pink\n  first\n  second\nend note\nnote "floating" as N1\nnote bottom of "C" : below'),
+  );
+  assert.deepEqual(ast.notes, [
+    { lines: ['one', 'two'], for: 'A', side: 'left' },
+    { lines: ['first', 'second'], for: 'B', side: 'top' },
+    { lines: ['below'], for: 'C', side: 'bottom' },
+  ]);
+  assert.ok(warnings.some((w) => /Floating notes/.test(w)));
+});
+
 test('one [*] start and end per block, as in PlantUML', () => {
   const { ast } = parsePlantUmlState(uml('[*] --> A\n[*] --> B\nstate A {\n  [*] --> a\n  a --> [*]\n}\nB --> [*]'));
   assert.deepEqual(ast.states.filter((s) => s.kind === 'start').map((s) => s.parent), [undefined, 'A']);

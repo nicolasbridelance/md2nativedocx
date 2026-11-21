@@ -206,7 +206,11 @@ Ensuite, dans l'ordre :
               composite un lien ordinaire ; direction propre de chaque composite (TB par défaut, comme la base de
               Mermaid) ; libellés posés dans la place que Dagre leur garde, transitions jumelles écartées ; aussi en
               PlantUML (direction du diagramme) ; différentiel étendu aux parents, **22/22** ; vérifié dans Word,
-              `test-corpus/word-verification/state-composites.*`). Reste : notes, styles. Une transition qui
+              `test-corpus/word-verification/state-composites.*`), ~~notes~~ (faites le 2026-11-21 : `StateDiagram.notes`, à gauche/droite
+              en Mermaid, aussi haut/bas en PlantUML ; chaque note agrandit la boîte de mise en page de son état, donc
+              Dagre la tient à l'écart des autres boîtes ; une note du côté où arrivent les transitions est décalée hors
+              de l'axe de l'état ; différentiel étendu aux notes ; vérifié dans Word, `test-corpus/word-verification/
+              state-notes.*`). Reste : styles. Une transition qui
               traverse le bord d'un composite est tracée droite, sans routage ;
             - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
               cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;

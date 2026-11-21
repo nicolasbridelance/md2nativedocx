@@ -10,13 +10,14 @@
  * `<<fork>>`, `<<join>>`, `<<start>>`, `<<end>>` (other ones drawn as ordinary states); `X : text` and
  * `state X : text` as description lines under the name; composite states `state X { ... }` (nested boxes,
  * laid out in the diagram's direction as PlantUML does) and their concurrent regions `--` / `||`; one `[*]`
- * start and one end per block, as in PlantUML; `left to right direction`. Ignored with a warning: notes
- * (also `note on link`), hidden transitions, colours and inline styles,
+ * start and one end per block, as in PlantUML; `left to right direction`; notes `note left|right|top|bottom
+ * of X` (one line after `:`, or a block up to `end note`). Ignored with a warning: floating notes and
+ * `note on link`, hidden transitions, colours and inline styles,
  * `skinparam`, `<style>`, `hide` / `scale` / `title`..., preprocessor lines, `!include` (never followed).
  * Capped (hostile input): 300 states, 600 transitions, 20 description lines per state.
  */
 
-import type { StateDiagram, StateNode, StateNodeKind, StateRegion } from '../state-diagram/types.js';
+import type { StateDiagram, StateNode, StateNodeKind, StateNote, StateRegion } from '../state-diagram/types.js';
 
 export interface PlantUmlStateParseResult {
   ast: StateDiagram;
@@ -27,6 +28,8 @@ const MAX_STATES = 300;
 const MAX_TRANSITIONS = 600;
 const MAX_DESCRIPTION = 20;
 const MAX_LINE = 2000;
+const MAX_NOTES = 100;
+const MAX_NOTE_LINES = 50;
 /** Deepest nesting of composite states kept; deeper blocks hold their states in the last one kept. */
 const MAX_DEPTH = 32;
 
@@ -166,11 +169,40 @@ export function parsePlantUmlState(source: string): PlantUmlStateParseResult {
 
   let multi: RegExp | undefined;
   let inBlockComment = false;
+  const notes: StateNote[] = [];
+  /** A `note … of X` block being read, up to `end note`. */
+  let openNote: StateNote | undefined;
+  const addNote = (note: StateNote): void => {
+    if (notes.length >= MAX_NOTES) {
+      warnOnce('notes', `State diagram limited to ${MAX_NOTES} notes; the rest were ignored.`);
+      return;
+    }
+    if (note.lines.length > MAX_NOTE_LINES) {
+      warnOnce('noteLines', `Notes are limited to ${MAX_NOTE_LINES} lines; the rest were ignored.`);
+      note.lines = note.lines.slice(0, MAX_NOTE_LINES);
+    }
+    notes.push(note);
+  };
+  /** A note's text as lines: PlantUML's `\n` breaks a line too. */
+  const noteLines = (text: string): string[] =>
+    text
+      .split(/\\n/)
+      .map((l) => l.trim())
+      .filter((l) => l !== '');
 
   for (const rawLine of source.split(/\r?\n/)) {
     const line = rawLine.trim().slice(0, MAX_LINE);
     if (inBlockComment) {
       if (line.includes("'/")) inBlockComment = false;
+      continue;
+    }
+    if (openNote) {
+      if (/^end\s*note$/i.test(line)) {
+        addNote(openNote);
+        openNote = undefined;
+      } else if (openNote.lines.length <= MAX_NOTE_LINES) {
+        openNote.lines.push(...noteLines(line));
+      }
       continue;
     }
     if (multi) {
@@ -215,8 +247,17 @@ export function parsePlantUmlState(source: string): PlantUmlStateParseResult {
     } else if (/^legend\b/i.test(line)) {
       warnOnce('legend', '`legend` blocks are ignored.');
       multi = /^end\s*legend$/i;
+    } else if ((m = line.match(new RegExp(String.raw`^note\s+(left|right|top|bottom)\s+of\s+(${NAME})(.*)$`, 'i')))) {
+      const side = (m[1] as string).toLowerCase() as StateNote['side'];
+      const target = endpoint(m[2] as string, 'to');
+      // A colour right after the state (`note left of A #pink`) is not drawn.
+      const rest = (m[3] as string).replace(/^\s*#\S*/, '').trim();
+      if (target === undefined) continue;
+      if (rest.startsWith(':')) addNote({ lines: noteLines(rest.slice(1)), for: target, side });
+      else if (rest === '') openNote = { lines: [], for: target, side };
+      else warnings.push(`Unsupported part of a note ignored: ${line}`);
     } else if (/^[hr]?note\b/i.test(line)) {
-      warnOnce('note', 'Notes are not drawn in state diagrams.');
+      warnOnce('note', 'Floating notes and notes on links are not drawn in state diagrams.');
       // One-line notes have a `:` or a quoted text; the others run to `end note`.
       if (!/(?<!:):(?!:)/.test(line) && !/^[hr]?note\s+"[^"]*"/i.test(line)) multi = /^end\s*[hr]?note$/i;
     } else if ((m = line.match(new RegExp(String.raw`^state\s+(${NAME})(.*)$`, 'i')))) {
@@ -288,6 +329,10 @@ export function parsePlantUmlState(source: string): PlantUmlStateParseResult {
     }
   }
 
+  if (openNote) {
+    warnings.push(`A note for "${openNote.for}" was never closed with \`end note\`; it is kept up to the end of the diagram.`);
+    addNote(openNote);
+  }
   if (multi) warnings.push('A multi-line block (`note`, `legend`, `<style>`) was never closed; the rest was ignored.');
   if (blocks.length > 0) warnings.push('One or more `{` blocks were never closed; closed automatically.');
   // PlantUML lays a composite's content out in the diagram's direction (Mermaid, whose default the AST
@@ -297,5 +342,8 @@ export function parsePlantUmlState(source: string): PlantUmlStateParseResult {
     const holder = states.get(node.parent) ?? states.get(regions.find((r) => r.id === node.parent)?.parent ?? '');
     if (holder) holder.direction = direction;
   }
-  return { ast: { direction, states: [...states.values()], transitions, ...(regions.length > 0 ? { regions } : {}) }, warnings };
+  return {
+    ast: { direction, states: [...states.values()], transitions, ...(regions.length > 0 ? { regions } : {}), ...(notes.length > 0 ? { notes } : {}) },
+    warnings,
+  };
 }

@@ -31,7 +31,8 @@
 
 import dagre from 'dagre';
 import { assertWithinLimits, layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
-import type { StateDiagram, StateNode, StateRegion } from './types.js';
+import type { StateDiagram, StateNode, StateNote, StateRegion } from './types.js';
+import { boxShape } from '../../translator/boxes.js';
 import { estimateTextWidth } from '../../layout/layout.js';
 import {
   createIdAllocator,
@@ -64,6 +65,15 @@ const COMPOSITE_INSET = 4;
 const COMPOSITE_RADIUS = 8;
 /** Gap between two concurrent regions, the dashed divider in its middle. */
 const REGION_GAP = 24;
+/** Note: the class diagram's look (Mermaid's default note colours, folded corner, left-aligned lines). */
+const NOTE_FILL = 'FFF5AD';
+const NOTE_LINE = 'AAAA33';
+const NOTE_FONT_PX = 11;
+const NOTE_LINE_H = 18;
+const NOTE_PAD = 10;
+/** Gap between a state and its notes, and between two notes on the same side. */
+const NOTE_GAP = 16;
+const NOTE_STACK_GAP = 8;
 /** Gap between two transitions joining the same pair of states (`A --> B`, `B --> A`). */
 const PARALLEL_GAP = 14;
 
@@ -194,6 +204,12 @@ interface BlockLayout {
   dividers: Array<{ x1: number; y1: number; x2: number; y2: number }>;
   /** Centre of the room Dagre kept for a transition's label, by the transition's index. */
   labels: Map<number, { x: number; y: number }>;
+  /** Every note in the block, at any depth, by the note's index in `StateDiagram.notes`. */
+  notes: Map<number, Frame>;
+}
+
+function centre(f: Frame): { x: number; y: number } {
+  return { x: f.x + f.width / 2, y: f.y + f.height / 2 };
 }
 
 function offsetFrame(f: Frame, dx: number, dy: number): Frame {
@@ -205,10 +221,11 @@ function mergeInto(outer: BlockLayout, inner: BlockLayout, dx: number, dy: numbe
   for (const [id, f] of inner.frames) outer.frames.set(id, offsetFrame(f, dx, dy));
   for (const d of inner.dividers) outer.dividers.push({ x1: d.x1 + dx, y1: d.y1 + dy, x2: d.x2 + dx, y2: d.y2 + dy });
   for (const [i, p] of inner.labels) outer.labels.set(i, { x: p.x + dx, y: p.y + dy });
+  for (const [i, f] of inner.notes) outer.notes.set(i, offsetFrame(f, dx, dy));
 }
 
 function emptyLayout(): BlockLayout {
-  return { width: 0, height: 0, frames: new Map(), dividers: [], labels: new Map() };
+  return { width: 0, height: 0, frames: new Map(), dividers: [], labels: new Map(), notes: new Map() };
 }
 
 /** The diagram's nesting: what each block holds. The key of the diagram itself is `undefined`. */
@@ -282,9 +299,80 @@ function selfLoopRooms(chart: StateDiagram): Map<string, number> {
   return rooms;
 }
 
+/** A note's box: its longest line, its line count, padding, and the folded corner's room. */
+function noteSize(note: StateNote): NodeSize {
+  const widest = Math.max(0, ...note.lines.map((line) => estimateTextWidth(line, NOTE_FONT_PX)));
+  return { width: Math.max(60, widest + 2 * NOTE_PAD + 12), height: Math.max(1, note.lines.length) * NOTE_LINE_H + 2 * NOTE_PAD };
+}
+
+/**
+ * What one member of a block takes in its Dagre graph: the state, its self-loop's room on its right, and its
+ * notes on their sides (stacked when several share a side). Dagre then keeps the notes clear of every other
+ * box, as it does the state. Positions are relative to the member's box, the box around all of them.
+ *
+ * Transitions are straight lines to the state's centre, and they come in along the block's flow: from above
+ * and below in a top-to-bottom block, from the sides in a left-to-right one. A note on such a side is moved
+ * off the state's axis (to the right of it above or below, beneath it on the left or right), so the lines
+ * coming in along the flow pass beside it instead of through it. A note on a side across the flow stays
+ * centred on the state.
+ */
+interface MemberBox {
+  width: number;
+  height: number;
+  state: { x: number; y: number };
+  notes: Array<{ index: number; frame: Frame }>;
+}
+
+function memberBox(size: NodeSize, loopRoom: number, notes: Array<{ index: number; note: StateNote }>, direction: StateDiagram['direction']): MemberBox {
+  const vertical = direction === 'TD' || direction === 'BT';
+  const bySide = (side: StateNote['side']) => notes.filter(({ note }) => note.side === side).map(({ index, note }) => ({ index, size: noteSize(note) }));
+  const stackH = (list: Array<{ size: NodeSize }>): number => list.reduce((h, n) => h + n.size.height, 0) + Math.max(0, list.length - 1) * NOTE_STACK_GAP;
+  // Everything placed around the state, its top-left corner at (0, 0); the box is then fitted around it all.
+  const placed: Array<{ index: number; frame: Frame }> = [];
+  const cx = size.width / 2;
+  const cy = size.height / 2;
+  const stack = (list: ReturnType<typeof bySide>, x: (w: number) => number, top: number): void => {
+    let y = top;
+    for (const n of list) {
+      placed.push({ index: n.index, frame: { x: x(n.size.width), y, width: n.size.width, height: n.size.height } });
+      y += n.size.height + NOTE_STACK_GAP;
+    }
+  };
+  const left = bySide('left');
+  const right = bySide('right');
+  const top = bySide('top');
+  const bottom = bySide('bottom');
+  // Left and right: centred on the state, or beneath its axis in a left-to-right block.
+  const sideTop = (list: ReturnType<typeof bySide>): number => (vertical ? cy - stackH(list) / 2 : cy + NOTE_STACK_GAP);
+  stack(left, (w) => -NOTE_GAP - w, sideTop(left));
+  stack(right, () => size.width + loopRoom + NOTE_GAP, sideTop(right));
+  // Above and below: centred on the state, or right of its axis in a top-to-bottom block.
+  const across = (w: number): number => (vertical ? cx + NOTE_STACK_GAP : cx - w / 2);
+  stack(top, across, -NOTE_GAP - stackH(top));
+  stack(bottom, across, size.height + NOTE_GAP);
+
+  let minX = 0;
+  let minY = 0;
+  let maxX = size.width + loopRoom;
+  let maxY = size.height;
+  for (const { frame: f } of placed) {
+    minX = Math.min(minX, f.x);
+    minY = Math.min(minY, f.y);
+    maxX = Math.max(maxX, f.x + f.width);
+    maxY = Math.max(maxY, f.y + f.height);
+  }
+  return {
+    width: maxX - minX,
+    height: maxY - minY,
+    state: { x: -minX, y: -minY },
+    notes: placed.map(({ index, frame }) => ({ index, frame: offsetFrame(frame, -minX, -minY) })),
+  };
+}
+
 /** Lays the diagram out block by block, from the inside out (see the module doc comment). */
 class StateLayout {
   private readonly loopRooms: Map<string, number>;
+  private readonly notesOf = new Map<string, Array<{ index: number; note: StateNote }>>();
 
   constructor(
     private readonly chart: StateDiagram,
@@ -292,6 +380,11 @@ class StateLayout {
     private readonly options: CanvasOptions,
   ) {
     this.loopRooms = selfLoopRooms(chart);
+    (chart.notes ?? []).forEach((note, index) => {
+      const list = this.notesOf.get(note.for) ?? [];
+      list.push({ index, note });
+      this.notesOf.set(note.for, list);
+    });
   }
 
   /** The members of `block` laid out in one Dagre graph, in `direction`. */
@@ -313,12 +406,15 @@ class StateLayout {
       }
     }
 
+    const boxes = new Map<string, MemberBox>();
+    for (const node of members) boxes.set(node.id, memberBox(sizes.get(node.id)!, this.loopRooms.get(node.id) ?? 0, this.notesOf.get(node.id) ?? [], direction));
+
     const g = new dagre.graphlib.Graph({ multigraph: true });
     g.setGraph({ rankdir: RANKDIR[direction], nodesep: 40, ranksep: 60, marginx: 0, marginy: 0 });
     g.setDefaultEdgeLabel(() => ({}));
     for (const node of members) {
-      const size = sizes.get(node.id)!;
-      g.setNode(nodeKey(node.id), { width: size.width + (this.loopRooms.get(node.id) ?? 0), height: size.height });
+      const box = boxes.get(node.id)!;
+      g.setNode(nodeKey(node.id), { width: box.width, height: box.height });
     }
     // A transition joins, at this level, the two members holding its ends; one inside a single member is laid
     // out with that member's content. A label tells Dagre the room it takes, as the class diagram does.
@@ -332,11 +428,14 @@ class StateLayout {
     layoutWithinLimits(g, this.options);
 
     for (const node of members) {
-      const n = g.node(nodeKey(node.id)) as { x: number; y: number; width: number };
+      const n = g.node(nodeKey(node.id)) as { x: number; y: number };
       const size = sizes.get(node.id)!;
-      // The loop's room is on the right: the state itself sits at the left of its layout box.
-      const frame = { x: n.x - n.width / 2, y: n.y - size.height / 2, width: size.width, height: size.height };
+      const box = boxes.get(node.id)!;
+      const left = n.x - box.width / 2;
+      const top = n.y - box.height / 2;
+      const frame = { x: left + box.state.x, y: top + box.state.y, width: size.width, height: size.height };
       out.frames.set(node.id, frame);
+      for (const { index, frame: f } of box.notes) out.notes.set(index, offsetFrame(f, left, top));
       const content = inner.get(node.id);
       if (content) mergeInto(out, content, frame.x, frame.y);
     }
@@ -399,11 +498,12 @@ const LABEL_GAP = 4;
 
 /**
  * Where a transition label goes (top-left corner, alignment), from the centre Dagre kept for it. Dagre keeps
- * that room on its own route, which the straight line drawn here does not always follow: on a vertical line
- * the label is moved against the line, on the side Dagre chose (the right when it sat on the line), and on a
- * horizontal one just above or below it, so it neither crosses its line nor floats away from it. A line
- * spread from a twin (`A --> B`, `B --> A`) takes its label to the side away from the twin, `away` (the
- * perpendicular offset it was drawn with), whatever Dagre chose. On a slanted line, Dagre's spot is kept.
+ * that room on its own route, which the straight line drawn here does not follow: left there, a label floats
+ * away from its line or sits across it. So the spot is projected onto the drawn line (kept off its ends) and
+ * the label set against the line at that point, on the side Dagre chose, just far enough that its box does
+ * not touch the line: the box's half-extent along the line's normal, plus a gap. A line spread from a twin
+ * (`A --> B`, `B --> A`) takes its label to the side away from the twin, `away` (the perpendicular offset it
+ * was drawn with), whatever Dagre chose.
  */
 function labelBeside(
   kept: { x: number; y: number },
@@ -412,20 +512,24 @@ function labelBeside(
   width: number,
   away: { x: number; y: number },
 ): { x: number; y: number; align: 'l' | 'ctr' } {
-  const vertical = Math.abs(p2.x - p1.x) < 4;
-  const horizontal = Math.abs(p2.y - p1.y) < 4;
-  if (vertical) {
-    const lineX = (p1.x + p2.x) / 2;
-    // Left of the line, the box is sized to the text, so centring in it reads as right-aligned.
-    const left = Math.abs(away.x) > 1 ? away.x < 0 : kept.x < lineX - 1;
-    return left ? { x: lineX - LABEL_GAP - width, y: kept.y - LABEL_H / 2, align: 'ctr' } : { x: lineX + LABEL_GAP, y: kept.y - LABEL_H / 2, align: 'l' };
-  }
-  if (horizontal) {
-    const lineY = (p1.y + p2.y) / 2;
-    const below = Math.abs(away.y) > 1 ? away.y > 0 : kept.y > lineY + 1;
-    return { x: kept.x - width / 2, y: below ? lineY + LABEL_GAP / 2 : lineY - LABEL_H - LABEL_GAP / 2, align: 'ctr' };
-  }
-  return { x: kept.x - width / 2, y: kept.y - LABEL_H / 2, align: 'ctr' };
+  const lx = p2.x - p1.x;
+  const ly = p2.y - p1.y;
+  const length = Math.hypot(lx, ly);
+  if (length === 0) return { x: kept.x - width / 2, y: kept.y - LABEL_H / 2, align: 'ctr' };
+  // Unit normal, turned to the right or, on a horizontal line, upwards: the default side.
+  let nx = -ly / length;
+  let ny = lx / length;
+  if (nx < -1e-9 || (Math.abs(nx) <= 1e-9 && ny > 0)) [nx, ny] = [-nx, -ny];
+  const t = Math.min(0.8, Math.max(0.2, ((kept.x - p1.x) * lx + (kept.y - p1.y) * ly) / (length * length)));
+  const q = { x: p1.x + t * lx, y: p1.y + t * ly };
+  const twin = away.x * nx + away.y * ny;
+  const chosen = (kept.x - q.x) * nx + (kept.y - q.y) * ny;
+  const side = Math.abs(twin) > 1 ? Math.sign(twin) : Math.abs(chosen) > 1 ? Math.sign(chosen) : 1;
+  const clearance = (width / 2) * Math.abs(nx) + (LABEL_H / 2) * Math.abs(ny) + LABEL_GAP;
+  const cx = q.x + side * nx * clearance;
+  const cy = q.y + side * ny * clearance;
+  // Right of a near-vertical line, the text starts at the line; elsewhere it is centred in a box sized to it.
+  return { x: cx - width / 2, y: cy - LABEL_H / 2, align: side * nx > 0.9 ? 'l' : 'ctr' };
 }
 
 /** The shapes of a composite state: its box and title band, the white content area below the title. */
@@ -490,6 +594,31 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
     const f = frames.get(node.id);
     if (f && nesting.isComposite(node.id)) parts.push(...compositeShapes(nextId, node, f, dx, dy, s));
   }
+  // Notes: the dotted line to their state first, then the note itself.
+  for (const [index, f] of laid.notes) {
+    const note = chart.notes![index]!;
+    const target = frames.get(note.for);
+    if (target) {
+      const nc = centre(f);
+      const tc = centre(target);
+      const a = edgePoint(nc.x, nc.y, f.width / 2, f.height / 2, tc.x, tc.y);
+      const b = edgePoint(tc.x, tc.y, target.width / 2, target.height / 2, nc.x, nc.y);
+      parts.push(connector(nextId(), scalePt(a.x + dx, s), scalePt(a.y + dy, s), scalePt(b.x + dx, s), scalePt(b.y + dy, s), NOTE_LINE, lineWidth, 'dash', 'none', 'sm', 'none', 'sm'));
+    }
+    parts.push(
+      boxShape(
+        nextId(),
+        scalePt(f.x + dx, s),
+        scalePt(f.y + dy, s),
+        scalePt(f.width, s),
+        scalePt(f.height, s),
+        note.lines.length > 0 ? note.lines : [''],
+        { fill: NOTE_FILL, line: NOTE_LINE, color: '000000', align: 'left', prst: 'foldedCorner' },
+        NOTE_FONT_PX,
+        s,
+      ),
+    );
+  }
   for (const d of laid.dividers) {
     parts.push(connector(nextId(), scalePt(d.x1 + dx, s), scalePt(d.y1 + dy, s), scalePt(d.x2 + dx, s), scalePt(d.y2 + dy, s), LINE_COLOR, lineWidth, 'dash', 'none', 'sm', 'none', 'sm'));
   }
@@ -500,7 +629,6 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
   const pairCount = new Map<string, number>();
   for (const t of chart.transitions) if (t.from !== t.to) pairCount.set(pairKey(t), (pairCount.get(pairKey(t)) ?? 0) + 1);
   const pairSeen = new Map<string, number>();
-  const centre = (f: Frame): { x: number; y: number } => ({ x: f.x + f.width / 2, y: f.y + f.height / 2 });
 
   for (const [transitionIndex, t] of chart.transitions.entries()) {
     const fFrom = frames.get(t.from);
@@ -526,39 +654,16 @@ export function translateStateDiagramToOoxml(chart: StateDiagram, options: Canva
     parts.push(
       connector(nextId(), scalePt(p1.x + dx, s), scalePt(p1.y + dy, s), scalePt(p2.x + dx, s), scalePt(p2.y + dy, s), LINE_COLOR, lineWidth, 'solid', 'none', MARKER_SIZE, 'triangle', MARKER_SIZE),
     );
-    const kept = laid.labels.get(transitionIndex);
-    if (t.label && kept) {
-      // In the room Dagre kept for it: clear of every box, which the middle of a straight line is not.
+    if (t.label) {
+      // In the room Dagre kept for it, set against the drawn line (`labelBeside`). A transition no single block
+      // laid out (between two regions of one composite) starts from the middle of its line instead.
+      const kept = laid.labels.get(transitionIndex) ?? { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
       const labelWidth = estimateTextWidth(t.label, 8) + 12;
       const at = labelBeside(kept, p1, p2, labelWidth, { x: ux * offset, y: uy * offset });
       parts.push(
         textBoxLines(nextId(), scalePt(at.x + dx, s), scalePt(at.y + dy, s), scalePt(labelWidth, s), scalePt(LABEL_H, s), [t.label], scaledFontSizeHalfPt(EDGE_LABEL_SIZE_HALFPT, s), {
           align: at.align,
         }),
-      );
-    } else if (t.label) {
-      // A transition no single block laid out (between two regions of one composite): beside its middle.
-      const midX = (p1.x + p2.x) / 2;
-      const midY = (p1.y + p2.y) / 2;
-      const labelWidth = estimateTextWidth(t.label, 8) + 12;
-      // Beside a slanted line rather than across it: on the side the line heads to, so the labels of two
-      // transitions that diverge from one state end up on either side instead of on top of each other. A
-      // vertical line spread from its twin (`offset`) takes its label to its own side too.
-      const slope = p2.x - p1.x;
-      const side = Math.abs(slope) < 4 ? (Math.abs(ux) > 0.5 && offset !== 0 ? Math.sign(ux * offset) : 0) : Math.sign(slope);
-      const x = side === 0 ? midX - labelWidth / 2 : side > 0 ? midX + 4 : midX - labelWidth - 4;
-      parts.push(
-        textBoxLines(
-          nextId(),
-          scalePt(x + dx, s),
-          scalePt(midY + dy - 10, s),
-          scalePt(labelWidth, s),
-          scalePt(20, s),
-          [t.label],
-          scaledFontSizeHalfPt(EDGE_LABEL_SIZE_HALFPT, s),
-          // Left of the line, the box is sized to the text, so centring in it reads as right-aligned.
-          { align: side > 0 ? 'l' : 'ctr' },
-        ),
       );
     }
   }

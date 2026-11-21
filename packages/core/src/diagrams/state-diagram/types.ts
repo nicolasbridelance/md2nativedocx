@@ -53,6 +53,15 @@ export interface StateRegion {
   parent: string;
 }
 
+/** A note beside a state: Mermaid `note left|right of X`, PlantUML also `top` / `bottom`. */
+export interface StateNote {
+  /** Text, one entry per line (each trimmed); Mermaid's `<br>` and PlantUML's `\n` also break a line. */
+  lines: string[];
+  /** Id of the state the note is for. */
+  for: string;
+  side: 'left' | 'right' | 'top' | 'bottom';
+}
+
 export interface StateTransition {
   from: string;
   to: string;
@@ -66,4 +75,6 @@ export interface StateDiagram {
   transitions: StateTransition[];
   /** Concurrent regions, in source order. Absent when no composite state has a `--` separator. */
   regions?: StateRegion[];
+  /** Notes, in source order. Absent when the diagram has none. */
+  notes?: StateNote[];
 }

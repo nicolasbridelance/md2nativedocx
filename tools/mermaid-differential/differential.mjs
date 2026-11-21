@@ -223,6 +223,12 @@ const COMPARATORS = {
       const where = (n) => (n.parentId === undefined ? '' : ` in ${regionName.get(n.parentId) ?? n.parentId}`);
       const facts = nodes.filter((n) => !pseudo.has(n.id) && !layoutOnly.has(n.id)).map((n) => `state ${n.id}${where(n)}`);
       for (const n of nodes.filter((p) => pseudo.has(p.id))) facts.push(`${pseudo.get(n.id)}${where(n)}`);
+      // A note is a `note` node joined to its state by an edge, either way round.
+      for (const n of nodes.filter((p) => p.shape === 'note')) {
+        const link = edges.find((e) => e.start === n.id || e.end === n.id);
+        const target = link ? (link.start === n.id ? link.end : link.start) : '-';
+        facts.push(`note ${String(n.position).replace(/ of$/, '')} of ${target} "${normText(mermaidEntities(n.label))}"`);
+      }
       for (const e of edges) {
         if (layoutOnly.has(e.start) || layoutOnly.has(e.end)) continue;
         facts.push(`transition ${pseudo.get(e.start) ?? e.start} -> ${pseudo.get(e.end) ?? e.end}${e.label ? ` "${normText(mermaidEntities(e.label))}"` : ''}`);
@@ -240,6 +246,7 @@ const COMPARATORS = {
       const where = (s) => (s.parent === undefined ? '' : ` in ${regionName.get(s.parent) ?? s.parent}`);
       const facts = ast.states.filter((s) => !pseudo.has(s.id)).map((s) => `state ${s.id}${where(s)}`);
       for (const s of ast.states.filter((p) => pseudo.has(p.id))) facts.push(`${pseudo.get(s.id)}${where(s)}`);
+      for (const note of ast.notes ?? []) facts.push(`note ${note.side} of ${note.for} "${ourText(note.lines.join(' '))}"`);
       for (const t of ast.transitions) facts.push(`transition ${pseudo.get(t.from) ?? t.from} -> ${pseudo.get(t.to) ?? t.to}${t.label ? ` "${ourText(t.label)}"` : ''}`);
       return facts;
     },

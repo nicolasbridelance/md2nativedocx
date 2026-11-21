@@ -52,10 +52,12 @@ export function gitGraphToFlowchart(diagram: GitGraphDiagram): Flowchart | null 
 
 /**
  * The graph of a state machine's ordinary states (start/end markers set aside), or `null` with a
- * choice/fork/join or a composite state: SmartArt has no box to draw around a group.
+ * choice/fork/join, a composite state or a note: SmartArt has no box to draw around a group and no place for
+ * a note.
  */
 export function stateDiagramToFlowchart(diagram: StateDiagram): Flowchart | null {
   if (diagram.states.some((s) => s.kind === 'choice' || s.kind === 'fork' || s.kind === 'join' || s.parent !== undefined)) return null;
+  if ((diagram.notes?.length ?? 0) > 0) return null;
   const normal = diagram.states.filter((s) => s.kind === 'normal');
   const ids = new Set(normal.map((s) => s.id));
   const nodes = normal.map((s) => node(s.id, [{ text: s.label }]));
