@@ -309,7 +309,7 @@ Ensuite, dans l'ordre :
               appliquées ». Ajouts d'API, optionnels : `TreeViewNode.className` / `icon`,
               `TreeViewDiagram.title` / `accTitle` / `accDescr` ; changement de sens : `TreeViewNode.label`
               n'a plus le `/` final d'un dossier (`isDirectory` le porte). Baseline `test:visual` `tree-view`
-              à rafraîchir depuis la CI Linux (fixture corrigée : `index.ts :::highlight`).
+              rafraîchie depuis la CI Linux, revue (seule image modifiée ; fixture corrigée : `index.ts :::highlight`).
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
               `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; ~~railroad~~
               (fait le 2026-11-20 : `diagrams/railroad/`, conception propre au projet, CC0 : la syntaxe vient de la doc
