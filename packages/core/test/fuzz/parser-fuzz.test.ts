@@ -282,3 +282,26 @@ test('property: requirement diagram input never throws and always gives well-for
     { numRuns: 400 },
   );
 });
+
+test('property: tree view input never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  // Indentation (spaces, tabs, box drawing), names, quotes, the three annotations and header lines.
+  const token = fc.oneof(
+    hostileText,
+    nodeId,
+    fc.constantFrom('  ', '\t', '    ', '├── ', '└── ', '│   ', '├─', '━━', '┃', '"', "'", '/'),
+    fc.constantFrom(' :::highlight', ' :::x', ':::', ' icon(none)', ' icon()', ' icon(logos:react)', ' icon(', ' ## ', '##', ')'),
+    fc.constantFrom('title ', 'accTitle: ', 'accDescr: ', 'accDescr {', '}', '%% c'),
+  );
+  const line = fc.array(token, { maxLength: 6 }).map((toks) => toks.join(''));
+  fc.assert(
+    fc.property(fc.array(line, { maxLength: 25 }), fc.boolean(), (lines, smartArt) => {
+      const result = renderDiagram(`treeView-beta\n${lines.join('\n')}`, { smartArt });
+      assertWellFormedXml(result.fragment);
+      for (const part of result.parts) {
+        if (part.kind === 'smartart') assertWellFormedXml(part.dataXml.replace(/^<\?xml[^>]*\?>/, ''));
+      }
+    }),
+    { numRuns: 400 },
+  );
+});

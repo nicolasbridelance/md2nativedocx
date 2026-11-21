@@ -39,10 +39,13 @@ test('pie / xychart / radar: chart when native charts are on, else shapes + "wou
   assert.equal(planRendering('radar-beta\n  axis a, b, c\n  curve x{1, 2, 3}', pieOnly).chartWouldApply, true);
 });
 
-test('mindmap and single-root treeView: SmartArt hierarchy when on; a two-root treeView stays shapes', () => {
+test('mindmap and treeView: SmartArt hierarchy when on; a treeView counts its implicit / root', () => {
   assert.deepEqual(planRendering('mindmap\n  root\n    A\n      B', ON).smartArt, { layout: 'tree', depth: 3 });
   assert.equal(planRendering('mindmap\n  root\n    A', OFF).smartArtWouldApply, true);
-  assert.equal(planRendering('treeView-beta\n  a/\n    x\n  b/\n    y', ON).rendering, 'shapes');
+  assert.deepEqual(planRendering('treeView-beta\n  a/\n    x\n  b/\n    y', ON).smartArt, { layout: 'tree', depth: 3 });
+  // Ten written levels are eleven with the root: past SmartArt's depth, so shapes.
+  const deep = ['treeView-beta', ...Array.from({ length: 10 }, (_, i) => `${' '.repeat(2 * (i + 1))}n${i}`)].join('\n');
+  assert.equal(planRendering(deep, ON).rendering, 'shapes');
 });
 
 test('timeline (with or without sections) and journey: SmartArt time line when on', () => {

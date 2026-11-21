@@ -12,14 +12,15 @@
  * (`TD`), where the compact layout stacks each folder's files in a column under it, like a file explorer.
  *
  * What SmartArt cannot keep, and the shape-built translators do: the mindmap's radial layout and node
- * shapes (circle, cloud, bang…), the file tree's bold folders and italic descriptions (the description is
- * folded into the box text instead). A `treeView` with several top-level entries is not one tree and is
- * left to the shape-built translator.
+ * shapes (circle, cloud, bang…), the file tree's rows and description column (the description is folded
+ * into the box text instead, in italics). A `treeView` is always one tree: Mermaid hangs every entry from
+ * an implicit `/` root (`tree-view/implicit-root.ts`), and so does this hierarchy.
  */
 
 import type { FlowEdge, FlowNode, Flowchart, LabelToken } from '../types.js';
 import type { MindmapChart, MindmapNode } from '../diagrams/mindmap/types.js';
 import type { TreeViewDiagram } from '../diagrams/tree-view/types.js';
+import { withImplicitRoot } from '../diagrams/tree-view/implicit-root.js';
 import type { SmartArtGenerated } from './dispatch.js';
 import { MAX_TREE_DEPTH, flowchartTreeDepth } from './classify.js';
 import { generateTree } from './tree.js';
@@ -50,13 +51,21 @@ export function mindmapToFlowchart(chart: MindmapChart): Flowchart | null {
   return { direction: 'LR', nodes, edges, subgraphs: [] };
 }
 
-/** The flowchart-shaped tree of a file tree (`TD`), or `null` unless it has exactly one top-level entry. */
+/**
+ * The flowchart-shaped tree of a file tree (`TD`) under Mermaid's implicit `/` root, or `null` when the
+ * tree view is empty. Directories are bold, as Mermaid draws them; a description follows its name in
+ * italics.
+ */
 export function treeViewToFlowchart(diagram: TreeViewDiagram): Flowchart | null {
-  if (diagram.nodes.filter((n) => n.parent === -1).length !== 1) return null;
-  const nodes = diagram.nodes.map((n, i) =>
-    node(`t${i}`, n.description ? `${n.label} — ${n.description}` : n.label, n.highlighted ? 'FFF2CC' : undefined)
-  );
-  const edges = diagram.nodes.flatMap((n, i) => (n.parent >= 0 ? [edge(`t${n.parent}`, `t${i}`)] : []));
+  if (diagram.nodes.length === 0) return null;
+  const rows = withImplicitRoot(diagram);
+  const nodes = rows.map((n, i) => {
+    const runs: LabelToken[] = [{ text: n.label, ...(n.isDirectory ? { bold: true } : {}) }];
+    if (n.description) runs.push({ text: ` — ${n.description}`, italic: true });
+    const label = n.description ? `${n.label} — ${n.description}` : n.label;
+    return node(`t${i}`, label, n.highlighted ? 'FFF2CC' : undefined, runs);
+  });
+  const edges = rows.flatMap((n, i) => (n.parent >= 0 ? [edge(`t${n.parent}`, `t${i}`)] : []));
   return { direction: 'TD', nodes, edges, subgraphs: [] };
 }
 
@@ -76,7 +85,7 @@ export function generateMindmapSmartArt(chart: MindmapChart, options: SmartArtGe
   return treeSmartArt(mindmapToFlowchart(chart), options);
 }
 
-/** SmartArt parts for a parsed `treeView-beta`, or `null` (several top-level entries, too deep…). */
+/** SmartArt parts for a parsed `treeView-beta`, or `null` (empty, or deeper than `MAX_TREE_DEPTH` with its `/` root). */
 export function generateTreeViewSmartArt(diagram: TreeViewDiagram, options: SmartArtGenerateOptions = {}): SmartArtGenerated | null {
   return treeSmartArt(treeViewToFlowchart(diagram), options);
 }

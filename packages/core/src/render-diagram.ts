@@ -296,7 +296,9 @@ function shapesOnly<T>(
 /**
  * A type that becomes SmartArt when it can, shapes otherwise. `fits` is the cheap test the plan uses:
  * the SmartArt `generate` would produce, or `undefined` when it would decline. `titleOf`, for a SmartArt
- * with no place for the diagram title, puts that title in a paragraph above it.
+ * with no place for the diagram title, puts that title in a paragraph above it; with `titleAboveShapes`,
+ * also above the shapes, aligned with the drawing like a frontmatter title (for a type whose shape-built
+ * translator does not draw its title either).
  */
 function smartArtOrShapes<T>(
   parse: (source: string) => { ast: T; warnings: string[] },
@@ -304,12 +306,16 @@ function smartArtOrShapes<T>(
   generate: (ast: T, options: SmartArtGenerateOptions) => GeneratedSmartArt | null,
   translate: (ast: T, options: CanvasOptions) => string,
   titleOf?: (ast: T) => string | undefined,
+  titleAboveShapes = false,
 ): TypeHandler {
   return {
     render: (source, ctx) => {
       const ast = parsed(ctx, parse(source));
       const smartArt = ctx.smartArt((options) => generate(ast, options));
-      if (!smartArt) return shapes(translate(ast, ctx.canvas));
+      if (!smartArt) {
+        const fragment = translate(ast, ctx.canvas);
+        return shapes(titleOf && titleAboveShapes ? titleParagraphXml(titleOf(ast), 'left') + fragment : fragment);
+      }
       return titleOf ? { ...smartArt, fragment: titleParagraphXml(titleOf(ast)) + smartArt.fragment } : smartArt;
     },
     plan: (source) => {
@@ -490,7 +496,14 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
     (ast) => ast.title,
   ),
   // A single-root file tree becomes a top-down SmartArt hierarchy.
-  treeView: smartArtOrShapes(parseTreeView, (ast) => treeShape(treeViewToFlowchart(ast)), generateTreeViewSmartArt, translateTreeViewToOoxml),
+  treeView: smartArtOrShapes(
+    parseTreeView,
+    (ast) => treeShape(treeViewToFlowchart(ast)),
+    generateTreeViewSmartArt,
+    translateTreeViewToOoxml,
+    (ast) => ast.title,
+    true,
+  ),
   radar: chartOrShapes('radar', parseRadar, translateRadarToChart, translateRadarToOoxml),
   ishikawa: shapesOnly(parseIshikawa, translateIshikawaToOoxml),
   xychart: chartOrShapes('xychart', parseXyChart, translateXyChartToChart, translateXyChartToOoxml),

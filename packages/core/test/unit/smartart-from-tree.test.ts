@@ -51,24 +51,30 @@ test('mindmap labels are XML-escaped in every SmartArt part', () => {
   }
 });
 
-const TREE = ['treeView-beta', '  "projet/"', '    "src/" ## sources', '      index.ts:::highlight', '      util.ts', '    "README.md"'].join('\n');
+const TREE = ['treeView-beta', '  "projet/"', '    "src/" ## sources', '      index.ts :::highlight', '      util.ts', '    "README.md"'].join('\n');
 
-test('treeView -> top-down tree; description folded into the text, highlight kept as a fill', () => {
+test('treeView -> top-down tree under the / root; folders bold, description folded in italics, highlight kept as a fill', () => {
   const fc = treeViewToFlowchart(parseTreeView(TREE).ast);
   assert.ok(fc);
   assert.equal(fc.direction, 'TD');
-  assert.equal(fc.nodes.length, 5);
-  assert.ok(fc.nodes.some((n) => n.label.includes('sources')));
+  assert.equal(fc.nodes.length, 6);
+  assert.equal(fc.nodes[0]?.label, '/');
+  assert.deepEqual(fc.edges[0], { from: 't0', to: 't1', type: 'line', label: null, labelRuns: null });
+  const src = fc.nodes.find((n) => n.label.startsWith('src'));
+  assert.deepEqual(src?.labelRuns, [{ text: 'src', bold: true }, { text: ' — sources', italic: true }]);
   assert.equal(fc.nodes.find((n) => n.label.startsWith('index.ts'))?.fill, 'FFF2CC');
   const out = generateTreeViewSmartArt(parseTreeView(TREE).ast, { drawing: true });
   assert.equal(out?.layout, 'tree');
   assert.ok(out?.drawingXml?.includes('FFF2CC'));
+  // Four levels with the root: the deep tree, which also writes dark text on the pale highlight.
+  assert.ok(out?.dataXml.includes('<a:solidFill><a:schemeClr val="dk1"/></a:solidFill></a:rPr><a:t>index.ts</a:t>'));
 });
 
-test('a treeView with several top-level entries is not one tree: shape-built rendering kept', () => {
+test('several top-level entries hang from the / root, as in Mermaid: still one tree', () => {
   const forest = parseTreeView('treeView-beta\n  a/\n    x\n  b/\n    y').ast;
-  assert.equal(treeViewToFlowchart(forest), null);
-  assert.equal(generateTreeViewSmartArt(forest), null);
+  assert.deepEqual(treeViewToFlowchart(forest)?.nodes.map((n) => n.label), ['/', 'a', 'x', 'b', 'y']);
+  assert.equal(generateTreeViewSmartArt(forest)?.layout, 'tree');
+  assert.equal(treeViewToFlowchart(parseTreeView('treeView-beta').ast), null);
 });
 
 test('no external relationship in any part', () => {
