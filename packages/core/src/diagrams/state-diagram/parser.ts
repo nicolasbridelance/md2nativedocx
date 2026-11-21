@@ -4,34 +4,26 @@
  * Line-oriented, same forgiving convention as `../../parser/parser.ts` and
  * `../class-diagram/parser.ts`.
  *
- * V1 scope, deliberately:
- * - Flat transitions (`A --> B`, `A --> B : label`), start/end pseudostates
- *   (`[*]` as either endpoint — each occurrence gets its own synthesized
- *   node, see {@link resolveEndpoint}), state naming (`state "Label" as id`),
- *   the alternate one-line description (`id : Description`), and choice/
- *   fork/join stereotypes (`state id <<choice|fork|join>>`).
- * - `direction TD|TB|LR|BT|RL` (same TB->TD normalization as flowchart).
+ * Supported:
+ * - Transitions (`A --> B`, `A --> B : label`), start/end pseudostates (`[*]` as either endpoint: one start
+ *   and one end per block, as in Mermaid, see {@link parseStateDiagram}), state naming (`state "Label" as
+ *   id`), the alternate one-line description (`id : Description`), and choice/fork/join stereotypes
+ *   (`state id <<choice|fork|join>>`).
+ * - `direction TD|TB|LR|BT|RL` (same TB->TD normalization as flowchart); inside a composite state's block
+ *   it is that composite's own direction ({@link StateNode.direction}), not the diagram's.
+ * - Composite states (`state X { ... }`, nested to {@link MAX_DEPTH} levels): each state records the block
+ *   it first appears in ({@link StateNode.parent}), as Mermaid does.
+ * - Concurrency separators (a lone `--` inside a composite state): the block is split into
+ *   {@link StateRegion}s.
  *
- * NOT implemented yet, each degrading to "recognized and warned", never
- * silently dropped:
- * - Composite states (`state X { ... }`) — the block is recognized (a
- *   generic brace-nesting stack, same technique as `../class-diagram/
- *   parser.ts`'s namespace handling) and a warning is emitted once, but its
- *   contents are flattened into the top-level `states`/`transitions` lists
- *   rather than represented as a nested containment box. Real diagrams that
- *   rely on nesting to disambiguate same-named states in different parents
- *   may collide; anything else still renders correctly, just without the
- *   visual grouping.
- * - Concurrency dividers (a lone `--` inside a composite state) — falls
- *   through to the generic "unsupported line" warning.
- * - Notes (`note left|right of X` block or one-line `: text` form) and
- *   `classDef`/`class`/`style` styling — recognized and warned, skipped
- *   entirely (no positional/structural information lost, only cosmetic
+ * NOT implemented yet, each degrading to "recognized and warned", never silently dropped:
+ * - Notes (`note left|right of X` block or one-line `: text` form) and `classDef`/`class`/`style` styling —
+ *   recognized and warned, skipped entirely (no positional/structural information lost, only cosmetic
  *   extras).
  */
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
-import type { StateDiagram, StateNode, StateNodeKind } from './types.js';
+import type { StateDiagram, StateNode, StateNodeKind, StateRegion } from './types.js';
 
 export interface StateDiagramParseResult {
   ast: StateDiagram;
@@ -44,39 +36,103 @@ const DESCRIPTION = /^(\S+)\s*:\s*(.+)$/;
 const BARE_STATE = /^[\p{L}\p{N}_][\p{L}\p{N}_-]*$/u;
 const NOTE_BLOCK_OPEN = /^note\s+(?:left|right)\s+of\s+\S+\s*$/i;
 const NOTE_ONE_LINE = /^note\s+(?:left|right)\s+of\s+\S+\s*:\s*.+$/i;
+/** Deepest nesting of composite states kept; a block deeper than this holds its states in the last one kept. */
+export const MAX_DEPTH = 32;
 
+/** An open composite state block. */
+interface Block {
+  /** The composite state. */
+  state: string;
+  /** Where the states read now go: the composite, or its current region once a `--` split it. */
+  scope: string;
+  /** Its regions, once the first `--` was read. */
+  regions: StateRegion[];
+}
+
+/**
+ * Parse Mermaid state-diagram text. Never throws on malformed input.
+ *
+ * `[*]` follows Mermaid: within one block (the diagram, a composite state or one of its regions), every `[*]`
+ * used as a source is the same start node, and every `[*]` used as a target the same end node.
+ */
 export function parseStateDiagram(text: string): StateDiagramParseResult {
   const warnings: string[] = [];
   const states = new Map<string, StateNode>();
   const transitions: StateDiagram['transitions'] = [];
+  const regions: StateRegion[] = [];
   let direction: StateDiagram['direction'] = 'TD';
+
+  // Open composite blocks, outermost first. Blocks past MAX_DEPTH are only counted (`ignoredDepth`), so
+  // their `}` closes nothing kept.
+  const blocks: Block[] = [];
+  let ignoredDepth = 0;
+  const scope = (): string | undefined => blocks[blocks.length - 1]?.scope;
 
   function getOrCreateState(id: string, kind: StateNodeKind = 'normal'): StateNode {
     let node = states.get(id);
     if (!node) {
-      node = { id, label: id, kind };
+      const parent = scope();
+      node = { id, label: id, kind, ...(parent !== undefined ? { parent } : {}) };
       states.set(id, node);
     }
     return node;
   }
 
+  // The start and end node of each block, keyed by `role` + block id ('' for the diagram).
+  const pseudoOf = new Map<string, string>();
   let pseudoCounter = 0;
   function resolveEndpoint(endpoint: string, role: 'from' | 'to'): string {
     if (endpoint !== '[*]') {
       getOrCreateState(endpoint);
       return endpoint;
     }
+    const key = `${role}:${scope() ?? ''}`;
+    const known = pseudoOf.get(key);
+    if (known !== undefined) return known;
     const id = `__pseudo_${pseudoCounter++}`;
     getOrCreateState(id, role === 'from' ? 'start' : 'end');
+    pseudoOf.set(key, id);
     return id;
   }
 
-  // Generic brace-nesting stack (see module doc comment): only used to know
-  // when a composite state's `}` closes, since its contents are otherwise
-  // parsed exactly like top-level lines (flattened).
-  let braceDepth = 0;
+  function openBlock(id: string): void {
+    if (blocks.length >= MAX_DEPTH) {
+      if (ignoredDepth === 0) warnings.push(`Composite states nested deeper than ${MAX_DEPTH} levels are drawn inside the last level kept.`);
+      ignoredDepth++;
+      return;
+    }
+    blocks.push({ state: id, scope: id, regions: [] });
+  }
+
+  /** A `--` in a composite's block: what came before is its first region (made now), what follows a new one. */
+  function splitRegion(): void {
+    const block = blocks[blocks.length - 1];
+    if (!block) {
+      warnings.push('Concurrency separator "--" outside a composite state ignored.');
+      return;
+    }
+    if (ignoredDepth > 0) return;
+    const region = (): StateRegion => {
+      const r = { id: `__region_${regions.length}`, parent: block.state };
+      regions.push(r);
+      block.regions.push(r);
+      return r;
+    };
+    if (block.regions.length === 0) {
+      const first = region();
+      for (const node of states.values()) if (node.parent === block.state) node.parent = first.id;
+      for (const role of ['from', 'to']) {
+        const known = pseudoOf.get(`${role}:${block.state}`);
+        if (known !== undefined) {
+          pseudoOf.delete(`${role}:${block.state}`);
+          pseudoOf.set(`${role}:${first.id}`, known);
+        }
+      }
+    }
+    block.scope = region().id;
+  }
+
   let inNoteBlock = false;
-  let warnedComposite = false;
 
   let inFrontmatter = false;
   let inAccDescrBlock = false;
@@ -142,15 +198,25 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
     }
 
     if (line === '}') {
-      if (braceDepth > 0) braceDepth--;
+      if (ignoredDepth > 0) ignoredDepth--;
+      else if (blocks.length > 0) blocks.pop();
       else warnings.push(`Unexpected "}" without a matching block opener: ${line}`);
+      continue;
+    }
+
+    if (line === '--') {
+      splitRegion();
       continue;
     }
 
     const dirMatch = line.match(/^direction\s+(TD|TB|LR|BT|RL)\b/i);
     if (dirMatch) {
       const requested = dirMatch[1]!.toUpperCase();
-      direction = requested === 'TB' ? 'TD' : (requested as StateDiagram['direction']);
+      const value = requested === 'TB' ? 'TD' : (requested as StateDiagram['direction']);
+      // In a block, the composite's own direction; at the top level, the diagram's.
+      const block = blocks[blocks.length - 1];
+      if (block && ignoredDepth === 0) states.get(block.state)!.direction = value;
+      else if (!block) direction = value;
       continue;
     }
 
@@ -160,13 +226,7 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       const id = aliasMatch[2] ?? '';
       const node = getOrCreateState(id);
       node.label = label;
-      if (aliasMatch[3] === '{') {
-        braceDepth++;
-        if (!warnedComposite) {
-          warnings.push('Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.');
-          warnedComposite = true;
-        }
-      }
+      if (aliasMatch[3] === '{') openBlock(id);
       continue;
     }
 
@@ -176,13 +236,7 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       const kindWord = declMatch[2] as 'choice' | 'fork' | 'join' | undefined;
       const node = getOrCreateState(id, kindWord ?? 'normal');
       if (kindWord) node.kind = kindWord;
-      if (declMatch[3] === '{') {
-        braceDepth++;
-        if (!warnedComposite) {
-          warnings.push('Composite states are not yet rendered as nested boxes; their contents are still parsed, flattened to the top level.');
-          warnedComposite = true;
-        }
-      }
+      if (declMatch[3] === '{') openBlock(id);
       continue;
     }
 
@@ -220,8 +274,7 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
       continue;
     }
 
-    // A state declared by its name alone (`stateId`), as Mermaid allows; the `--` concurrency divider never
-    // gets here (it starts with no letter).
+    // A state declared by its name alone (`stateId`), as Mermaid allows.
     if (BARE_STATE.test(line)) {
       getOrCreateState(line);
       continue;
@@ -230,12 +283,12 @@ export function parseStateDiagram(text: string): StateDiagramParseResult {
     warnings.push(`Unsupported line ignored: ${line}`);
   }
 
-  if (braceDepth > 0) {
+  if (blocks.length > 0) {
     warnings.push('One or more composite state blocks were not closed with a matching "}".');
   }
 
   return {
-    ast: { direction, states: [...states.values()], transitions },
+    ast: { direction, states: [...states.values()], transitions, ...(regions.length > 0 ? { regions } : {}) },
     warnings,
   };
 }

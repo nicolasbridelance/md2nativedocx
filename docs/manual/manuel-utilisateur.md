@@ -531,14 +531,18 @@ Classes UML avec attributs, méthodes et relations.
 - `A --> B`, `A --> B : libellé`, `[*]` début/fin
 - `state "Libellé" as id`, `id : description`
 - `state id <<choice|fork|join>>`
-- `direction`
+- `direction` (dans un bloc `state X { … }`, celle de cet état seul)
+- `state X { … }` (états composites, imbriqués), `--` (régions concurrentes)
 
-**Pris en charge :** Transitions plates, pseudo-états, choix/fork/join.
+**Pris en charge :** Transitions, pseudo-états, choix/fork/join, états composites dessinés en cadres titrés
+autour de leurs états, régions concurrentes côte à côte séparées par un pointillé. Comme dans Mermaid, tous
+les `[*]` d'un même bloc sont le même point de début (ou de fin), et le contenu d'un composite se lit de haut
+en bas sauf `direction` dans son bloc.
 
 **Limites**
 
-- États composites `state X { … }` : contenu mis à plat, sans cadre imbriqué
-- Séparateur de concurrence `--`, notes, styles : ignorés avec avertissement
+- Notes, styles : ignorés avec avertissement
+- Une transition qui traverse le bord d'un composite (`Dehors --> Dedans`) est tracée en ligne droite
 
 
 +------------------------------------+-------------------------------------------------------------+

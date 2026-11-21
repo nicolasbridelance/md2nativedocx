@@ -214,7 +214,15 @@ const COMPARATORS = {
       const pseudo = new Map(nodes.filter((n) => n.shape === 'stateStart' || n.shape === 'stateEnd').map((n) => [n.id, n.shape === 'stateStart' ? '(start)' : '(end)']));
       // Notes and the regions of a concurrent state (`--`) are layout nodes in Mermaid's data, not states.
       const layoutOnly = new Set(nodes.filter((n) => ['note', 'noteGroup', 'divider'].includes(n.shape)).map((n) => n.id));
-      const facts = nodes.filter((n) => !pseudo.has(n.id) && !layoutOnly.has(n.id)).map((n) => `state ${n.id}`);
+      // A region (`divider`) has a generated id: named by its composite and its rank among that composite's regions.
+      const regionName = new Map();
+      for (const n of nodes.filter((d) => d.shape === 'divider')) {
+        const rank = [...regionName.values()].filter((v) => v.endsWith(` of ${n.parentId}`)).length;
+        regionName.set(n.id, `region ${rank} of ${n.parentId}`);
+      }
+      const where = (n) => (n.parentId === undefined ? '' : ` in ${regionName.get(n.parentId) ?? n.parentId}`);
+      const facts = nodes.filter((n) => !pseudo.has(n.id) && !layoutOnly.has(n.id)).map((n) => `state ${n.id}${where(n)}`);
+      for (const n of nodes.filter((p) => pseudo.has(p.id))) facts.push(`${pseudo.get(n.id)}${where(n)}`);
       for (const e of edges) {
         if (layoutOnly.has(e.start) || layoutOnly.has(e.end)) continue;
         facts.push(`transition ${pseudo.get(e.start) ?? e.start} -> ${pseudo.get(e.end) ?? e.end}${e.label ? ` "${normText(mermaidEntities(e.label))}"` : ''}`);
@@ -224,7 +232,14 @@ const COMPARATORS = {
     ours(source) {
       const { ast } = parseStateDiagram(source);
       const pseudo = new Map(ast.states.filter((s) => s.kind === 'start' || s.kind === 'end').map((s) => [s.id, `(${s.kind})`]));
-      const facts = ast.states.filter((s) => !pseudo.has(s.id)).map((s) => `state ${s.id}`);
+      const regionName = new Map();
+      for (const r of ast.regions ?? []) {
+        const rank = [...regionName.values()].filter((v) => v.endsWith(` of ${r.parent}`)).length;
+        regionName.set(r.id, `region ${rank} of ${r.parent}`);
+      }
+      const where = (s) => (s.parent === undefined ? '' : ` in ${regionName.get(s.parent) ?? s.parent}`);
+      const facts = ast.states.filter((s) => !pseudo.has(s.id)).map((s) => `state ${s.id}${where(s)}`);
+      for (const s of ast.states.filter((p) => pseudo.has(p.id))) facts.push(`${pseudo.get(s.id)}${where(s)}`);
       for (const t of ast.transitions) facts.push(`transition ${pseudo.get(t.from) ?? t.from} -> ${pseudo.get(t.to) ?? t.to}${t.label ? ` "${ourText(t.label)}"` : ''}`);
       return facts;
     },

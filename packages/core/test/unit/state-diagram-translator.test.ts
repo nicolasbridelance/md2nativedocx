@@ -87,3 +87,90 @@ test('an empty state diagram renders a visible note, not a silent blank canvas',
 test('is a pure function: identical input produces byte-identical output', () => {
   assert.equal(translate(BASIC), translate(BASIC));
 });
+
+/** Every named shape's box, in EMU: `name="X"` then its `a:off` / `a:ext`. */
+function boxes(xml: string): Array<{ name: string; x: number; y: number; w: number; h: number }> {
+  const out: Array<{ name: string; x: number; y: number; w: number; h: number }> = [];
+  const re = /<wps:cNvPr id="\d+" name="([^"]*)"\/>[\s\S]*?<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/g;
+  for (const m of xml.matchAll(re)) out.push({ name: m[1]!, x: +m[2]!, y: +m[3]!, w: +m[4]!, h: +m[5]! });
+  return out;
+}
+const box = (xml: string, name: string) => {
+  const found = boxes(xml).find((b) => b.name === name);
+  assert.ok(found, `no shape named ${name}`);
+  return found;
+};
+const inside = (inner: { x: number; y: number; w: number; h: number }, outer: { x: number; y: number; w: number; h: number }): boolean =>
+  inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+
+const COMPOSITE = `stateDiagram-v2
+  [*] --> Draft
+  Draft --> Submitted : submit
+  state Review {
+    [*] --> Screening
+    Screening --> Decision
+  }
+  Submitted --> Review
+  Review --> Published : approved
+  Review --> Draft : rejected
+  Published --> [*]`;
+
+test('a composite state is a titled box around its states, behind them (Mermaid #2)', () => {
+  const xml = translate(COMPOSITE);
+  const review = box(xml, 'Review');
+  const content = box(xml, 'Review content');
+  assert.ok(inside(content, review));
+  assert.ok(content.y > review.y, 'the content area starts below the title band');
+  for (const name of ['Screening', 'Decision']) assert.ok(inside(box(xml, name), content), `${name} is drawn inside the composite`);
+  for (const name of ['Draft', 'Submitted', 'Published']) assert.ok(!inside(box(xml, name), review), `${name} is outside it`);
+  assert.ok(xml.indexOf('name="Review"') < xml.indexOf('name="Screening"'), 'the composite is drawn first, behind its states');
+  // 8 transitions, `Submitted --> Review` and `Review --> ...` ending on the composite's box.
+  assert.equal((xml.match(/<wps:cNvCnPr\/>/g) ?? []).length, 8);
+});
+
+test('nested composites are boxes inside boxes (Mermaid #11)', () => {
+  const xml = translate('stateDiagram-v2\n  [*] --> First\n  state First {\n    [*] --> Second\n    state Second {\n      [*] --> second\n      second --> Third\n      state Third {\n        [*] --> third\n        third --> [*]\n      }\n    }\n  }');
+  assert.ok(inside(box(xml, 'Third'), box(xml, 'Second content')));
+  assert.ok(inside(box(xml, 'Second'), box(xml, 'First content')));
+  assert.ok(inside(box(xml, 'third'), box(xml, 'Third content')));
+});
+
+test('a composite lays its content out in its own direction, top to bottom by default (Mermaid)', () => {
+  const lr = translate('stateDiagram-v2\n  direction LR\n  A --> B\n  state B {\n    x --> y\n  }');
+  assert.ok(box(lr, 'y').y > box(lr, 'x').y, 'no direction in the block: top to bottom, even in an LR diagram');
+  assert.ok(box(lr, 'B').x > box(lr, 'A').x, 'the diagram itself stays left to right');
+  const own = translate('stateDiagram-v2\n  A --> B\n  state B {\n    direction LR\n    x --> y\n  }');
+  assert.ok(box(own, 'y').x > box(own, 'x').x, 'the block\'s own direction');
+});
+
+test('concurrent regions sit side by side in their composite, a dashed line between each two (Mermaid #16)', () => {
+  const xml = translate(
+    'stateDiagram-v2\n  [*] --> Active\n  state Active {\n    [*] --> NumOff\n    NumOff --> NumOn : press\n    NumOn --> NumOff : press\n    --\n    [*] --> CapsOff\n    CapsOff --> CapsOn\n    --\n    [*] --> ScrollOff\n  }',
+  );
+  const content = box(xml, 'Active content');
+  const num = box(xml, 'NumOff');
+  const caps = box(xml, 'CapsOff');
+  const scroll = box(xml, 'ScrollOff');
+  for (const b of [num, caps, scroll]) assert.ok(inside(b, content));
+  assert.ok(num.x + num.w < caps.x && caps.x + caps.w < scroll.x, 'regions in a row, left to right in source order');
+  assert.equal((xml.match(/<a:prstDash val="dash"\/>/g) ?? []).length, 2, 'two dividers for three regions');
+});
+
+test('two transitions between the same states are drawn apart, not on top of each other', () => {
+  const xml = translate('stateDiagram-v2\n  A --> B : go\n  B --> A : back');
+  const lines = [...xml.matchAll(/<wps:cNvCnPr\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/g)].map((m) => m.slice(1).join(','));
+  assert.equal(lines.length, 2);
+  assert.notEqual(lines[0], lines[1]);
+});
+
+test('a parent cycle in a hand-built AST is cut rather than recursing for ever', () => {
+  const xml = translateStateDiagramToOoxml({
+    direction: 'TD',
+    states: [
+      { id: 'A', label: 'A', kind: 'normal', parent: 'B' },
+      { id: 'B', label: 'B', kind: 'normal', parent: 'A' },
+    ],
+    transitions: [],
+  });
+  assert.ok(xml.includes('<wpc:wpc'));
+});

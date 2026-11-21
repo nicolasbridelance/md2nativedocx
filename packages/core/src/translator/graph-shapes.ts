@@ -94,7 +94,23 @@ export function shiftPoint(p: { x: number; y: number }, ux: number, uy: number, 
   return { x: p.x + ux * amount, y: p.y + uy * amount };
 }
 
-export function rect(id: number, x: number, y: number, w: number, h: number, fill: string | undefined, line: string | undefined, name: string, roundRect = false): string {
+/**
+ * A plain or rounded rectangle. `cornerAdj` (rounded only) is DrawingML's `adj`, the corner radius as a
+ * fraction of the shorter side in 1/100000: without it Word's default (about a sixth of that side) applies,
+ * which grows with the box.
+ */
+export function rect(
+  id: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string | undefined,
+  line: string | undefined,
+  name: string,
+  roundRect = false,
+  cornerAdj?: number,
+): string {
   const fillXml = fill ? `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>` : '<a:noFill/>';
   const lineXml = line
     ? `<a:ln w="9525"><a:solidFill><a:srgbClr val="${line}"/></a:solidFill></a:ln>`
@@ -105,7 +121,9 @@ export function rect(id: number, x: number, y: number, w: number, h: number, fil
     '  <wps:cNvSpPr/>',
     '  <wps:spPr>',
     `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-    `    <a:prstGeom prst="${roundRect ? 'roundRect' : 'rect'}"><a:avLst/></a:prstGeom>`,
+    roundRect && cornerAdj !== undefined
+      ? `    <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ${Math.round(cornerAdj)}"/></a:avLst></a:prstGeom>`
+      : `    <a:prstGeom prst="${roundRect ? 'roundRect' : 'rect'}"><a:avLst/></a:prstGeom>`,
     fillXml,
     lineXml,
     '  </wps:spPr>',

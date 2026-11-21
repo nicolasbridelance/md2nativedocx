@@ -6,7 +6,8 @@
  *   bold, its tag under it). Lost: the commit dots and their types (highlight, reverse).
  * - `stateDiagram` whose states form a chain or a loop, once the `[*]` start/end markers are set aside (no
  *   choice/fork/join): a process or a cycle, transition labels folded into the box text (`label : state`).
- *   Lost: the start/end markers. A tree-shaped state machine is not turned into an org chart.
+ *   Lost: the start/end markers. A tree-shaped state machine is not turned into an org chart, and one with
+ *   composite states keeps its shapes.
  * - `classDiagram` made only of inheritance forming a single tree: a hierarchy, superclass on top, each box
  *   holding the class name in bold then its attributes and methods. Lost: the UML compartments' separators.
  *
@@ -49,9 +50,12 @@ export function gitGraphToFlowchart(diagram: GitGraphDiagram): Flowchart | null 
   return { direction, nodes, edges, subgraphs: [] };
 }
 
-/** The graph of a state machine's ordinary states (start/end markers set aside), or `null` with a choice/fork/join. */
+/**
+ * The graph of a state machine's ordinary states (start/end markers set aside), or `null` with a
+ * choice/fork/join or a composite state: SmartArt has no box to draw around a group.
+ */
 export function stateDiagramToFlowchart(diagram: StateDiagram): Flowchart | null {
-  if (diagram.states.some((s) => s.kind === 'choice' || s.kind === 'fork' || s.kind === 'join')) return null;
+  if (diagram.states.some((s) => s.kind === 'choice' || s.kind === 'fork' || s.kind === 'join' || s.parent !== undefined)) return null;
   const normal = diagram.states.filter((s) => s.kind === 'normal');
   const ids = new Set(normal.map((s) => s.id));
   const nodes = normal.map((s) => node(s.id, [{ text: s.label }]));

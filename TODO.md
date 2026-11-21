@@ -199,7 +199,15 @@ Ensuite, dans l'ordre :
               réservent 22 px par ligne (`ROW_H`, `class-diagram/translator.ts`) alors que Word en écrit environ
               18 : un vide grandit sous les membres (5 lignes : ~20 px, `classDiagram#25`). Mesurer la hauteur de
               ligne réelle (police de membre à 9 pt) avant de changer `ROW_H` : toutes les classes bougent ;
-            - **états (13)** : états composites en boîtes imbriquées, notes, styles ;
+            - **états** : ~~états composites en boîtes imbriquées, régions `--`~~ (faits le 2026-11-21 :
+              `StateNode.parent` / `direction`, `StateDiagram.regions` ; un `[*]` de début et de fin par bloc comme
+              Mermaid (avant : un nœud par occurrence) ; mise en page de l'intérieur vers l'extérieur, un graphe
+              Dagre par bloc, ce qui évite l'échec connu de Dagre sur les clusters à cycles et fait d'un lien vers un
+              composite un lien ordinaire ; direction propre de chaque composite (TB par défaut, comme la base de
+              Mermaid) ; libellés posés dans la place que Dagre leur garde, transitions jumelles écartées ; aussi en
+              PlantUML (direction du diagramme) ; différentiel étendu aux parents, **22/22** ; vérifié dans Word,
+              `test-corpus/word-verification/state-composites.*`). Reste : notes, styles. Une transition qui
+              traverse le bord d'un composite est tracée droite, sans routage ;
             - **organigrammes** : ~~liens vers un sous-graphe~~ (faits le 2026-11-20 : le lien s'arrête au bord du
               cadre, sous-graphe rangé comme un seul bloc quand aucun lien ne traverse sa bordure, comme Mermaid ;
               vérifié dans Word et LibreOffice, `test-corpus/word-verification/subgraph-links.*` ; le sens élargi

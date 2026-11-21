@@ -60,14 +60,72 @@ test('direction is parsed with the same TB->TD normalization as flowchart', () =
   assert.equal(parseStateDiagram('stateDiagram-v2\n  A --> B').ast.direction, 'TD');
 });
 
-test('a composite state block is warned once, but its nested states/transitions still parse (flattened)', () => {
+test('a composite state holds the states first named in its block, with its own start and end (Mermaid #2)', () => {
   const { ast, warnings } = parseStateDiagram(
-    'stateDiagram-v2\n  state Composite {\n    [*] --> One\n    One --> Two\n    Two --> [*]\n  }',
+    'stateDiagram-v2\n  [*] --> Draft\n  state Review {\n    [*] --> Screening\n    Screening --> Decision\n    Decision --> [*]\n  }\n  Draft --> Review\n  Review --> [*]',
   );
-  assert.ok(ast.states.some((s) => s.id === 'One'));
-  assert.ok(ast.states.some((s) => s.id === 'Two'));
-  assert.equal(ast.transitions.length, 3);
-  assert.equal(warnings.filter((w) => w.includes('Composite')).length, 1, 'warned exactly once, not once per composite state');
+  assert.deepEqual(warnings, []);
+  const parent = (id: string): string | undefined => ast.states.find((s) => s.id === id)?.parent;
+  assert.equal(parent('Review'), undefined);
+  assert.equal(parent('Screening'), 'Review');
+  assert.equal(parent('Decision'), 'Review');
+  assert.equal(parent('Draft'), undefined, 'named at the top level first: stays there');
+  const starts = ast.states.filter((s) => s.kind === 'start');
+  const ends = ast.states.filter((s) => s.kind === 'end');
+  assert.deepEqual(starts.map((s) => s.parent), [undefined, 'Review'], 'one start per block');
+  assert.deepEqual(ends.map((s) => s.parent), ['Review', undefined], 'one end per block');
+});
+
+test('every [*] of one block on the same side is the same node, as in Mermaid (#21)', () => {
+  const { ast } = parseStateDiagram('stateDiagram-v2\n  [*] --> A\n  [*] --> B\n  A --> [*]\n  B --> [*]');
+  assert.equal(ast.states.filter((s) => s.kind === 'start').length, 1);
+  assert.equal(ast.states.filter((s) => s.kind === 'end').length, 1);
+  assert.equal(new Set(ast.transitions.slice(0, 2).map((t) => t.from)).size, 1);
+});
+
+test('composites nest; a state keeps the block it first appeared in (Mermaid #11, #12)', () => {
+  const { ast } = parseStateDiagram('stateDiagram-v2\n  First --> Second\n  state First {\n    state Inner {\n      a --> b\n    }\n    Second\n  }');
+  const parent = (id: string): string | undefined => ast.states.find((s) => s.id === id)?.parent;
+  assert.equal(parent('Inner'), 'First');
+  assert.equal(parent('a'), 'Inner');
+  assert.equal(parent('Second'), undefined);
+  const order = ast.states.map((s) => s.id);
+  assert.ok(order.indexOf('Inner') < order.indexOf('a'), 'a composite is listed before what it holds');
+});
+
+test("a direction inside a block is the composite's own, not the diagram's (Mermaid #17)", () => {
+  const { ast } = parseStateDiagram('stateDiagram\n  direction LR\n  A --> B\n  state B {\n    direction BT\n    a --> b\n  }');
+  assert.equal(ast.direction, 'LR');
+  assert.equal(ast.states.find((s) => s.id === 'B')?.direction, 'BT');
+  assert.equal(ast.states.find((s) => s.id === 'A')?.direction, undefined);
+});
+
+test('-- splits a composite into concurrent regions, each with its own start (Mermaid #16)', () => {
+  const { ast, warnings } = parseStateDiagram(
+    'stateDiagram-v2\n  state Active {\n    [*] --> NumOff\n    NumOff --> NumOn\n    --\n    [*] --> CapsOff\n    --\n    [*] --> ScrollOff\n  }',
+  );
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.regions, [
+    { id: '__region_0', parent: 'Active' },
+    { id: '__region_1', parent: 'Active' },
+    { id: '__region_2', parent: 'Active' },
+  ]);
+  const parent = (id: string): string | undefined => ast.states.find((s) => s.id === id)?.parent;
+  assert.equal(parent('NumOff'), '__region_0', 'what came before the first -- is moved into the first region');
+  assert.equal(parent('CapsOff'), '__region_1');
+  assert.equal(parent('ScrollOff'), '__region_2');
+  assert.deepEqual(
+    ast.states.filter((s) => s.kind === 'start').map((s) => s.parent),
+    ['__region_0', '__region_1', '__region_2'],
+  );
+});
+
+test('-- outside a composite is warned; nesting past the depth cap is kept in the last level', () => {
+  assert.ok(parseStateDiagram('stateDiagram-v2\n  A --> B\n  --').warnings.some((w) => w.includes('outside a composite')));
+  const deep = parseStateDiagram(`stateDiagram-v2\n${'state S {\n'.repeat(40)}leaf\n${'}\n'.repeat(40)}after`);
+  assert.ok(deep.warnings.some((w) => w.includes('nested deeper')));
+  assert.ok(!deep.warnings.some((w) => w.includes('Unexpected "}"')), 'the ignored levels still close');
+  assert.equal(deep.ast.states.find((s) => s.id === 'after')?.parent, undefined);
 });
 
 test('note blocks (multi-line and one-line) are recognized and warned, contents skipped', () => {

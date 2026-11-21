@@ -62,7 +62,7 @@ test('states: aliases either way, stereotypes, descriptions, history, hidden tra
   assert.ok(!byId.has('Z'));
 });
 
-test('skipped content: composite states, concurrent regions, notes, skinparam, style, json, groups', () => {
+test('composite states and their regions kept; notes, skinparam, style, json and groups skipped', () => {
   const { ast, warnings } = parsePlantUmlState(
     uml(
       [
@@ -105,6 +105,18 @@ test('skipped content: composite states, concurrent regions, notes, skinparam, s
     ['Outer', 'In1', 'In2', 'Inner', 'x'],
   );
   assert.equal(ast.transitions.length, 4);
+  const parent = (id: string): string | undefined => ast.states.find((s) => s.id === id)?.parent;
+  assert.equal(parent('In1'), '__region_0');
+  assert.equal(parent('In2'), '__region_1');
+  assert.equal(parent('Inner'), '__region_2');
+  assert.equal(parent('x'), undefined, 'a frame group is not a composite state');
+  assert.equal(ast.states.find((s) => s.id === 'Outer')?.direction, 'LR', 'PlantUML lays composites out in the diagram direction');
+});
+
+test('one [*] start and end per block, as in PlantUML', () => {
+  const { ast } = parsePlantUmlState(uml('[*] --> A\n[*] --> B\nstate A {\n  [*] --> a\n  a --> [*]\n}\nB --> [*]'));
+  assert.deepEqual(ast.states.filter((s) => s.kind === 'start').map((s) => s.parent), [undefined, 'A']);
+  assert.deepEqual(ast.states.filter((s) => s.kind === 'end').map((s) => s.parent), ['A', undefined]);
 });
 
 test('hostile labels are escaped in the Word output (AGENTS rule 2)', () => {
