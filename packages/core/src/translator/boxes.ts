@@ -55,7 +55,7 @@ export interface BoxStyle {
    */
   noWrap?: boolean;
   /** Preset geometry (default `rect`); `roundRect` takes {@link BoxStyle.cornerAdj}. */
-  prst?: 'rect' | 'roundRect' | 'ellipse';
+  prst?: 'rect' | 'roundRect' | 'ellipse' | 'foldedCorner';
   /** `roundRect` corner radius, as DrawingML's `adj` (100000 = half the shorter side). */
   cornerAdj?: number;
   /** Dashed outline. */

@@ -178,7 +178,10 @@ Ensuite, dans l'ordre :
               Mermaid au différentiel, aussi en PlantUML ; une relation avec libellé ou cardinalités réserve leur place
               dans la mise en page Dagre, comme les libellés d'arêtes de l'organigramme ; au passage, un libellé entre
               guillemets ne fait plus disparaître la relation ; vérifié dans Word, `test-corpus/word-verification/
-              class-cardinalities.*`), notes ;
+              class-cardinalities.*`), ~~notes~~ (faites le 2026-11-20 : `ClassDiagram.notes`, identiques à Mermaid au
+              différentiel ; nœuds Dagre à coin replié, aux couleurs de note de Mermaid, trait pointillé vers leur classe ;
+              une note garde le diagramme hors SmartArt ; vérifié dans Word, `test-corpus/word-verification/
+              class-notes.*`. Les notes PlantUML restent avertis : à brancher sur le même champ) ;
             - **Couleurs nommées (`red`, `white`) ignorées sans avertissement**, dans l'organigramme comme dans les
               classes (`parseHexColor`, `parser/css-style.ts`) : `classDiagram#35` (`color:red`) garde son texte noir.
               Lire les noms CSS (une table de 148 entrées) ou au moins avertir ;

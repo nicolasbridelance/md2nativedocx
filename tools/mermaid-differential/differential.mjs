@@ -184,6 +184,7 @@ const COMPARATORS = {
         const card = (t) => (t === undefined || t === 'none' ? '-' : normText(mermaidEntities(t)));
         facts.push(`relation ${r.id1} ${end[type1] ?? 'none'} ${lineType === 1 ? '..' : '--'} ${end[type2] ?? 'none'} ${r.id2} [${card(r.relationTitle1)} ${card(r.relationTitle2)}]`);
       }
+      for (const note of db.getNotes().values()) facts.push(`note for ${note.class ?? '-'}`);
       for (const ns of db.getNamespaces().values()) {
         facts.push(`namespace ${ns.id} "${normText(mermaidEntities(ns.label))}" in ${ns.parent ?? '-'} [${[...ns.classes.keys()].sort().join(' ')}]`);
       }
@@ -199,6 +200,7 @@ const COMPARATORS = {
         const atTo = r.markerEnd === 'to' || r.markerEnd === 'both' ? (kind[r.type] ?? 'none') : 'none';
         facts.push(`relation ${r.from} ${atFrom} ${dotted.has(r.type) ? '..' : '--'} ${atTo} ${r.to} [${r.fromCardinality ? ourText(r.fromCardinality) : '-'} ${r.toCardinality ? ourText(r.toCardinality) : '-'}]`);
       }
+      for (const note of ast.notes ?? []) facts.push(`note for ${note.for ?? '-'}`);
       for (const ns of ast.namespaces ?? []) {
         const members = ast.classes.filter((c) => c.namespace === ns.id).map((c) => c.id);
         facts.push(`namespace ${ns.id} "${ourText(ns.label)}" in ${ns.parent ?? '-'} [${members.sort().join(' ')}]`);

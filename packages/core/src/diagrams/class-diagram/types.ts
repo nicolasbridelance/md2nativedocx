@@ -91,10 +91,20 @@ export interface ClassNamespace {
   parent?: string;
 }
 
+/** A `note "text"`, or a `note for Class "text"` attached to a class by a dotted line. */
+export interface ClassNote {
+  /** Text, one line per `\n` (Mermaid's `<br>` is read as a line break). */
+  text: string;
+  /** Id of the class the note is for, if any; the line is drawn only when that class exists. */
+  for?: string;
+}
+
 export interface ClassDiagram {
   direction: 'TD' | 'LR' | 'BT' | 'RL';
   classes: ClassBox[];
   relationships: ClassRelationship[];
   /** Namespaces, a parent before its children. Absent when the diagram declares none. */
   namespaces?: ClassNamespace[];
+  /** Notes, in source order. Absent when the diagram has none. */
+  notes?: ClassNote[];
 }

@@ -135,9 +135,12 @@ test('a namespace block groups its classes, which still parse', () => {
   assert.deepEqual(warnings, []);
 });
 
-test('note lines are recognized and warned, not silently dropped', () => {
-  const { warnings: w3 } = parseClassDiagram('classDiagram\n  note "a note"\n  class A');
-  assert.ok(w3.some((w) => w.includes('Notes')));
+test('notes are read, free or for a class, <br> as a line break', () => {
+  const { ast, warnings } = parseClassDiagram(
+    'classDiagram\n  note "a general note"\n  note for `My Class` "can fly<br>can swim<br/>can dive"\n  class `My Class`\n  note what',
+  );
+  assert.deepEqual(ast.notes, [{ text: 'a general note' }, { text: 'can fly\ncan swim\ncan dive', for: 'My Class' }]);
+  assert.deepEqual(warnings, ['Unsupported line ignored: note what']);
 });
 
 test('an unclosed class block is warned, not silently dropped', () => {

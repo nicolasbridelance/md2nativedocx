@@ -82,6 +82,12 @@ const NAMESPACE_LINE = '999999';
 /** Height of a namespace's title band, added above what Dagre laid out. */
 const NAMESPACE_TITLE_H = 24;
 const NAMESPACE_TITLE_SIZE_HALFPT = 20;
+/** Note: Mermaid's default note colours (pale yellow, olive border), folded corner, left-aligned lines. */
+const NOTE_FILL = 'FFF5AD';
+const NOTE_LINE = 'AAAA33';
+const NOTE_FONT_PX = 11;
+const NOTE_LINE_H = 18;
+const NOTE_PAD = 10;
 
 const RANKDIR: Readonly<Record<ClassDiagram['direction'], 'TB' | 'BT' | 'LR' | 'RL'>> = {
   TD: 'TB',
@@ -210,6 +216,18 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
   return parts;
 }
 
+/** The Dagre key of a note: apart from classes and namespaces. */
+function noteKey(index: number): string {
+  return `note:${index}`;
+}
+
+/** A note's box: its longest line, its line count, padding, and the folded corner's room. */
+function noteSize(text: string): { width: number; height: number } {
+  const lines = text.split('\n');
+  const widest = Math.max(...lines.map((line) => estimateTextWidth(line, NOTE_FONT_PX)));
+  return { width: Math.max(60, widest + 2 * NOTE_PAD + 12), height: lines.length * NOTE_LINE_H + 2 * NOTE_PAD };
+}
+
 /** Room a relation's label and cardinalities need along the line (`undefined`: no text). */
 function relationTextRoom(rel: ClassDiagram['relationships'][number]): { width: number; height: number } | undefined {
   const cards = [rel.fromCardinality, rel.toCardinality].filter((c): c is string => c !== undefined);
@@ -274,6 +292,13 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   const drawnIds = new Set(namespaces.map((ns) => ns.id));
   for (const ns of namespaces) if (ns.parent !== undefined && drawnIds.has(ns.parent)) g.setParent(namespaceKey(ns.id), namespaceKey(ns.parent));
   for (const box of chart.classes) if (box.namespace !== undefined && drawnIds.has(box.namespace)) g.setParent(nodeKey(box.id), namespaceKey(box.namespace));
+  // Notes are nodes too; one for a class is pulled next to it by a layout edge, drawn as a dotted line.
+  const notes = chart.notes ?? [];
+  const noteSizes = notes.map((note) => noteSize(note.text));
+  notes.forEach((note, i) => {
+    g.setNode(noteKey(i), noteSizes[i]!);
+    if (note.for !== undefined && g.hasNode(nodeKey(note.for))) g.setEdge(noteKey(i), nodeKey(note.for));
+  });
   const linked = new Set<string>();
   for (const rel of chart.relationships) {
     if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) {
@@ -302,6 +327,10 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     const n = g.node(nodeKey(box.id)) as { x: number; y: number };
     centres.set(box.id, { x: n.x, y: n.y });
   }
+  const noteCentres = notes.map((_, i) => {
+    const n = g.node(noteKey(i)) as { x: number; y: number };
+    return { x: n.x, y: n.y };
+  });
   const nsBoxes = new Map<string, { x: number; y: number; width: number; height: number }>();
   for (const ns of namespaces) {
     const c = g.node(namespaceKey(ns.id)) as { x: number; y: number; width: number; height: number } | undefined;
@@ -331,6 +360,13 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     minY = Math.min(minY, n.y - size.height / 2);
     maxY = Math.max(maxY, n.y + size.height / 2);
   }
+  noteCentres.forEach((c, i) => {
+    const size = noteSizes[i]!;
+    minX = Math.min(minX, c.x - size.width / 2);
+    maxX = Math.max(maxX, c.x + size.width / 2);
+    minY = Math.min(minY, c.y - size.height / 2);
+    maxY = Math.max(maxY, c.y + size.height / 2);
+  });
   for (const box of nsBoxes.values()) {
     minX = Math.min(minX, box.x);
     maxX = Math.max(maxX, box.x + box.width);
@@ -358,6 +394,34 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
     parts.push(boxShape(nextId(), x, y, w, scalePt(box.height, s), [''], { fill: NAMESPACE_FILL, line: NAMESPACE_LINE, color: '000000', dashed: true }, MEMBER_FONT_PX, s));
     parts.push(textBoxLines(nextId(), x, y, w, scalePt(NAMESPACE_TITLE_H, s), [ns.label], scaledFontSizeHalfPt(NAMESPACE_TITLE_SIZE_HALFPT, s), { align: 'ctr' }));
   }
+
+  // Notes: the dotted line to their class first, then the note itself.
+  notes.forEach((note, i) => {
+    const c = noteCentres[i]!;
+    const size = noteSizes[i]!;
+    const target = note.for === undefined ? undefined : centres.get(note.for);
+    if (target) {
+      const targetSize = sizes.get(note.for!)!;
+      const a = edgePoint(c.x, c.y, size.width / 2, size.height / 2, target.x, target.y);
+      const b = edgePoint(target.x, target.y, targetSize.width / 2, targetSize.height / 2, c.x, c.y);
+      parts.push(
+        connector(nextId(), scalePt(a.x + dx, s), scalePt(a.y + dy, s), scalePt(b.x + dx, s), scalePt(b.y + dy, s), NOTE_LINE, scaledLineWidthEmu(9525, s), 'dash', 'none', 'sm', 'none', 'sm'),
+      );
+    }
+    parts.push(
+      boxShape(
+        nextId(),
+        scalePt(c.x - size.width / 2 + dx, s),
+        scalePt(c.y - size.height / 2 + dy, s),
+        scalePt(size.width, s),
+        scalePt(size.height, s),
+        note.text.split('\n'),
+        { fill: NOTE_FILL, line: NOTE_LINE, color: '000000', align: 'left', prst: 'foldedCorner' },
+        NOTE_FONT_PX,
+        s,
+      ),
+    );
+  });
 
   for (const rel of chart.relationships) {
     const nFrom = centres.get(rel.from);

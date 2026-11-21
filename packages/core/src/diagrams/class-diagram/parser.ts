@@ -26,7 +26,7 @@
  *   then `style`). Only `fill`, `stroke` and `color` with a hex value are kept (`../../parser/css-style.ts`).
  * - Relationship cardinalities (`A "1" --> "*" B`): each quoted segment before the label goes to the end
  *   it is written next to, as Mermaid's grammar reads it (`fromCardinality`, `toCardinality`).
- * - `note`/`note for` — warned and skipped.
+ * - `note "text"` and `note for Class "text"` into `ClassDiagram.notes` (`<br>` read as a line break).
  *
  * None of the above affects which classes/members/relationships end up in
  * the AST — only cosmetic extras a first version can safely leave out.
@@ -34,7 +34,7 @@
 
 import { splitLines, splitStatements } from '../../parser/normalize-statements.js';
 import { INTERACTIVE_DIRECTIVES_IGNORED, isInteractiveDirective } from '../../parser/interactive.js';
-import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassRelationType } from './types.js';
+import type { ClassBox, ClassDiagram, ClassMember, ClassNamespace, ClassNote, ClassRelationType } from './types.js';
 import { extractNodeStyle, parseCssStyleProps, type NodeStylePatch } from '../../parser/css-style.js';
 
 export interface ClassDiagramParseResult {
@@ -177,6 +177,25 @@ function relationCardinalities(line: string): { fromCardinality?: string; toCard
   return result;
 }
 
+/** `note "text"` or `note for Class "text"`, or `null`. The text is read up to its closing quote. */
+// Read in steps (keyword, optional `for Class`, quoted text) rather than with one regular expression whose
+// optional group sat between free-spacing runs (`security/detect-unsafe-regex`: untrusted input).
+function parseNote(line: string): ClassNote | null {
+  if (!/^note\s/i.test(line)) return null;
+  let rest = line.slice('note'.length).trim();
+  let target: string | undefined;
+  if (/^for\s/i.test(rest)) {
+    rest = rest.slice('for'.length).trim();
+    const id = /^(?:`[^`]+`|[^\s"]+)/.exec(rest)?.[0];
+    if (id === undefined) return null;
+    target = stripIdQuotes(id);
+    rest = rest.slice(id.length).trim();
+  }
+  if (!rest.startsWith('"') || !rest.endsWith('"') || rest.length < 2) return null;
+  const text = rest.slice(1, -1).replace(/<br\s*\/?>/gi, '\n');
+  return target === undefined ? { text } : { text, for: target };
+}
+
 function stripIdQuotes(id: string): string {
   return id.replace(/^`|`$/g, '').trim();
 }
@@ -201,6 +220,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
   type Frame = { kind: 'class'; box: ClassBox } | { kind: 'namespace'; id: string };
   const stack: Frame[] = [];
   const namespaces = new Map<string, ClassNamespace>();
+  const notes: ClassNote[] = [];
   const currentNamespace = (): string | undefined => {
     for (let i = stack.length - 1; i >= 0; i--) {
       const frame = stack[i]!;
@@ -358,8 +378,13 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       warnings.push(`Unsupported line ignored: ${line}`);
       continue;
     }
+    const note = parseNote(line);
+    if (note) {
+      notes.push(note);
+      continue;
+    }
     if (/^note\b/i.test(line)) {
-      warnings.push(`Notes are not yet supported for class diagrams, ignored: ${line}`);
+      warnings.push(`Unsupported line ignored: ${line}`);
       continue;
     }
     // `<<interface>> Shape`: an annotation for a class declared elsewhere (or not yet).
@@ -401,6 +426,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       classes: [...classes.values()],
       relationships,
       ...(namespaces.size > 0 ? { namespaces: [...namespaces.values()] } : {}),
+      ...(notes.length > 0 ? { notes } : {}),
     },
     warnings,
   };

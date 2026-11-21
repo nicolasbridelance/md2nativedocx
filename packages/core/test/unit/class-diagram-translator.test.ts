@@ -170,3 +170,20 @@ test('cardinalities are drawn next to their own end, escaped', () => {
   };
   assert.ok(y('1 &lt;&amp;&gt;') < y('*'));
 });
+
+test('a note is a folded-corner box, escaped, joined to its class by a dotted line', () => {
+  // Injection case (AGENTS.md): note text is user text.
+  const xml = translateClassDiagramToOoxml(parseClassDiagram('classDiagram\nclass A\nnote for A "x <y> &<br>z"\nnote "free"').ast);
+  assert.equal((xml.match(/<a:prstGeom prst="foldedCorner">/g) ?? []).length, 2);
+  assert.ok(xml.includes('>x &lt;y&gt; &amp;</w:t>') && xml.includes('>z</w:t>'), 'two escaped lines');
+  assert.ok(!xml.includes('<y>'));
+  assert.ok(/<a:srgbClr val="AAAA33"\/><\/a:solidFill>\s*<a:prstDash val="dash"\/>/.test(xml), 'a dotted line in the note colour');
+  assert.equal((xml.match(/<a:prstDash val="dash"\/>/g) ?? []).length, 1);
+});
+
+test('a note keeps an inheritance tree out of SmartArt, which has no place for it', async () => {
+  const { classDiagramToFlowchart } = await import('../../src/smartart/from-graph.js');
+  const tree = 'classDiagram\nAnimal <|-- Duck';
+  assert.ok(classDiagramToFlowchart(parseClassDiagram(tree).ast));
+  assert.equal(classDiagramToFlowchart(parseClassDiagram(`${tree}\nnote for Duck "can fly"`).ast), null);
+});

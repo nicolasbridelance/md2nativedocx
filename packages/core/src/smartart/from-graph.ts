@@ -66,12 +66,12 @@ function member(m: ClassMember): string {
 /**
  * The superclass → subclass tree of an inheritance-only class diagram, or `null` with any other relation. A
  * two-way inheritance (`A <|--|> B`) names no superclass, so it is not a tree either: the shapes keep both
- * triangles. A class in a `namespace` keeps the diagram in shapes too: SmartArt has no box to draw around a
- * group, as for a flowchart `subgraph`.
+ * triangles. A class in a `namespace`, or a note, keeps the diagram in shapes too: SmartArt has no box to
+ * draw around a group (as for a flowchart `subgraph`) and no place for a note.
  */
 export function classDiagramToFlowchart(diagram: ClassDiagram): Flowchart | null {
   if (diagram.relationships.length === 0 || diagram.relationships.some((r) => r.type !== 'inheritance' || r.markerEnd === 'both')) return null;
-  if (diagram.classes.some((c) => c.namespace !== undefined)) return null;
+  if (diagram.classes.some((c) => c.namespace !== undefined) || (diagram.notes?.length ?? 0) > 0) return null;
   const nodes = diagram.classes.map((c) => {
     const tokens = lines(c.label, [...c.attributes, ...c.methods].map(member));
     // The annotation goes above the name, as in the shapes (only the first, as Mermaid does).

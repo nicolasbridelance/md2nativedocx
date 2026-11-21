@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 455 sans avertissement (84 %), 86 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 457 sans avertissement (84 %), 84 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -12,7 +12,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | architecture | 6 | 1 | 5 | 0 | 0 | 0 |
 | block | 30 | 29 | 1 | 0 | 0 | 0 |
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
-| classDiagram | 38 | 33 | 5 | 0 | 0 | 0 |
+| classDiagram | 38 | 35 | 3 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
 | entityRelationshipDiagram | 25 | 15 | 10 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
@@ -74,10 +74,8 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### classDiagram
 
-- #0 warned: Notes are not yet supported for class diagrams, ignored: note "From Duck till Zebra" \| Notes are not yet supported for class diagrams, ignored: note for Duck "can fly<br>can swim<br>can dive<br>can help in debugging"
 - #15 warned: Unsupported line ignored: bar ()-- foo
 - #16 warned: Unsupported line ignored: Class01 --() bar \| Unsupported line ignored: Class02 --() bar \| Unsupported line ignored: foo ()-- Class01
-- #28 warned: Notes are not yet supported for class diagrams, ignored: note "This is a general note" \| Notes are not yet supported for class diagrams, ignored: note for MyClass "This is a note for a class"
 - #36 warned: classDef "styleClass" referenced but not defined.
 
 ### entityRelationshipDiagram
