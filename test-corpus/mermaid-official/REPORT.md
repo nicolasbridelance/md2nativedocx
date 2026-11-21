@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 492 sans avertissement (91 %), 49 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 498 sans avertissement (92 %), 43 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -17,7 +17,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | entityRelationshipDiagram | 25 | 25 | 0 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
 | flowchart | 116 | 115 | 1 | 0 | 0 | 0 |
-| gantt | 11 | 4 | 7 | 0 | 0 | 0 |
+| gantt | 11 | 10 | 1 | 0 | 0 | 0 |
 | gitgraph | 35 | 34 | 1 | 0 | 0 | 0 |
 | ishikawa | 1 | 1 | 0 | 0 | 0 | 0 |
 | kanban | 3 | 3 | 0 | 0 | 0 | 0 |
@@ -82,13 +82,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### gantt
 
-- #1 warned: Task ignored (unresolvable "until" reference): Add to mermaid                      :until isadded
-- #3 warned: Unsupported directive ignored (cosmetic/interactive, no bearing on task position): weekend friday
-- #4 warned: Unsupported directive ignored (cosmetic/interactive, no bearing on task position): axisFormat %H:%M \| Task ignored (invalid end/duration "2m"): Initial milestone : milestone, m1, 17:49, 2m \| Task ignored (no start date and no previous task to chain from): Task A : 10m \| Task ignored (no start date and no previous task to chain from): Task B : 5m \| Task ignored (invalid end/duration 
-- #5 warned: Unsupported directive ignored (cosmetic/interactive, no bearing on task position): axisFormat %H:%M \| Task ignored (invalid start date "v1" for dateFormat "HH:mm"): Initial vert : vert, v1, 17:30, 2m \| Task ignored (no start date and no previous task to chain from): Task A : 3m \| Task ignored (no start date and no previous task to chain from): Task B : 8m \| Task ignored (invalid sta
-- #6 warned: Unsupported directive ignored (cosmetic/interactive, no bearing on task position): tickInterval 1week \| Unsupported directive ignored (cosmetic/interactive, no bearing on task position): weekday monday
-- #9 warned: Unsupported directive ignored (cosmetic/interactive, no bearing on task position): axisFormat %s \| Task ignored (invalid start date "0" for dateFormat "X"): 71   : 0, 71 \| Task ignored (invalid start date "0" for dateFormat "X"): 36   : 0, 36 \| Task ignored (invalid start date "0" for dateFormat "X"): 34   : 0, 34 \| Task ignored (invalid start date "0" for dateFormat "X"): 9    : 0,
-- #10 warned: Unsupported directive ignored (cosmetic/interactive, no bearing on task position): axisFormat %y \| Unsupported directive ignored (cosmetic/interactive, no bearing on task position): tickInterval 1decade \| Task ignored (invalid end/duration "1s"): 0    : milestone, item0,  1918, 1s \| Task ignored (invalid end/duration "1s   %% not yet official"): 9    : vert,              1906, 1s   
+- #10 warned: tickInterval "1decade" ignored (Mermaid accepts a number followed by millisecond, second, minute, hour, day, week or month), automatic ticks used: tickInterval 1decade
 
 ### gitgraph
 

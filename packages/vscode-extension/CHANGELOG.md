@@ -26,6 +26,14 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   flowchart subgraphs (a group keeps its own `direction` unless a relationship crosses its border, as in
   Mermaid); a relationship can join two groups. `style`, `classDef` (through `:::` or `class`) and
   `classDef default` colour entities and groups. Both used to be ignored, with a warning.
+- **Gantt charts: the whole time axis.** Dates are computed as Mermaid computes them (checked against its 11
+  official examples): `after`/`until` may name a task declared further down, durations in `ms`, `s`, `m`
+  (minutes) as well as hours to years, `dateFormat X`/`x` (Unix time), `includes`, `weekend friday`,
+  `inclusiveEndDates`. The axis runs from minutes to centuries, with ticks chosen for the span, `axisFormat`,
+  `tickInterval` and `weekday` applied, and a long plan fitted to the page instead of shrunk to unreadable.
+  Excluded days are shaded; a milestone sits on the middle of its span; `vert` draws a dated vertical line.
+  These used to be ignored or to drop the task, with a warning. An invalid duration now gives a task with no
+  duration (as in Mermaid) instead of dropping it.
 
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,

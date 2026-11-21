@@ -878,16 +878,18 @@ Planning de tâches sur un calendrier.
 
 **Syntaxe**
 
-- `title`, `dateFormat`, `excludes` (weekends, jours, dates), `section`
-- Tâche : `nom :tags, id, début, fin|durée` (`active`, `done`, `crit`, `milestone`), `after id`, `until id`, durées `3d` `2w`…
+- `title`, `dateFormat` (jetons `YYYY MM DD HH mm ss`, ou `X`/`x` pour des secondes/millisecondes Unix), `excludes` (weekends, jours, dates), `includes`, `weekend friday`, `inclusiveEndDates`, `section`
+- Tâche : `nom :tags, id, début, fin|durée` (`active`, `done`, `crit`, `milestone`, `vert`), `after id`, `until id` (même vers une tâche déclarée plus bas), durées `500ms` `30s` `10m` `2h` `3d` `2w` `1M` `1y`
+- Axe : `axisFormat` (format D3, par ex. `%H:%M`, `%d %b`, `%Y`), `tickInterval` (`1week`, `15minute`…), `weekday` (jour des graduations hebdomadaires)
 
-**Pris en charge :** Positions et durées avec jours exclus.
+**Pris en charge :** Dates calculées comme Mermaid (comparées aux 11 exemples officiels). Échelle de la minute aux siècles : graduations choisies selon la durée, graphique borné à la largeur de la page. Jours exclus grisés (sinon le week-end). Jalon centré sur le milieu de sa durée. `vert` : ligne verticale datée, son libellé sous le graphique.
 
 **Limites**
 
-- Non gérés (avertissement) : `axisFormat`, `tickInterval`, `todayMarker`, `includes`, `weekday`, `inclusiveEndDates`, `topAxis`, `click`
-- Semaine fixe : week-end samedi/dimanche
-- Un `after` introuvable retombe sur la fin de la tâche précédente (jamais sur « aujourd’hui »)
+- Non gérés (avertissement) : `todayMarker` (un document ne dépend pas du jour où il est produit ; `todayMarker off` est accepté), `click`, `accTitle`/`accDescr`
+- Axe toujours en haut (`topAxis` sans effet) ; `displayMode: compact` (en-tête YAML) non appliqué
+- Un `after` introuvable retombe sur la fin de la tâche précédente, un `until` introuvable écarte la tâche, et un `dateFormat` sans date (`HH:mm`) place les heures au 1970-01-01 : jamais « aujourd’hui » comme Mermaid, pour que le document ne change pas selon le jour de l'export
+- Plus de 5 ans : jours exclus non grisés (comme Mermaid)
 
 
 +-----------------------------------------------------------+----------------------------------------------------------------------------------------------------+

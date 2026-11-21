@@ -12,11 +12,14 @@
  * the vendored reference (`docs/adr/spikes/spike-gantt-parser/`) — so this translator
  * doesn't either; no magnetic-connector geometry needed here.
  *
- * **V1 simplification**: only the fixed Saturday/Sunday weekend is shaded on the
- * calendar. A custom `excludes` list (specific dates/weekday names) still correctly
- * shifts task end dates (`parser.ts`'s `stretchPastExcludes`) — it just isn't
- * re-derived here for shading, since `GanttChart` intentionally carries only already-
- * resolved dates (see `types.ts`'s doc comment), not the original `excludes` tokens.
+ * Positions come from `time-axis.ts` (a linear time scale, bounded in width) and the shaded days
+ * from the parser (`GanttChart.shadedDays`: the excluded days, or the weekend when nothing is
+ * excluded). A day is shaded only when the chart spans two days or more and a day is wide enough
+ * to see; otherwise the shading would only grey the whole chart or draw slivers.
+ *
+ * As in Mermaid's renderer: a milestone is a diamond centred on the middle of its span (a
+ * zero-length one on its date); a `vert` task takes no row, it is a vertical line at its start
+ * across the whole chart, labelled below it.
  */
 
 import type { GanttChart, GanttTag, GanttTask } from './types.js';
@@ -32,10 +35,9 @@ import {
   LABEL_NAME,
   unwrappedTextFrame,
 } from '../../translator/canvas.js';
-import { addDays, daysBetween, isWeekend } from './date-utils.js';
+import { addDays, isWeekend, MS_PER_DAY } from './date-utils.js';
+import { buildTicks, timeScale, xOf, type TimeScale } from './time-axis.js';
 
-const PX_PER_DAY = 22;
-const MIN_CHART_WIDTH = 220;
 const MIN_GUTTER = 140;
 const MAX_GUTTER = 260;
 const RIGHT_MARGIN = 16;
@@ -46,6 +48,16 @@ const ROW_HEIGHT = 24;
 const SECTION_ROW_HEIGHT = 22;
 const BAR_VPAD = 4;
 const MIN_BAR_WIDTH = 6;
+/** Width of a tick label box (four days at the base scale, as before the scale became continuous). */
+const TICK_LABEL_WIDTH = 88;
+/** A tick label's font (7 pt) in pixels, to measure it, and the margin added to the measure. */
+const TICK_FONT_PX = 10;
+const LABEL_SLACK = 6;
+/** Below this many pixels a shaded day would be a sliver: no shading. */
+const MIN_SHADED_DAY_WIDTH = 4;
+const VERT_LABEL_HEIGHT = 20;
+const VERT_LABEL_WIDTH = 120;
+const VERT_COLOR = '1F3864';
 
 const GRID_BORDER = 'BFBFBF';
 const WEEKEND_FILL = 'F2F2F2';
@@ -165,11 +177,14 @@ function textBox(id: number, x: number, y: number, w: number, h: number, text: s
 
 type Row = { kind: 'section'; label: string } | { kind: 'task'; task: GanttTask };
 
+/** One row per task in declaration order, a band before each change of section. `vert` tasks take
+ * no row (see the module comment). */
 function buildRows(tasks: readonly GanttTask[]): Row[] {
   const rows: Row[] = [];
   let currentSection: string | undefined;
   let sawAnySection = false;
   for (const task of tasks) {
+    if (hasTag(task.tags, 'vert')) continue;
     if (task.section !== undefined && (task.section !== currentSection || !sawAnySection)) {
       rows.push({ kind: 'section', label: task.section });
       currentSection = task.section;
@@ -180,31 +195,13 @@ function buildRows(tasks: readonly GanttTask[]): Row[] {
   return rows;
 }
 
-/** Weekly ticks for a range short enough to read at {@link PX_PER_DAY}, monthly
- * ticks (1st of each covered month) beyond that — same rationale as
- * `../quadrant/translator.ts` capping label rotation complexity: this is a v1, not an
- * attempt to reproduce Mermaid's own adaptive D3 time-axis exactly. */
-function buildTicks(dateMin: Date, dateMax: Date): { date: Date; label: string }[] {
-  const totalDays = Math.max(1, daysBetween(dateMin, dateMax));
-  const ticks: { date: Date; label: string }[] = [];
-  if (totalDays <= 62) {
-    for (let d = dateMin; d.getTime() <= dateMax.getTime(); d = addDays(d, 7)) {
-      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const dd = String(d.getUTCDate()).padStart(2, '0');
-      ticks.push({ date: d, label: `${mm}-${dd}` });
-    }
-  } else {
-    let cursor = new Date(Date.UTC(dateMin.getUTCFullYear(), dateMin.getUTCMonth(), 1));
-    while (cursor.getTime() <= dateMax.getTime()) {
-      if (cursor.getTime() >= dateMin.getTime()) {
-        const yyyy = cursor.getUTCFullYear();
-        const mm = String(cursor.getUTCMonth() + 1).padStart(2, '0');
-        ticks.push({ date: cursor, label: `${yyyy}-${mm}` });
-      }
-      cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
-    }
+/** Saturdays and Sundays of the span, for a chart built without `shadedDays`. */
+function defaultShadedDays(scale: TimeScale): Date[] {
+  const days: Date[] = [];
+  for (let day = new Date(scale.t0); day.getTime() < scale.t1; day = addDays(day, 1)) {
+    if (isWeekend(day)) days.push(day);
   }
-  return ticks;
+  return days;
 }
 
 export function translateGanttToOoxml(chart: GanttChart, options: CanvasOptions = {}): string {
@@ -225,23 +222,33 @@ export function translateGanttToOoxml(chart: GanttChart, options: CanvasOptions 
   }
 
   const dateMin = chart.tasks.reduce((min, t) => (t.start < min ? t.start : min), chart.tasks[0]!.start);
-  const dateMaxRaw = chart.tasks.reduce((max, t) => (t.end > max ? t.end : max), chart.tasks[0]!.end);
-  const dateMax = dateMaxRaw > dateMin ? dateMaxRaw : addDays(dateMin, 1);
-
-  const totalDays = Math.max(1, daysBetween(dateMin, dateMax));
-  const chartWidth = Math.max(MIN_CHART_WIDTH, totalDays * PX_PER_DAY);
-
-  const longestLabel = chart.tasks.reduce((max, t) => Math.max(max, estimateTextWidth(t.text, 12)), 0);
-  const gutterWidth = Math.min(MAX_GUTTER, Math.max(MIN_GUTTER, longestLabel + 16));
+  const dateMax = chart.tasks.reduce((max, t) => (t.end > max ? t.end : max), chart.tasks[0]!.end);
+  const axis = timeScale(dateMin, dateMax);
+  const chartWidth = axis.width;
 
   const rows = buildRows(chart.tasks);
-  const rowsHeight = rows.reduce((sum, r) => sum + (r.kind === 'section' ? SECTION_ROW_HEIGHT : ROW_HEIGHT), 0);
+  const verts = chart.tasks.filter((t) => hasTag(t.tags, 'vert'));
+  const longestLabel = rows.reduce((max, r) => Math.max(max, r.kind === 'task' ? estimateTextWidth(r.task.text, 12) : 0), 0);
+  const gutterWidth = Math.min(MAX_GUTTER, Math.max(MIN_GUTTER, longestLabel + 16));
 
-  const canvasW = gutterWidth + chartWidth + RIGHT_MARGIN;
-  const canvasH = topMargin + rowsHeight;
-  const { scale: s } = scaledExtent(canvasW, canvasH, options);
+  const rowsHeight = rows.reduce((sum, r) => sum + (r.kind === 'section' ? SECTION_ROW_HEIGHT : ROW_HEIGHT), 0);
+  const vertLabelsHeight = verts.length > 0 ? VERT_LABEL_HEIGHT : 0;
 
   const chartX0 = gutterWidth;
+  const xAt = (date: Date | number): number => chartX0 + xOf(axis, date);
+  const ticks = buildTicks(axis, { tickInterval: chart.tickInterval, weekday: chart.weekday, axisFormat: chart.axisFormat });
+
+  // Wide enough for the chart, and for the labels that start or centre near its right edge (the last
+  // tick's, a `vert` line's), which Word would otherwise wrap against the canvas border.
+  const lastTick = ticks[ticks.length - 1];
+  const canvasW = Math.max(
+    gutterWidth + chartWidth + RIGHT_MARGIN,
+    lastTick ? xAt(lastTick.date) + estimateTextWidth(lastTick.label, TICK_FONT_PX) + LABEL_SLACK : 0,
+    ...verts.map((v) => xAt(v.start) + VERT_LABEL_WIDTH / 2),
+  );
+  const canvasH = topMargin + rowsHeight + vertLabelsHeight;
+  const { scale: s } = scaledExtent(canvasW, canvasH, options);
+
   const gridTop = topMargin;
   const gridBottom = topMargin + rowsHeight;
 
@@ -253,20 +260,22 @@ export function translateGanttToOoxml(chart: GanttChart, options: CanvasOptions 
     );
   }
 
-  // Weekend shading, drawn first so every later shape sits on top of it.
-  for (let day = 0; day < totalDays; day++) {
-    const date = addDays(dateMin, day);
-    if (isWeekend(date)) {
-      parts.push(rect(nextId(), scale(chartX0 + day * PX_PER_DAY, s), scale(gridTop, s), scale(PX_PER_DAY, s), scale(rowsHeight, s), WEEKEND_FILL));
+  // Shaded days, drawn first so every later shape sits on top of them.
+  const dayWidth = MS_PER_DAY * axis.pxPerMs;
+  if (axis.t1 - axis.t0 >= 2 * MS_PER_DAY && dayWidth >= MIN_SHADED_DAY_WIDTH) {
+    for (const day of chart.shadedDays ?? defaultShadedDays(axis)) {
+      const from = Math.max(day.getTime(), axis.t0);
+      const to = Math.min(day.getTime() + MS_PER_DAY, axis.t1);
+      if (to <= from) continue;
+      parts.push(rect(nextId(), scale(xAt(from), s), scale(gridTop, s), scale(xOf(axis, to) - xOf(axis, from), s), scale(rowsHeight, s), WEEKEND_FILL));
     }
   }
 
   // Date-axis ticks: vertical gridline through the whole chart body + a label in the header strip.
-  const ticks = buildTicks(dateMin, dateMax);
   for (const tick of ticks) {
-    const x = chartX0 + daysBetween(dateMin, tick.date) * PX_PER_DAY;
+    const x = xAt(tick.date);
     parts.push(rect(nextId(), scale(x, s), scale(gridTop, s), scale(1, s), scale(rowsHeight, s), GRID_BORDER));
-    parts.push(textBox(nextId(), scale(x, s), scale(topMargin - HEADER_HEIGHT + 4, s), scale(PX_PER_DAY * 4, s), scale(HEADER_HEIGHT - 4, s), tick.label, { sizeHalfPt: 14, color: '595959' }, s));
+    parts.push(textBox(nextId(), scale(x, s), scale(topMargin - HEADER_HEIGHT + 4, s), scale(TICK_LABEL_WIDTH, s), scale(HEADER_HEIGHT - 4, s), tick.label, { sizeHalfPt: 14, color: '595959' }, s));
   }
 
   // Frame around the calendar body.
@@ -288,25 +297,32 @@ export function translateGanttToOoxml(chart: GanttChart, options: CanvasOptions 
       textBox(nextId(), scale(6, s), scale(rowY + 2, s), scale(gutterWidth - 10, s), scale(ROW_HEIGHT - 4, s), task.text, { sizeHalfPt: 15, color: '000000' }, s),
     );
 
-    const startOffsetDays = daysBetween(dateMin, task.start);
     const barY = rowY + BAR_VPAD;
     const barH = ROW_HEIGHT - 2 * BAR_VPAD;
 
     if (hasTag(task.tags, 'milestone')) {
-      const cx = chartX0 + startOffsetDays * PX_PER_DAY;
+      const cx = xAt((task.start.getTime() + task.end.getTime()) / 2);
       const cy = rowY + ROW_HEIGHT / 2;
       parts.push(milestoneDiamond(nextId(), scale(cx, s), scale(cy, s), scale(barH, s), BAR_COLORS.milestone));
     } else {
-      const durationDays = Math.max(0, daysBetween(task.start, task.end));
-      const barX = chartX0 + startOffsetDays * PX_PER_DAY;
-      const barW = Math.max(MIN_BAR_WIDTH, durationDays * PX_PER_DAY);
+      const barX = xAt(task.start);
+      const barW = Math.max(MIN_BAR_WIDTH, xAt(task.end) - barX);
       parts.push(bar(nextId(), scale(barX, s), scale(barY, s), scale(barW, s), scale(barH, s), barColor(task.tags)));
     }
 
     rowY += ROW_HEIGHT;
   }
 
+  // Vertical markers, over the bars, labelled under the chart.
+  for (const vert of verts) {
+    const x = xAt(vert.start);
+    parts.push(rect(nextId(), scale(x - 1, s), scale(gridTop, s), scale(2, s), scale(rowsHeight, s), VERT_COLOR));
+    parts.push(
+      textBox(nextId(), scale(x - VERT_LABEL_WIDTH / 2, s), scale(gridBottom + 2, s), scale(VERT_LABEL_WIDTH, s), scale(VERT_LABEL_HEIGHT - 4, s), vert.text, { sizeHalfPt: 14, color: VERT_COLOR, align: 'center' }, s),
+    );
+  }
+
   const content = parts.join('\n');
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, Math.max(canvasH, gridBottom), docPrId, chart.title ?? 'Gantt chart', options);
+  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, chart.title ?? 'Gantt chart', options);
 }

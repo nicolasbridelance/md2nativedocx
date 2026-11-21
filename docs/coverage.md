@@ -56,7 +56,7 @@ SmartArt and charts are `.docx`-only.
 | `block-beta` | Shapes | — | A grid with spans and free links. |
 | `quadrantChart` | Shapes | — | Points placed by `[x, y]` coordinates; SmartArt matrices hold text, not positioned points. |
 | `venn-beta` | Shapes | — | Overlap colours come from stacked translucent circles. A SmartArt Basic Venn is possible when no overlap is labelled: open product decision, see the backlog. |
-| `gantt` | Shapes | — | Bars on a calendar scale. A Word chart cannot show it faithfully (ADR 0011). |
+| `gantt` | Shapes | — | Bars on a time scale (minutes to centuries), dates computed as Mermaid does; `vert` lines, shaded excluded days. A Word chart cannot show it faithfully (ADR 0011). Not applied: `displayMode: compact`, `todayMarker`, `click`. |
 | `sankey-beta` | Shapes | — | Flow widths proportional to values; no Word chart or SmartArt equivalent. |
 | `treemap-beta` | Shapes | — | Squarified rectangles. Word's own treemap chart is a different chart format (`cx:chartex`), not implemented (backlog). |
 | `packet-beta` | Shapes | — | A bit grid. |
