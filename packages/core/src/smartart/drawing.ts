@@ -16,7 +16,7 @@
 
 import { escapeXml, validateHexColor } from '../translator/xml-escape.js';
 import type { Flowchart, LabelToken } from '../types.js';
-import { paragraphRunsXml, textLines } from './text.js';
+import { paragraphRunsXml, textColorOnFill, textLines } from './text.js';
 import { accentOf, profileOf, type SmartArtStyle } from './styles.js';
 
 /** Frame size (EMU) the diagram is embedded in — keep in sync with `embed.ts`'s defaults. */
@@ -82,14 +82,6 @@ export interface DrawingShape {
 
 const EMU_PER_PT = 12700;
 
-/** Black or white text depending on the fill's luminance (light `classDef` fills need dark text). */
-function textColor(fill: string | undefined): string {
-  if (!fill) return 'lt1';
-  const n = Number.parseInt(fill, 16);
-  const luma = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
-  return luma > 160 ? 'dk1' : 'lt1';
-}
-
 /** Theme gradient fill 2 (a soft two-stop gradient, what a "moderate" quick style references) for one accent. */
 function moderateGradient(accent: string): string {
   return (
@@ -143,7 +135,7 @@ function shapeXml(shape: DrawingShape, style: SmartArtStyle): string {
     ? `<a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:srgbClr val="${validateHexColor(shape.line, '')}"/></a:solidFill><a:prstDash val="solid"/></a:ln>`
     : `<a:ln w="${lineWidth}" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
   const effects = isArrow || shape.line !== undefined ? '<a:effectLst/>' : profile.effectIdx === 2 ? SHADOW : profile.effectIdx === 1 ? LIGHT_SHADOW : '<a:effectLst/>';
-  const colour = textColor(fill || undefined);
+  const colour = textColorOnFill(fill || undefined);
   const lnIdx = isConn ? 2 : isArrow ? 0 : profile.lnIdx;
   const fillIdx = isConn ? 0 : isArrow ? 1 : profile.fillIdx;
   const effectIdx = isArrow ? 0 : profile.effectIdx;

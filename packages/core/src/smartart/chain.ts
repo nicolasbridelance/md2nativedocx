@@ -472,7 +472,7 @@ function buildChainDataXml(
         ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
         : '<dgm:spPr/>';
       const nodePt =
-        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text)}</dgm:pt>`;
+        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text, fill)}</dgm:pt>`;
       const parTransId = parTransIds[i];
       const sibTransId = sibTransIds[i];
       const transPts =

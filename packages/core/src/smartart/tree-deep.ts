@@ -282,7 +282,7 @@ export function generateDeepTree(flowchart: Flowchart, options: SmartArtGenerate
     .map(
       (n) =>
         `<dgm:pt modelId="${n.pt}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(n.fill)}` +
-        `${pointTextXml(n.text)}</dgm:pt>` +
+        `${pointTextXml(n.text, n.fill)}</dgm:pt>` +
         `<dgm:pt modelId="${n.parTrans}" type="parTrans" cxnId="${n.parOf}"><dgm:prSet/><dgm:spPr/></dgm:pt>` +
         `<dgm:pt modelId="${n.sibTrans}" type="sibTrans" cxnId="${n.parOf}"><dgm:prSet/><dgm:spPr/></dgm:pt>`
     )

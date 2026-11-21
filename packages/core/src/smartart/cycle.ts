@@ -279,7 +279,7 @@ function buildCycleDataXml(
         ? `<dgm:spPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></dgm:spPr>`
         : '<dgm:spPr/>';
       return (
-        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text)}</dgm:pt>` +
+        `<dgm:pt modelId="${nodeIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPr}${pointTextXml(text, fill)}</dgm:pt>` +
         `<dgm:pt modelId="${parTransIds[i]}" type="parTrans"><dgm:prSet/></dgm:pt>` +
         `<dgm:pt modelId="${sibTransIds[i]}" type="sibTrans"><dgm:prSet/></dgm:pt>`
       );

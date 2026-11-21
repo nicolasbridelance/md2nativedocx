@@ -39,3 +39,23 @@ test('Markdown-string bold/italic reach the SmartArt runs', () => {
   assert.ok(out.dataXml.includes('<a:rPr lang="fr-FR" i="1"/><a:t>now</a:t>'));
   assert.ok(out.drawingXml?.includes('b="1"'));
 });
+
+test('a point with its own fill writes its text in the colour readable on it, in the data model too', () => {
+  // Word lays the SmartArt out again from the data model: without a colour there, a light fill kept the
+  // quick style's white text (seen on a highlighted tree view row, 2026-11-21).
+  const dark = '<a:solidFill><a:schemeClr val="dk1"/></a:solidFill>';
+  const light = '<a:solidFill><a:schemeClr val="lt1"/></a:solidFill>';
+  assert.ok(pointTextXml([{ text: 'a' }, { break: true }], 'FFF2CC').includes(`<a:rPr lang="fr-FR">${dark}</a:rPr><a:t>a</a:t>`));
+  assert.ok(pointTextXml([{ text: 'a', bold: true }], '1F3864').includes(`<a:rPr lang="fr-FR" b="1">${light}</a:rPr>`));
+  assert.ok(!pointTextXml([{ text: 'a' }]).includes('solidFill'));
+  assert.ok(!pointTextXml([{ text: 'a' }], 'not-a-colour').includes('solidFill'));
+
+  const styled = 'classDef pale fill:#fff2cc\n  class A pale';
+  const chain = generateChain(parseMermaid(`flowchart LR\n  A[x] --> B[y]\n  ${styled}`).ast);
+  const cycle = generateCycle(parseMermaid(`flowchart LR\n  A[x] --> B[y] --> C[z] --> A\n  ${styled}`).ast);
+  const tree = generateTree(parseMermaid(`flowchart TD\n  A[x] --> B[y]\n  A --> C[z]\n  ${styled}`).ast);
+  for (const { dataXml } of [chain, cycle, tree]) {
+    assert.ok(dataXml.includes(`${dark}</a:rPr><a:t>x</a:t>`));
+    assert.ok(dataXml.includes('<a:rPr lang="fr-FR"/><a:t>y</a:t>'));
+  }
+});

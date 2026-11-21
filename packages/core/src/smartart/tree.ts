@@ -450,12 +450,12 @@ function buildTreeDataXml(
   const pConnIds = new Map(childIds.map((id) => [id, newModelId()]));
 
   const rootPt =
-    `<dgm:pt modelId="${rootId}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(root.fill)}${pointTextXml(boxText(root))}</dgm:pt>`;
+    `<dgm:pt modelId="${rootId}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(root.fill)}${pointTextXml(boxText(root), root.fill)}</dgm:pt>`;
 
   const childPts = children
     .map((node, i) => {
       const label = incomingLabel.get(node.id);
-      return `<dgm:pt modelId="${childIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(node.fill)}${pointTextXml(boxText(node, label))}</dgm:pt>`;
+      return `<dgm:pt modelId="${childIds[i]}"><dgm:prSet phldrT="[Texte]"/>${spPrFor(node.fill)}${pointTextXml(boxText(node, label), node.fill)}</dgm:pt>`;
     })
     .join('');
 
