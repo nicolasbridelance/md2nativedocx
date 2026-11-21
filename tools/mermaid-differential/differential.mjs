@@ -30,6 +30,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { JSDOM } from 'jsdom';
 
+// Mermaid's Gantt dates are local time (dayjs), ours are UTC by design (`gantt/date-utils.ts`): compare both
+// in UTC. Set before Mermaid is loaded and before any date is made.
+process.env.TZ = 'UTC';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..');
 const corpusDir = join(root, 'test-corpus', 'mermaid-official');
@@ -60,6 +64,7 @@ const { parseSequence } = await core('diagrams/sequence/parser.js');
 const { parseClassDiagram } = await core('diagrams/class-diagram/parser.js');
 const { parseStateDiagram } = await core('diagrams/state-diagram/parser.js');
 const { parseErDiagram } = await core('diagrams/er-diagram/parser.js');
+const { parseGanttChart } = await core('diagrams/gantt/parser.js');
 const { extractNodeStyle, parseCssStyleProps } = await core('parser/css-style.js');
 
 /** A style as one comparable string (`fill=FF0000 bold`), or '' when it sets nothing. */
@@ -308,7 +313,41 @@ const COMPARATORS = {
       return facts;
     },
   },
+  gantt: {
+    theirs(db) {
+      // `getTasks()` resolves the dates (the parse alone only records the task lines). A `dateFormat` with no
+      // date in it (`HH:mm`) puts the times on today for dayjs, on 1970-01-01 for us (determinism, parser.ts):
+      // Mermaid's dates are brought back to 1970-01-01 for the comparison.
+      const dateFormat = db.getDateFormat().trim() || 'YYYY-MM-DD';
+      const timeOnly = !/[YDM]/.test(dateFormat) && !/^[xX]$/.test(dateFormat);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const iso = (date) => new Date(date.getTime() - (timeOnly ? today.getTime() : 0)).toISOString();
+      return db.getTasks().map((t) => {
+        // Mermaid reads a trailing `%%` comment in a task's data as part of its end, which then is no duration
+        // and gives the task none; we ignore the comment (parser.ts). The end of such a task is not compared.
+        const end = String(t.raw?.endTime?.data ?? '').includes('%%') ? '(commented)' : iso(t.endTime);
+        const tags = ['active', 'done', 'crit', 'milestone', 'vert'].filter((k) => t[k]);
+        return ganttFact(t.id, normText(mermaidEntities(t.task)), t.section, iso(t.startTime), end, tags);
+      });
+    },
+    ours(source) {
+      const { ast } = parseGanttChart(source);
+      const commented = new Set(
+        source
+          .split('\n')
+          .filter((l) => !l.trim().startsWith('%%') && /:.*%%/.test(l))
+          .map((l) => l.slice(0, l.indexOf(':')).trim()),
+      );
+      return ast.tasks.map((t) => ganttFact(t.id, ourText(t.text), t.section ?? '', t.start.toISOString(), commented.has(t.text) ? '(commented)' : t.end.toISOString(), t.tags));
+    },
+  },
 };
+
+/** One Gantt task as a comparable fact: id, text, section, resolved dates, tags. */
+function ganttFact(id, text, section, start, end, tags) {
+  return `task ${id} "${text}" in "${section}" ${start} -> ${end} [${[...tags].sort().join(' ')}]`;
+}
 
 // --- Run ------------------------------------------------------------------------------------------------
 
@@ -385,7 +424,7 @@ sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (\`LICENSE\`
 **${compared.length} exemples comparés : ${count('match')} identiques, ${count('diff')} avec écart, dont ${silent.length} sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 ${silent.map((r) => `\`${r.id}\``).join(', ') || 'aucun'}). Hors comparaison : ${count('mermaid-rejects')} refusé(s) par Mermaid lui-même${rejected},
-${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états et ER en ont un).
+${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER et Gantt en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|
