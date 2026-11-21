@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 503 sans avertissement (93 %), 38 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 504 sans avertissement (93 %), 37 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -34,7 +34,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | swimlanes | 13 | 12 | 1 | 0 | 0 | 0 |
 | timeline | 14 | 13 | 1 | 0 | 0 | 0 |
 | treemap | 8 | 8 | 0 | 0 | 0 | 0 |
-| treeView | 13 | 9 | 4 | 0 | 0 | 0 |
+| treeView | 13 | 10 | 3 | 0 | 0 | 0 |
 | usecase | 24 | 19 | 5 | 0 | 0 | 0 |
 | userJourney | 1 | 1 | 0 | 0 | 0 | 0 |
 | venn | 8 | 7 | 1 | 0 | 0 | 0 |
@@ -113,10 +113,9 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
 ### treeView
 
-- #1 warned: TreeView icons are not supported and were ignored.
-- #7 warned: TreeView icons are not supported and were ignored.
-- #8 warned: TreeView icons are not supported and were ignored.
-- #9 warned: TreeView icons are not supported and were ignored.
+- #1 warned: TreeView icons are not drawn (they come from icon packs the page running Mermaid registers), ignored on "App.tsx": icon(logos:react)
+- #7 warned: TreeView icons are not drawn (they come from icon packs the page running Mermaid registers), ignored on "App.tsx": icon(logos:react)
+- #9 warned: TreeView icons are not drawn (they come from icon packs the page running Mermaid registers), ignored on "App.tsx": icon(logos:react)
 
 ### usecase
 

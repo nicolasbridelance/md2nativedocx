@@ -5,10 +5,10 @@ exemple de `examples.json`, ce que Mermaid a compris (sa base après analyse, sa
 analyseur a compris. Un écart est un nœud, un lien, un message ou un bloc qu'un seul des deux côtés voit, même
 sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**287 exemples comparés : 287 identiques, 0 avec écart, dont 0 sans avertissement** (l'étage 1 les
+**300 exemples comparés : 300 identiques, 0 avec écart, dont 0 sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
-254 d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales et exigences en ont un).
+241 d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales, exigences et arborescences en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|
@@ -21,6 +21,7 @@ aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 | sequenceDiagram | 38 | 38 | 0 | 0 |
 | stateDiagram | 22 | 22 | 0 | 0 |
 | swimlanes | 13 | 13 | 0 | 0 |
+| treeView | 13 | 13 | 0 | 0 |
 
 ## Écarts
 

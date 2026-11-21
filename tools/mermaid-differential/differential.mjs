@@ -67,6 +67,8 @@ const { parseErDiagram } = await core('diagrams/er-diagram/parser.js');
 const { parseGanttChart } = await core('diagrams/gantt/parser.js');
 const { parseMindmap } = await core('diagrams/mindmap/parser.js');
 const { parseRequirementDiagram } = await core('diagrams/requirement-diagram/parser.js');
+const { parseTreeView } = await core('diagrams/tree-view/parser.js');
+const { withImplicitRoot } = await core('diagrams/tree-view/implicit-root.js');
 const { parseLabel } = await core('parser/label.js');
 const { extractNodeStyle, parseCssStyleProps } = await core('parser/css-style.js');
 
@@ -441,6 +443,39 @@ COMPARATORS.requirement = {
   },
 };
 
+/** One tree view row as a comparable fact: its place, kind, name as shown, and annotations. */
+function treeViewFact(index, parent, kind, name, className, icon, description) {
+  return `node ${index} under ${parent} ${kind} "${name}" class="${className ?? ''}" icon="${icon ?? ''}" desc="${description ?? ''}"`;
+}
+
+/**
+ * A tree view as facts: each row in tree order, Mermaid's implicit `/` root first (its db starts with it;
+ * we add it when drawing, `withImplicitRoot`), then the title and accessibility texts.
+ */
+COMPARATORS.treeView = {
+  theirs(db) {
+    const facts = [];
+    const walk = (node, parent) => {
+      const index = facts.length;
+      facts.push(treeViewFact(index, parent, node.nodeType === 'directory' ? 'dir' : 'file', node.name, node.cssClass, node.icon, node.description));
+      for (const child of node.children) walk(child, index);
+    };
+    walk(db.getRoot(), '-');
+    for (const [key, value] of [['title', db.getDiagramTitle()], ['accTitle', db.getAccTitle()], ['accDescr', db.getAccDescription()]]) {
+      if (value) facts.push(`${key} "${value}"`);
+    }
+    return facts;
+  },
+  ours(source) {
+    const { ast } = parseTreeView(source);
+    const facts = withImplicitRoot(ast).map((n, i) =>
+      treeViewFact(i, n.parent < 0 ? '-' : n.parent, n.isDirectory ? 'dir' : 'file', n.label, n.className, n.icon, n.description),
+    );
+    for (const key of ['title', 'accTitle', 'accDescr']) if (ast[key]) facts.push(`${key} "${ast[key]}"`);
+    return facts;
+  },
+};
+
 /** One Gantt task as a comparable fact: id, text, section, resolved dates, tags. */
 function ganttFact(id, text, section, start, end, tags) {
   return `task ${id} "${text}" in "${section}" ${start} -> ${end} [${[...tags].sort().join(' ')}]`;
@@ -521,7 +556,7 @@ sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (\`LICENSE\`
 **${compared.length} exemples comparés : ${count('match')} identiques, ${count('diff')} avec écart, dont ${silent.length} sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 ${silent.map((r) => `\`${r.id}\``).join(', ') || 'aucun'}). Hors comparaison : ${count('mermaid-rejects')} refusé(s) par Mermaid lui-même${rejected},
-${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales et exigences en ont un).
+${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt, cartes mentales, exigences et arborescences en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|
