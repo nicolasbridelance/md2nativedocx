@@ -276,9 +276,17 @@ const COMPARATORS = {
   },
   er: {
     theirs(db) {
+      // A relationship naming a group also creates an entity of that name in Mermaid's db; its renderer
+      // (`getData`) skips every entity whose name is a group's id, so only the group is drawn.
+      const groups = db.getSubGraphs();
+      const groupIds = new Set(groups.map((g) => g.id));
       const entities = [...db.getEntities().entries()];
       const byInternalId = new Map(entities.map(([name, e]) => [e.id, name]));
-      const facts = entities.map(([name, e]) => `entity ${name} "${normText(mermaidEntities(e.alias || name))}" ${e.attributes.length} attributes`);
+      const facts = entities
+        .filter(([name]) => !groupIds.has(name))
+        .map(([name, e]) => `entity ${name} "${normText(mermaidEntities(e.alias || name))}" ${e.attributes.length} attributes`);
+      const direction = (d) => (d === undefined ? '-' : d === 'TB' ? 'TD' : d);
+      for (const g of groups) facts.push(`group ${g.id} "${normText(mermaidEntities(g.title))}" ${direction(g.dir)} [${[...g.nodes].sort().join(' ')}]`);
       // Mermaid's relSpec names the cardinalities oddly: cardB sits next to entityA, cardA next to entityB.
       const card = { ZERO_OR_ONE: 'zero-or-one', ONLY_ONE: 'exactly-one', ZERO_OR_MORE: 'zero-or-many', ONE_OR_MORE: 'one-or-many' };
       for (const r of db.getRelationships()) {
@@ -290,6 +298,10 @@ const COMPARATORS = {
     ours(source) {
       const { ast } = parseErDiagram(source);
       const facts = ast.entities.map((e) => `entity ${e.id} "${ourText(e.label ?? e.id)}" ${e.attributes.length} attributes`);
+      for (const g of ast.groups ?? []) {
+        const members = [...ast.entities.filter((e) => e.group === g.id).map((e) => e.id), ...(ast.groups ?? []).filter((c) => c.parent === g.id).map((c) => c.id)];
+        facts.push(`group ${g.id} "${ourText(g.label)}" ${g.direction ?? '-'} [${members.sort().join(' ')}]`);
+      }
       for (const r of ast.relationships) {
         facts.push(`relation ${r.from} ${r.fromCardinality} ${r.identifying ? '--' : '..'} ${r.toCardinality} ${r.to} "${ourText(r.label)}"`);
       }
