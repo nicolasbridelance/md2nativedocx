@@ -156,3 +156,17 @@ test('a colour that is not 6 hex digits never reaches the XML, even from a calle
   });
   assert.ok(!xml.includes('evil') && !xml.includes('"red"'));
 });
+
+test('cardinalities are drawn next to their own end, escaped', () => {
+  // Injection case (AGENTS.md): a cardinality is user text.
+  const xml = translateClassDiagramToOoxml(parseClassDiagram('classDiagram\nA "1 <&>" --> "*" B : has').ast);
+  assert.ok(xml.includes('>1 &lt;&amp;&gt;</w:t>'));
+  assert.ok(!xml.includes('1 <&>'));
+  // TD layout: A above B, so the "1" (A's end) sits above the "*" (B's end).
+  const y = (text: string): number => {
+    const at = xml.indexOf(`>${text}</w:t>`);
+    const offs = [...xml.slice(0, at).matchAll(/<a:off x="-?\d+" y="(-?\d+)"\/>/g)];
+    return Number(offs[offs.length - 1]![1]);
+  };
+  assert.ok(y('1 &lt;&amp;&gt;') < y('*'));
+});

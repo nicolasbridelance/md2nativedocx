@@ -475,6 +475,7 @@ Classes UML avec attributs, méthodes et relations.
 - `namespace Nom { … }` (imbriqués, noms pointés `A.B.C`, libellé `namespace X["Libellé"]`) : cadre gris en pointillé, titré, autour de ses classes ; un nom pointé crée aussi ses parents (`A`, `A.B`), comme Mermaid
 - Annotations `<<interface>>`, `<<enumeration>>`… (dans le bloc, après `class Nom` ou sur une ligne `<<interface>> Nom`) : affichées `«interface»` au-dessus du nom ; la première seulement, comme Mermaid
 - 8 familles de relations : héritage, réalisation, composition, agrégation, association, dépendance, lien, lien pointillé, avec `: libellé`
+- Cardinalités `Client "1" --> "*" Commande` : écrites près de l'extrémité à côté de laquelle elles sont notées
 - `direction TD|LR|BT|RL`
 
 **Pris en charge :** Boîtes à 3 compartiments (nom, attributs, méthodes) ; Mise en page Dagre.
@@ -482,7 +483,6 @@ Classes UML avec attributs, méthodes et relations.
 **Limites**
 
 - Styles : seuls `fill`, `stroke` et `color` en hexadécimal (`#f96`, `#ff9966`) sont appliqués ; un nom de couleur (`red`) et les autres propriétés (`stroke-width`, `stroke-dasharray`) sont ignorés
-- Cardinalités (`"1"`, `"0..1"`) ignorées avec avertissement
 - Génériques `~T~` : retirés du nom, non affichés
 - `note` : avertissement, non rendue
 - Option `hierarchicalNamespaces: false` de l'en-tête YAML non appliquée (espaces de noms toujours imbriqués)

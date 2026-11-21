@@ -24,11 +24,11 @@ aucun). Hors comparaison : 0 refusé(s) par Mermaid lui-même,
 ### classDiagram#15
 
 - Mermaid seulement : `class foo "foo" 0a 0m <<>>`
-- Mermaid seulement : `relation interface0 lollipop -- none foo`
+- Mermaid seulement : `relation interface0 lollipop -- none foo [- -]`
 
 ### classDiagram#16
 
 - Mermaid seulement : `class Class02 "Class02" 0a 0m <<>>`
-- Mermaid seulement : `relation Class01 none -- lollipop interface0`
-- Mermaid seulement : `relation Class02 none -- lollipop interface1`
-- Mermaid seulement : `relation interface2 lollipop -- none Class01`
+- Mermaid seulement : `relation Class01 none -- lollipop interface0 [- -]`
+- Mermaid seulement : `relation Class02 none -- lollipop interface1 [- -]`
+- Mermaid seulement : `relation interface2 lollipop -- none Class01 [- -]`

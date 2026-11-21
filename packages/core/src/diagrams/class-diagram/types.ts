@@ -71,6 +71,10 @@ export interface ClassRelationship {
    * `'none'` for `link`/`dashedLink`, which have no marker at either end. */
   markerEnd: 'from' | 'to' | 'both' | 'none';
   label?: string;
+  /** Cardinality written next to `from` (`"1"` in `A "1" --> "*" B`), drawn at that end. */
+  fromCardinality?: string;
+  /** Cardinality written next to `to` (`"*"` above), drawn at that end. */
+  toCardinality?: string;
 }
 
 /**

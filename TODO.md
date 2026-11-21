@@ -174,7 +174,11 @@ Ensuite, dans l'ordre :
               default`, superposés comme Mermaid ; `ClassBox.fill` / `stroke` / `textColor`, validés avant le XML, repris
               par le SmartArt ; lecture des styles partagée avec l'organigramme (`parser/css-style.ts`), `textColorFor`
               mis en commun (`translator/text-color.ts`) ; vérifié dans Word, `test-corpus/word-verification/
-              class-styles.*`), cardinalités, notes ;
+              class-styles.*`), ~~cardinalités~~ (faites le 2026-11-20 : `fromCardinality` / `toCardinality`, identiques à
+              Mermaid au différentiel, aussi en PlantUML ; une relation avec libellé ou cardinalités réserve leur place
+              dans la mise en page Dagre, comme les libellés d'arêtes de l'organigramme ; au passage, un libellé entre
+              guillemets ne fait plus disparaître la relation ; vérifié dans Word, `test-corpus/word-verification/
+              class-cardinalities.*`), notes ;
             - **Couleurs nommées (`red`, `white`) ignorées sans avertissement**, dans l'organigramme comme dans les
               classes (`parseHexColor`, `parser/css-style.ts`) : `classDiagram#35` (`color:red`) garde son texte noir.
               Lire les noms CSS (une table de 148 entrées) ou au moins avertir ;

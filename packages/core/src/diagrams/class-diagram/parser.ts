@@ -24,8 +24,8 @@
  * - Styling: `style Id …`, `classDef name …` applied through `class Id:::name` or `cssClass "A,B" name`,
  *   and `classDef default …` for every class, as Mermaid layers them (default, then each class in order,
  *   then `style`). Only `fill`, `stroke` and `color` with a hex value are kept (`../../parser/css-style.ts`).
- * - Relationship cardinalities (`"1"`, `"0..1"`, ...) — stripped (quoted segments removed before
- *   relationship matching) with a warning.
+ * - Relationship cardinalities (`A "1" --> "*" B`): each quoted segment before the label goes to the end
+ *   it is written next to, as Mermaid's grammar reads it (`fromCardinality`, `toCardinality`).
  * - `note`/`note for` — warned and skipped.
  *
  * None of the above affects which classes/members/relationships end up in
@@ -88,16 +88,28 @@ const CLASS_HEADER = new RegExp(
   'i',
 );
 
-function stripQuotedSegments(line: string): { clean: string; hadQuoted: boolean } {
-  let hadQuoted = false;
-  const clean = line
-    .replace(/"[^"]*"/g, () => {
-      hadQuoted = true;
-      return ' ';
-    })
-    .replace(/\s+/g, ' ')
-    .trim();
-  return { clean, hadQuoted };
+/**
+ * A relation line split at its label's `:`, the first one outside quotes: `Customer "1" --> "*" Order` and
+ * `places`. `label` is `undefined` when there is no `:`.
+ */
+function splitRelationLabel(line: string): { head: string; label?: string } {
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') inQuote = !inQuote;
+    else if (ch === ':' && !inQuote) return { head: line.slice(0, i), label: line.slice(i + 1) };
+  }
+  return { head: line };
+}
+
+/**
+ * `line` for relation matching: its cardinalities (quoted segments before the label, read apart by
+ * `relationCardinalities`) removed, its label kept as written, quotes included.
+ */
+function stripQuotedSegments(line: string): string {
+  const { head, label } = splitRelationLabel(line);
+  const clean = head.replace(/"[^"]*"/g, ' ').replace(/\s+/g, ' ').trim();
+  return label === undefined ? clean : `${clean} :${label}`;
 }
 
 /**
@@ -141,6 +153,28 @@ function parseStyleStatement(
   const patch = extractNodeStyle(parseCssStyleProps(rest.slice(space + 1)));
   if (keyword === 'style') return { kind: 'style', id: stripIdQuotes(target), patch };
   return { kind: 'classDef', names: target.split(',').map((n) => n.trim()).filter((n) => n.length > 0), patch };
+}
+
+/**
+ * The cardinalities of a relation line: a quoted segment before the line's operator belongs to the left
+ * end, one after it to the right end (`Customer "1" --> "*" Order : places`). Only the part before the
+ * label's `:` is read, so a quote in the label is not taken for one.
+ */
+function relationCardinalities(line: string): { fromCardinality?: string; toCardinality?: string } {
+  const { head } = splitRelationLabel(line);
+  const result: { fromCardinality?: string; toCardinality?: string } = {};
+  let before = '';
+  for (const part of head.split(/("[^"]*")/)) {
+    if (part.length >= 2 && part.startsWith('"') && part.endsWith('"')) {
+      const text = part.slice(1, -1).trim();
+      if (text.length === 0) continue;
+      if (before.includes('--') || before.includes('..')) result.toCardinality = text;
+      else result.fromCardinality = text;
+    } else {
+      before += part;
+    }
+  }
+  return result;
 }
 
 function stripIdQuotes(id: string): string {
@@ -269,7 +303,7 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
       continue;
     }
 
-    const { clean, hadQuoted } = stripQuotedSegments(line);
+    const clean = stripQuotedSegments(line);
     const relMatch = clean.match(REL_LINE);
     if (relMatch) {
       const fromId = stripIdQuotes(relMatch[1] ?? '');
@@ -290,10 +324,8 @@ export function parseClassDiagram(text: string): ClassDiagramParseResult {
           type: relationType(toKind ?? fromKind, dotted),
           markerEnd,
           ...(relMatch[6] ? { label: relMatch[6].trim() } : {}),
+          ...relationCardinalities(line),
         });
-        if (hadQuoted) {
-          warnings.push(`Relationship cardinalities are not yet supported, ignored: ${line}`);
-        }
         continue;
       }
     }

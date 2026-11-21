@@ -67,6 +67,9 @@ const MEMBER_SIZE_HALFPT = 18;
 const LABEL_SIZE_HALFPT = 16;
 
 const TITLE_H = 32;
+/** Where a cardinality sits: this far along the line from its end (past a marker), and this far to one side. */
+const CARDINALITY_ALONG = 22;
+const CARDINALITY_ASIDE = 12;
 /** Extra title height for an annotation line (`«interface»`) above the name. */
 const ANNOTATION_H = 16;
 const ROW_H = 22;
@@ -207,6 +210,18 @@ function classBoxShapes(nextId: () => number, box: ClassBox, size: BoxSize, x: n
   return parts;
 }
 
+/** Room a relation's label and cardinalities need along the line (`undefined`: no text). */
+function relationTextRoom(rel: ClassDiagram['relationships'][number]): { width: number; height: number } | undefined {
+  const cards = [rel.fromCardinality, rel.toCardinality].filter((c): c is string => c !== undefined);
+  if (!rel.label && cards.length === 0) return undefined;
+  const labelWidth = rel.label ? estimateTextWidth(rel.label, 8) + 12 : 0;
+  const cardWidth = cards.reduce((sum, c) => sum + estimateTextWidth(c, 8) + 8, 0);
+  return {
+    width: Math.max(labelWidth, cardWidth),
+    height: (rel.label ? 20 : 0) + (cards.length > 0 ? 2 * CARDINALITY_ASIDE + 18 : 0),
+  };
+}
+
 /** The Dagre key of a namespace cluster: apart from {@link nodeKey}'s, so a class and a namespace may share a name. */
 function namespaceKey(id: string): string {
   return `ns:${id}`;
@@ -262,7 +277,11 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
   const linked = new Set<string>();
   for (const rel of chart.relationships) {
     if (g.hasNode(nodeKey(rel.from)) && g.hasNode(nodeKey(rel.to))) {
-      g.setEdge(nodeKey(rel.from), nodeKey(rel.to));
+      // A relation with a label or cardinalities tells Dagre the room its texts take (Dagre gives it an
+      // intermediate rank), so they do not pile up on a short line: the flowchart does the same for its
+      // edge labels. Without text, the line keeps Dagre's shortest gap.
+      const room = relationTextRoom(rel);
+      g.setEdge(nodeKey(rel.from), nodeKey(rel.to), room ? { ...room, labelpos: 'c' } : {});
       linked.add(rel.from).add(rel.to);
     }
   }
@@ -386,6 +405,31 @@ export function translateClassDiagramToOoxml(chart: ClassDiagram, options: Canva
           ),
         );
       }
+    }
+    // Cardinalities just off each end, on one side of the line, clear of the end's marker.
+    for (const [text, at, other] of [
+      [rel.fromCardinality, p1, p2],
+      [rel.toCardinality, p2, p1],
+    ] as const) {
+      if (text === undefined) continue;
+      const length = Math.hypot(other.x - at.x, other.y - at.y) || 1;
+      const ux = (other.x - at.x) / length;
+      const uy = (other.y - at.y) / length;
+      const cx = at.x + ux * CARDINALITY_ALONG - uy * CARDINALITY_ASIDE;
+      const cy = at.y + uy * CARDINALITY_ALONG + ux * CARDINALITY_ASIDE;
+      const width = estimateTextWidth(text, 8) + 8;
+      parts.push(
+        textBoxLines(
+          nextId(),
+          scalePt(cx + dx - width / 2, s),
+          scalePt(cy + dy - 9, s),
+          scalePt(width, s),
+          scalePt(18, s),
+          [text],
+          scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s),
+          { align: 'ctr' },
+        ),
+      );
     }
     if (rel.label) {
       const midX = (p1.x + p2.x) / 2;

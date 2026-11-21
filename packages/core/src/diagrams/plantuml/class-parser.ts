@@ -9,7 +9,8 @@
  * (drawn as relations); member blocks `{ ... }` with visibility, `{static}` / `{abstract}` / `{field}` /
  * `{method}` modifiers and separator lines skipped; `Class : member` lines; relations with every end
  * (`<|` `|>` `^` `*` `o` `<` `>` `#` `x` `}` `{` `+`), solid or dotted shafts, direction hints (`-up->`,
- * `-[#red]->`), quoted cardinalities (dropped, with a warning) and `: label` (direction marks `<` `>`
+ * `-[#red]->`), quoted cardinalities (drawn at their end, as in a Mermaid class diagram; roles `"1"/role`
+ * dropped with a warning) and `: label` (direction marks `<` `>`
  * dropped); `left to right direction`. Kept with a warning: `package` / `namespace` / `together` blocks
  * (contents parsed, grouping not drawn). Ignored with a warning: notes, `skinparam`, `<style>`, `hide` /
  * `show` / `remove`, preprocessor lines, `!include` (never followed: it would read a file or a URL).
@@ -40,11 +41,11 @@ const DECLARATION = new RegExp(String.raw`^(${KINDS})\s+(${NAME})(.*)$`, 'i');
  */
 const LEFT_END = String.raw`<\||\^|\*|o|<|#|x|\}|\+|\(\)`;
 const RIGHT_END = String.raw`\|>|\^|\*|o|>|#|x|\{|\+|\(\)`;
-/** A cardinality or role next to a relation end: `"1"`, `"0..n"/items`. */
-const CARD = String.raw`(?:"[^"]*"(?:\/\S+)?\s*)?`;
+/** A cardinality, with an optional role, next to a relation end: `"1"`, `"0..n"/items`; captured as `group`. */
+const card = (group: string): string => String.raw`(?:"(?<${group}>[^"]*)"(?:\/\S+)?\s*)?`;
 const SHAFT = String.raw`(?:-+|\.+)(?:(?:up|down|left|right|u|d|l|r|le|ri|do)?(?:\[[^\]]*\])?)(?:-*|\.*)`;
 const RELATION = new RegExp(
-  String.raw`^(?<a>${NAME})\s*${CARD}(?<l>${LEFT_END})?(?<shaft>${SHAFT})(?<r>${RIGHT_END})?\s*${CARD}(?<b>${NAME})(?:\s+#\S+)?\s*(?::(?<label>.*))?$`,
+  String.raw`^(?<a>${NAME})\s*${card('ca')}(?<l>${LEFT_END})?(?<shaft>${SHAFT})(?<r>${RIGHT_END})?\s*${card('cb')}(?<b>${NAME})(?:\s+#\S+)?\s*(?::(?<label>.*))?$`,
   'i',
 );
 
@@ -94,10 +95,17 @@ export function parsePlantUmlClass(source: string): PlantUmlClassParseResult {
     ast.classes.push(box);
     return box;
   };
-  const relate = (from: string, to: string, type: ClassRelationType, markerEnd: 'from' | 'to' | 'none', label?: string): void => {
+  const relate = (
+    from: string,
+    to: string,
+    type: ClassRelationType,
+    markerEnd: 'from' | 'to' | 'none',
+    label?: string,
+    cardinalities: { fromCardinality?: string; toCardinality?: string } = {},
+  ): void => {
     if (ast.relationships.length >= MAX_RELATIONS) return warnOnce('relations', `Class diagram limited to ${MAX_RELATIONS} relations; the rest were ignored.`);
     if (!ensure(from) || !ensure(to)) return;
-    ast.relationships.push(label ? { from, to, type, markerEnd, label } : { from, to, type, markerEnd });
+    ast.relationships.push({ from, to, type, markerEnd, ...(label ? { label } : {}), ...cardinalities });
   };
 
   const addMember = (box: ClassBox, raw: string): void => {
@@ -256,11 +264,15 @@ export function parsePlantUmlClass(source: string): PlantUmlClassParseResult {
       const g = m.groups;
       if (noteIds.has(unquote(g.a as string)) || noteIds.has(unquote(g.b as string))) continue;
       const shaft = g.shaft as string;
-      if (/"/.test(line.replace(/:.*$/, ''))) warnOnce('cardinality', 'Relation cardinalities (`"1"`, `"0..*"`) are not displayed.');
+      if (/"\//.test(line.replace(/:.*$/, ''))) warnOnce('roles', 'Relation roles (`"1"/role`) are not displayed; the cardinality is.');
+      const cardinalities = {
+        ...(g.ca?.trim() ? { fromCardinality: g.ca.trim() } : {}),
+        ...(g.cb?.trim() ? { toCardinality: g.cb.trim() } : {}),
+      };
       const { type, markerEnd } = relationOf(g.l ?? '', g.r ?? '', shaft.startsWith('.'));
       if (/[#x}{+(]/.test((g.l ?? '') + (g.r ?? ''))) warnOnce('ends', 'Relation ends `#`, `x`, `}`, `{`, `+` and `()` are drawn as plain lines.');
       const label = (g.label ?? '').trim().replace(/^[<>]\s*|\s*[<>]$/g, '').trim();
-      relate(unquote(g.a as string), unquote(g.b as string), type, markerEnd, label === '' ? undefined : label);
+      relate(unquote(g.a as string), unquote(g.b as string), type, markerEnd, label === '' ? undefined : label, cardinalities);
     } else if ((m = line.match(new RegExp(String.raw`^(${NAME})\s*:\s*(.+)$`)))) {
       const box = ensure(unquote(m[1] as string));
       if (box) addMember(box, m[2] as string);

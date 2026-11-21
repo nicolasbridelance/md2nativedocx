@@ -50,7 +50,11 @@ test('relations: cardinalities, roles, qualifiers, direction hints, colours and 
       ['foo', 'association', 'baz', 'coloured'],
     ],
   );
-  assert.ok(warnings.some((w) => w.includes('cardinalities')));
+  assert.deepEqual(
+    ast.relationships.map((r) => [r.fromCardinality, r.toCardinality]),
+    [['1', '4..*'], ['owner', '0..n'], [undefined, 'customer'], [undefined, undefined], [undefined, undefined]],
+  );
+  assert.ok(warnings.some((w) => w.includes('roles')));
 });
 
 test('declarations: kinds, aliases, generics, stereotypes, colours, extends/implements, members', () => {

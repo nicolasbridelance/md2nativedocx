@@ -73,13 +73,17 @@ test('a relationship label after ":" is captured', () => {
   assert.equal(ast.relationships[0]?.label, 'places');
 });
 
-test('quoted cardinalities are stripped and warned, not left in the label', () => {
+test('quoted cardinalities go to the end they are written next to, never into the label', () => {
   const { ast, warnings } = parseClassDiagram('classDiagram\n  Customer "1" --> "many" Order : places');
   assert.equal(ast.relationships.length, 1);
   assert.equal(ast.relationships[0]?.from, 'Customer');
   assert.equal(ast.relationships[0]?.to, 'Order');
   assert.equal(ast.relationships[0]?.label, 'places');
-  assert.ok(warnings.some((w) => w.includes('cardinalities')));
+  assert.equal(ast.relationships[0]?.fromCardinality, '1');
+  assert.equal(ast.relationships[0]?.toCardinality, 'many');
+  assert.deepEqual(warnings, []);
+  const oneSided = parseClassDiagram('classDiagram\n  Galaxy --> "many" Star : "Contains"').ast.relationships[0]!;
+  assert.deepEqual([oneSided.fromCardinality, oneSided.toCardinality], [undefined, 'many'], 'a quote in the label is not a cardinality');
 });
 
 test('class with a bracket label', () => {
