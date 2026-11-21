@@ -308,7 +308,7 @@ Ensuite, dans l'ordre :
               `C4Category` `'node'` (un nœud de déploiement est un cadre). Restent, connus : traits droits (Mermaid
               courbe ceux après le premier), qui peuvent passer sur une forme ou sur le libellé d'un cadre
               (`c4#5`) ; `$shape`, `$sprite`, `$tags`, `$link` non appliqués (avertis pour `UpdateElementStyle`).
-              Baseline `test:visual` `c4` à rafraîchir depuis la CI Linux ;
+              Baseline `test:visual` `c4` rafraîchie depuis la CI Linux, revue (seule image modifiée) ;
             - ~~**treeView (4)**~~ (fait le 2026-11-21) : parseur refait sur la grammaire de Mermaid 12.3
               (`treeView.langium` et sa lecture des arbres en traits : niveau par colonne de branche et pas de
               l'arbre ; tabulation = 1 colonne hors traits ; noms entre `"…"` ou `'…'` ; annotation reconnue après
