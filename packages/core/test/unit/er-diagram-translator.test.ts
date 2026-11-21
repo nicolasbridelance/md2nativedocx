@@ -94,3 +94,91 @@ test('an empty ER diagram renders a visible note, not a silent blank canvas', ()
 test('is a pure function: identical input produces byte-identical output', () => {
   assert.equal(translate(BASIC), translate(BASIC));
 });
+
+/** Offset and extent of the shape named `name` (the first one), in EMU. */
+function frameOf(xml: string, name: string): { x: number; y: number; w: number; h: number } {
+  const at = xml.indexOf(`name="${name}"`);
+  assert.ok(at !== -1, name);
+  const m = /<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(xml.slice(at));
+  assert.ok(m, name);
+  return { x: Number(m[1]), y: Number(m[2]), w: Number(m[3]), h: Number(m[4]) };
+}
+const inside = (inner: { x: number; y: number; w: number; h: number }, outer: { x: number; y: number; w: number; h: number }): boolean =>
+  inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+
+test('groups: a dashed titled box around its entities, nested groups inside their parent, title escaped', () => {
+  const xml = translate(`erDiagram
+  subgraph outer [Outer <&>]
+    CAR ||--o{ DRIVER : allows
+    subgraph inner
+      PERSON
+    end
+  end
+  HOUSE`);
+  assert.ok(xml.includes('Outer &lt;&amp;&gt;') && !xml.includes('Outer <&>'));
+  const boxes = [...xml.matchAll(/<a:prstDash val="dash"\/>/g)].length;
+  assert.ok(boxes >= 2, 'two dashed group boxes');
+  const group = (title: string): { x: number; y: number; w: number; h: number } => {
+    // A group's box is the shape just before its title text box.
+    const titleAt = xml.indexOf(`>${title}<`);
+    const before = xml.slice(0, titleAt);
+    const all = [...before.matchAll(/<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/g)];
+    const m = all[all.length - 2] as RegExpMatchArray;
+    return { x: Number(m[1]), y: Number(m[2]), w: Number(m[3]), h: Number(m[4]) };
+  };
+  const outer = group('Outer &lt;&amp;&gt;');
+  const innerBox = group('inner');
+  assert.ok(inside(innerBox, outer), 'inner group inside outer');
+  assert.ok(inside(frameOf(xml, 'CAR'), outer) && inside(frameOf(xml, 'DRIVER'), outer));
+  assert.ok(inside(frameOf(xml, 'PERSON'), innerBox));
+  assert.ok(!inside(frameOf(xml, 'HOUSE'), outer));
+  // Groups are drawn first, behind the entities.
+  assert.ok(xml.indexOf('>inner<') < xml.indexOf('name="PERSON"'));
+});
+
+test('groups: a relationship to a group ends on its box; one per relationship, none lost', () => {
+  const xml = translate('erDiagram\n  subgraph G1\n    A ||--|| B : x\n  end\n  subgraph G2\n    C\n  end\n  G1 ||--|| G2 : links\n  G2 ||--|| A : y');
+  assert.equal((xml.match(/<wps:cNvCnPr\/>/g) ?? []).length, 3);
+  assert.ok(!xml.includes('name="G1"'), 'no entity box for a group name');
+});
+
+test('groups: an empty, cyclic or dangling group from a hand-built AST is drawn or dropped without throwing', () => {
+  const xml = translateErDiagramToOoxml({
+    entities: [{ id: 'A', attributes: [], group: 'nowhere' }, { id: 'B', attributes: [], group: 'X' }],
+    relationships: [{ from: 'A', to: 'Y', fromCardinality: 'exactly-one', toCardinality: 'exactly-one', identifying: true }],
+    groups: [
+      { id: 'X', label: 'X', parent: 'Y' },
+      { id: 'Y', label: 'Y', parent: 'X' },
+      { id: 'E', label: 'Empty', fill: '"/><evil/>' },
+    ],
+  });
+  assert.ok(xml.includes('>Empty<') && !xml.includes('evil'));
+  assert.ok(xml.includes('name="A"') && xml.includes('name="B"'));
+});
+
+test('styling: fill, stroke and text colour of an entity; text contrasts with a dark fill', () => {
+  const xml = translate('erDiagram\n  A {\n    int id\n  }\n  style A fill:#000080,stroke:#ff0000');
+  assert.ok(xml.includes('<a:srgbClr val="000080"/>'));
+  assert.ok(xml.includes('<a:srgbClr val="FF0000"/>'));
+  assert.ok(/w:color w:val="FFFFFF"/.test(xml), 'white text on navy');
+  const plain = translate('erDiagram\n  A {\n    int id\n  }');
+  assert.ok(!plain.includes('000080'));
+});
+
+test('groups: a group no relationship crosses keeps its own direction; a crossed one follows the diagram', () => {
+  const centreX = (xml: string, name: string): number => {
+    const f = frameOf(xml, name);
+    return f.x + f.w / 2;
+  };
+  const centreY = (xml: string, name: string): number => {
+    const f = frameOf(xml, name);
+    return f.y + f.h / 2;
+  };
+  // B1 runs right to left inside a top-to-bottom diagram: `I1 -- F1` puts F1 left of I1, on the same row.
+  const own = translate('erDiagram\n  subgraph B1\n    direction RL\n    I1 ||--|| F1 : links\n  end\n  A ||--|| B1 : x');
+  assert.ok(centreX(own, 'F1') < centreX(own, 'I1'));
+  assert.equal(centreY(own, 'F1'), centreY(own, 'I1'));
+  // The same group with a relationship crossing its border is laid out with the rest, top to bottom.
+  const crossed = translate('erDiagram\n  subgraph B1\n    direction RL\n    I1 ||--|| F1 : links\n  end\n  A ||--|| F1 : x');
+  assert.notEqual(centreY(crossed, 'F1'), centreY(crossed, 'I1'));
+});

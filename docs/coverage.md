@@ -49,7 +49,7 @@ SmartArt and charts are `.docx`-only.
 | `radar-beta` | **Word chart** (radar) | Three axes or more. Confirmed (round 5). The grid is always a polygon. | Shapes for fewer than three axes. |
 | `sequenceDiagram` | Shapes | — | Lifelines and messages in time order have no SmartArt layout. |
 | `zenuml` | Shapes (as a sequence diagram) | — | Same as `sequenceDiagram`. |
-| `erDiagram` | Shapes | — | Crow's-foot cardinalities and labelled relations; SmartArt connectors carry neither. |
+| `erDiagram` | Shapes | — | Crow's-foot cardinalities and labelled relations; SmartArt connectors carry neither. `subgraph` groups are titled dashed boxes, laid out by the flowchart engine (own `direction` when no relationship crosses the border); `style` / `classDef` / `:::` / `class` colour entities and groups. |
 | `requirementDiagram` | Shapes | — | Typed relations between boxes (see the backlog for the tree-only case). |
 | `C4Context` … `C4Deployment` | Shapes | — | A general graph with labelled relations. |
 | `architecture-beta` | Shapes | — | A general graph with ports. |

@@ -1,0 +1,19 @@
+erDiagram
+    subgraph Sales
+        ORDER ||--|{ LINE-ITEM : contains
+        ORDER {
+            int id PK
+            date placed
+        }
+    end
+    subgraph Customers [Customer domain]
+        CUSTOMER:::vip ||--o{ ADDRESS : has
+    end
+    subgraph Catalog
+        direction LR
+        PRODUCT ||--o{ PRICE : lists
+    end
+    CUSTOMER ||--o{ ORDER : places
+    LINE-ITEM }o--|| Catalog : refers
+    classDef vip fill:#fde68a,stroke:#b45309
+    style Catalog fill:#e0f2fe

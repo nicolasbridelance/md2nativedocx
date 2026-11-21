@@ -30,9 +30,33 @@ export interface ErEntity {
   /** The alias drawn instead of the id (`p[Person]` gives id `p`, label `Person`); absent when none was given. */
   label?: string;
   attributes: ErAttribute[];
+  /** The group (`subgraph`) drawn around it; absent at the top level. */
+  group?: string;
+  /** Box fill (hex, no `#`) from `style`, `classDef` (through `:::` or `class`) or `classDef default`. */
+  fill?: string;
+  /** Border and divider colour (hex, no `#`), same sources as `fill`. */
+  stroke?: string;
+  /** Text colour (hex, no `#`) from `color:`, same sources; otherwise black or white to suit the fill. */
+  textColor?: string;
+}
+
+/** A `subgraph` group: a titled box around its entities and the groups inside it. */
+export interface ErGroup {
+  /** The name relationships and `style` refer to (`subgraph id [Title]`), unique among groups. */
+  id: string;
+  /** Title drawn at the top of the box; the id when none was given. */
+  label: string;
+  /** The enclosing group; absent at the top level. */
+  parent?: string;
+  /** Flow inside the group (`direction` within it); absent means the enclosing block's. */
+  direction?: 'TD' | 'BT' | 'LR' | 'RL';
+  /** Box fill and border (hex, no `#`) from `style` or `class`. */
+  fill?: string;
+  stroke?: string;
 }
 
 export interface ErRelationship {
+  /** An entity id, or a group id: a relationship to a group ends on its box. */
   from: string;
   to: string;
   fromCardinality: ErCardinality;
@@ -48,4 +72,6 @@ export interface ErDiagram {
   direction?: 'TD' | 'BT' | 'LR' | 'RL';
   entities: ErEntity[];
   relationships: ErRelationship[];
+  /** `subgraph` groups, an enclosing group before the groups inside it; absent when there are none. */
+  groups?: ErGroup[];
 }

@@ -57,9 +57,34 @@ test('the PERSON/CAR/NAMED-DRIVER example from the docs parses fully', () => {
   assert.equal(ast.relationships[1]?.identifying, true);
 });
 
-test('classDef/class/style lines are recognized and warned, not silently dropped', () => {
-  const { warnings } = parseErDiagram('erDiagram\n  classDef foo fill:#f00\n  A ||--|| B');
-  assert.ok(warnings.some((w) => w.includes('Styling')));
+test('a styling line it cannot read is warned, not silently dropped', () => {
+  const { warnings } = parseErDiagram('erDiagram\n  classDef foo\n  style\n  A ||--|| B');
+  assert.deepEqual(warnings, ['Unsupported line ignored: classDef foo', 'Unsupported line ignored: style']);
+});
+
+test('styling: classDef default, then classes in order (`:::` or `class`), then `style`, as Mermaid layers them', () => {
+  const { ast, warnings } = parseErDiagram(`erDiagram
+  PERSON:::foo ||--|| CAR : owns
+  PERSON o{--|| HOUSE:::bar : has
+  class CAR baz
+  style HOUSE fill:white,color:#00f
+  classDef default fill:#f9f,stroke-width:4px
+  classDef foo stroke:#f00
+  classDef bar stroke:#0f0,fill:#123456
+  classDef baz fill:red`);
+  assert.deepEqual(warnings, []);
+  const look = Object.fromEntries(ast.entities.map((e) => [e.id, [e.fill, e.stroke, e.textColor]]));
+  assert.deepEqual(look, {
+    PERSON: ['FF99FF', 'FF0000', undefined],
+    CAR: ['FF0000', undefined, undefined],
+    HOUSE: ['FFFFFF', '00FF00', '0000FF'],
+  });
+});
+
+test('styling: an undefined class is reported; injected text never becomes a colour', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  A:::nope\n  style A fill:"/><x/>,stroke:#zzz');
+  assert.deepEqual(warnings, ['classDef "nope" referenced but not defined.']);
+  assert.deepEqual([ast.entities[0]?.fill, ast.entities[0]?.stroke], [undefined, undefined]);
 });
 
 test('an unclosed attribute block is warned, not silently dropped', () => {
@@ -119,17 +144,63 @@ test('an alias is drawn instead of the id; quoted and Unicode names; bare declar
   assert.equal(warnings.length, 0);
 });
 
-test('`:::class` suffixes are stripped from the entity name and warned once', () => {
-  const { ast, warnings } = parseErDiagram('erDiagram\n  PERSON:::foo ||--|| CAR : owns\n  HOUSE:::a,b');
+test('`:::class` suffixes are stripped from the entity name', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  PERSON:::foo ||--|| CAR : owns\n  HOUSE:::a,b\n  classDef foo,a,b fill:#eee');
   assert.deepEqual(ast.entities.map((e) => e.id), ['PERSON', 'CAR', 'HOUSE']);
-  assert.equal(warnings.filter((w) => w.includes(':::class')).length, 1);
+  assert.deepEqual(warnings, []);
 });
 
-test('direction is kept; a subgraph keeps its entities and warns that the box is not drawn', () => {
+test('direction is kept; a subgraph keeps its entities, its id and its title', () => {
   const { ast, warnings } = parseErDiagram('erDiagram\n  direction LR\n  subgraph id1 [title 1]\n    CUSTOMER\n  end\n  CUSTOMER ||--o{ ORDER : places');
   assert.equal(ast.direction, 'LR');
-  assert.deepEqual(ast.entities.map((e) => e.id), ['CUSTOMER', 'ORDER']);
-  assert.deepEqual(warnings, ['ER groups (`subgraph`) are not drawn as boxes; their entities are kept.']);
+  assert.deepEqual(ast.entities.map((e) => [e.id, e.group]), [['CUSTOMER', 'id1'], ['ORDER', undefined]]);
+  assert.deepEqual(ast.groups, [{ id: 'id1', label: 'title 1' }]);
+  assert.deepEqual(warnings, []);
+});
+
+test('subgraphs: nesting, both ends of a relationship, an inner group keeps its entities, quoted titles', () => {
+  const { ast, warnings } = parseErDiagram(`erDiagram
+  subgraph title2
+    CAR ||--o{ NAMED-DRIVER : allows
+    subgraph title3
+      direction LR
+      PERSON
+      CAR
+    end
+  end
+  subgraph "Customer Domain"
+    CUSTOMER
+  end`);
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.groups, [
+    { id: 'title2', label: 'title2' },
+    { id: 'Customer Domain', label: 'Customer Domain' },
+    { id: 'title3', label: 'title3', parent: 'title2', direction: 'LR' },
+  ]);
+  // CAR is named in title3 too: the inner group, closed first, keeps it.
+  assert.deepEqual(Object.fromEntries(ast.entities.map((e) => [e.id, e.group])), { CAR: 'title3', 'NAMED-DRIVER': 'title2', PERSON: 'title3', CUSTOMER: 'Customer Domain' });
+});
+
+test('subgraphs: a group name in a relationship is the group, not a new entity', () => {
+  const { ast, warnings } = parseErDiagram('erDiagram\n  subgraph G1\n    A ||--|| B : x\n  end\n  subgraph G2\n    C\n  end\n  G1 ||--|| G2 : links\n  G2 ||--|| A : y');
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(ast.entities.map((e) => e.id), ['A', 'B', 'C']);
+  assert.deepEqual(ast.relationships.map((r) => [r.from, r.to]), [['A', 'B'], ['G1', 'G2'], ['G2', 'A']]);
+});
+
+test('subgraphs: unclosed, duplicated, nameless and too deep groups are reported; hostile nesting does not throw', () => {
+  assert.ok(parseErDiagram('erDiagram\n  subgraph G\n    A').warnings.some((w) => w.includes('never closed')));
+  assert.ok(parseErDiagram('erDiagram\n  subgraph G\n  end\n  subgraph G\n  end').warnings.some((w) => w.includes('declared twice')));
+  assert.ok(parseErDiagram('erDiagram\n  subgraph\n  A\n  end').warnings.some((w) => w.includes('without a name')));
+  const deep = parseErDiagram('erDiagram\n' + Array.from({ length: 41 }, (_, i) => `subgraph g${i}\n`).join('') + 'A\n' + 'end\n'.repeat(41));
+  assert.ok(deep.warnings.some((w) => w.includes('nested deeper')));
+  assert.equal(deep.ast.groups?.length, 20);
+  // A is named past the cap, in groups that are not drawn: it goes to the innermost drawn one around them.
+  assert.equal(deep.ast.entities.find((e) => e.id === 'A')?.group, 'g19');
+  // A group inside a second group of the same name is drawn, in the drawn group around them.
+  const dup = parseErDiagram('erDiagram\n  subgraph G\n  end\n  subgraph O\n    subgraph G\n      subgraph I\n        B\n      end\n    end\n  end');
+  assert.deepEqual(dup.ast.groups?.map((g) => [g.id, g.parent]), [['G', undefined], ['O', undefined], ['I', 'O']]);
+  assert.ok(!dup.warnings.some((w) => w.includes('nested deeper')));
 });
 
 test('a line that is not a statement is still warned, not guessed', () => {

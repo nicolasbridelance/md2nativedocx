@@ -53,6 +53,12 @@ export const SUBGRAPH_TITLE_HEIGHT = 24;
 export interface LayoutOptions extends GraphLimits {
   nodeWidth?: number;
   nodeHeight?: number;
+  /**
+   * The box of a node, by node id, for a diagram that draws its own nodes (an ER entity with its attribute
+   * rows): used instead of the size estimated from the node's label. A node absent from the map is sized
+   * as usual.
+   */
+  nodeSizes?: ReadonlyMap<string, { width: number; height: number }>;
   /** Layout engine. `dagre` is the default; `graphviz` is reserved for future use. */
   engine?: 'dagre' | 'graphviz';
 }
@@ -428,7 +434,7 @@ function layoutBase(
     g.setDefaultEdgeLabel(() => ({}));
 
     for (const node of flowchart.nodes) {
-      const { width, height } = overrides.get(node.id) ?? fixedSize ?? nodeDimensions(node.labelRuns, node.shape);
+      const { width, height } = overrides.get(node.id) ?? options.nodeSizes?.get(node.id) ?? fixedSize ?? nodeDimensions(node.labelRuns, node.shape);
       g.setNode(node.id, { width, height });
     }
     for (const edge of flowchart.edges) {

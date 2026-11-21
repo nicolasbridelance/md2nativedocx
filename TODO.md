@@ -158,9 +158,11 @@ Ensuite, dans l'ordre :
             central, types agentflow/railroad/usecase reconnus (note), `;` en séquence, organigrammes (ids de
             lien `e1@-->`, libellés entre guillemets sur plusieurs lignes, `click` écarté exprès).
             Reste, par ordre de rendement (détail : `REPORT.md`) :
-            - **ER (19)** : relations en toutes lettres (`1 to zero or more`, `only one to`, `many(0) optionally
-              to 0+`), alias d'entité `a["Customer Account"] { … }`, `direction`, `subgraph`, `:::classe`,
-              relation sans espaces (`id1||--||id2`), noms d'entité entre guillemets ;
+            - ~~**ER (19)**~~ : relations en toutes lettres, alias, `direction`, relation sans espaces, noms entre
+              guillemets (faits avant) ; ~~`subgraph`, `style` / `classDef` / `:::` / `class`~~ (faits le 2026-11-21 :
+              `ErDiagram.groups`, `ErEntity.group` / `fill` / `stroke` / `textColor`, mise en page des groupes par le
+              moteur des organigrammes via `LayoutOptions.nodeSizes` ; vus dans Word et LibreOffice, `.pptx` validé) :
+              **25/25**, étage 1 à **492 propres (91 %)** ;
             - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, ~~sucettes `()--`/`--()`~~ (faites le
               2026-11-21 : relation `lollipop` et `ClassDiagram.interfaces`, une interface par relation comme Mermaid ;
               cercle creux au bout du trait, nom au-delà ; vérifié dans Word, `test-corpus/word-verification/

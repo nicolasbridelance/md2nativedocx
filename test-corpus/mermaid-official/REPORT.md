@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 482 sans avertissement (89 %), 59 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 492 sans avertissement (91 %), 49 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -14,7 +14,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | c4 | 6 | 0 | 6 | 0 | 0 | 0 |
 | classDiagram | 38 | 37 | 1 | 0 | 0 | 0 |
 | cynefin | 3 | 3 | 0 | 0 | 0 | 0 |
-| entityRelationshipDiagram | 25 | 15 | 10 | 0 | 0 | 0 |
+| entityRelationshipDiagram | 25 | 25 | 0 | 0 | 0 | 0 |
 | eventmodeling | 13 | 13 | 0 | 0 | 0 | 0 |
 | flowchart | 116 | 115 | 1 | 0 | 0 | 0 |
 | gantt | 11 | 4 | 7 | 0 | 0 | 0 |
@@ -75,19 +75,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 ### classDiagram
 
 - #36 warned: classDef "styleClass" referenced but not defined.
-
-### entityRelationshipDiagram
-
-- #14 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
-- #15 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
-- #16 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
-- #17 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
-- #18 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
-- #19 warned: ER groups (`subgraph`) are not drawn as boxes; their entities are kept.
-- #20 warned: Styling directives are not yet supported for ER diagrams, ignored: style id1 fill:#f9f,stroke:#333,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: style id2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
-- #21 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef someclass fill:#f96
-- #22 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar stroke:#0f0 \| Styling directives are not yet supported for ER diagrams, ignored: classDef foobar stroke:#00f
-- #23 warned: Styling directives are not yet supported for ER diagrams: `:::class` on an entity is ignored. \| Styling directives are not yet supported for ER diagrams, ignored: classDef default fill:#f9f,stroke-width:4px \| Styling directives are not yet supported for ER diagrams, ignored: classDef foo stroke:#f00 \| Styling directives are not yet supported for ER diagrams, ignored: classDef bar st
 
 ### flowchart
 

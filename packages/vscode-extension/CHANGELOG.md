@@ -22,6 +22,10 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   ... `end box`), outlined otherwise. They used to be ignored, with a warning.
 - **Central connections** (Mermaid `A->>()B`, `A()->>B`) are drawn as a dot on the lifeline at the marked end,
   as in Mermaid, instead of being ignored with a warning.
+- **ER diagram groups and colours.** `subgraph` groups are drawn as titled boxes, nested, laid out like
+  flowchart subgraphs (a group keeps its own `direction` unless a relationship crosses its border, as in
+  Mermaid); a relationship can join two groups. `style`, `classDef` (through `:::` or `class`) and
+  `classDef default` colour entities and groups. Both used to be ignored, with a warning.
 
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,

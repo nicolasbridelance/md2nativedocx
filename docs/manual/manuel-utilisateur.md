@@ -224,7 +224,7 @@ Le tableau ci-dessous récapitule tous les types reconnus, leur mot-clé Mermaid
 | ZenUML | `zenuml` | Couleurs fixes |
 | Diagramme de classes | `classDiagram` | Oui : `style`, `classDef` (fond, bordure, texte) |
 | Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Oui : `style`, `classDef` (fond, bordure, texte, gras, italique) |
-| Entité-relation | `erDiagram` | Non (style ignoré) |
+| Entité-relation | `erDiagram` | Oui : `style`, `classDef` (fond, bordure, texte), aussi sur les groupes |
 | Diagramme d’exigences | `requirementDiagram` | Non (style ignoré) |
 | C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Couleurs fixes |
 | Architecture | `architecture-beta` | Couleurs fixes |
@@ -575,21 +575,23 @@ Entités avec attributs et cardinalités « patte de corbeau ».
 | Rubrique | Détail |
 |:---------|:-------|
 | Mot-clé | `erDiagram` |
-| Couleurs | Non (style ignoré) |
+| Couleurs | Oui : `style`, `classDef` (fond, bordure, texte) |
 
 
 **Syntaxe**
 
-- `ENTITE { type nom PK|FK|UK "commentaire" }`
+- `ENTITE { type nom PK|FK|UK "commentaire" }`, alias `p[Personne]`
 - `A ||--o{ B : "libellé"` : 4 états de cardinalité par extrémité, `--` identifiante, `..` non identifiante
+- `direction TB|BT|LR|RL`
+- Groupes `subgraph id [Titre]` … `end`, imbriqués : un cadre titré, gris, en pointillés, comme un sous-graphe d'organigramme. Un groupe contient les entités que ses lignes nomment (les deux bouts d'une relation compris). Un nom de groupe dans une relation (`domaine1 ||--|| domaine2`) relie les cadres. Un groupe garde sa propre `direction` tant qu'aucune relation ne traverse son cadre ; sinon il suit celle du diagramme, comme dans Mermaid
+- Styles : `style A fill:…,stroke:…,color:…`, `classDef nom …` appliqué par `A:::nom` ou `class A,B nom`, `classDef default` pour toutes les entités ; `style` colore aussi un groupe
 
-**Pris en charge :** Attributs avec clés, cardinalités complètes, traits pleins/pointillés.
+**Pris en charge :** Attributs avec clés, cardinalités complètes, traits pleins/pointillés, groupes, couleurs.
 
 **Limites**
 
-- Styles (`classDef`, `class`, `style`) ignorés avec avertissement
-- Alias d’entité non gérés
-- Liens en lignes droites
+- Liens en lignes droites : une relation peut passer sur le titre d'un groupe
+- Épaisseur et pointillés de bordure (`stroke-width`, `stroke-dasharray`) non appliqués
 
 
 +-----------------------------------------+----------------------------------------------------------------------+

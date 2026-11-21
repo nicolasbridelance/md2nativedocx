@@ -384,3 +384,16 @@ test('a link to a subgraph that cannot be laid out as one block ranks against it
   assert.ok(r.nodes.X!.y + r.nodes.X!.height <= r.subgraphs['S']!.y);
   assert.ok(r.edges.every((points) => points.length > 0));
 });
+
+test('nodeSizes: a node takes the box it is given, inside a subgraph laid out on its own too', () => {
+  const { ast } = parseMermaid('flowchart TD\n  subgraph S\n    direction LR\n    A --> B\n  end\n  C --> S');
+  const nodeSizes = new Map([
+    ['A', { width: 210, height: 95 }],
+    ['C', { width: 33, height: 44 }],
+  ]);
+  const result = layout(ast, { nodeSizes });
+  assert.deepEqual([result.nodes['A']?.width, result.nodes['A']?.height], [210, 95]);
+  assert.deepEqual([result.nodes['C']?.width, result.nodes['C']?.height], [33, 44]);
+  // A node absent from the map keeps its label-driven size.
+  assert.deepEqual([result.nodes['B']?.width, result.nodes['B']?.height], [layout(ast).nodes['B']?.width, layout(ast).nodes['B']?.height]);
+});
