@@ -9,6 +9,8 @@ reports/
 packages/*/reports/
 .env
 .vscode-test/
+# Browser-automation session logs (Playwright MCP), written at the repo root
+.playwright-mcp/
 *.vsix
 # Compiled JS/maps emitted into src/ by tsc (should not be committed)
 packages/**/src/**/*.js
