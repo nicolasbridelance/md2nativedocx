@@ -484,7 +484,7 @@ Classes UML avec attributs, méthodes et relations.
 
 **Limites**
 
-- Styles : seuls `fill`, `stroke` et `color` en hexadécimal (`#f96`, `#ff9966`) sont appliqués ; un nom de couleur (`red`) et les autres propriétés (`stroke-width`, `stroke-dasharray`) sont ignorés
+- Styles : seuls `fill`, `stroke` et `color` sont appliqués, en hexadécimal (`#f96`, `#ff9966`) ou par un nom de couleur CSS (`red`, `white`) ; les autres propriétés (`stroke-width`, `stroke-dasharray`) sont ignorées
 - Génériques `~T~` : retirés du nom, non affichés
 - Option `hierarchicalNamespaces: false` de l'en-tête YAML non appliquée (espaces de noms toujours imbriqués)
 - Les marqueurs creux UML (triangle, losange vides) sont remplacés par les marqueurs Word les plus proches
@@ -523,7 +523,7 @@ Classes UML avec attributs, méthodes et relations.
 | Rubrique | Détail |
 |:---------|:-------|
 | Mot-clé | `stateDiagram` / `stateDiagram-v2` |
-| Couleurs | Oui : `classDef` avec `class` ou `:::`, `style` (couleurs en hexadécimal) |
+| Couleurs | Oui : `classDef` avec `class` ou `:::`, `style` (hexadécimal ou nom de couleur CSS) |
 
 
 **Syntaxe**
@@ -543,7 +543,6 @@ en bas sauf `direction` dans son bloc.
 
 **Limites**
 
-- Couleurs nommées (`red`, `white`) : pas encore lues, seules les couleurs hexadécimales comptent
 - Une transition qui traverse le bord d'un composite (`Dehors --> Dedans`) va droit vers l'état intérieur, sans
   contourner les états du composite ; les autres contournent les boîtes qu'un trait droit traverserait
 
@@ -1331,7 +1330,7 @@ Rectangles imbriqués proportionnels aux valeurs.
 - `"Section"`, `"Feuille": valeur`, indentation
 - `classDef nom fill:#…,color:#…,stroke:#…;` puis `:::nom`
 
-**Pris en charge :** `fill`, `color`, `stroke` en hexadécimal et quelques noms CSS.
+**Pris en charge :** `fill`, `color`, `stroke` en hexadécimal ou par un nom de couleur CSS.
 
 **Limites**
 

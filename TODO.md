@@ -187,10 +187,9 @@ Ensuite, dans l'ordre :
               différentiel ; nœuds Dagre à coin replié, aux couleurs de note de Mermaid, trait pointillé vers leur classe ;
               une note garde le diagramme hors SmartArt ; vérifié dans Word, `test-corpus/word-verification/
               class-notes.*`. Les notes PlantUML restent avertis : à brancher sur le même champ) ;
-            - **Couleurs nommées (`red`, `white`) ignorées sans avertissement**, dans l'organigramme comme dans les
-              classes et les états (`parseHexColor`, `parser/css-style.ts`) : `classDiagram#35` (`color:red`) garde son
-              texte noir, `stateDiagram#19` perd `fill:white` et `stroke:yellow`.
-              Lire les noms CSS (une table de 148 entrées) ou au moins avertir ;
+            - ~~**Couleurs nommées (`red`, `white`) ignorées sans avertissement**~~ (fait le 2026-11-21 : les 148 noms de
+              CSS Color 4 dans `parser/css-named-colors.ts`, lus par `parseHexColor` pour l'organigramme, les classes, les
+              états et le treemap, qui avait sa propre table de 10 noms, remplacée) ;
             - **`classDef default` de l'organigramme** n'est toujours pas appliqué (manuel, limites) alors que les
               classes l'appliquent depuis le 2026-11-20 : aligner ;
             - **Vu dans Word le 2026-11-20 :** un libellé de relation de classes est posé au milieu du trait, sans

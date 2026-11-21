@@ -39,7 +39,7 @@ test('without `color:` the automatic black/white choice is unchanged', () => {
 });
 
 test('an invalid colour value is dropped, never written to the XML', () => {
-  for (const bad of ['red;"><x/>', 'url(#x)', '#GGGGGG', '#12345']) {
+  for (const bad of ['reddish;"><x/>', 'url(#x)', '#GGGGGG', '#12345', 'constructor']) {
     const src = `graph TD\n  A[One] --> B\n  style A color:${bad}`;
     assert.equal(parseMermaid(src).ast.nodes.find((n) => n.id === 'A')!.textColor, undefined, bad);
     assert.ok(!renderDiagram(src).fragment.includes('<x/>'));

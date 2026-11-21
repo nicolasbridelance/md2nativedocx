@@ -3,30 +3,24 @@
  * tabs; a tab counts as 4 columns). A node is `"Name"` (section) or
  * `"Name": value` (leaf), optionally followed by `:::className`.
  * `classDef name fill:#RRGGBB,color:#RRGGBB,stroke:#RRGGBB;` lines define
- * styles; only `fill`/`color`/`stroke` as 3/6-digit hex or a handful of basic
- * CSS color names are honored (other properties/values ignored silently, as in
+ * styles; only `fill`/`color`/`stroke` as 3/6-digit hex or a CSS colour name
+ * (`../../parser/css-style.ts`) are honored (other properties/values ignored silently, as in
  * the flowchart `classDef` handling). Frontmatter is skipped with one warning.
  */
 
 import type { TreemapDiagram, TreemapNode, TreemapStyle } from './types.js';
+import { parseHexColor } from '../../parser/css-style.js';
 
 export interface TreemapParseResult {
   ast: TreemapDiagram;
   warnings: string[];
 }
 
-const NAMED_COLORS: Record<string, string> = {
-  red: 'FF0000', blue: '0000FF', green: '008000', yellow: 'FFFF00', orange: 'FFA500',
-  purple: '800080', black: '000000', white: 'FFFFFF', gray: '808080', grey: '808080',
-};
-
 const MAX_DEPTH = 32; // bounds recursion in the translator for hostile input
 
+/** A colour value as hex: 3/6-digit hex or a CSS colour name, read like every other diagram's styles. */
 function toHex(value: string): string | undefined {
-  const v = value.trim().replace(/^#/, '').toLowerCase();
-  if (/^[0-9a-f]{6}$/.test(v)) return v.toUpperCase();
-  if (/^[0-9a-f]{3}$/.test(v)) return v.split('').map((c) => c + c).join('').toUpperCase();
-  return NAMED_COLORS[v];
+  return parseHexColor(value) ?? undefined;
 }
 
 function indentOf(raw: string): number {

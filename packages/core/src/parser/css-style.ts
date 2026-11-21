@@ -1,9 +1,11 @@
 /**
  * Mermaid's CSS-like style lists (`classDef`, `style`, `linkStyle`), read the same way for every diagram
  * that takes them: a flowchart, a class diagram and a state diagram. Only `fill`, `stroke` and `color` with a
- * hex value are kept, so nothing but a validated colour can reach the XML (AGENTS.md rule 2), and
+ * hex value or a CSS colour name (turned into its hex value) are kept, so nothing but a validated colour can reach the XML (AGENTS.md rule 2), and
  * `font-weight` / `font-style` as booleans (read by the state diagram only, for now).
  */
+
+import { CSS_NAMED_COLORS } from './css-named-colors.js';
 
 /**
  * Parse a CSS-like `prop:value,prop:value` property list (`classDef`/`style`/
@@ -29,10 +31,11 @@ export function parseCssStyleProps(text: string): Map<string, string> {
 /**
  * Normalize a CSS color value to a bare 6-digit uppercase hex string (what
  * the translator's `hexColor()` expects), expanding the 3-digit shorthand
- * (`#f9f` -> `FF99FF`). Returns `null` for anything else (a named color like
- * `red`, `transparent`, a `rgb(...)` call, ...) — deliberately out of scope,
- * same tolerant-degradation style as an unrecognized `@{shape: ...}` name:
- * the property is just dropped rather than failing the whole statement.
+ * (`#f9f` -> `FF99FF`), and a CSS named colour (`red`, `white`, any case) to
+ * its standard value ({@link CSS_NAMED_COLORS}). Returns `null` for anything
+ * else (`transparent`, a `rgb(...)` call, ...) — same tolerant-degradation
+ * style as an unrecognized `@{shape: ...}` name: the property is just dropped
+ * rather than failing the whole statement.
  */
 export function parseHexColor(value: string): string | null {
   const v = value.trim();
@@ -43,7 +46,7 @@ export function parseHexColor(value: string): string | null {
     const [r, g, b] = hex3[1]!;
     return `${r}${r}${g}${g}${b}${b}`.toUpperCase();
   }
-  return null;
+  return CSS_NAMED_COLORS.get(v.toLowerCase()) ?? null;
 }
 
 /** The subset of `fill`/`stroke` CSS properties this parser maps to OOXML. */

@@ -457,9 +457,10 @@ test('an out-of-range linkStyle index is silently skipped rather than crashing',
   assert.equal(warnings.length, 0);
 });
 
-test('an unrecognized style color value (named color) is dropped, not applied as a bogus hex', () => {
-  const { ast, warnings } = parseMermaid('graph TD\n  A --> B\n  style A fill:red');
-  assert.equal(ast.nodes.find((n) => n.id === 'A')!.fill, undefined);
+test('a CSS colour name is read as its hex value; an unknown word is dropped, not applied as a bogus hex', () => {
+  const { ast, warnings } = parseMermaid('graph TD\n  A --> B\n  style A fill:red\n  style B fill:reddish');
+  assert.equal(ast.nodes.find((n) => n.id === 'A')!.fill, 'FF0000');
+  assert.equal(ast.nodes.find((n) => n.id === 'B')!.fill, undefined);
   assert.equal(warnings.length, 0);
 });
 

@@ -9,6 +9,11 @@ test('fill, stroke and color are kept only as hex colours', () => {
   assert.deepEqual(read('fill:url(javascript:x),stroke:"/><evil'), {});
 });
 
+test('a CSS colour name is read as its standard value, in any case; other words are dropped', () => {
+  assert.deepEqual(read('fill:white,stroke:Yellow,color:REBECCAPURPLE'), { fill: 'FFFFFF', stroke: 'FFFF00', color: '663399' });
+  assert.deepEqual(read('fill:transparent,stroke:constructor,color:__proto__'), {});
+});
+
 test('font-weight and font-style become booleans', () => {
   assert.deepEqual(read('font-weight:bold,font-style:italic'), { bold: true, italic: true });
   assert.deepEqual(read('font-weight:700'), { bold: true });
