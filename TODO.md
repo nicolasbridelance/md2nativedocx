@@ -186,6 +186,22 @@ Ensuite, dans l'ordre :
               style de la page web), avertis. Ajouts d'API, optionnels : `MindmapNode.labelRuns` / `icon` /
               `className`. Reste : `colorBy: depth` (en-tête YAML `config.mindmap`, non transmis ; couvert par la
               notice « options non appliquées »). Baselines `test:visual` `mindmap` (docx, pptx) rafraîchies depuis la CI Linux, revues (boîtes un peu plus larges, « Marketing » enfin lisible dans son `bang`).
+            - ~~**requirement (4)**~~ (fait le 2026-11-21) : parseur refait sur la grammaire de Mermaid 12.3
+              (noms et valeurs entre guillemets, nom non cité avec espaces, `:::` après un nom ou seul sur sa ligne,
+              mots-clés insensibles à la casse, `risk` / `verifymethod` affichés comme Mermaid, bloc défini deux fois :
+              le premier gardé, averti ; relation vers une boîte absente : avertie) ; `direction`, `style`,
+              `classDef`, `class` appliqués (défaut, puis classes, puis `style`, comme le diagramme de classes ;
+              couleurs validées). Boîte dessinée comme `requirementBox` de Mermaid (stéréotype `«Functional
+              Requirement»` puis nom en gras, champs `ID:` / `Text:` / `Risk:` / `Verification:` / `Type:` /
+              `Doc Ref:` centrés, lus en Markdown) ; `contains` en trait plein avec cercle barré côté contenant,
+              les six autres en pointillés avec flèche ouverte (`a:tailEnd type="arrow"`) ; libellés sur fond blanc,
+              place réservée par Dagre (en LR le libellé masquait la flèche). Comparateur au différentiel :
+              **9/9 identiques** (et `normText` du différentiel ne retire plus un `_` dans un mot, règle de `marked`) ;
+              étage 1 à **503 propres (93 %)**. Vu dans Word et LibreOffice
+              (`test-corpus/word-verification/requirement-diagram.*`). Ajouts d'API, optionnels :
+              `Requirement` / `RequirementElement` `fill` / `stroke` / `textColor` / `bold` / `italic` (type
+              `RequirementBoxStyle`), `RequirementDiagram.direction`. Reste : baselines `test:visual`
+              `requirement-diagram` à rafraîchir depuis la CI Linux.
             - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, ~~sucettes `()--`/`--()`~~ (faites le
               2026-11-21 : relation `lollipop` et `ClassDiagram.interfaces`, une interface par relation comme Mermaid ;
               cercle creux au bout du trait, nom au-delà ; vérifié dans Word, `test-corpus/word-verification/
@@ -270,7 +286,7 @@ Ensuite, dans l'ordre :
               `extractor` de son rendu dagre). Ici, seuls les sous-graphes à direction propre ou visés par un lien
               sont rangés à part, dans la direction du diagramme. Adopter la règle de Mermaid changerait le rendu
               de la plupart des diagrammes à sous-graphes (baselines `test:visual`) : décision du mainteneur ;
-            - **séquence (11)**, **C4 (6)**, **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), **requirement (4)**,
+            - **séquence (11)**, **C4 (6)**, **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
               **treeView (4)**, divers (8) ;
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
               `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; ~~railroad~~
@@ -309,7 +325,7 @@ Ensuite, dans l'ordre :
             par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime). Outil livré le 2026-11-20 :
             `tools/mermaid-differential/` (hors workspaces, son propre lockfile, `mermaid@12.3.0` épinglé comme le
             corpus), rapport `test-corpus/mermaid-official/DIFFERENTIAL.md`, verrou CI (job *Mermaid differential*,
-            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes). Premier passage :
+            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes), exigences (ajouté le 2026-11-21 : boîtes, champs affichés, relations, direction, styles). Premier passage :
             252 exemples comparés, 217 identiques, 35 écarts dont 7 sans avertissement ; **les 7 corrigés le
             2026-11-20** (flèche longue avec libellé, membres de sous-graphe à la règle de Mermaid, titre de
             sous-graphe lu comme un libellé, `participant X@{…} as …` et `"alias"`, entités nommées HTML 4 partagées
@@ -325,7 +341,7 @@ Ensuite, dans l'ordre :
             sous-graphe le même jour (#100 à #103) : **250/252**, étage 1 à **431 propres (80 %)**. Restent les
             « sucettes » `()--` / `--()` (#15, #16) : une interface dessinée en petit cercle, forme à ajouter au
             traducteur, pas une lecture à corriger.
-            Reste : comparateurs des autres types (C4, requirement…).
+            Reste : comparateurs des autres types (C4, architecture…).
             Rejouer à chaque montée de version de Mermaid, corpus et épingle ensemble.
 
 - [ ] **Générateur du manuel dans `scripts/`.** `docs/manual/manuel-utilisateur.{md,docx}` a été

@@ -225,7 +225,7 @@ Le tableau ci-dessous récapitule tous les types reconnus, leur mot-clé Mermaid
 | Diagramme de classes | `classDiagram` | Oui : `style`, `classDef` (fond, bordure, texte) |
 | Diagramme d’états | `stateDiagram` / `stateDiagram-v2` | Oui : `style`, `classDef` (fond, bordure, texte, gras, italique) |
 | Entité-relation | `erDiagram` | Oui : `style`, `classDef` (fond, bordure, texte), aussi sur les groupes |
-| Diagramme d’exigences | `requirementDiagram` | Non (style ignoré) |
+| Diagramme d’exigences | `requirementDiagram` | Oui : `style`, `classDef`, `class`, `:::` (fond, bordure, texte, gras, italique) |
 | C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Couleurs fixes |
 | Architecture | `architecture-beta` | Couleurs fixes |
 | Block | `block-beta` | Oui : style, classDef, class |
@@ -631,20 +631,21 @@ Exigences, éléments et leurs relations (SysML).
 | Rubrique | Détail |
 |:---------|:-------|
 | Mot-clé | `requirementDiagram` |
-| Couleurs | Non (style ignoré) |
+| Couleurs | Oui : `style`, `classDef`, `class`, `:::` (fond, bordure, texte, gras, italique) |
 
 
 **Syntaxe**
 
-- Blocs `requirement`, `functionalRequirement`… avec `id`, `text`, `risk`, `verifymethod`, blocs `element`
+- Blocs `requirement`, `functionalRequirement`… avec `id`, `text`, `risk`, `verifymethod`, blocs `element` avec `type`, `docref` ; noms et valeurs éventuellement entre guillemets
 - Relations `A - type -> B` ou `B <- type - A`, 7 types
+- `direction TB|BT|LR|RL`
 
-**Pris en charge :** Blocs et les 7 types de relation, dans les deux sens.
+**Pris en charge :** Blocs, les 7 types de relation dans les deux sens, direction et styles. Chaque boîte est dessinée comme dans Mermaid : le type (« Functional Requirement »), le nom en gras, puis `ID:`, `Text:`, `Risk:`, `Verification:` (ou `Type:`, `Doc Ref:`), chaque ligne lue en Markdown (gras, italique). `contains` est un trait plein avec un cercle barré côté contenant ; les six autres relations sont en pointillés avec une flèche ouverte.
 
 **Limites**
 
-- Les 7 relations sont dessinées de la même façon (comme Mermaid), le type est dans le libellé
-- Styles ignorés avec avertissement
+- Un type, un risque ou une méthode de vérification que Mermaid ne connaît pas est gardé tel quel, avec un avertissement (Mermaid refuse alors tout le diagramme)
+- Un bloc défini deux fois garde sa première définition, comme dans Mermaid, avec un avertissement
 
 
 +---------------------------------------+------------------------------------------------------------------+

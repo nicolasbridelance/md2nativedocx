@@ -39,6 +39,12 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   of its nodes). A long label wraps instead of widening its node. In the radial (shapes) layout, a circle,
   cloud, bang or hexagon is now sized to the text area of its shape: a root circle or a bang used to cut its
   text. `::icon(…)` and `:::classes` stay undrawn, with a clearer warning that names the node.
+- **Requirement diagrams drawn as Mermaid draws them.** Each box shows its type (`«Functional Requirement»`),
+  its name in bold, then `ID:`, `Text:`, `Risk: High`, `Verification: Test` (or `Type:`, `Doc Ref:`), each line
+  read as Markdown. `contains` is a solid line with a circled cross on the containing box; the other relations
+  are dashed with an open arrowhead, and their labels sit on a white background with room left for them.
+  `direction`, `style`, `classDef`, `class` and `:::` now apply (they used to be ignored, with a warning).
+  Quoted names and values lose their quotes, and a name may hold spaces.
 
 ### Fixed
 - The extension package now carries the license notices of all the third-party code inside it (layout,
