@@ -178,6 +178,14 @@ function runSuite(sofficeBin, workDir, { label, fixtures, format, baselineDir })
     const renderedPng = renderFixture(sofficeBin, join(fixturesDir, fixture), suiteDir, format);
     const baselinePng = join(baselineDir, `${name}.png`);
 
+    const keepFailure = () => {
+      // CI sets this so the rendered PNG of a failing or new fixture outlives the temp dir (uploaded as an
+      // artifact): the render to review before it becomes a baseline.
+      const dir = process.env.MD2NATIVEDOCX_VISUAL_FAILURE_DIR;
+      if (!dir) return;
+      mkdirSync(dir, { recursive: true });
+      copyFileSync(renderedPng, join(dir, `${tag.replace(/[^\w.-]+/g, '_')}.png`));
+    };
     if (!existsSync(baselinePng)) {
       if (updateBaseline) {
         copyFileSync(renderedPng, baselinePng);
@@ -185,6 +193,7 @@ function runSuite(sofficeBin, workDir, { label, fixtures, format, baselineDir })
         created++;
       } else {
         console.error(`✖ ${tag}: no baseline yet. Review ${renderedPng} then re-run with --update-baseline.`);
+        keepFailure();
         failures++;
       }
       continue;
@@ -200,13 +209,6 @@ function runSuite(sofficeBin, workDir, { label, fixtures, format, baselineDir })
     const baseline = decodePng(readFileSync(baselinePng));
     const rendered = decodePng(readFileSync(renderedPng));
     const diff = diffImages(baseline, rendered);
-    const keepFailure = () => {
-      // CI sets this so the rendered PNG of a failing fixture outlives the temp dir (uploaded as an artifact).
-      const dir = process.env.MD2NATIVEDOCX_VISUAL_FAILURE_DIR;
-      if (!dir) return;
-      mkdirSync(dir, { recursive: true });
-      copyFileSync(renderedPng, join(dir, `${tag.replace(/[^\w.-]+/g, '_')}.png`));
-    };
     if (!diff.equalDimensions) {
       console.error(
         `✖ ${tag}: dimensions changed (baseline ${baseline.width}x${baseline.height}, ` +
