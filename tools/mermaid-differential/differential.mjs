@@ -65,6 +65,7 @@ const { parseClassDiagram } = await core('diagrams/class-diagram/parser.js');
 const { parseStateDiagram } = await core('diagrams/state-diagram/parser.js');
 const { parseErDiagram } = await core('diagrams/er-diagram/parser.js');
 const { parseGanttChart } = await core('diagrams/gantt/parser.js');
+const { parseMindmap } = await core('diagrams/mindmap/parser.js');
 const { extractNodeStyle, parseCssStyleProps } = await core('parser/css-style.js');
 
 /** A style as one comparable string (`fill=FF0000 bold`), or '' when it sets nothing. */
@@ -344,6 +345,40 @@ const COMPARATORS = {
   },
 };
 
+// Mermaid's `nodeType` numbers (mindmapDb.ts), named as our `MindmapShape`.
+const MINDMAP_SHAPES = ['default', 'rounded', 'square', 'circle', 'cloud', 'bang', 'hexagon'];
+
+/**
+ * A mindmap as facts, one per node in tree order: its place (its index and its parent's), shape, text and
+ * decorations. Ids are not compared: an unshaped node's id is its text for Mermaid, a generated one for us.
+ */
+function mindmapFacts(root, fact) {
+  const facts = [];
+  const walk = (node, parent) => {
+    const index = facts.length;
+    facts.push(fact(node, index, parent));
+    for (const child of node.children) walk(child, index);
+  };
+  if (root) walk(root, '-');
+  return facts;
+}
+
+function mindmapFact(index, parent, shape, text, icon, className) {
+  return `node ${index} under ${parent} ${shape} "${text}" icon="${icon ?? ''}" class="${className ?? ''}"`;
+}
+
+COMPARATORS.mindmap = {
+  // Every mindmap label is Markdown for Mermaid (`labelType: 'markdown'`), backticks or not.
+  theirs: (db) =>
+    mindmapFacts(db.getMindmap(), (n, i, parent) =>
+      mindmapFact(i, parent, MINDMAP_SHAPES[n.type] ?? `type${n.type}`, normText(mermaidEntities(n.descr), true), n.icon, n.class),
+    ),
+  ours(source) {
+    const { ast } = parseMindmap(source);
+    return mindmapFacts(ast.root, (n, i, parent) => mindmapFact(i, parent, n.shape, ourText(n.label), n.icon, n.className));
+  },
+};
+
 /** One Gantt task as a comparable fact: id, text, section, resolved dates, tags. */
 function ganttFact(id, text, section, start, end, tags) {
   return `task ${id} "${text}" in "${section}" ${start} -> ${end} [${[...tags].sort().join(' ')}]`;
@@ -424,7 +459,7 @@ sans avertissement. Exemples © les auteurs de Mermaid, licence MIT (\`LICENSE\`
 **${compared.length} exemples comparés : ${count('match')} identiques, ${count('diff')} avec écart, dont ${silent.length} sans avertissement** (l'étage 1 les
 compte comme propres : nous dessinons autre chose que Mermaid sans le dire, à corriger en premier :
 ${silent.map((r) => `\`${r.id}\``).join(', ') || 'aucun'}). Hors comparaison : ${count('mermaid-rejects')} refusé(s) par Mermaid lui-même${rejected},
-${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER et Gantt en ont un).
+${count('not-compared')} d'un type sans comparateur pour l'instant (organigrammes, séquence, classes, états, ER, Gantt et cartes mentales en ont un).
 
 | Page | Exemples | Identiques | Écarts | Refusés par Mermaid |
 |---|---:|---:|---:|---:|
