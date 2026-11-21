@@ -200,8 +200,8 @@ Ensuite, dans l'ordre :
               étage 1 à **503 propres (93 %)**. Vu dans Word et LibreOffice
               (`test-corpus/word-verification/requirement-diagram.*`). Ajouts d'API, optionnels :
               `Requirement` / `RequirementElement` `fill` / `stroke` / `textColor` / `bold` / `italic` (type
-              `RequirementBoxStyle`), `RequirementDiagram.direction`. Reste : baselines `test:visual`
-              `requirement-diagram` à rafraîchir depuis la CI Linux.
+              `RequirementBoxStyle`), `RequirementDiagram.direction`. Baseline `test:visual`
+              `requirement-diagram` rafraîchie depuis la CI Linux, revue (seule image modifiée).
             - **classes (25)** : noms entre backticks, `<|..`, `<|--|>`, ~~sucettes `()--`/`--()`~~ (faites le
               2026-11-21 : relation `lollipop` et `ClassDiagram.interfaces`, une interface par relation comme Mermaid ;
               cercle creux au bout du trait, nom au-delà ; vérifié dans Word, `test-corpus/word-verification/
