@@ -287,7 +287,29 @@ Ensuite, dans l'ordre :
               sont rangés à part, dans la direction du diagramme. Adopter la règle de Mermaid changerait le rendu
               de la plupart des diagrammes à sous-graphes (baselines `test:visual`) : décision du mainteneur ;
             - **séquence (11)**, **C4 (6)**, **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
-              **treeView (4)**, divers (8) ;
+              ~~**treeView (4)**~~ (fait le 2026-11-21, voir ci-dessous), divers (8) ;
+            - ~~**treeView (4)**~~ (fait le 2026-11-21) : parseur refait sur la grammaire de Mermaid 12.3
+              (`treeView.langium` et sa lecture des arbres en traits : niveau par colonne de branche et pas de
+              l'arbre ; tabulation = 1 colonne hors traits ; noms entre `"…"` ou `'…'` ; annotation reconnue après
+              une espace seulement, la dernière de chaque sorte gagne ; `/` final retiré à l'affichage ;
+              `title` / `accTitle` / `accDescr`). Rendu comme celui de Mermaid, vu dans son SVG : racine implicite
+              `/` au-dessus des entrées (en formes et en SmartArt, `tree-view/implicit-root.ts` ; un arbre à
+              plusieurs entrées devient donc une SmartArt), dossiers en gras, descriptions en vert italique dans
+              une colonne, bande `highlight` ambre jusqu'au bord droit, traits noirs, `title` au-dessus (le titre
+              de frontmatter devient l'instruction `title`). `icon(none)` / `icon()` acceptés sans
+              avertissement (#8 propre). Comparateur au différentiel : **13/13 identiques** ; étage 1 à **504
+              propres (93 %)**. Corrigé en passant : dans Word, une boîte SmartArt à fond clair (`classDef`,
+              `style`, `highlight`) gardait le texte blanc du style, illisible ; le modèle de données porte
+              maintenant la couleur lisible (`textColorOnFill`, `smartart/text.ts`), pour toutes les SmartArt.
+              Vu dans Word et LibreOffice (`test-corpus/word-verification/tree-view*`), 0 erreur de schéma
+              dans `document.xml` et `word/diagrams/`. Restent, voulus : `icon(logos:react)` (#1, #7, #9),
+              non dessinable (paquet d'icônes de la page web). Restent, à faire : les icônes intégrées de
+              Mermaid (`folder`, `file`, et `showIcons: true` qui les met partout) ; les options `config.treeView`
+              (`showIcons`, `rowIndent`, `lineThickness`, couleurs), couvertes par la notice « options non
+              appliquées ». Ajouts d'API, optionnels : `TreeViewNode.className` / `icon`,
+              `TreeViewDiagram.title` / `accTitle` / `accDescr` ; changement de sens : `TreeViewNode.label`
+              n'a plus le `/` final d'un dossier (`isDirectory` le porte). Baseline `test:visual` `tree-view`
+              à rafraîchir depuis la CI Linux (fixture corrigée : `index.ts :::highlight`).
             - **types à dessiner** : ~~agentflow, usecase~~ (faits le 2026-11-19, via le moteur d'organigramme :
               `diagrams/flowchart-source.ts`, acteurs en bonhomme : forme `actor`, géométrie personnalisée) ; ~~railroad~~
               (fait le 2026-11-20 : `diagrams/railroad/`, conception propre au projet, CC0 : la syntaxe vient de la doc

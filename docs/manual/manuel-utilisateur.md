@@ -1289,15 +1289,25 @@ Arborescence façon explorateur de fichiers.
 
 **Syntaxe**
 
-- Hiérarchie par la colonne de départ (tabulation = 4), ou avec `├ └ │`
-- Libellé `"avec espaces"`, `/` final pour un dossier, `## description`, `:::highlight`
+- Hiérarchie par la colonne de départ (une tabulation compte pour une colonne, comme dans Mermaid), ou avec
+  des traits `├──`, `└──`, `│`
+- Nom `"avec espaces"` ou `'avec espaces'`, ou nom sans guillemets jusqu'à la première annotation ; `/` final
+  pour un dossier (affiché en gras, sans le `/`)
+- Après une espace : `:::highlight`, `## description`, `icon(nom)`. Sans espace, `index.ts:::highlight` est
+  un nom de fichier, comme dans Mermaid
+- `title`, `accTitle:`, `accDescr:` juste après `treeView-beta`
 
-**Pris en charge :** Dossiers, fichiers, descriptions, surlignage.
+**Pris en charge :** Dossiers, fichiers, descriptions, surlignage, titre. Comme Mermaid, l'arbre part d'une
+racine `/` dessinée au-dessus des entrées. En SmartArt, `/` est la boîte du haut et la description suit le nom
+en italique ; en formes, l'arbre ressemble à celui de Mermaid ligne pour ligne (descriptions en vert dans une
+colonne, ligne surlignée sur une bande ambre).
 
 **Limites**
 
-- `icon(nom)` ignoré avec avertissement
-- Seule la classe `highlight` est prise en compte
+- `icon(nom)` non dessiné, avec avertissement (les icônes viennent de paquets que la page web de Mermaid
+  enregistre) ; `icon(none)` est accepté sans avertissement
+- Seule la classe `highlight` est dessinée
+- Les options `config:` (`showIcons`, `rowIndent`, couleurs…) ne sont pas appliquées
 - Plafonds : profondeur 32, 2000 nœuds
 
 
@@ -1311,7 +1321,7 @@ Arborescence façon explorateur de fichiers.
 |             "src/"                      |             "src/"                                                   |
 |                 parser/                 |                 parser/                                              |
 |                 translator/             |                 translator/                                          |
-|                 index.ts:::highlight    |                 index.ts:::highlight                                 |
+|                 index.ts :::highlight   |                 index.ts :::highlight                                |
 |             package.json                |             package.json                                             |
 |         cli/                            |         cli/                                                         |
 |         "README file.md" ## quick start |         "README file.md" ## quick start                              |

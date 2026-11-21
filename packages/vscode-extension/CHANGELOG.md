@@ -45,8 +45,15 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   are dashed with an open arrowhead, and their labels sit on a white background with room left for them.
   `direction`, `style`, `classDef`, `class` and `:::` now apply (they used to be ignored, with a warning).
   Quoted names and values lose their quotes, and a name may hold spaces.
+- **File trees (`treeView-beta`) read and drawn as Mermaid does.** Like Mermaid, the tree hangs from a `/`
+  root, so a tree with several top-level entries is now one SmartArt hierarchy too. Folders are bold without
+  their trailing `/`; with SmartArt off, descriptions line up in a green italic column and a `highlight` row
+  sits on an amber band, as in Mermaid. `title` is drawn above the tree, box-drawing trees (`├──`) and
+  `'single quotes'` are read as Mermaid reads them, and `icon(none)` no longer warns.
 
 ### Fixed
+- In real Word, a SmartArt box with a light colour of its own (`classDef`, `style`, a highlighted file) showed
+  white text that could hardly be read; its text is now dark, as LibreOffice already showed it.
 - The extension package now carries the license notices of all the third-party code inside it (layout,
   zip and XML libraries, the Open XML SDK of the Word compatibility check) in `dist/licenses/`; before, only
   `adm-zip` was named.
