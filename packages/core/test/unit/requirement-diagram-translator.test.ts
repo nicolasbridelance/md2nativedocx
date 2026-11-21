@@ -32,35 +32,82 @@ test('wraps the drawing canvas in the schema-required paragraph hierarchy, same 
   }
 });
 
-test('every relationship renders as a dashed line with a triangle only at the destination end', () => {
+test('a relationship other than contains is a dashed line with an open arrowhead only at the destination end, as in Mermaid', () => {
   const xml = translate(BASIC);
   assert.equal((xml.match(/<wps:cNvCnPr\/>/g) ?? []).length, 1);
   assert.equal((xml.match(/<a:headEnd /g) ?? []).length, 0);
-  assert.equal((xml.match(/<a:tailEnd /g) ?? []).length, 1);
+  assert.equal((xml.match(/<a:tailEnd type="arrow"/g) ?? []).length, 1);
   assert.ok(xml.includes('<a:prstDash val="dash"/>'));
 });
 
-test('the relationship type renders as a «type» label', () => {
-  assert.ok(translate(BASIC).includes('«satisfies»'));
+test('contains is a solid line with a circled cross at the containing end, no arrowhead, as in Mermaid', () => {
+  const xml = translate('requirementDiagram\n  requirement A {\n  }\n  requirement B {\n  }\n  A - contains -> B');
+  assert.ok(!xml.includes('<a:prstDash val="dash"/>'));
+  assert.ok(!xml.includes('<a:tailEnd '));
+  assert.ok(!xml.includes('<a:headEnd '));
+  // The line, then the two strokes of the cross; the circle is an ellipse.
+  assert.equal((xml.match(/<wps:cNvCnPr\/>/g) ?? []).length, 3);
+  assert.equal((xml.match(/prst="ellipse"/g) ?? []).length, 1);
 });
 
-test('a requirement box shows its stereotype and every populated field', () => {
+test('the relationship type renders as a «type» label on a white background, as in Mermaid', () => {
   const xml = translate(BASIC);
-  assert.ok(xml.includes('«requirement»'));
-  assert.ok(xml.includes('id: 1'));
-  assert.ok(xml.includes('text: the test text.'));
-  assert.ok(xml.includes('risk: high'));
-  assert.ok(xml.includes('verifyMethod: test'));
+  assert.ok(xml.includes('«satisfies»'));
+  assert.ok(/name="«satisfies» background"\/>[^]*?<a:srgbClr val="FFFFFF"\/>/.test(xml));
+});
+
+test('a requirement box shows its stereotype and every populated field, labelled as Mermaid labels them', () => {
+  const xml = translate(BASIC);
+  assert.ok(xml.includes('«Requirement»'));
+  assert.ok(xml.includes('ID: 1'));
+  assert.ok(xml.includes('Text: the test text.'));
+  assert.ok(xml.includes('Risk: High'));
+  assert.ok(xml.includes('Verification: Test'));
+});
+
+test('each requirement type keyword shows as Mermaid displays it', () => {
+  assert.ok(translate('requirementDiagram\n  functionalRequirement r {\n  }').includes('«Functional Requirement»'));
+  assert.ok(translate('requirementDiagram\n  designConstraint r {\n  }').includes('«Design Constraint»'));
 });
 
 test('an element box shows its stereotype and populated fields', () => {
   const xml = translate(BASIC);
-  assert.ok(xml.includes('«element»'));
-  assert.ok(xml.includes('type: simulation'));
+  assert.ok(xml.includes('«Element»'));
+  assert.ok(xml.includes('Type: simulation'));
+  assert.ok(translate('requirementDiagram\n  element e {\n    docref: a/b\n  }').includes('Doc Ref: a/b'));
+});
+
+test('names and fields are read as Markdown, as Mermaid draws them (official example #3)', () => {
+  const xml = translate('requirementDiagram\nrequirement "__test_req__" {\n    text: "*italicized text* **bold text**"\n}');
+  assert.ok(/<w:b\/>[^]*?>test_req<\/w:t>/.test(xml), 'the name, without its underscores, in bold');
+  assert.ok(!xml.includes('__test_req__'));
+  assert.ok(/<w:i\/>[^]*?>italicized text<\/w:t>/.test(xml));
+  assert.ok(/<w:b\/>[^]*?>bold text<\/w:t>/.test(xml));
+  assert.ok(xml.includes('>Text: </w:t>'));
+});
+
+test('a styled box takes its fill, border and text colour; font-weight makes every text bold', () => {
+  const xml = translate('requirementDiagram\n  element e {\n    type: x\n  }\n  style e fill:#f9f,stroke:#333,color:blue,font-weight:bold');
+  assert.ok(xml.includes('<a:srgbClr val="FF99FF"/>'));
+  assert.ok(xml.includes('<a:srgbClr val="333333"/>'));
+  assert.ok(!xml.includes('D9E2F3'), 'a styled fill covers the header too');
+  assert.ok(/<w:b\/><w:color w:val="0000FF"\/>[^]*?Type: x/.test(xml));
+});
+
+test('direction LR lays the boxes out side by side', () => {
+  const positions = (src: string): number[][] =>
+    [...translate(src).matchAll(/<wps:cNvPr id="\d+" name="(?:A|B)"\/>[^]*?<a:off x="(\d+)" y="(\d+)"/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  const body = '\n  element A {\n  }\n  element B {\n  }\n  A - traces -> B';
+  const [tdA, tdB] = positions(`requirementDiagram${body}`);
+  const [lrA, lrB] = positions(`requirementDiagram\n  direction LR${body}`);
+  assert.equal(tdA![0], tdB![0]);
+  assert.equal(lrA![1], lrB![1]);
 });
 
 test('field text is XML-escaped', () => {
-  const xml = translate('requirementDiagram\n  requirement A {\n    text: "quoted" & <tag>\n  }');
+  const xml = translate('requirementDiagram\n  requirement "A&<b>\'" {\n    text: "quoted" & <tag>\n  }\n  element "<x/>" {\n    docref: a"&b\n  }');
+  assert.ok(!xml.includes('<b>'));
+  assert.ok(!xml.includes('<x/>'));
   assert.ok(xml.includes('&amp;'));
   assert.ok(xml.includes('&lt;tag&gt;'));
   assert.ok(!xml.includes('<tag>'));
@@ -93,10 +140,10 @@ test('2 relationships between the same pair of boxes are pushed apart (parallel-
   const xml = translate(
     'requirementDiagram\n  requirement A {\n    id: 1\n  }\n  requirement B {\n    id: 2\n  }\n  A - traces -> B\n  A <- derives - B',
   );
-  // Emission order per relationship is [connector, label], so the 2
-  // connectors' own <a:off> land at indices 0/2 and the 2 labels' at 1/3.
+  // Emission order per relationship is [connector, label background, label],
+  // so the 2 connectors' own <a:off> land at indices 0/3 and the 2 labels' at 2/5.
   const offsets = [...xml.matchAll(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/g)].map((m) => [Number(m[1]), Number(m[2])]);
-  assert.notDeepEqual(offsets[0], offsets[2], 'the 2 connectors must not share the same bounding-box origin');
+  assert.notDeepEqual(offsets[0], offsets[3], 'the 2 connectors must not share the same bounding-box origin');
   // Regression: this pair is deliberately declared in *opposite* documented
   // directions (`A - traces -> B` then `A <- derives - B`, i.e.
   // {from:A,to:B} then {from:B,to:A}) — the first fix attempt derived the
@@ -105,5 +152,5 @@ test('2 relationships between the same pair of boxes are pushed apart (parallel-
   // cancels parallelEdgeOffset's own index-based sign flip, collapsing both
   // labels onto the same point again even though the connectors themselves
   // were already correctly separated. Only a real render caught it.
-  assert.notDeepEqual(offsets[1], offsets[3], 'the 2 «type» labels must not share the same position');
+  assert.notDeepEqual(offsets[2], offsets[5], 'the 2 «type» labels must not share the same position');
 });

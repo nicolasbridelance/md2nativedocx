@@ -4,7 +4,7 @@ Généré par `node scripts/mermaid-conformance.mjs --report` sur `mermaid@12.3.
 chaque bloc d'exemple des pages de syntaxe de la doc Mermaid passé dans `renderDiagram()`.
 Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 
-**Total : 541 exemples — 499 sans avertissement (92 %), 42 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
+**Total : 541 exemples — 503 sans avertissement (93 %), 38 avec avertissement, 0 de types pas encore dessinés (note à la place), 0 mal typés, 0 en échec.**
 
 | Page | Exemples | Sans avert. | Avec avert. | Type non dessiné | Mal typés | Échecs |
 |---|---:|---:|---:|---:|---:|---:|
@@ -27,7 +27,7 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 | quadrantChart | 3 | 2 | 1 | 0 | 0 | 0 |
 | radar | 3 | 3 | 0 | 0 | 0 | 0 |
 | railroad | 14 | 14 | 0 | 0 | 0 | 0 |
-| requirementDiagram | 9 | 5 | 4 | 0 | 0 | 0 |
+| requirementDiagram | 9 | 9 | 0 | 0 | 0 | 0 |
 | sankey | 8 | 8 | 0 | 0 | 0 | 0 |
 | sequenceDiagram | 38 | 36 | 2 | 0 | 0 | 0 |
 | stateDiagram | 22 | 22 | 0 | 0 | 0 | 0 |
@@ -97,13 +97,6 @@ Exemples © les auteurs de Mermaid, licence MIT (`LICENSE` dans ce dossier).
 ### quadrantChart
 
 - #2 warned: classDef styling is not yet supported for quadrant charts, ignored: classDef class1 color: #109060 \| classDef styling is not yet supported for quadrant charts, ignored: classDef class2 color: #908342, radius : 10, stroke-color: #310085, stroke-width: 10px \| classDef styling is not yet supported for quadrant charts, ignored: classDef class3 color: #f00fff, radius : 10
-
-### requirementDiagram
-
-- #5 warned: Unsupported line ignored: direction LR
-- #6 warned: Styling directives are not yet supported for requirement diagrams, ignored: style test_req fill:#ffa,stroke:#000, color: green \| Styling directives are not yet supported for requirement diagrams, ignored: style test_entity fill:#f9f,stroke:#333, color: blue
-- #7 warned: Styling directives are not yet supported for requirement diagrams, ignored: classDef important fill:#f96,stroke:#333,stroke-width:4px \| Styling directives are not yet supported for requirement diagrams, ignored: classDef test fill:#ffa,stroke:#000
-- #8 warned: Styling directives are not yet supported for requirement diagrams, ignored: classDef important font-weight:bold \| Styling directives are not yet supported for requirement diagrams, ignored: class test_entity important \| Styling directives are not yet supported for requirement diagrams, ignored: style test_entity fill:#f9f,stroke:#333
 
 ### sequenceDiagram
 

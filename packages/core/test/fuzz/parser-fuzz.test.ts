@@ -261,3 +261,24 @@ test('property: mindmap input never throws and always gives well-formed, escaped
     { numRuns: 400 },
   );
 });
+
+test('property: requirement diagram input never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  // Block openers and closers, fields, both arrow directions, styling statements, quotes and hostile text.
+  const token = fc.oneof(
+    hostileText,
+    nodeId,
+    fc.constantFrom('requirement ', 'functionalRequirement ', 'element ', 'designConstraint ', '{', '}', '"', ':::', ',', ':'),
+    fc.constantFrom('id: ', 'text: ', 'risk: high', 'verifymethod: test', 'type: ', 'docref: ', '**', '*', '_', '<br/>'),
+    fc.constantFrom(' - contains -> ', ' - satisfies -> ', ' <- copies - ', '->', '<-', ' - '),
+    fc.constantFrom('direction LR', 'style ', 'classDef ', 'class ', 'fill:#f9f,stroke:#333,color:red', 'font-weight:bold', '%% c'),
+  );
+  const line = fc.array(token, { maxLength: 6 }).map((toks) => toks.join(''));
+  fc.assert(
+    fc.property(fc.array(line, { maxLength: 25 }), (lines) => {
+      const result = renderDiagram(`requirementDiagram\n${lines.join('\n')}`);
+      assertWellFormedXml(result.fragment);
+    }),
+    { numRuns: 400 },
+  );
+});

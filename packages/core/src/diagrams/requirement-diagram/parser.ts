@@ -1,28 +1,37 @@
 /**
- * Parser for Mermaid `requirementDiagram` (grammar verified against
- * mermaid.js.org/syntax/requirementDiagram.html, fetched 2026-09-09).
- * Line-oriented, same forgiving convention as `../../parser/parser.ts` and
- * `../class-diagram/parser.ts`.
+ * Parser for Mermaid `requirementDiagram`. Grammar read from Mermaid's own
+ * (`requirementDiagram.jison` and `requirementDb.ts`, mermaid@12.3.0, the
+ * version the official corpus is pinned to), reinterpreted here, not copied.
+ * Line-oriented, same forgiving convention as `../class-diagram/parser.ts`.
  *
- * V1 scope, deliberately:
- * - Requirement blocks (`<type> name { id: ... text: ... risk: ...
- *   verifymethod: ... }`) and element blocks (`element name { type: ...
- *   docref: ... }`).
- * - Both relationship line directions (`A - type -> B` and
- *   `A <- type - B`), all 7 relationship type keywords.
+ * What it reads, as Mermaid does:
+ * - Requirement blocks `<type> name { … }` with the 6 type keywords
+ *   (case-insensitive) and the fields `id`, `text`, `risk`, `verifymethod`;
+ *   element blocks `element name { … }` with `type` and `docref`. A name or a
+ *   value may be quoted (`"…"`, quotes removed) and an unquoted name may hold
+ *   spaces. `risk` and `verifymethod` are shown the way Mermaid shows them
+ *   (`high` -> `High`, `test` -> `Test`).
+ * - A block defined twice keeps its first definition (Mermaid ignores the
+ *   second); a warning says so.
+ * - Both relationship directions, `A - type -> B` and `B <- type - A`, with
+ *   the 7 type keywords; ends may be quoted.
+ * - `direction TB|BT|LR|RL`.
+ * - Styling: `style ids css`, `classDef names css`, `class ids names`, and
+ *   `:::names` after a block's name or on a line of its own (`id:::names`).
+ *   Layered like the class diagram: `classDef default`, then each class in the
+ *   order it was given, then each `style` in order. Mermaid writes a
+ *   `classDef` as an `!important` rule of the page's stylesheet, so a class
+ *   applies wherever its `classDef` sits; a `style` or `class` naming a block
+ *   not defined yet does nothing, as in Mermaid. Only `fill`, `stroke`,
+ *   `color`, `font-weight` and `font-style` are kept (`../../parser/css-style.ts`).
  *
- * `Requirement.type`/`risk`/`verifyMethod` are kept as free-form strings
- * rather than validated against the spec's own enumerated keyword lists
- * (`REQUIREMENT_TYPES`, `Low|Medium|High`, `Analysis|Inspection|Test|
- * Demonstration`) — this project has no evidence those lists are exhaustive
- * across Mermaid versions, and rejecting/warning on an unrecognized-but-
- * plausible value would risk losing real content over a list this parser
- * can't be sure is complete. Only relationship type keywords are validated
- * (a fixed, closed set — an unrecognized one can't be routed to any of the
- * 7 rendering styles), degrading to the generic "unsupported line" warning.
+ * Where Mermaid rejects the whole diagram (an unknown type keyword, risk or
+ * verify method), this parser keeps the content as written and warns.
  */
 
-import type { RequirementDiagram, RequirementElement, RequirementRelationType, Requirement } from './types.js';
+import { extractNodeStyle, parseCssStyleProps, type NodeStylePatch } from '../../parser/css-style.js';
+import { REQUIREMENT_TYPES } from './types.js';
+import type { RequirementBoxStyle, RequirementDiagram, RequirementElement, RequirementRelationType, Requirement } from './types.js';
 
 export interface RequirementDiagramParseResult {
   ast: RequirementDiagram;
@@ -39,43 +48,118 @@ const RELATIONSHIP_TYPES = new Set<RequirementRelationType>([
   'traces',
 ]);
 
+/** Type keyword in lower case -> its canonical spelling (Mermaid's lexer ignores case). */
+const TYPE_BY_LOWER = new Map<string, string>(REQUIREMENT_TYPES.map((t) => [t.toLowerCase(), t]));
+
+/** How Mermaid displays each risk level and verify method it accepts (`requirementDb.ts`). */
+const RISK_DISPLAY = new Map([
+  ['low', 'Low'],
+  ['medium', 'Medium'],
+  ['high', 'High'],
+]);
+const VERIFY_DISPLAY = new Map([
+  ['analysis', 'Analysis'],
+  ['demonstration', 'Demonstration'],
+  ['inspection', 'Inspection'],
+  ['test', 'Test'],
+]);
+
 function isRelationshipType(word: string): word is RequirementRelationType {
   return RELATIONSHIP_TYPES.has(word as RequirementRelationType);
 }
 
+/** `"name"` -> `name`; anything else trimmed and kept as written. */
+function unquote(text: string): string {
+  const t = text.trim();
+  return t.length >= 2 && t.startsWith('"') && t.endsWith('"') ? t.slice(1, -1) : t;
+}
+
+/** Index of `needle` in `text` outside a `"…"` string, searching from the end if `last`; -1 if none. */
+function indexOutsideQuotes(text: string, needle: string, last = false): number {
+  let found = -1;
+  let inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '"') {
+      inQuote = !inQuote;
+      continue;
+    }
+    if (!inQuote && text.startsWith(needle, i)) {
+      if (!last) return i;
+      found = i;
+    }
+  }
+  return found;
+}
+
+/** A comma-separated list of names, each possibly quoted. */
+function nameList(text: string): string[] {
+  return text
+    .split(',')
+    .map(unquote)
+    .filter((n) => n.length > 0);
+}
+
+/** Split `head rest` at the first whitespace outside quotes. */
+function splitFirstWord(text: string): { head: string; rest: string } {
+  let inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '"') inQuote = !inQuote;
+    else if (!inQuote && /\s/.test(text[i]!)) return { head: text.slice(0, i), rest: text.slice(i + 1).trim() };
+  }
+  return { head: text, rest: '' };
+}
+
 /**
- * Parse one relationship line in either documented direction:
- * `source - type -> destination` or `destination <- type - source`. Split
- * on the literal `->`/`<-` arrow tokens (and, for the type word, the
- * literal `-` separator) rather than one combined regex — the same
- * detect-unsafe-regex false positive already documented at `../quadrant/
- * parser.ts`'s POINT_TAIL and `../er-diagram/parser.ts`'s relationship
- * parsing.
+ * One relationship line in either direction: `source - type -> destination` or
+ * `destination <- type - source`. Split on the arrow tokens and the `-`
+ * separator outside quotes rather than with one combined regex (untrusted
+ * input, `security/detect-unsafe-regex`); an unquoted name may then hold a `-`.
  */
 function parseRelationshipLine(line: string): { from: string; to: string; type: RequirementRelationType } | null {
-  const rightArrowIdx = line.indexOf('->');
-  if (rightArrowIdx !== -1) {
-    const to = line.slice(rightArrowIdx + 2).trim();
-    const left = line.slice(0, rightArrowIdx).trim();
-    const dashIdx = left.lastIndexOf('-');
-    if (dashIdx === -1) return null;
-    const from = left.slice(0, dashIdx).trim();
-    const type = left.slice(dashIdx + 1).trim();
-    if (from.length > 0 && to.length > 0 && isRelationshipType(type)) return { from, to, type };
-    return null;
+  const rightArrow = indexOutsideQuotes(line, '->');
+  if (rightArrow !== -1) {
+    const left = line.slice(0, rightArrow);
+    const dash = indexOutsideQuotes(left, '-', true);
+    if (dash === -1) return null;
+    return relationship(left.slice(0, dash), left.slice(dash + 1).trim(), line.slice(rightArrow + 2));
   }
-  const leftArrowIdx = line.indexOf('<-');
-  if (leftArrowIdx !== -1) {
-    const to = line.slice(0, leftArrowIdx).trim();
-    const right = line.slice(leftArrowIdx + 2).trim();
-    const dashIdx = right.lastIndexOf('-');
-    if (dashIdx === -1) return null;
-    const type = right.slice(0, dashIdx).trim();
-    const from = right.slice(dashIdx + 1).trim();
-    if (from.length > 0 && to.length > 0 && isRelationshipType(type)) return { from, to, type };
-    return null;
+  const leftArrow = indexOutsideQuotes(line, '<-');
+  if (leftArrow !== -1) {
+    const right = line.slice(leftArrow + 2);
+    const dash = indexOutsideQuotes(right, '-');
+    if (dash === -1) return null;
+    return relationship(right.slice(dash + 1), right.slice(0, dash).trim(), line.slice(0, leftArrow));
   }
   return null;
+}
+
+function relationship(fromText: string, typeText: string, toText: string): { from: string; to: string; type: RequirementRelationType } | null {
+  const from = unquote(fromText);
+  const to = unquote(toText);
+  const type = typeText.toLowerCase();
+  if (from.length > 0 && to.length > 0 && isRelationshipType(type)) return { from, to, type };
+  return null;
+}
+
+/** `<kw> name[:::classes]` (the `{` already removed): the name, quotes removed, and its classes. */
+function parseBlockName(text: string): { name: string; classes: string[] } {
+  const t = text.trim();
+  if (t.startsWith('"')) {
+    const close = t.indexOf('"', 1);
+    if (close !== -1) {
+      const after = t.slice(close + 1).trim();
+      return { name: t.slice(1, close), classes: after.startsWith(':::') ? nameList(after.slice(3)) : [] };
+    }
+  }
+  const sep = t.indexOf(':::');
+  if (sep === -1) return { name: t, classes: [] };
+  return { name: t.slice(0, sep).trim(), classes: nameList(t.slice(sep + 3)) };
+}
+
+interface Box {
+  style: RequirementBoxStyle;
+  classes: string[];
+  inline: NodeStylePatch[];
 }
 
 export function parseRequirementDiagram(text: string): RequirementDiagramParseResult {
@@ -83,13 +167,23 @@ export function parseRequirementDiagram(text: string): RequirementDiagramParseRe
   const requirements = new Map<string, Requirement>();
   const elements = new Map<string, RequirementElement>();
   const relationships: RequirementDiagram['relationships'] = [];
+  let direction: RequirementDiagram['direction'];
 
-  type Block = { kind: 'requirement'; req: Requirement } | { kind: 'element'; el: RequirementElement };
+  // Styling state. `boxes` is keyed by name; Mermaid looks a requirement up first, then an element.
+  const boxes = new Map<string, Box>();
+  const classDefs = new Map<string, NodeStylePatch>();
+  const boxNamed = (name: string): Box | undefined => boxes.get(`r:${name}`) ?? boxes.get(`e:${name}`);
+  const addClasses = (names: string[], classNames: string[]): void => {
+    for (const name of names) boxNamed(name)?.classes.push(...classNames);
+  };
+
+  type Block = { kind: 'requirement'; req: Requirement; discard: boolean } | { kind: 'element'; el: RequirementElement; discard: boolean };
   let open: Block | null = null;
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (line.length === 0 || line.startsWith('%%')) continue;
+    // Mermaid's lexer skips `%…` and `#…` up to the end of the line.
+    if (line.length === 0 || line.startsWith('%') || line.startsWith('#')) continue;
     if (/^requirementDiagram\b/i.test(line)) continue;
 
     if (open) {
@@ -103,13 +197,22 @@ export function parseRequirementDiagram(text: string): RequirementDiagramParseRe
         continue;
       }
       const key = line.slice(0, colonIdx).trim().toLowerCase();
-      const value = line.slice(colonIdx + 1).trim();
+      const value = unquote(line.slice(colonIdx + 1));
       if (open.kind === 'requirement') {
-        if (key === 'id') open.req.id = value;
-        else if (key === 'text') open.req.text = value;
-        else if (key === 'risk') open.req.risk = value;
-        else if (key === 'verifymethod') open.req.verifyMethod = value;
-        else warnings.push(`Unsupported requirement field ignored: ${line}`);
+        const req = open.req;
+        if (key === 'id') req.id = value;
+        else if (key === 'text') req.text = value;
+        else if (key === 'risk') {
+          req.risk = RISK_DISPLAY.get(value.toLowerCase()) ?? value;
+          if (!RISK_DISPLAY.has(value.toLowerCase()) && !open.discard) {
+            warnings.push(`Risk "${value}" of requirement "${req.name}" is not Low, Medium or High (Mermaid rejects it); shown as written.`);
+          }
+        } else if (key === 'verifymethod') {
+          req.verifyMethod = VERIFY_DISPLAY.get(value.toLowerCase()) ?? value;
+          if (!VERIFY_DISPLAY.has(value.toLowerCase()) && !open.discard) {
+            warnings.push(`Verify method "${value}" of requirement "${req.name}" is not Analysis, Demonstration, Inspection or Test (Mermaid rejects it); shown as written.`);
+          }
+        } else warnings.push(`Unsupported requirement field ignored: ${line}`);
       } else {
         if (key === 'type') open.el.type = value;
         else if (key === 'docref') open.el.docRef = value;
@@ -118,21 +221,62 @@ export function parseRequirementDiagram(text: string): RequirementDiagramParseRe
       continue;
     }
 
+    const directionMatch = /^direction\s+(TB|TD|BT|LR|RL)$/i.exec(line);
+    if (directionMatch) {
+      const requested = directionMatch[1]!.toUpperCase();
+      direction = requested === 'TB' ? 'TD' : (requested as NonNullable<RequirementDiagram['direction']>);
+      continue;
+    }
+
     if (line.endsWith('{')) {
-      const header = line.slice(0, -1).trim().split(/\s+/).filter(Boolean);
-      if (header.length === 2 && header[0] === 'element') {
-        const el: RequirementElement = { name: header[1]! };
-        elements.set(el.name, el);
-        open = { kind: 'element', el };
+      const { head: keyword, rest } = splitFirstWord(line.slice(0, -1).trim());
+      const { name, classes } = parseBlockName(rest);
+      if (name.length === 0) {
+        warnings.push(`Unsupported block opener ignored: ${line}`);
         continue;
       }
-      if (header.length === 2) {
-        const req: Requirement = { name: header[1]!, type: header[0]! };
-        requirements.set(req.name, req);
-        open = { kind: 'requirement', req };
-        continue;
+      if (keyword.toLowerCase() === 'element') {
+        const key = `e:${name}`;
+        const discard = boxes.has(key);
+        const el: RequirementElement = { name };
+        if (discard) warnings.push(`Element "${name}" is defined twice; the first definition is kept, as in Mermaid.`);
+        else {
+          elements.set(name, el);
+          boxes.set(key, { style: el, classes: [], inline: [] });
+        }
+        open = { kind: 'element', el, discard };
+      } else {
+        const type = TYPE_BY_LOWER.get(keyword.toLowerCase());
+        if (type === undefined) warnings.push(`"${keyword}" is not a requirement type Mermaid knows (it rejects the diagram); "${name}" is drawn as a requirement of that type.`);
+        const key = `r:${name}`;
+        const discard = boxes.has(key);
+        const req: Requirement = { name, type: type ?? keyword };
+        if (discard) warnings.push(`Requirement "${name}" is defined twice; the first definition is kept, as in Mermaid.`);
+        else {
+          requirements.set(name, req);
+          boxes.set(key, { style: req, classes: [], inline: [] });
+        }
+        open = { kind: 'requirement', req, discard };
       }
-      warnings.push(`Unsupported block opener ignored: ${line}`);
+      if (!open.discard) addClasses([name], classes);
+      continue;
+    }
+
+    const keyword = /^(classDef|class|style)\s/i.exec(line)?.[1]?.toLowerCase();
+    if (keyword !== undefined) {
+      const { head, rest } = splitFirstWord(line.slice(keyword.length).trim());
+      const targets = nameList(head);
+      if (targets.length === 0 || rest.length === 0) {
+        warnings.push(`Unsupported line ignored: ${line}`);
+      } else if (keyword === 'classdef') {
+        const patch = extractNodeStyle(parseCssStyleProps(rest));
+        for (const name of targets) classDefs.set(name, { ...classDefs.get(name), ...patch });
+      } else if (keyword === 'class') {
+        addClasses(targets, nameList(rest));
+      } else {
+        const patch = extractNodeStyle(parseCssStyleProps(rest));
+        for (const name of targets) boxNamed(name)?.inline.push(patch);
+      }
       continue;
     }
 
@@ -142,8 +286,10 @@ export function parseRequirementDiagram(text: string): RequirementDiagramParseRe
       continue;
     }
 
-    if (/^(?:classDef|class|style)\b/i.test(line)) {
-      warnings.push(`Styling directives are not yet supported for requirement diagrams, ignored: ${line}`);
+    // `id:::classes` on a line of its own.
+    const sep = indexOutsideQuotes(line, ':::');
+    if (sep > 0) {
+      addClasses([unquote(line.slice(0, sep))], nameList(line.slice(sep + 3)));
       continue;
     }
 
@@ -154,8 +300,36 @@ export function parseRequirementDiagram(text: string): RequirementDiagramParseRe
     warnings.push('One or more requirement/element blocks were not closed with a matching "}".');
   }
 
+  const undefinedClasses = new Set<string>();
+  for (const box of boxes.values()) {
+    const patch: NodeStylePatch = { ...classDefs.get('default') };
+    for (const name of box.classes) {
+      const def = classDefs.get(name);
+      if (def) Object.assign(patch, def);
+      else if (name !== 'default') undefinedClasses.add(name);
+    }
+    for (const inline of box.inline) Object.assign(patch, inline);
+    if (patch.fill !== undefined) box.style.fill = patch.fill;
+    if (patch.stroke !== undefined) box.style.stroke = patch.stroke;
+    if (patch.color !== undefined) box.style.textColor = patch.color;
+    if (patch.bold !== undefined) box.style.bold = patch.bold;
+    if (patch.italic !== undefined) box.style.italic = patch.italic;
+  }
+  for (const name of undefinedClasses) warnings.push(`classDef "${name}" referenced but not defined.`);
+
+  for (const rel of relationships) {
+    for (const end of [rel.from, rel.to]) {
+      if (!boxNamed(end)) warnings.push(`Relationship "${rel.from} - ${rel.type} -> ${rel.to}" names "${end}", which is not defined; it is not drawn.`);
+    }
+  }
+
   return {
-    ast: { requirements: [...requirements.values()], elements: [...elements.values()], relationships },
+    ast: {
+      requirements: [...requirements.values()],
+      elements: [...elements.values()],
+      relationships,
+      ...(direction ? { direction } : {}),
+    },
     warnings,
   };
 }

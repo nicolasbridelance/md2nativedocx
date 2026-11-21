@@ -17,12 +17,16 @@
  */
 
 import { pathShape } from './path-shape.js';
+import { renderLabelRuns } from './label-runs.js';
 import { escapeXml } from './xml-escape.js';
+import type { LabelToken } from '../types.js';
 import { EMU_PER_PX, LABEL_NAME, unwrappedTextFrame } from './canvas.js';
 
 /** `a:headEnd`/`a:tailEnd` marker presets this project has confirmed render
- * correctly (see `../translator/ooxml-translator.ts`'s `ArrowMarker`). */
-export type ArrowMarker = 'none' | 'triangle' | 'oval' | 'diamond';
+ * correctly (see `../translator/ooxml-translator.ts`'s `ArrowMarker`).
+ * `arrow` is the open arrowhead (two strokes, no fill), the requirement
+ * diagram's. */
+export type ArrowMarker = 'none' | 'triangle' | 'arrow' | 'oval' | 'diamond';
 
 export function scalePt(px: number, factor: number): number {
   return Math.round(px * EMU_PER_PX * factor);
@@ -169,13 +173,17 @@ export function diamond(id: number, x: number, y: number, w: number, h: number, 
 
 const WORD_JC: Readonly<Record<'l' | 'ctr', 'left' | 'center'>> = { l: 'left', ctr: 'center' };
 
+/**
+ * A borderless text box, one paragraph per entry of `lines`. An entry is plain text, or a label's rich text
+ * (`LabelToken[]`: bold/italic runs and line breaks), on which `opts.bold`/`opts.italic` add their emphasis.
+ */
 export function textBoxLines(
   id: number,
   x: number,
   y: number,
   w: number,
   h: number,
-  lines: string[],
+  lines: Array<string | LabelToken[]>,
   sizeHalfPt: number,
   opts: { bold?: boolean; italic?: boolean; align?: 'l' | 'ctr'; color?: string } = {},
 ): string {
@@ -183,12 +191,22 @@ export function textBoxLines(
   const frame = unwrappedTextFrame(x, w, WORD_JC[align]);
   const emphasis = (opts.bold ? '<w:b/>' : '') + (opts.italic ? '<w:i/>' : '');
   const color = opts.color ?? '000000';
+  const pPr = `<w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${WORD_JC[align]}"/></w:pPr>`;
   const paragraphs = lines
-    .map(
-      (line) =>
-        `      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${WORD_JC[align]}"/></w:pPr>` +
-        `<w:r><w:rPr>${emphasis}<w:color w:val="${color}"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
-        `<w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`,
+    .map((line) =>
+      typeof line === 'string'
+        ? `      <w:p>${pPr}` +
+          `<w:r><w:rPr>${emphasis}<w:color w:val="${color}"/><w:sz w:val="${sizeHalfPt}"/></w:rPr>` +
+          `<w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`
+        : [
+            `      <w:p>${pPr}`,
+            renderLabelRuns(
+              line.map((t) => ('break' in t ? t : { ...t, bold: t.bold || opts.bold, italic: t.italic || opts.italic })),
+              color,
+              sizeHalfPt,
+            ),
+            '      </w:p>',
+          ].join('\n'),
     )
     .join('\n');
   return [
