@@ -4,6 +4,7 @@ import { parseMermaid } from '../../src/parser/index.js';
 import { layout } from '../../src/layout/layout.js';
 import { translateToOoxml } from '../../src/translator/ooxml-translator.js';
 import { escapeXml } from '../../src/translator/xml-escape.js';
+import { drawnElbow } from './drawn-elbow.js';
 
 function translate(text: string): string {
   const { ast } = parseMermaid(text);
@@ -563,36 +564,29 @@ test('an adjacent-rank edge still renders as a plain straight line (no regressio
   assert.ok(!xml.includes('<a:custGeom>'));
 });
 
-test('a rank-skipping edge is routed around the intermediate node, not through it', () => {
+test('a rank-skipping edge is routed around the intermediate node as an elbow connector, not through it', () => {
   const xml = translate(
     'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action longue a faire]\n  B -->|non| D[Fin]\n  C --> D',
   );
-  // The B->D connector ("non") must use a custom path, not a straight line.
-  assert.ok(xml.includes('<a:custGeom>'), 'expected the skip-rank edge to use a:custGeom');
+  // The B->D connector ("non") is Word's own elbow, not a straight line nor a free-form path.
+  const elbow = /<wps:wsp>(?:(?!<\/wps:wsp>)[\s\S])*?prst="bentConnector5"[\s\S]*?<\/wps:wsp>/.exec(xml);
+  assert.ok(elbow, 'expected the skip-rank edge to be a bentConnector5');
+  assert.ok(!xml.includes('<a:custGeom>'));
 
-  // None of that path's points should fall inside Action's (C's) box.
+  // No segment of the path Word draws crosses Action's (C's) box.
   const actionBox = /<wps:cNvPr id="(\d+)" name="Action longue a faire" descr="C"\/>[\s\S]*?<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(
     xml,
   );
   assert.ok(actionBox, 'expected to find Action\'s own box');
-  const [, , ax, ay, aw, ah] = actionBox!.map(Number);
-
-  const custGeom = /<a:xfrm>\s*<a:off x="(\d+)" y="(\d+)"\/>[\s\S]*?<a:custGeom>[\s\S]*?<a:pathLst>([\s\S]*?)<\/a:pathLst>/.exec(
-    xml,
-  );
-  assert.ok(custGeom, 'expected to find the custGeom connector');
-  const [, offXStr, offYStr, pathBody] = custGeom!;
-  const offX = Number(offXStr);
-  const offY = Number(offYStr);
-  const points = [...pathBody!.matchAll(/<a:pt x="(-?\d+)" y="(-?\d+)"\/>/g)].map((m) => ({
-    x: Number(m[1]) + offX,
-    y: Number(m[2]) + offY,
-  }));
-  assert.ok(points.length > 2, 'expected intermediate waypoints beyond just start/end');
-  for (const p of points) {
-    const inside = p.x > ax! && p.x < ax! + aw! && p.y > ay! && p.y < ay! + ah!;
-    assert.ok(!inside, `connector point (${p.x},${p.y}) falls inside Action's box`);
-  }
+  const [, , ax, ay, aw, ah] = actionBox!.map(Number) as number[];
+  const points = drawnElbow(elbow![0]);
+  points.slice(1).forEach((b, i) => {
+    const a = points[i]!;
+    // Axis-aligned segments: one crosses the box when it overlaps it on both axes.
+    const overlapsX = Math.max(a.x, b.x) > ax! && Math.min(a.x, b.x) < ax! + aw!;
+    const overlapsY = Math.max(a.y, b.y) > ay! && Math.min(a.y, b.y) < ay! + ah!;
+    assert.ok(!(overlapsX && overlapsY), `segment ${i} (${JSON.stringify(a)} -> ${JSON.stringify(b)}) crosses Action's box`);
+  });
 });
 
 test('a label on a routed edge sits on the real path, not inside the node it routes around', () => {
@@ -618,10 +612,10 @@ test('a routed connector still declares stCxn/endCxn for magnetic attachment', (
   const xml = translate(
     'flowchart TD\n  A[Debut] --> B{Choix}\n  B -->|oui| C[Action longue a faire]\n  B -->|non| D[Fin]\n  C --> D',
   );
-  const custGeomBlock = /<wps:cNvCnPr>[\s\S]*?<\/wps:cNvCnPr>[\s\S]*?<a:custGeom>/.exec(xml);
-  assert.ok(custGeomBlock, 'expected a custGeom connector to still declare wps:cNvCnPr first');
-  assert.ok(/<a:stCxn id="\d+" idx="\d"\/>/.test(custGeomBlock![0]));
-  assert.ok(/<a:endCxn id="\d+" idx="\d"\/>/.test(custGeomBlock![0]));
+  const elbowBlock = /<wps:cNvCnPr>(?:(?!<\/wps:wsp>)[\s\S])*?<\/wps:cNvCnPr>(?:(?!<\/wps:wsp>)[\s\S])*?prst="bentConnector5"/.exec(xml);
+  assert.ok(elbowBlock, 'expected the elbow connector to declare wps:cNvCnPr');
+  assert.ok(/<a:stCxn id="\d+" idx="\d"\/>/.test(elbowBlock![0]));
+  assert.ok(/<a:endCxn id="\d+" idx="\d"\/>/.test(elbowBlock![0]));
 });
 
 // --- Self-loop (`A --> A`) audit, punch list item 5 (2026-09-04) ---

@@ -1,6 +1,19 @@
 # À ouvrir dans Word (liste tenue à jour)
 
-Dernière mise à jour : 2026-11-16. Cocher ici, puis reporter le résultat dans `CHECKLIST.md`.
+Dernière mise à jour : 2026-11-24. Cocher ici, puis reporter le résultat dans `CHECKLIST.md`.
+
+## 0. `routed-connectors.docx` : flèches qui contournent un nœud (nouveau, 2026-11-24)
+
+Trois diagrammes. Rendu Word déjà vérifié par Claude (export PDF) : chaque détour est un coude qui évite les nœuds.
+
+- [ ] Cliquer une flèche coudée (par ex. « Log return → Close request ») : c'est un connecteur, ses deux bouts
+      sont des points d'attache verts sur les formes.
+- [ ] Déplacer « Close request » : la flèche suit. Word recalcule alors le chemin lui-même ; noter s'il reste
+      lisible ou s'il passe sur un nœud (le banc l'a vu traverser un nœud après 12 points de déplacement).
+- [ ] Même essai sur le diagramme du bas (S03), qui a trois détours.
+
+Source : `routed-connectors.md`. Régénérer :
+`node packages/cli/bin/md2nativedocx.mjs test-corpus/word-verification/routed-connectors.md -o test-corpus/word-verification/routed-connectors.docx`
 
 ## 1. `subgraph-direction.docx` : R2.4, `direction` dans un `subgraph` (nouveau, jamais vu dans Word)
 

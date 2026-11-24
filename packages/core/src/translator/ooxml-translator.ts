@@ -56,6 +56,7 @@ import { renderLabelRuns } from './label-runs.js';
 import { HOLLOW_SIZE_PX, hollowMarker } from './graph-shapes.js';
 import { actorConnectBox, actorFigure, type FigurePoint } from './actor-figure.js';
 import { textColorFor } from './text-color.js';
+import { elbowConnectorGeometry, elbowRoute, type Direction, type ElbowRoute } from './elbow-connector.js';
 
 /** Pixels -> EMU (English Metric Units). Word uses 914400 EMU per inch; at 96
  * DPI that is 9525 EMU per pixel. */
@@ -1014,6 +1015,11 @@ interface ConnectorGeometry {
   endSide: number;
   /** Every point the connector passes through, start to end, in order. */
   points: { x: number; y: number }[];
+  /**
+   * Set when `points` is a squared-off detour drawn as Word's own elbow connector
+   * ({@link elbowRoute}): the direction it leaves its source.
+   */
+  elbowExit?: Direction;
 }
 
 /** Whether point (x,y) falls within (or on the boundary of) a box. */
@@ -1107,12 +1113,22 @@ function connectorGeometry(
   const start = sitePoint(from, stSide);
   const end = sitePoint(to, endSide);
   const rawWaypoints = dagrePoints.length > 2 ? dagrePoints.slice(1, -1) : [];
-  const needsRouting =
-    rawWaypoints.length > 0 &&
-    otherBoxes.some((box) => segmentIntersectsBox(start.x, start.y, end.x, end.y, box));
-  const waypoints = needsRouting ? rawWaypoints : [];
-  return { stSide, endSide, points: [start, ...waypoints, end] };
+  const clear = (a: { x: number; y: number }, b: { x: number; y: number }): boolean =>
+    !otherBoxes.some((box) => segmentIntersectsBox(a.x, a.y, b.x, b.y, box));
+  if (rawWaypoints.length === 0 || clear(start, end)) return { stSide, endSide, points: [start, end] };
+  const exit = EXIT_BY_SITE[stSide]!;
+  const elbow = elbowRoute(start, end, exit, rawWaypoints, clear);
+  if (elbow) return { stSide, endSide, points: elbow, elbowExit: exit };
+  return { stSide, endSide, points: [start, ...rawWaypoints, end] };
 }
+
+/** The direction a connector leaves a box from each connection site. */
+const EXIT_BY_SITE: Readonly<Record<number, Direction>> = {
+  [SITE.top]: { x: 0, y: -1 },
+  [SITE.right]: { x: 1, y: 0 },
+  [SITE.bottom]: { x: 0, y: 1 },
+  [SITE.left]: { x: -1, y: 0 },
+};
 
 /**
  * The point at a given fraction (0..1) of the way along a polyline's total
@@ -1169,16 +1185,12 @@ function straightConnectorGeometry(startX: number, startY: number, endX: number,
 
 /**
  * The `a:custGeom`/`a:xfrm` for a connector Dagre routed around an
- * intermediate rank's nodes (spec §9 "0 croisement de flèches") — an explicit
- * `moveTo`/`lnTo*` path through every waypoint, rather than one of Word's
- * built-in `bentConnectorN`/`curvedConnectorN` presets: those are parametrized
- * by a handful of `adj` guide values with no documented public formula for
- * "here are N arbitrary points, produce the adj values that trace them", so
- * reproducing Dagre's routing through them would mean reverse-engineering
- * Word's own connector-routing heuristic. A custom path draws exactly the
- * route Dagre already computed, no guessing involved. `wps:cNvCnPr` still
- * carries `stCxn`/`endCxn` for the magnetic-attachment behaviour (spec §6.2)
- * — that comes from being declared a connection shape, not from the geometry.
+ * intermediate rank's nodes (spec §9 "0 croisement de flèches") when no
+ * squared-off elbow ({@link elbowRoute}) stays clear of the nodes: an explicit
+ * `moveTo`/`lnTo*` path through every waypoint. It is the fallback because
+ * Word loads a connector with a custom geometry as a free-form shape and drops
+ * its `stCxn`/`endCxn` (measured on Word 16.0.20625 by the agent benchmark),
+ * so the line no longer follows its nodes; the elbow keeps that attachment.
  *
  * The path's own coordinate space is set to exactly the shape's EMU extent
  * (`w`/`h` on `a:path` equal to `a:ext`'s `cx`/`cy`), so every path point can
@@ -1219,7 +1231,9 @@ function bentConnectorGeometry(points: { x: number; y: number }[]): string {
  * Render an edge as a `wps:wsp` connector (with `wps:cNvCnPr`), following the
  * route Dagre computed (`dagrePoints`, from `LayoutResult.edges`) when the
  * straight line between the two connection sites would actually cross
- * another node — see {@link connectorGeometry}.
+ * another node — see {@link connectorGeometry}: squared off as Word's own
+ * elbow connector when that stays clear ({@link elbowConnectorGeometry}),
+ * Dagre's polyline otherwise ({@link bentConnectorGeometry}).
  *
  * `cNvPr/name` is set to `"{mermaidFromId}--{mermaidToId}"` rather than a
  * generic label (spec follow-up, `docs/specs/FUTURE_docx2mermaid_SPEC.md` §4) — no
@@ -1267,16 +1281,19 @@ function renderEdge(
   // diagram's overall `scale` uniformly to whichever width wins.
   const baseWidthEmu =
     strokeWidthPx !== undefined ? Math.max(1, Math.round(strokeWidthPx * EMU_PER_PX)) : lineStyle.width;
-  const { stSide, endSide, points } = connectorGeometry(from, to, dagrePoints, otherBoxes);
+  const { stSide, endSide, points, elbowExit } = connectorGeometry(from, to, dagrePoints, otherBoxes);
   const emuPoints = points.map((p) => ({
     x: Math.round(p.x * EMU_PER_PX * scale),
     y: Math.round(p.y * EMU_PER_PX * scale),
   }));
 
+  // Rounding each coordinate the same way keeps an elbow route's segments axis-aligned in EMU.
   const geometry =
     emuPoints.length === 2
       ? straightConnectorGeometry(emuPoints[0]!.x, emuPoints[0]!.y, emuPoints[1]!.x, emuPoints[1]!.y)
-      : bentConnectorGeometry(emuPoints);
+      : elbowExit
+        ? elbowConnectorGeometry(emuPoints as ElbowRoute, elbowExit)
+        : bentConnectorGeometry(emuPoints);
   const markerSize = arrowMarkerSize(baseWidthEmu, scale);
   const headEnd =
     lineStyle.headEnd !== 'none'

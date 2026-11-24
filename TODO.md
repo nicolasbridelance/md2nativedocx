@@ -58,15 +58,17 @@ ici. Repères : 5/54 sans moteur contre 24/54 avec (0/45 contre 18/45 sur les t�
 facultatif ; 18/20 documents inédits passent la grille Word complète.
 [Notebook Kaggle public](https://www.kaggle.com/code/nbridelancetb/editable-word-diagrams-md2nativedocx-benchmark).
 
-- [ ] **Connecteurs routés autour d'un obstacle : attaches perdues dans Word.** Word charge les tracés
-  `a:custGeom` en formes libres malgré `wps:cNvCnPr`, `a:stCxn` et `a:endCxn` (stress Mermaid S02/S03,
-  reproduit sur 0.7.0 et `d5477e2` ; 20 connecteurs prédéfinis sur 24 restent attachés). Un
-  `bentConnector5` paramétré reste attaché et contourne les nœuds à l'ouverture, mais après un
-  déplacement de 12 points Word recalcule le chemin et traverse un nœud (F02/F16, raccord
-  `Log return → Close request` entre sous-graphes). Avant d'intégrer : lisibilité après édition, trajets
-  sans segment horizontal, LibreOffice. Ajouter F02 et F16 à la régression, seuls puis dans le rapport
-  multipage. Détail dans le banc : `MERMAID_STRESS_RESULTS.md`, `ROUTED_CONNECTOR_RESULTS.md`,
-  `FRONTIER_RESULTS.md`.
+- [ ] **Connecteurs routés : reste après le passage au `bentConnector5` (2026-11-24).** Un détour de
+  flowchart est désormais un connecteur coudé de Word, attaché (`translator/elbow-connector.ts`) ; la
+  géométrie libre ne reste que si aucun couloir de Dagre n'est dégagé. Vérifié par rendu dans Word et
+  PowerPoint (LR, TB, BT, RL ; F02, S02, S03). Reste : (1) l'œil du mainteneur sur
+  `test-corpus/word-verification/routed-connectors.docx`, après déplacement d'une forme : Word recalcule
+  alors le chemin lui-même et peut traverser un nœud (mesuré par le banc), comme pour tout connecteur ;
+  (2) F16, le même raccourci dans le rapport multipage du banc ; (3) LibreOffice Writer, à l'ouverture du
+  `.docx`, ignore les réglages des `bentConnector4`/`5` (attachés ou non ; il respecte ceux du
+  `bentConnector3`) et trace ces détours en ligne droite à travers le nœud : limite de LibreOffice, notée
+  dans le manuel, le `.odt` n'est pas concerné. Bug à signaler à LibreOffice (décision du mainteneur).
+  Détail dans le banc : `ROUTED_CONNECTOR_RESULTS.md`.
 - [ ] **Persistance des connecteurs dans les régressions Word.** Le banc vérifie 14 connecteurs sur neuf
   documents après déplacement, sauvegarde et réouverture ; en faire un contrôle Word sur une fixture
   versionnée ici. Le banc a aussi une fixture de pagination de 30 pages (table sur trois pages, dessins

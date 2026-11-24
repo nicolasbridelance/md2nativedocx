@@ -271,10 +271,12 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 - Liens `-->`, `---`, `-.->`, `==>`, `<-->`, `~~~`, avec libellé `-- texte -->`, chaînage `A --> B --> C` et groupes `A & B --> C`
 - `subgraph … end` (imbriqués), liens vers un sous-graphe (`A --> S`, `S1 --> S2`) tracés jusqu’au bord de son cadre, sous-graphe replié (`S@{ view: collapsed }`) dessiné en une seule boîte grise (son titre puis « • • • »), son contenu caché et les liens vers ce contenu arrivant sur la boîte, `<br/>` et `**gras**`/`_italique_` dans un libellé entre accents graves
 
-**Pris en charge :** Couleurs : `classDef`, `class`, `:::nom`, `style`, `linkStyle` (couleur, épaisseur) ; Auto-boucles `A --> A`, diagrammes très grands (réduits pour tenir dans la page).
+**Pris en charge :** Couleurs : `classDef`, `class`, `:::nom`, `style`, `linkStyle` (couleur, épaisseur) ; Auto-boucles `A --> A`, diagrammes très grands (réduits pour tenir dans la page). Une flèche qui contourne un nœud est un connecteur coudé de Word, attaché à ses deux formes.
 
 **Limites**
 
+- LibreOffice, quand il ouvre le `.docx`, trace les flèches coudées tout droit, à travers le nœud qu’elles contournent ; Word et PowerPoint les dessinent correctement. Pour LibreOffice, exporter en `.odt`.
+- Après déplacement d’une forme, Word recalcule lui-même le chemin d’une flèche coudée, qui peut alors passer sur un autre nœud
 - `direction` à l’intérieur d’un `subgraph` : appliquée (mise en page propre au sous-graphe) tant qu’aucun lien ne relie l’intérieur à l’extérieur ; sinon ignorée avec un avertissement, comme Mermaid
 - Pas de `click`, d’animation d’arête ni de formes icône/image
 - `classDef default` n’est pas appliqué ; SmartArt : option expérimentale, désactivée par défaut

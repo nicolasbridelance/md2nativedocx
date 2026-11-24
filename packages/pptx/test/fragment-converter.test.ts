@@ -78,10 +78,28 @@ test('unknown run properties are dropped with a warning, not passed through', ()
   assert.equal(out.warnings.length, 1);
 });
 
+const ROUTED = 'flowchart TD\n A --> B\n B --> C\n C --> D\n A --> D\n A --> C\n B --> D';
+
+test('a routed edge drawn as an elbow stays a p:cxnSp, attached, with its rotation and adjustments', () => {
+  const xml = convertFragment(flowchartFragment(ROUTED), { x: 0, y: 0, scale: 2 }).shapesXml.join('');
+  const elbows = [...xml.matchAll(/<p:cxnSp>.*?<\/p:cxnSp>/gs)].map((m) => m[0]).filter((c) => c.includes('bentConnector5'));
+  assert.ok(elbows.length > 0, 'fixture must contain a routed edge');
+  for (const elbow of elbows) {
+    assert.match(elbow, /<a:stCxn id="\d+"/);
+    assert.match(elbow, /<a:endCxn id="\d+"/);
+    assert.match(elbow, /<a:xfrm rot="5400000"/, 'a TD detour leaves downwards: a quarter turn');
+    assert.match(elbow, /<a:gd name="adj3" fmla="val -?\d+"\/>/);
+  }
+});
+
 test('a routed (custGeom) edge is a p:sp, never a p:cxnSp: PowerPoint repairs a connector with custom geometry', () => {
-  const src = 'flowchart TD\n A --> B\n B --> C\n C --> D\n A --> D\n A --> C\n B --> D';
-  const xml = convertFragment(flowchartFragment(src), { x: 0, y: 0 }).shapesXml.join('');
-  assert.match(xml, /<a:custGeom>/, 'fixture must contain a routed edge');
+  // The translator falls back to a free-form path when no squared-off route stays clear of the nodes.
+  const freeForm = flowchartFragment(ROUTED).replace(
+    /<a:prstGeom prst="bentConnector5">[\s\S]*?<\/a:prstGeom>/,
+    '<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="0" b="0"/><a:pathLst><a:path w="10" h="10"><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="10" y="10"/></a:lnTo></a:path></a:pathLst></a:custGeom>',
+  );
+  const xml = convertFragment(freeForm, { x: 0, y: 0 }).shapesXml.join('');
+  assert.match(xml, /<a:custGeom>/, 'fixture must contain a free-form edge');
   for (const m of xml.matchAll(/<p:cxnSp>.*?<\/p:cxnSp>/gs)) {
     assert.doesNotMatch(m[0], /custGeom/);
   }
