@@ -287,7 +287,10 @@ Ensuite, dans l'ordre :
               sont rangés à part, dans la direction du diagramme. Adopter la règle de Mermaid changerait le rendu
               de la plupart des diagrammes à sous-graphes (baselines `test:visual`) : décision du mainteneur ;
             - ~~**séquence (11)**~~ (fait : 36/38, les 2 restants voulus, voir plus haut), ~~**C4 (6)**~~ (fait le 2026-11-21, voir
-              ci-dessous), **architecture (5)**, ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
+              ci-dessous), ~~**architecture (5)**~~ (fait le 2026-11-24 : dessiné comme Mermaid 12.3, icônes intégrées, grille
+              déduite des ports, `align`, groupes imbriqués, `{group}`, `-[label]-` ; vérifié dans Word et LibreOffice,
+              `test-corpus/word-verification/architecture.*` ; comparateur différentiel encore à écrire, voir plus bas),
+              ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
               ~~**treeView (4)**~~ (fait le 2026-11-21, voir ci-dessous), divers (8) ;
             - ~~**C4 (6)**~~ (fait le 2026-11-21) : dessiné comme Mermaid 12.3 le dessine (son moteur C4 lu sur les
               exemples officiels, code propre au projet). Pas de Dagre : grille dans l'ordre de déclaration, 4 éléments
