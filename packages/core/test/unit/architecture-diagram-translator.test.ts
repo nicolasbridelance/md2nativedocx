@@ -26,15 +26,24 @@ test('wraps the drawing canvas in the schema-required paragraph hierarchy, same 
   }
 });
 
-test('a recognized icon maps to its stand-in preset geometry (database -> can, cloud -> cloud)', () => {
+test('a built-in icon is drawn as custom geometry: the blue square and its white glyph, no preset stand-in', () => {
   const xml = translate(BASIC);
-  assert.ok(xml.includes('<a:prstGeom prst="can">'));
-  assert.ok(xml.includes('<a:prstGeom prst="cloud">'));
+  assert.ok(xml.includes('<a:custGeom>'));
+  assert.ok(!/prst="(can|cloud|roundRect)"/.test(xml));
+  assert.ok(xml.includes('name="My Database"'));
 });
 
-test('an unrecognized or missing icon falls back to a plain rounded rectangle', () => {
-  const xml = translate('architecture-beta\n  service server(server)[Server]');
-  assert.ok(xml.includes('<a:prstGeom prst="roundRect">'));
+test('an icon outside the built-in set is drawn and warned about, as Mermaid draws it without its pack', () => {
+  const { ast } = parseArchitectureDiagram('architecture-beta\n  service s3(logos:aws-s3)[Bucket]');
+  const warnings: string[] = [];
+  const xml = translateArchitectureDiagramToOoxml(ast, {}, warnings);
+  assert.ok(xml.includes('<a:custGeom>'));
+  assert.ok(warnings.some((w) => w.includes('logos:aws-s3')));
+});
+
+test('a service with neither icon nor text is a dashed outline', () => {
+  const xml = translate('architecture-beta\n  service server[Server]');
+  assert.ok(xml.includes('<a:prstDash val="dash"/>'));
 });
 
 test('an edge with an arrow on only one side renders exactly one marker', () => {
@@ -49,9 +58,10 @@ test('an edge with no arrows renders no markers at all', () => {
   assert.equal((xml.match(/<a:tailEnd /g) ?? []).length, 0);
 });
 
-test('a junction renders as a small filled circle, distinct from a service box', () => {
-  const xml = translate('architecture-beta\n  junction j1\n  service a(server)[A]\n  a:R --> L:j1');
-  assert.ok(xml.includes('<a:prstGeom prst="ellipse">'));
+test('a junction draws no shape of its own; the edge still reaches it', () => {
+  const withJunction = translate('architecture-beta\n  junction j1\n  service a(server)[A]\n  a:R --> L:j1');
+  assert.ok(!withJunction.includes('name="j1"'));
+  assert.equal((withJunction.match(/<a:tailEnd /g) ?? []).length, 1);
 });
 
 test('node titles are XML-escaped', () => {

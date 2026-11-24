@@ -305,3 +305,24 @@ test('property: tree view input never throws and always gives well-formed, escap
     { numRuns: 400 },
   );
 });
+
+test('property: architecture input never throws and always gives well-formed, escaped XML', async () => {
+  const { renderDiagram } = await import('../../src/render-diagram.js');
+  // Declarations, icons and quoted texts, titles, `in`, ports, arrows, `{group}`, edge labels, `align`.
+  const token = fc.oneof(
+    hostileText,
+    nodeId,
+    fc.constantFrom('group ', 'service ', 'junction ', ' in ', '(cloud)', '(server)', '(logos:aws-s3)', '(', ')', '"', "'", '[', ']', '["a [b]"]'),
+    fc.constantFrom(':L', ':R', ':T', ':B', 'L:', 'R:', 'T:', 'B:', ' -- ', ' --> ', ' <-- ', ' <--> ', '-[x]-', '{group}', ':', '-'),
+    fc.constantFrom('align row ', 'align column ', 'title ', 'accTitle: ', 'accDescr: ', 'accDescr {', '}', '%% c'),
+  );
+  const line = fc.array(token, { maxLength: 7 }).map((toks) => toks.join(''));
+  fc.assert(
+    fc.property(fc.array(line, { maxLength: 25 }), (lines) => {
+      const result = renderDiagram(`architecture-beta\n${lines.join('\n')}`);
+      assertWellFormedXml(result.fragment);
+      assert.doesNotMatch(result.fragment, /NaN|Infinity|undefined/);
+    }),
+    { numRuns: 400 },
+  );
+});

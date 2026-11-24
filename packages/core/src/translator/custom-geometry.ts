@@ -42,11 +42,19 @@ export function roundedRectPath(x: number, y: number, w: number, h: number, r: n
 
 /**
  * A custom geometry of `w` x `h` px whose paths are given as `[fill, path ops]`: `norm` is filled and
- * outlined, `none` only outlined, `darken` filled with a darker shade of the fill.
+ * outlined, `none` only outlined, `darken` filled with a darker shade of the fill. A third element
+ * `{ stroke: false }` leaves that path without its outline (a background under outlined strokes).
  */
-export function customGeometry(w: number, h: number, paths: Array<['norm' | 'none' | 'darken', string]>): string {
+export function customGeometry(
+  w: number,
+  h: number,
+  paths: Array<['norm' | 'none' | 'darken', string] | ['norm' | 'none' | 'darken', string, { stroke: false }]>,
+): string {
   const body = paths
-    .map(([fill, ops]) => `<a:path w="${pathUnits(w)}" h="${pathUnits(h)}"${fill === 'norm' ? '' : ` fill="${fill}"`}>${ops}</a:path>`)
+    .map(
+      ([fill, ops, opts]) =>
+        `<a:path w="${pathUnits(w)}" h="${pathUnits(h)}"${fill === 'norm' ? '' : ` fill="${fill}"`}${opts?.stroke === false ? ' stroke="0"' : ''}>${ops}</a:path>`,
+    )
     .join('');
   return `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst>${body}</a:pathLst></a:custGeom>`;
 }

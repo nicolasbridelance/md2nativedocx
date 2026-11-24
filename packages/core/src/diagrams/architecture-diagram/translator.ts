@@ -1,220 +1,345 @@
 /**
- * OOXML translator for a Mermaid `architecture-beta` diagram (Family B —
- * reuses Dagre for layout and `../../translator/graph-shapes.ts`'s
- * connector primitives, same rationale as `../class-diagram/translator.ts`'s
- * module doc comment).
+ * OOXML translator for a Mermaid `architecture-beta` diagram, drawn the way Mermaid 12.3 draws it (its
+ * renderer read against the official examples; the code here is this project's own). Placement is in
+ * `layout.ts`; this file draws.
  *
- * Two deliberate v1 simplifications, both documented rather than silently
- * approximated:
- * - **Group containment is not rendered as nesting.** A `service ... in
- *   group1` relationship is parsed (`ArchitectureNode.parent`) but every
- *   node — service, group, or junction — lays out as an ordinary sibling
- *   box in one flat Dagre graph; `parser.ts` emits a one-time warning
- *   rather than silently dropping the containment. Real nested-container
- *   layout (a group's box sized to enclose its children, the way
- *   `ooxml-translator.ts` already does for flowchart `subgraph`) is a
- *   real, separate design effort — same category of gap as classDiagram's
- *   `namespace` handling.
- * - **Edge ports (`L`/`R`/`T`/`B`) are parsed but not used for exact-side
- *   docking.** Mermaid's own renderer routes a `db:R -- L:server` edge to
- *   leave `db` from its right edge and enter `server` at its left edge
- *   specifically; this translator instead uses the same generic
- *   center-to-center-trimmed-to-border approach (`edgePoint()`) every other
- *   Family B module uses, which usually lands close to the intended side
- *   for a simple layout but doesn't guarantee it. `ArchitectureEdge.fromSide`/
- *   `toSide` are kept in the AST for a future exact-docking implementation.
+ * **Services** are Mermaid's icons: a blue square with a white drawing (`icons.ts`), the title centred
+ * under it, both in one shape so they move together in Word. A service in quotes (`service a"API"`)
+ * shows its text in a blank blue square; one with neither icon nor text, a dashed outline with rounded
+ * top corners. An icon outside Mermaid's built-in set (an icon pack such as `logos:` that a web page
+ * registers) is drawn as Mermaid draws it without that pack: a `?`. **Junctions** draw nothing: the
+ * edges meet at their centre, as in Mermaid.
  *
- * Icons have no OOXML equivalent at all (Mermaid's architecture-beta icon
- * set is its own bundled SVG library), so recognized icon names map onto
- * the closest existing preset shape this project already uses elsewhere
- * (`cloud` from `../mindmap/translator.ts`, `can` — a cylinder — from
- * `../../translator/ooxml-translator.ts`'s flowchart shape table) purely as
- * a visual hint; an unrecognized or absent icon falls back to a plain
- * rounded rectangle.
+ * **Groups** are dashed frames in Mermaid's group colour, their icon and title in the top-left corner,
+ * nested as declared.
+ *
+ * **Edges** run from port to port: the middle of the named side of each icon, or of the group's frame
+ * for an end marked `{group}`. Two ports on the same axis give a straight line (slanted when an `align`
+ * moved one end, as in Mermaid); a turn (`R -- T`) gives a right-angled line. Arrowheads where `<` / `>`
+ * say, a `-[label]-` by the middle of the line.
+ *
+ * Proportions are Mermaid's (icon, half an icon of frame padding, one and a half between icons), at
+ * 56 px rather than 80 so that a diagram of a few columns keeps a readable size on the page.
  */
 
-import dagre from 'dagre';
-import { layoutWithinLimits, nodeKey } from '../../layout/graph-limits.js';
-import type { ArchitectureDiagram, ArchitectureNode } from './types.js';
-import { escapeXml } from '../../translator/xml-escape.js';
 import { estimateTextWidth } from '../../layout/layout.js';
-import {
-  createIdAllocator,
-  scaledExtent,
-  scaledFontSizeHalfPt,
-  scaledLineWidthEmu,
-  wrapDrawingCanvas,
-  type CanvasOptions,
-} from '../../translator/canvas.js';
-import { connector, edgePoint, scalePt } from '../../translator/graph-shapes.js';
+import { createIdAllocator, scaledExtent, scaledFontSizeHalfPt, scaledLineWidthEmu, wrapDrawingCanvas, type CanvasOptions } from '../../translator/canvas.js';
+import { customGeometry } from '../../translator/custom-geometry.js';
+import { connector, scalePt, textBoxLines, type ArrowMarker } from '../../translator/graph-shapes.js';
+import { noteParagraph, wrapText } from '../../translator/boxes.js';
+import { escapeXml } from '../../translator/xml-escape.js';
+import { BUILT_IN_ICONS, ICON_FILL, ICON_STROKE, bareServicePath, iconPaths } from './icons.js';
+import { layoutArchitecture, type ArchitectureMetrics, type Box, type PlacedNode } from './layout.js';
+import type { ArchitectureDiagram, ArchitectureEdge, ArchitectureNode, ArchitectureSide } from './types.js';
 
-const LINE_COLOR = '2F5496';
-const SERVICE_FILL = 'D9E2F3';
-const GROUP_FILL = 'FCE4D6';
-const LABEL_FONT_PX = 11;
-const LABEL_SIZE_HALFPT = 18;
-const NODE_H = 44;
-const JUNCTION_SIZE = 14;
-const PAD_X = 14;
+const ICON = 56;
+const GAP = ICON * 1.5;
+const PADDING = ICON / 2;
+const CLEARANCE = 48;
+/** A service's title wraps at this width (Mermaid: one and a half icons, at a larger type size). */
+const LABEL_W = ICON * 2;
+const GROUP_ICON = PADDING * 0.75;
+const CANVAS_PAD = 16;
 
-const ICON_PRESET: Readonly<Record<string, string>> = {
-  cloud: 'cloud',
-  database: 'can',
-  disk: 'can',
+/** Mermaid's default theme: edges `lineColor`, frames `primaryBorderColor` (hsl 240° 60% 86%), text `textColor`. */
+const EDGE_COLOR = '333333';
+const FRAME_COLOR = 'C7C7F1';
+const TEXT_COLOR = '333333';
+
+const LABEL_PT = 10;
+const GROUP_PT = 10;
+const ICON_TEXT_PT = 9;
+const EDGE_PT = 9;
+
+const pxOf = (pt: number): number => (pt * 4) / 3;
+const lineH = (pt: number): number => Math.ceil(pxOf(pt) * 1.3);
+const halfPt = (pt: number): number => Math.round(pt * 2);
+/** Room between an icon and the first line of its title. */
+const LABEL_TOP = 4;
+
+const labelLines = (node: ArchitectureNode): string[] => (node.kind === 'service' && node.title ? wrapText(node.title, pxOf(LABEL_PT), LABEL_W) : []);
+
+const METRICS: ArchitectureMetrics = {
+  iconSize: ICON,
+  gap: GAP,
+  padding: PADDING,
+  clearance: CLEARANCE,
+  labelHeight: (node) => {
+    const lines = labelLines(node);
+    return lines.length > 0 ? LABEL_TOP + lines.length * lineH(LABEL_PT) : 0;
+  },
+  labelWidth: (node) => Math.max(0, ...labelLines(node).map((l) => estimateTextWidth(l, pxOf(LABEL_PT)))),
+  headerWidth: (group) => GROUP_ICON + 12 + (group.title ? estimateTextWidth(group.title, pxOf(GROUP_PT)) : 0) + 8,
 };
 
-interface NodeSize {
-  width: number;
-  height: number;
+interface Paragraph {
+  text: string;
+  sizeHalfPt: number;
+  color: string;
 }
 
-function sizeForNode(node: ArchitectureNode): NodeSize {
-  if (node.kind === 'junction') return { width: JUNCTION_SIZE, height: JUNCTION_SIZE };
-  const label = node.title ?? node.id;
-  const width = Math.max(70, estimateTextWidth(label, LABEL_FONT_PX) + PAD_X * 2);
-  return { width, height: NODE_H };
-}
-
-function nodeShape(id: number, node: ArchitectureNode, x: number, y: number, w: number, h: number, s: number): string {
-  if (node.kind === 'junction') {
-    return [
-      '<wps:wsp>',
-      `  <wps:cNvPr id="${id}" name="${escapeXml(node.id)}"/>`,
-      '  <wps:cNvSpPr/>',
-      '  <wps:spPr>',
-      `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-      '    <a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>',
-      `    <a:solidFill><a:srgbClr val="${LINE_COLOR}"/></a:solidFill>`,
-      '  </wps:spPr>',
-      '  <wps:bodyPr/>',
-      '</wps:wsp>',
-    ].join('\n');
-  }
-
-  const prst = (node.icon && ICON_PRESET[node.icon]) || 'roundRect';
-  const fill = node.kind === 'group' ? GROUP_FILL : SERVICE_FILL;
-  const label = node.title ?? node.id;
+/** One `wps:wsp` with a custom geometry, its fill and outline, and its text (insets in EMU). */
+function shape(
+  id: number,
+  name: string,
+  box: { x: number; y: number; w: number; h: number },
+  geometry: string,
+  fill: string | undefined,
+  line: { color: string; emu: number; dashed?: boolean } | undefined,
+  paragraphs: Paragraph[],
+  text: { t: number; lr: number; anchor: 't' | 'ctr'; align: 'left' | 'center' },
+): string {
+  const fillXml = fill ? `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>` : '<a:noFill/>';
+  const lnXml = line
+    ? `<a:ln w="${line.emu}"><a:solidFill><a:srgbClr val="${line.color}"/></a:solidFill>${line.dashed ? '<a:prstDash val="dash"/>' : ''}</a:ln>`
+    : '<a:ln><a:noFill/></a:ln>';
+  const body = paragraphs
+    .map(
+      (p) =>
+        `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${text.align}"/></w:pPr>` +
+        `<w:r><w:rPr><w:color w:val="${p.color}"/><w:sz w:val="${p.sizeHalfPt}"/></w:rPr>` +
+        `<w:t xml:space="preserve">${escapeXml(p.text)}</w:t></w:r></w:p>`,
+    )
+    .join('');
   return [
     '<wps:wsp>',
-    `  <wps:cNvPr id="${id}" name="${escapeXml(label)}"/>`,
+    `  <wps:cNvPr id="${id}" name="${escapeXml(name)}"/>`,
     '  <wps:cNvSpPr/>',
     '  <wps:spPr>',
-    `    <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${Math.max(1, w)}" cy="${Math.max(1, h)}"/></a:xfrm>`,
-    `    <a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>`,
-    `    <a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`,
-    `    <a:ln w="9525"><a:solidFill><a:srgbClr val="${LINE_COLOR}"/></a:solidFill></a:ln>`,
+    `    <a:xfrm><a:off x="${box.x}" y="${box.y}"/><a:ext cx="${Math.max(1, box.w)}" cy="${Math.max(1, box.h)}"/></a:xfrm>`,
+    `    ${geometry}`,
+    `    ${fillXml}`,
+    `    ${lnXml}`,
     '  </wps:spPr>',
-    '  <wps:txbx>',
-    '    <w:txbxContent>',
-    '      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>',
-    '        <w:r>',
-    `          <w:rPr><w:color w:val="000000"/><w:sz w:val="${scaledFontSizeHalfPt(LABEL_SIZE_HALFPT, s)}"/></w:rPr>`,
-    `          <w:t xml:space="preserve">${escapeXml(label)}</w:t>`,
-    '        </w:r>',
-    '      </w:p>',
-    '    </w:txbxContent>',
-    '  </wps:txbx>',
-    '  <wps:bodyPr lIns="45720" tIns="22860" rIns="45720" bIns="22860" anchor="ctr" wrap="square"/>',
+    ...(paragraphs.length > 0 ? ['  <wps:txbx>', `    <w:txbxContent>${body}</w:txbxContent>`, '  </wps:txbx>'] : []),
+    `  <wps:bodyPr wrap="square" lIns="${text.lr}" tIns="${text.t}" rIns="${text.lr}" bIns="0" anchor="${text.anchor}"/>`,
     '</wps:wsp>',
   ].join('\n');
 }
 
-/** Translate a parsed architecture diagram into a self-contained
- * WordprocessingML paragraph. An empty diagram renders a visible note,
- * matching the other Family B translators' zero-content convention —
- * never a silent blank canvas. */
-export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, options: CanvasOptions = {}): string {
-  if (chart.nodes.length === 0) {
-    return [
-      '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
-      '  <w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr>',
-      '  <w:r>',
-      '    <w:rPr><w:i/><w:color w:val="808080"/><w:sz w:val="18"/></w:rPr>',
-      '    <w:t xml:space="preserve">This architecture diagram has no content to render.</w:t>',
-      '  </w:r>',
-      '</w:p>',
-    ].join('\n');
+/** A right-angled edge through `points` (EMU), arrowheads at either end. */
+function elbow(id: number, points: Array<{ x: number; y: number }>, color: string, widthEmu: number, head: ArrowMarker, tail: ArrowMarker): string {
+  const minX = Math.min(...points.map((p) => p.x));
+  const minY = Math.min(...points.map((p) => p.y));
+  const w = Math.max(1, Math.max(...points.map((p) => p.x)) - minX);
+  const h = Math.max(1, Math.max(...points.map((p) => p.y)) - minY);
+  const ops = points.map((p, i) => `<a:${i === 0 ? 'moveTo' : 'lnTo'}><a:pt x="${p.x - minX}" y="${p.y - minY}"/></a:${i === 0 ? 'moveTo' : 'lnTo'}>`).join('');
+  return [
+    '<wps:wsp>',
+    `  <wps:cNvPr id="${id}" name="Connector ${id}"/>`,
+    '  <wps:cNvSpPr/>',
+    '  <wps:spPr>',
+    `    <a:xfrm><a:off x="${minX}" y="${minY}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm>`,
+    `    <a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="0" b="0"/><a:pathLst><a:path w="${w}" h="${h}" fill="none">${ops}</a:path></a:pathLst></a:custGeom>`,
+    '    <a:noFill/>',
+    `    <a:ln w="${widthEmu}"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill>` +
+      (head !== 'none' ? `<a:headEnd type="${head}" w="lg" len="lg"/>` : '') +
+      (tail !== 'none' ? `<a:tailEnd type="${tail}" w="lg" len="lg"/>` : '') +
+      '</a:ln>',
+    '  </wps:spPr>',
+    '  <wps:bodyPr/>',
+    '</wps:wsp>',
+  ].join('\n');
+}
+
+/** The point where an edge leaves `p` by `side`: the middle of that side of the icon, or the centre of a junction. */
+function port(p: PlacedNode, side: ArchitectureSide): { x: number; y: number } {
+  if (p.node.kind === 'junction') return { x: p.cx, y: p.cy };
+  const half = ICON / 2;
+  switch (side) {
+    case 'L':
+      return { x: p.cx - half, y: p.cy };
+    case 'R':
+      return { x: p.cx + half, y: p.cy };
+    case 'T':
+      return { x: p.cx, y: p.cy - half };
+    case 'B':
+      return { x: p.cx, y: p.cy + half };
+  }
+}
+
+/** The same point moved out to the edge of `frame` (an end marked `{group}`). */
+function onFrame(point: { x: number; y: number }, side: ArchitectureSide, frame: Box): { x: number; y: number } {
+  switch (side) {
+    case 'L':
+      return { x: frame.x, y: point.y };
+    case 'R':
+      return { x: frame.x + frame.w, y: point.y };
+    case 'T':
+      return { x: point.x, y: frame.y };
+    case 'B':
+      return { x: point.x, y: frame.y + frame.h };
+  }
+}
+
+const horizontal = (side: ArchitectureSide): boolean => side === 'L' || side === 'R';
+
+/**
+ * Translate a parsed architecture diagram into a self-contained WordprocessingML paragraph. An empty
+ * diagram renders a visible note, never a silent blank canvas. Placement problems (contradictory ports
+ * or `align` lines, an icon Mermaid does not build in) are added to `warnings` when given.
+ */
+export function translateArchitectureDiagramToOoxml(chart: ArchitectureDiagram, options: CanvasOptions = {}, warnings?: string[]): string {
+  if (chart.nodes.length === 0) return noteParagraph('This architecture diagram has no content to render.');
+
+  const laid = layoutArchitecture(chart, METRICS, options);
+  warnings?.push(...laid.warnings);
+  const unknownIcons = [...new Set(chart.nodes.map((n) => n.icon).filter((i): i is string => i !== undefined && !BUILT_IN_ICONS.has(i)))];
+  if (unknownIcons.length > 0) {
+    warnings?.push(
+      `Icons outside Mermaid's built-in set (they come from an icon pack a web page loads) are drawn as "?", as Mermaid draws them without that pack: ${unknownIcons.join(', ')}.`,
+    );
   }
 
-  const sizes = new Map<string, NodeSize>();
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: 'TB', nodesep: 50, ranksep: 70, marginx: 0, marginy: 0 });
-  g.setDefaultEdgeLabel(() => ({}));
-  for (const node of chart.nodes) {
-    const size = sizeForNode(node);
-    sizes.set(node.id, size);
-    g.setNode(nodeKey(node.id), { width: size.width, height: size.height });
-  }
-  for (const edge of chart.edges) {
-    if (g.hasNode(nodeKey(edge.from)) && g.hasNode(nodeKey(edge.to))) g.setEdge(nodeKey(edge.from), nodeKey(edge.to));
-  }
-  layoutWithinLimits(g, options);
-
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const node of chart.nodes) {
-    const n = g.node(nodeKey(node.id)) as { x: number; y: number };
-    const size = sizes.get(node.id)!;
-    minX = Math.min(minX, n.x - size.width / 2);
-    maxX = Math.max(maxX, n.x + size.width / 2);
-    minY = Math.min(minY, n.y - size.height / 2);
-    maxY = Math.max(maxY, n.y + size.height / 2);
-  }
-  const PAD = 24;
-  const canvasW = maxX - minX + 2 * PAD;
-  const canvasH = maxY - minY + 2 * PAD;
-  const dx = -minX + PAD;
-  const dy = -minY + PAD;
+  const canvasW = laid.width + 2 * CANVAS_PAD;
+  const canvasH = laid.height + 2 * CANVAS_PAD;
   const { scale: s } = scaledExtent(canvasW, canvasH, options);
-
+  const S = (px: number): number => scalePt(px + CANVAS_PAD, s);
+  const L = (px: number): number => scalePt(px, s);
+  const sz = (pt: number): number => scaledFontSizeHalfPt(halfPt(pt), s);
   const nextId = createIdAllocator();
   const parts: string[] = [];
+  const byId = new Map(chart.nodes.map((n) => [n.id, n]));
 
-  for (const edge of chart.edges) {
-    const nFrom = g.node(nodeKey(edge.from)) as { x: number; y: number } | undefined;
-    const nTo = g.node(nodeKey(edge.to)) as { x: number; y: number } | undefined;
-    if (!nFrom || !nTo) continue;
-    const sizeFrom = sizes.get(edge.from)!;
-    const sizeTo = sizes.get(edge.to)!;
-    const p1 = edgePoint(nFrom.x, nFrom.y, sizeFrom.width / 2, sizeFrom.height / 2, nTo.x, nTo.y);
-    const p2 = edgePoint(nTo.x, nTo.y, sizeTo.width / 2, sizeTo.height / 2, nFrom.x, nFrom.y);
+  // Frames, outermost first; the group's icon in the top-left corner, its title beside it.
+  for (const [id, frame] of laid.frames) {
+    const group = byId.get(id)!;
+    const inset = GROUP_ICON + 10;
+    const header: Paragraph[] = group.title ? [{ text: group.title, sizeHalfPt: sz(GROUP_PT), color: TEXT_COLOR }] : [];
     parts.push(
-      connector(
+      shape(
         nextId(),
-        scalePt(p1.x + dx, s),
-        scalePt(p1.y + dy, s),
-        scalePt(p2.x + dx, s),
-        scalePt(p2.y + dy, s),
-        LINE_COLOR,
-        scaledLineWidthEmu(9525, s),
-        'solid',
-        edge.arrowAtFrom ? 'triangle' : 'none',
-        'sm',
-        edge.arrowAtTo ? 'triangle' : 'none',
-        'sm',
+        group.title || group.id,
+        { x: S(frame.x), y: S(frame.y), w: L(frame.w), h: L(frame.h) },
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
+        undefined,
+        { color: FRAME_COLOR, emu: scaledLineWidthEmu(15875, s), dashed: true },
+        header,
+        { t: L(4 + Math.max(0, (GROUP_ICON - lineH(GROUP_PT)) / 2)), lr: L(inset), anchor: 't', align: 'left' },
       ),
     );
+    if (group.icon) {
+      parts.push(
+        shape(
+          nextId(),
+          `${group.title || group.id} icon`,
+          { x: S(frame.x + 4), y: S(frame.y + 4), w: L(GROUP_ICON), h: L(GROUP_ICON) },
+          customGeometry(GROUP_ICON, GROUP_ICON, iconPaths(group.icon, 0, 0, GROUP_ICON)),
+          ICON_FILL,
+          { color: ICON_STROKE, emu: scaledLineWidthEmu(6350, s) },
+          [],
+          { t: 0, lr: 0, anchor: 't', align: 'left' },
+        ),
+      );
+    }
   }
 
-  for (const node of chart.nodes) {
-    const n = g.node(nodeKey(node.id)) as { x: number; y: number };
-    const size = sizes.get(node.id)!;
-    parts.push(
-      nodeShape(
-        nextId(),
-        node,
-        scalePt(n.x - size.width / 2 + dx, s),
-        scalePt(n.y - size.height / 2 + dy, s),
-        scalePt(size.width, s),
-        scalePt(size.height, s),
-        s,
-      ),
-    );
-  }
+  // Edges, under the icons so a line ends cleanly at the icon's side.
+  const edgeLabels: string[] = [];
+  const endPoint = (id: string, side: ArchitectureSide, toFrame: boolean | undefined): { x: number; y: number } | undefined => {
+    const p = laid.nodes.get(id);
+    if (!p) return undefined;
+    const at = port(p, side);
+    const frame = toFrame && p.node.parent !== undefined ? laid.frames.get(p.node.parent) : undefined;
+    return frame ? onFrame(at, side, frame) : at;
+  };
+  const lineEmu = scaledLineWidthEmu(19050, s);
+  chart.edges.forEach((edge: ArchitectureEdge) => {
+    const a = endPoint(edge.from, edge.fromSide, edge.fromGroup);
+    const b = endPoint(edge.to, edge.toSide, edge.toGroup);
+    if (!a || !b || (a.x === b.x && a.y === b.y)) return;
+    const head: ArrowMarker = edge.arrowAtFrom ? 'triangle' : 'none';
+    const tail: ArrowMarker = edge.arrowAtTo ? 'triangle' : 'none';
+    const turns = horizontal(edge.fromSide) !== horizontal(edge.toSide);
+    const corner = turns ? (horizontal(edge.fromSide) ? { x: b.x, y: a.y } : { x: a.x, y: b.y }) : undefined;
+    if (corner && (corner.x !== a.x || corner.y !== a.y) && (corner.x !== b.x || corner.y !== b.y)) {
+      parts.push(elbow(nextId(), [a, corner, b].map((p) => ({ x: S(p.x), y: S(p.y) })), EDGE_COLOR, lineEmu, head, tail));
+    } else {
+      parts.push(connector(nextId(), S(a.x), S(a.y), S(b.x), S(b.y), EDGE_COLOR, lineEmu, 'solid', head, 'lg', tail, 'lg'));
+    }
 
-  const content = parts.join('\n');
+    if (!edge.label) return;
+    const rowH = lineH(EDGE_PT);
+    const textW = estimateTextWidth(edge.label, pxOf(EDGE_PT)) + 8;
+    let x: number;
+    let y: number;
+    let align: 'l' | 'ctr';
+    if (corner) {
+      // Beside the corner, outside the turn.
+      x = corner.x + 6;
+      y = corner.y + 4;
+      align = 'l';
+    } else if (Math.abs(b.x - a.x) >= Math.abs(b.y - a.y)) {
+      // Under the middle of a horizontal line.
+      x = (a.x + b.x) / 2 - textW / 2;
+      y = (a.y + b.y) / 2 + 3;
+      align = 'ctr';
+    } else {
+      // Right of the middle of a vertical line.
+      x = (a.x + b.x) / 2 + 6;
+      y = (a.y + b.y) / 2 - rowH / 2;
+      align = 'l';
+    }
+    edgeLabels.push(textBoxLines(nextId(), S(x), S(y), L(textW), L(rowH), [edge.label], sz(EDGE_PT), { align, color: TEXT_COLOR }));
+  });
+
+  // Services: icon and title in one shape, the title under the icon.
+  for (const p of laid.nodes.values()) {
+    const node = p.node;
+    if (node.kind !== 'service') continue;
+    const lines = labelLines(node);
+    const w = Math.max(ICON, LABEL_W);
+    const h = ICON + METRICS.labelHeight(node);
+    const box = { x: S(p.cx - w / 2), y: S(p.cy - ICON / 2), w: L(w), h: L(h) };
+    const iconX = (w - ICON) / 2;
+    const paragraphs: Paragraph[] = lines.map((text) => ({ text, sizeHalfPt: sz(LABEL_PT), color: TEXT_COLOR }));
+    const textInset = { t: L(ICON + LABEL_TOP), lr: 0, anchor: 't' as const, align: 'center' as const };
+    const name = node.title || node.id;
+    if (node.icon !== undefined || node.iconText !== undefined) {
+      parts.push(
+        shape(
+          nextId(),
+          name,
+          box,
+          customGeometry(w, h, iconPaths(node.icon ?? 'blank', iconX, 0, ICON)),
+          ICON_FILL,
+          { color: ICON_STROKE, emu: scaledLineWidthEmu(12700, s) },
+          paragraphs,
+          textInset,
+        ),
+      );
+      if (node.iconText !== undefined) {
+        const text = wrapText(node.iconText, pxOf(ICON_TEXT_PT), ICON - 6).map((t) => ({ text: t, sizeHalfPt: sz(ICON_TEXT_PT), color: ICON_STROKE }));
+        parts.push(
+          shape(
+            nextId(),
+            `${name} text`,
+            { x: S(p.cx - ICON / 2), y: S(p.cy - ICON / 2), w: L(ICON), h: L(ICON) },
+            '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>',
+            undefined,
+            undefined,
+            text,
+            { t: 0, lr: L(3), anchor: 'ctr', align: 'center' },
+          ),
+        );
+      }
+    } else {
+      parts.push(
+        shape(
+          nextId(),
+          name,
+          box,
+          customGeometry(w, h, [['none', bareServicePath(iconX, 0, ICON)]]),
+          undefined,
+          { color: FRAME_COLOR, emu: scaledLineWidthEmu(15875, s), dashed: true },
+          paragraphs,
+          textInset,
+        ),
+      );
+    }
+  }
+  parts.push(...edgeLabels);
+
   const docPrId = nextId();
-  return wrapDrawingCanvas(content, canvasW, canvasH, docPrId, 'Architecture diagram', options);
+  return wrapDrawingCanvas(parts.join('\n'), canvasW, canvasH, docPrId, chart.title ?? 'Architecture diagram', options);
 }

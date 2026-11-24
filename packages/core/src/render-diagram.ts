@@ -462,7 +462,11 @@ const RENDERERS: Record<DiagramType, TypeHandler> = {
   ),
   er: shapesOnly(parseErDiagram, translateErDiagramToOoxml),
   requirement: shapesOnly(parseRequirementDiagram, translateRequirementDiagramToOoxml),
-  architecture: shapesOnly(parseArchitectureDiagram, translateArchitectureDiagramToOoxml),
+  // Shapes only; the layout reports its own warnings (contradictory ports or align lines, pack icons).
+  architecture: {
+    render: (source, ctx) => shapes(translateArchitectureDiagramToOoxml(parsed(ctx, parseArchitectureDiagram(source)), ctx.canvas, ctx.warnings)),
+    plan: (source) => (parseArchitectureDiagram(source), SHAPES),
+  },
   gantt: shapesOnly(parseGanttChart, translateGanttToOoxml),
   c4: shapesOnly(parseC4Diagram, translateC4DiagramToOoxml),
   // A main-branch-only history becomes a SmartArt process, one box per commit.

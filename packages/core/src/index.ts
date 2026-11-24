@@ -89,10 +89,10 @@ export { parseRequirementDiagram } from './diagrams/requirement-diagram/parser.j
 export { translateRequirementDiagramToOoxml } from './diagrams/requirement-diagram/translator.js';
 export type { RequirementDiagram, Requirement, RequirementElement, RequirementRelationship, RequirementRelationType } from './diagrams/requirement-diagram/types.js';
 
-// Architecture diagram module (Family B).
+// Architecture diagram module (drawn as Mermaid draws it: grid from the ports, icons, nested group frames).
 export { parseArchitectureDiagram } from './diagrams/architecture-diagram/parser.js';
 export { translateArchitectureDiagramToOoxml } from './diagrams/architecture-diagram/translator.js';
-export type { ArchitectureDiagram, ArchitectureNode, ArchitectureNodeKind, ArchitectureEdge, ArchitectureSide } from './diagrams/architecture-diagram/types.js';
+export type { ArchitectureDiagram, ArchitectureNode, ArchitectureNodeKind, ArchitectureEdge, ArchitectureSide, ArchitectureAlignment } from './diagrams/architecture-diagram/types.js';
 
 // Gantt module (Family D, option (b): calendar shapes, no `c:chart` — see
 // docs/adr/spikes/spike-gantt-parser/spike.md).
