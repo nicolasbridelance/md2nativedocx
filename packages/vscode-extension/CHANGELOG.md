@@ -63,6 +63,11 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 - The extension package now carries the license notices of all the third-party code inside it (layout,
   zip and XML libraries, the Open XML SDK of the Word compatibility check) in `dist/licenses/`; before, only
   `adm-zip` was named.
+- Two mistakes in a flowchart no longer produce a wrong drawing without a word. A bracket left open
+  (`A[Receive ticket --> B`) used to turn the rest of the diagram into one box's label, and `->` between two
+  nodes (`A[x] -> B[y]`) made a single box labelled `x] -> B[y`. Both lines are now left out with a warning
+  that names the cause (`unclosed bracket or quote`, `` `->` is not a link, use `-->` ``), and the rest of
+  the diagram is drawn. Found by the agent benchmark, where the export succeeded silently.
 
 ## [0.13.0] — 2026-11-20
 

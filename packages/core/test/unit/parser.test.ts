@@ -742,3 +742,72 @@ test('joins a node label that wraps across a raw newline instead of dropping the
   assert.ok(ast.edges.some((e) => e.from === 'Valider' && e.to === 'Next'));
   assert.ok(!warnings.some((w) => w.includes('Unsupported line ignored')));
 });
+
+// Silent degradations found by the agent benchmark (2026-11): both sources are rejected by Mermaid, and
+// the CLI used to write a plausible-looking but wrong drawing with exit code 0 and no warning.
+
+test('a bracket never closed does not swallow the rest of the diagram, and says so', () => {
+  const { ast, warnings } = parseMermaid(
+    'flowchart LR\n  A[Receive ticket --> B[Assign crew]\n  B --> C[Confirm pickup]',
+  );
+  // Before: one node labelled "Receive ticket --> B[Assign crew] B --> C[Confirm pickup", no edge.
+  assert.deepEqual(
+    ast.nodes.map((n) => [n.id, n.label]),
+    [['B', 'B'], ['C', 'Confirm pickup']],
+  );
+  assert.deepEqual(ast.edges.map((e) => [e.from, e.to]), [['B', 'C']]);
+  assert.deepEqual(warnings, [
+    'Unsupported line ignored (unclosed bracket or quote): A[Receive ticket --> B[Assign crew]',
+  ]);
+});
+
+test('a bracket never closed on the last line is still reported', () => {
+  const { ast, warnings } = parseMermaid('flowchart LR\n  A --> B\n  C[Confirm pickup');
+  assert.deepEqual(ast.edges.map((e) => [e.from, e.to]), [['A', 'B']]);
+  assert.deepEqual(warnings, ['Unsupported line ignored (unclosed bracket or quote): C[Confirm pickup']);
+});
+
+test('`->` between two nodes is reported, not read as one node spanning both labels', () => {
+  const { ast, warnings } = parseMermaid(
+    'flowchart LR\n  A[Receive ticket] -> B[Assign crew]\n  B --> C[Confirm pickup]',
+  );
+  // Before: node A labelled "Receive ticket] -> B[Assign crew".
+  assert.ok(!ast.nodes.some((n) => n.label.includes(']')));
+  assert.deepEqual(ast.edges.map((e) => [e.from, e.to]), [['B', 'C']]);
+  assert.deepEqual(warnings, [
+    'Unsupported line ignored (`->` is not a link, use `-->`): A[Receive ticket] -> B[Assign crew]',
+  ]);
+});
+
+test('two bracketed texts on one node are not merged into a single label', () => {
+  const { ast, warnings } = parseMermaid('flowchart LR\n  A[a] b [c]\n  A --> D[d] x [e]');
+  assert.equal(ast.nodes.length, 0);
+  assert.equal(ast.edges.length, 0);
+  assert.deepEqual(warnings, ['Unsupported line ignored: A[a] b [c]', 'Unsupported line ignored: A --> D[d] x [e]']);
+});
+
+test('labels that stay readable keep reading as before', () => {
+  const { ast, warnings } = parseMermaid(
+    [
+      'flowchart LR',
+      '  A["a] x [b"] --> B[f(x) = 1)]', // quoted brackets; another bracket kind inside []
+      '  C[line one', // a label wrapped across lines, closed later
+      '  line two] --> D(["x -> y"])',
+      '  E["a \\" b"] --> F', // a stray \" leaves the quote count odd, read alone as before
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    ast.nodes.map((n) => [n.id, n.label]),
+    [['A', 'a] x [b'], ['B', 'f(x) = 1)'], ['C', 'line one line two'], ['D', 'x -> y'], ['E', 'a \\" b'], ['F', 'F']],
+  );
+  assert.equal(ast.edges.length, 3);
+  assert.deepEqual(warnings, []);
+});
+
+test('the unclosed-line warning carries the line as text, markup and all', () => {
+  // Rule #2: warnings end up in the document's notes and the CLI log; the parser hands the raw line on,
+  // escaping is the writer's job (covered by the CLI tests). Here: the line is not altered or truncated.
+  const line = 'A["<b>&amp;</b>" --> B';
+  const { warnings } = parseMermaid(`flowchart LR\n  ${line}`);
+  assert.deepEqual(warnings, [`Unsupported line ignored (unclosed bracket or quote): ${line}`]);
+});

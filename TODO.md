@@ -71,9 +71,6 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   documents après déplacement, sauvegarde et réouverture ; en faire un contrôle Word sur une fixture
   versionnée ici. Le banc a aussi une fixture de pagination de 30 pages (table sur trois pages, dessins
   sur des pages distinctes) à reprendre.
-- [ ] **Signaler les dégradations silencieuses.** Flowchart avec `->` ou crochet de libellé manquant :
-  le CLI écrit le fichier, sort avec le code 0 et n'émet aucun avertissement, alors que des formes ou
-  des attaches manquent. Ajouter les deux régressions et l'avertissement.
 - [ ] **Rapport de conversion exploitable par un agent.** Exposer dans le rapport CLI/MCP, en données
   stables, la cause et le bloc concerné de chaque problème (un avertissement réel fait passer la
   reprise de 9/12 à 11/12 ; le banc mesurera la suite).

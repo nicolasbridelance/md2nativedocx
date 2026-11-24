@@ -415,30 +415,39 @@ function applyNodeStyle(
  * edge — disconnecting the diagram. Found via medium-realistic.mmd
  * (2026-09-04). Lines that are already bracket-balanced (the common case)
  * flush immediately and are unaffected.
+ *
+ * A bracket or quote that never closes (`A[Receive ticket --> B[Assign crew]`) is a syntax error in
+ * Mermaid. Joining to the end of the block would turn every following line into that node's label and
+ * draw a single box; instead the line that opened it is kept as a statement of its own (read normally if
+ * it can be, e.g. a stray `\"` inside a quoted label, otherwise warned about as unclosed), and the lines
+ * after it are read again.
  */
 function joinBracketContinuations(lines: string[]): string[] {
-  const result: string[] = [];
-  let buffer: string[] = [];
-  let depth = 0;
-  // Carried across lines: a quoted label may span several (`a["`Line1` / `Line 2`"]`), and its closing
-  // quote must not be read as an opening one.
-  let inQuotes = false;
-  for (const line of lines) {
-    buffer.push(line.trim());
-    const scan = bracketDelta(line, inQuotes);
-    depth += scan.delta;
-    inQuotes = scan.inQuotes;
-    if (depth <= 0) {
-      result.push(buffer.join(' '));
-      buffer = [];
-      depth = 0;
-      inQuotes = false;
+  const statements: string[] = [];
+  let pending = lines;
+  while (pending.length > 0) {
+    let buffer: string[] = [];
+    let depth = 0;
+    // Carried across lines: a quoted label may span several (`a["`Line1` / `Line 2`"]`), and its closing
+    // quote must not be read as an opening one.
+    let inQuotes = false;
+    for (const line of pending) {
+      buffer.push(line.trim());
+      const scan = bracketDelta(line, inQuotes);
+      depth += scan.delta;
+      inQuotes = scan.inQuotes;
+      if (depth <= 0) {
+        statements.push(buffer.join(' '));
+        buffer = [];
+        depth = 0;
+        inQuotes = false;
+      }
     }
+    if (buffer.length === 0) break;
+    statements.push(buffer[0]!);
+    pending = pending.slice(pending.length - buffer.length + 1);
   }
-  if (buffer.length > 0) {
-    result.push(buffer.join(' '));
-  }
-  return result;
+  return statements;
 }
 
 /**
@@ -728,7 +737,8 @@ export function parseMermaid(text: string): ParseResult {
     }
 
     // Unsupported construct — warn but keep going (V1 tolerance).
-    warnings.push(`Unsupported line ignored: ${line}`);
+    const reason = unsupportedLineReason(line);
+    warnings.push(reason ? `Unsupported line ignored (${reason}): ${line}` : `Unsupported line ignored: ${line}`);
   }
 
   // Resolve class/`:::` assignments whose `classDef` appeared later in the
@@ -998,16 +1008,67 @@ function parseNodeStatement(
     };
   }
 
-  for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
-    // Longest patterns first to avoid `(` matching `((`.
-    if (rest.startsWith(open) && rest.endsWith(close)) {
-      const inner = rest.slice(open.length, rest.length - close.length).trim();
-      const parsed = parseLabel(stripQuotedLabel(inner));
-      return { id, label: parsed.text, labelRuns: parsed.runs, shape, className };
-    }
-  }
+  const bracketed = matchShapeSyntax(rest);
+  return bracketed ? { id, ...bracketed, className } : null;
+}
 
+/**
+ * Why a flowchart line could not be read, when the cause is one of the two mistakes seen most in
+ * generated diagrams (agent benchmark, 2026-11): a bracket or quote left open, or `->`, which is not a
+ * Mermaid link. `null` when neither applies. Text inside quotes and brackets is not looked at, so a label
+ * such as `A["x -> y"]` is not mistaken for a link.
+ */
+function unsupportedLineReason(line: string): string | null {
+  const scan = bracketDelta(line);
+  if (scan.delta > 0 || scan.inQuotes) return 'unclosed bracket or quote';
+  let outside = '';
+  let depth = 0;
+  let inQuotes = false;
+  for (const ch of line) {
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (inQuotes) continue;
+    else if (ch === '[' || ch === '(' || ch === '{') depth++;
+    else if (ch === ']' || ch === ')' || ch === '}') depth = Math.max(0, depth - 1);
+    else if (depth === 0) outside += ch;
+  }
+  return /(^|[^-=.])->/.test(outside) ? '`->` is not a link, use `-->`' : null;
+}
+
+/**
+ * Read `rest` as one bracketed node shape (`[Text]`, `{Text}`, `((Text))`…) covering all of it, longest
+ * syntax first so `(` does not match `((`. The shape's own bracket must close exactly at the end:
+ * `[Receive ticket] -> B[Assign crew]` starts with `[` and ends with `]`, but it is two bracketed texts
+ * joined by something that is not a link (Mermaid rejects it), not one node labelled
+ * `Receive ticket] -> B[Assign crew`. Only the bracket pair that closes the shape is counted, so a label
+ * with another kind of bracket (`A[Step 1)]`, `A[f(x)]`) is read as before; a quoted label is taken whole.
+ */
+function matchShapeSyntax(rest: string): { label: string; labelRuns: LabelToken[]; shape: NodeShape } | null {
+  for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
+    if (!rest.startsWith(open) || !rest.endsWith(close)) continue;
+    const inner = rest.slice(open.length, rest.length - close.length).trim();
+    if (!closesOnlyAtEnd(inner, close[close.length - 1]!)) continue;
+    const parsed = parseLabel(stripQuotedLabel(inner));
+    return { label: parsed.text, labelRuns: parsed.runs, shape };
+  }
   return null;
+}
+
+/**
+ * Whether an unquoted label leaves its shape's bracket open to the end: its `[`/`]` (or `(`/`)`,
+ * `{`/`}`, after `closing`) are balanced and never close more than they opened. Double-quoted text is
+ * skipped, so `A["a] x [b"]` stays one label, as in Mermaid.
+ */
+function closesOnlyAtEnd(inner: string, closing: string): boolean {
+  const opening = closing === ']' ? '[' : closing === ')' ? '(' : '{';
+  let depth = 0;
+  let inQuotes = false;
+  for (const ch of inner) {
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (inQuotes) continue;
+    else if (ch === opening) depth++;
+    else if (ch === closing && --depth < 0) return false;
+  }
+  return depth === 0;
 }
 
 /** Parse a node reference at an edge endpoint: bare id or id with shape. */
@@ -1041,14 +1102,8 @@ function parseNodeRef(
     };
   }
 
-  for (const { open, close, shape } of SHAPE_BY_SYNTAX) {
-    if (rest.startsWith(open) && rest.endsWith(close)) {
-      const inner = rest.slice(open.length, rest.length - close.length).trim();
-      const parsed = parseLabel(stripQuotedLabel(inner));
-      return { id, label: parsed.text, labelRuns: parsed.runs, shape, className };
-    }
-  }
-  return null;
+  const bracketed = matchShapeSyntax(rest);
+  return bracketed ? { id, ...bracketed, className } : null;
 }
 
 interface ChainEdge {
