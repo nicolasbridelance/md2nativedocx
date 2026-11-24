@@ -65,9 +65,10 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   `test-corpus/word-verification/routed-connectors.docx`, après déplacement d'une forme : Word recalcule
   alors le chemin lui-même et peut traverser un nœud (mesuré par le banc), comme pour tout connecteur ;
   (2) F16, le même raccourci dans le rapport multipage du banc ; (3) LibreOffice Writer, à l'ouverture du
-  `.docx`, ignore les réglages des `bentConnector4`/`5` (attachés ou non ; il respecte ceux du
-  `bentConnector3`) et trace ces détours en ligne droite à travers le nœud : limite de LibreOffice, notée
-  dans le manuel, le `.odt` n'est pas concerné. Bug à signaler à LibreOffice (décision du mainteneur).
+  `.docx`, retrace lui-même ces détours en ligne droite à travers le nœud : il ignore les réglages des
+  `bentConnector4`/`5` (attachés ou non ; il respecte ceux du `bentConnector3`) et faisait déjà de même
+  avec l'ancienne géométrie libre (rendus identiques avant et après, baselines `test:visual` inchangées).
+  Limite de LibreOffice, notée dans le manuel ; le `.odt` n'est pas concerné. Bug à signaler à LibreOffice (décision du mainteneur).
   Détail dans le banc : `ROUTED_CONNECTOR_RESULTS.md`.
 - [ ] **Persistance des connecteurs dans les régressions Word.** Le banc vérifie 14 connecteurs sur neuf
   documents après déplacement, sauvegarde et réouverture ; en faire un contrôle Word sur une fixture

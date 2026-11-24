@@ -275,7 +275,7 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 
 **Limites**
 
-- LibreOffice, quand il ouvre le `.docx`, trace les flèches coudées tout droit, à travers le nœud qu’elles contournent ; Word et PowerPoint les dessinent correctement. Pour LibreOffice, exporter en `.odt`.
+- LibreOffice, quand il ouvre le `.docx`, retrace lui-même les flèches qui contournent un nœud : tout droit, à travers ce nœud ; Word et PowerPoint les dessinent correctement. Pour LibreOffice, exporter en `.odt`.
 - Après déplacement d’une forme, Word recalcule lui-même le chemin d’une flèche coudée, qui peut alors passer sur un autre nœud
 - `direction` à l’intérieur d’un `subgraph` : appliquée (mise en page propre au sous-graphe) tant qu’aucun lien ne relie l’intérieur à l’extérieur ; sinon ignorée avec un avertissement, comme Mermaid
 - Pas de `click`, d’animation d’arête ni de formes icône/image

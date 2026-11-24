@@ -954,8 +954,10 @@ function connectorStyle(): string {
  * `straightConnectorGeometry`) is a literal point list computed by
  * `sitePoint()` below, unaffected by this constant and geometrically correct
  * either way. That's why the old (wrong) mapping never produced a visibly
- * broken connector in LibreOffice — LibreOffice draws the literal path we
- * provide — but did in a real Word, which appears to prefer its own
+ * broken connector in LibreOffice — LibreOffice drew the literal path we
+ * provided (no longer so for a routed connector: LibreOffice 26.8 redraws it
+ * between its two sites itself, free-form path or elbow alike, measured
+ * 2026-11-24) — but did in a real Word, which appears to prefer its own
  * connection-site semantics over the static geometry for at least some
  * shapes/paths. Not independently re-verified against a real Word document
  * with a horizontal connector (`tools/word-reference/` only has the vertical

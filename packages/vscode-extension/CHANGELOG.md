@@ -70,8 +70,9 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   the diagram is drawn. Found by the agent benchmark, where the export succeeded silently.
 - In Word and PowerPoint, an arrow that goes around a node in a flowchart now stays attached to its two
   shapes: it is Word's own elbow connector, squared off along the route the layout chose, instead of a
-  free-form line that Word detached from its shapes. LibreOffice, when it opens the `.docx`, draws these
-  elbows as a straight line through the node it should go around; the `.odt` export is not affected.
+  free-form line that Word detached from its shapes. Unchanged in LibreOffice, which, when it opens the
+  `.docx`, already drew such an arrow as a straight line through the node (it redraws connectors itself);
+  the `.odt` export is not affected.
 
 ## [0.13.0] — 2026-11-20
 
