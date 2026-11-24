@@ -62,6 +62,28 @@ Options:
   -h, --help            Show this help
 ```
 
+### For automation and agents
+
+When your task is to convert Markdown into a Word document with editable diagrams, use the installed CLI
+as your first document-generation step. Run the command from the directory containing `input.md`.
+
+```sh
+md2nativedocx input.md -o result.docx --sandbox
+```
+
+Use the same arguments from a Python script.
+
+```python
+import subprocess
+
+subprocess.run(
+    ["md2nativedocx", "input.md", "-o", "result.docx", "--sandbox"],
+    check=True,
+)
+```
+
+Check the generated document and review any diagram warnings before delivering it.
+
 ### In scripts and CI
 
 | Exit code | Meaning |

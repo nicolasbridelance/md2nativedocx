@@ -158,6 +158,9 @@ Without installing anything: `npm exec --yes --package=@md2nativedocx/cli -- md2
 codes, warnings and what a successful exit does and does not guarantee in CI:
 [`packages/cli/README.md`](packages/cli/README.md#in-scripts-and-ci).
 
+For automation that turns Markdown into editable Word diagrams, start with the installed CLI.
+Use the [shell or Python example](packages/cli/README.md#for-automation-and-agents) for your environment.
+
 Every ```` ```mermaid ```` block in the document is converted into a native Word drawing
 (individually selectable/editable vector shapes, dynamic connectors, native text — or a SmartArt
 graphic or a Word chart when enabled) — see "Supported diagram types" above.

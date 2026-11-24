@@ -48,6 +48,41 @@ couverture mais la fiabilité dans un vrai Word et le nombre d'utilisateurs. Le 
 
 Au second plan, sans date : V2 moteur (§2bis, seulement les ▶), pistes SmartArt (§3), idées (§4).
 
+## Retours du benchmark agents (projet séparé)
+
+Le banc `md2nativedocx-agent-benchmark` mesure si un agent IA produit un meilleur DOCX avec ce moteur
+que sans. Son cahier des charges, ses protocoles, ses résultats et ses propres chantiers (TODO du banc)
+vivent dans ce dépôt séparé, avec un évaluateur indépendant ; seul ce qu'il demande au moteur est suivi
+ici. Repères : 5/54 sans moteur contre 24/54 avec (0/45 contre 18/45 sur les tâches graphiques) ;
+36/36 quand l'agent convertit le Markdown entier en un appel guidé, contre 17/36 avec un CLI
+facultatif ; 18/20 documents inédits passent la grille Word complète.
+[Notebook Kaggle public](https://www.kaggle.com/code/nbridelancetb/editable-word-diagrams-md2nativedocx-benchmark).
+
+- [ ] **Connecteurs routés autour d'un obstacle : attaches perdues dans Word.** Word charge les tracés
+  `a:custGeom` en formes libres malgré `wps:cNvCnPr`, `a:stCxn` et `a:endCxn` (stress Mermaid S02/S03,
+  reproduit sur 0.7.0 et `d5477e2` ; 20 connecteurs prédéfinis sur 24 restent attachés). Un
+  `bentConnector5` paramétré reste attaché et contourne les nœuds à l'ouverture, mais après un
+  déplacement de 12 points Word recalcule le chemin et traverse un nœud (F02/F16, raccord
+  `Log return → Close request` entre sous-graphes). Avant d'intégrer : lisibilité après édition, trajets
+  sans segment horizontal, LibreOffice. Ajouter F02 et F16 à la régression, seuls puis dans le rapport
+  multipage. Détail dans le banc : `MERMAID_STRESS_RESULTS.md`, `ROUTED_CONNECTOR_RESULTS.md`,
+  `FRONTIER_RESULTS.md`.
+- [ ] **Persistance des connecteurs dans les régressions Word.** Le banc vérifie 14 connecteurs sur neuf
+  documents après déplacement, sauvegarde et réouverture ; en faire un contrôle Word sur une fixture
+  versionnée ici. Le banc a aussi une fixture de pagination de 30 pages (table sur trois pages, dessins
+  sur des pages distinctes) à reprendre.
+- [ ] **Signaler les dégradations silencieuses.** Flowchart avec `->` ou crochet de libellé manquant :
+  le CLI écrit le fichier, sort avec le code 0 et n'émet aucun avertissement, alors que des formes ou
+  des attaches manquent. Ajouter les deux régressions et l'avertissement.
+- [ ] **Rapport de conversion exploitable par un agent.** Exposer dans le rapport CLI/MCP, en données
+  stables, la cause et le bloc concerné de chaque problème (un avertissement réel fait passer la
+  reprise de 9/12 à 11/12 ; le banc mesurera la suite).
+- [ ] **Parcours « Markdown complet → DOCX final » dans les fiches CLI et MCP.** 27 des 30 échecs
+  historiques n'appellent pas le CLI, les trois autres convertissent des fragments puis réassemblent le
+  DOCX. Montrer l'appel unique et son résultat ; en cas de reprise, corriger le Markdown et reconvertir
+  le document entier. (La première invocation pour agents est déjà dans `packages/cli/README.md`,
+  « For automation and agents ».)
+
 ## R. Robustesse (incident `flux_arcs`, 2026-11-13) — clos, restes ci-dessous
 
 R1 à R3 sont faits et publiés (0.8.1 à 0.8.3) : écriture sûre de la sortie, bloc non fermé signalé,
