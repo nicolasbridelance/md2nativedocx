@@ -321,7 +321,9 @@ Ensuite, dans l'ordre :
             - ~~**séquence (11)**~~ (fait : 36/38, les 2 restants voulus, voir plus haut), ~~**C4 (6)**~~ (fait le 2026-11-21, voir
               ci-dessous), ~~**architecture (5)**~~ (fait le 2026-11-24 : dessiné comme Mermaid 12.3, icônes intégrées, grille
               déduite des ports, `align`, groupes imbriqués, `{group}`, `-[label]-` ; vérifié dans Word et LibreOffice,
-              `test-corpus/word-verification/architecture.*` ; comparateur différentiel encore à écrire, voir plus bas),
+              `test-corpus/word-verification/architecture.*` ; comparateur différentiel encore à écrire, voir plus bas ;
+              à lui de dire si Mermaid fait aussi passer la flèche Gateway → Server sur le titre « Public API » du
+              groupe, comme la baseline `test:visual` du 2026-11-24 : cytoscape exige un vrai canvas sous jsdom),
               ~~**Gantt (7)**~~ (fait), ~~**mindmap (4)**~~ (fait), ~~**requirement (4)**~~ (fait),
               ~~**treeView (4)**~~ (fait le 2026-11-21, voir ci-dessous), divers (8) ;
             - ~~**C4 (6)**~~ (fait le 2026-11-21) : dessiné comme Mermaid 12.3 le dessine (son moteur C4 lu sur les
