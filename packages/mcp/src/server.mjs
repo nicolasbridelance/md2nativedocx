@@ -111,7 +111,8 @@ export function createServer({
     {
       description:
         'Convert a Markdown document to a .docx where every ```mermaid (or ```plantuml sequence, class, state or activity) block is an editable Word diagram. ' +
-        'Writes the file under the server root (never overwrites) and returns its path. Needs Pandoc on the server.',
+        'Writes the file under the server root (never overwrites) and returns its path, with each warning tied to its diagram (number and Markdown line) ' +
+        'so the right block can be fixed before converting the whole document again. Needs Pandoc on the server.',
       inputSchema: {
         markdown: z.string().min(1).max(MAX_MARKDOWN_LENGTH).describe('The Markdown document'),
         outputPath: z.string().min(1).max(512).describe('Relative path of the .docx to create, inside the server root'),

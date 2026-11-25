@@ -102,7 +102,7 @@ test('convert({ format: "odt" }): hostile labels stay text, no script or link re
 
 test('convert({ format: "odt" }): other diagram types become a note and a warning', async () => {
   const { document, warnings } = await convert('```mermaid\npie\n  "a" : 1\n```\n', { format: 'odt' });
-  assert.deepEqual(warnings, ['warning: Pie chart not converted: .odt output draws flowcharts (and the types drawn as flowcharts) only for now.']);
+  assert.deepEqual(warnings, ['warning: diagram 1, line 1: Pie chart not converted: .odt output draws flowcharts (and the types drawn as flowcharts) only for now.']);
   assert.match(contentXml(document), /Pie chart not converted/);
 });
 

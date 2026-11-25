@@ -5,7 +5,7 @@ MCP server (stdio) over md2nativedocx. Two tools, no document logic of its own:
 | Tool | Does | Calls |
 |---|---|---|
 | `render_diagram` | Renders one Mermaid (or PlantUML sequence, class, state or activity) diagram; returns its kind, detected type, warnings, and the XML fragment on request | `renderDiagram()` from `@md2nativedocx/core` |
-| `convert_document` | Converts Markdown to a `.docx` written under the server root; returns the path | `convert()` from `@md2nativedocx/cli` (needs Pandoc) |
+| `convert_document` | Converts Markdown to a `.docx` written under the server root; returns the path and the warnings, each with its diagram number and Markdown line (`diagnostics`) | `convert()` from `@md2nativedocx/cli` (needs Pandoc) |
 
 ```json
 { "mcpServers": { "md2nativedocx": { "command": "npx", "args": ["-y", "@md2nativedocx/mcp"] } } }

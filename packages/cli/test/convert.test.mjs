@@ -43,10 +43,30 @@ test('convert(): MD2NATIVEDOCX_* variables of the host process do not change the
   }
 });
 
-test('convert(): diagram warnings come back without the stderr prefix', async () => {
-  const { warnings, pandocStderr } = await convert('```mermaid\ngraph TD\n  A --> B\n  this is not mermaid\n```\n');
-  assert.deepEqual(warnings, ['warning: Unsupported line ignored: this is not mermaid']);
+test('convert(): diagram warnings come back without the stderr prefix, placed at their diagram', async () => {
+  const { warnings, diagnostics, pandocStderr } = await convert('```mermaid\ngraph TD\n  A --> B\n  this is not mermaid\n```\n');
+  assert.deepEqual(warnings, ['warning: diagram 1, line 1: Unsupported line ignored: this is not mermaid']);
+  assert.deepEqual(diagnostics, [{ message: 'Unsupported line ignored: this is not mermaid', diagram: 1, language: 'mermaid', line: 1 }]);
   assert.match(pandocStderr, /md2nativedocx: warning: Unsupported line ignored/);
+});
+
+test('convert(): each warning names its own diagram and fence line, in a document with several', async () => {
+  const md = [
+    '# Report', '', '```js', 'const a = 1;', '```', '',
+    '```mermaid', 'graph TD', '  A --> B', '```', '',
+    'Text.', '',
+    '```mermaid', 'graph TD', '  C --> D', '  not mermaid at all', '```', '',
+  ].join('\n');
+  const { diagnostics } = await convert(md, { smartArt: false });
+  assert.deepEqual(diagnostics, [{ message: 'Unsupported line ignored: not mermaid at all', diagram: 2, language: 'mermaid', line: 14 }]);
+});
+
+test('convert(): an unclosed fence is a diagnostic with its line and no diagram number', async () => {
+  const { diagnostics, warnings } = await convert('# T\n\n```mermaid\ngraph TD\n  A --> B\n');
+  assert.equal(diagnostics.length, 1);
+  assert.equal(diagnostics[0]?.line, 3);
+  assert.equal(diagnostics[0]?.diagram, undefined);
+  assert.match(warnings[0] ?? '', /^warning: line 3: the ```mermaid block is never closed/);
 });
 
 test('convert(): labels with XML metacharacters reach document.xml escaped', async () => {

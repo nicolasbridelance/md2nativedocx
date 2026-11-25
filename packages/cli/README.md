@@ -82,7 +82,9 @@ subprocess.run(
 )
 ```
 
-Check the generated document and review any diagram warnings before delivering it.
+Check the generated document and review any diagram warnings before delivering it. Each warning names
+its diagram and the line of that block's opening fence (`warning: diagram 2, line 14: ...`): fix that block
+in `input.md` and convert the whole document again, rather than converting diagrams one by one.
 
 ### In scripts and CI
 
@@ -174,7 +176,10 @@ await writeFile('report.docx', document);
 ```
 
 `convert()` takes Markdown text, or `{ path }` of a file, and resolves to `{ document, warnings,
-pandocStderr }`; `document` is the `.docx` as a `Buffer`. It reads no environment variable: every setting
+diagnostics, pandocStderr }`; `document` is the `.docx` as a `Buffer`. `diagnostics` holds the same
+problems as `warnings`, as data: `{ message, diagram, language, line }`, where `diagram` is the block's
+number in the document (1 for the first ```` ```mermaid ```` or ```` ```plantuml ````) and `line` its opening
+fence, left out when it cannot be found for certain. It reads no environment variable: every setting
 is an option (types in `src/convert.d.mts`, mirroring the variables above). A failure is a
 `ConversionError` whose `stage` is `setup`, `pandoc` or `postprocess`. To render a single diagram without
 Pandoc, use `renderDiagram()` from `@md2nativedocx/core`.

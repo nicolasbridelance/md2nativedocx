@@ -81,12 +81,32 @@ export interface ConvertOptions {
   nodeBin?: string;
 }
 
+/** One non-fatal problem, with where it is in the Markdown when that is known. */
+export interface ConversionDiagnostic {
+  /** What happened, as the engine says it, without its place. */
+  message: string;
+  /** The diagram it is about: 1 for the first ```mermaid / ```plantuml block of the document, and so on. */
+  diagram?: number;
+  /** That diagram's fence language as written: `mermaid`, `plantuml` or `puml`. */
+  language?: string;
+  /**
+   * Line (1-based) of the block's opening fence in the Markdown, or of the unclosed fence. Left out when it
+   * cannot be found for certain (the source's fences do not match the diagrams Pandoc read one for one).
+   */
+  line?: number;
+}
+
 /** A finished document. */
 export interface ConvertResult {
   /** The `.docx` (or `.odt`) file's bytes. */
   document: Buffer;
-  /** Non-fatal problems in the diagrams (syntax ignored, a SmartArt or chart drawn as shapes instead). */
+  /**
+   * Non-fatal problems in the diagrams (syntax ignored, a SmartArt or chart drawn as shapes instead), one
+   * line each, place first: `warning: diagram 2, line 14: ...`. The same as {@link diagnostics}, as text.
+   */
   warnings: string[];
+  /** The same problems as data: message, diagram number, language and line, in document order. */
+  diagnostics: ConversionDiagnostic[];
   /** Everything Pandoc and the filter wrote to stderr, for a log. */
   pandocStderr: string;
 }

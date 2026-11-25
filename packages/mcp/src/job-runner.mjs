@@ -32,7 +32,8 @@ const TOOLS = {
     }
     // 'wx': never overwrite a file the caller did not create; the parent already validated the path.
     await writeFile(outputPath, result.document, { flag: 'wx' });
-    return { outputPath, bytes: result.document.length, warnings: result.warnings };
+    // `warnings` as lines to read, `diagnostics` as data: each problem with its diagram number and line.
+    return { outputPath, bytes: result.document.length, warnings: result.warnings, diagnostics: result.diagnostics };
   },
 };
 

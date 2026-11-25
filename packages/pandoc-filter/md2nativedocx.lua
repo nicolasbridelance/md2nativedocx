@@ -110,10 +110,18 @@ local odf_styles = pandoc.List()
 
 -- The browser converter (packages/web/src/diagram-blocks.mjs) applies the same block selection and the
 -- same @startuml rule on Pandoc's JSON AST: keep the two in step.
+local diagram_count = 0
+
 local mermaid_filter = {
   CodeBlock = function(el)
     local lang = el.classes[1]
     if lang ~= 'mermaid' and lang ~= 'plantuml' and lang ~= 'puml' then return nil end
+    -- Marks which diagram the warnings that follow on stderr belong to (the bridge inherits this stderr and
+    -- writes after it). `convert()` reads the marker to attribute each warning to its block, then drops it.
+    -- Only a counter and the fence's own language name, never document text.
+    diagram_count = diagram_count + 1
+    io.stderr:write('md2nativedocx-diagram: ' .. diagram_count .. ' ' .. lang .. '\n')
+    io.stderr:flush()
     local source = el.text
     -- A ```plantuml block may leave out @startuml/@enduml (GitLab, Kroki accept that); core recognises
     -- PlantUML by that header, so add it.

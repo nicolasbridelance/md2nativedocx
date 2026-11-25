@@ -37,12 +37,22 @@ export function findUnclosedMermaidFenceLines(text) {
 }
 
 /**
+ * One diagnostic per unclosed ```mermaid fence in `text`: its line, and what happens because of it.
+ * @param {string} text
+ * @returns {Array<{ message: string, line: number }>}
+ */
+export function unclosedFenceDiagnostics(text) {
+  return findUnclosedMermaidFenceLines(text).map((line) => ({
+    message: 'the ```mermaid block is never closed, so Pandoc treats everything from there to the end of the file as plain code and no diagram is converted. Add a closing ``` line.',
+    line,
+  }));
+}
+
+/**
  * Export-log warnings for every unclosed ```mermaid fence in `text`.
  * @param {string} text
  * @returns {string[]}
  */
 export function unclosedFenceWarnings(text) {
-  return findUnclosedMermaidFenceLines(text).map(
-    (line) => `warning: line ${line}: the \`\`\`mermaid block is never closed, so Pandoc treats everything from there to the end of the file as plain code and no diagram is converted. Add a closing \`\`\` line.`,
-  );
+  return unclosedFenceDiagnostics(text).map((d) => `warning: line ${d.line}: ${d.message}`);
 }

@@ -58,6 +58,9 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   `'single quotes'` are read as Mermaid reads them, and `icon(none)` no longer warns.
 
 ### Fixed
+- **Each diagram warning says which diagram it is about**: its number in the document and the line of its
+  fence (`diagram 2, line 14: ...`), in the export log, the CLI output and the MCP server's reply (also as data,
+  `diagnostics`). A long document no longer leaves you guessing which block to fix.
 - Relationship labels of class and ER diagrams (`Vehicle ..> Inspection : requires`, `CUSTOMER ||--o{ ORDER :
   places`) sit on a white background, as in Mermaid. The line used to run through the text, which read as
   struck through.

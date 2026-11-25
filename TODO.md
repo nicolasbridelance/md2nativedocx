@@ -75,9 +75,14 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   documents après déplacement, sauvegarde et réouverture ; en faire un contrôle Word sur une fixture
   versionnée ici. Le banc a aussi une fixture de pagination de 30 pages (table sur trois pages, dessins
   sur des pages distinctes) à reprendre.
-- [ ] **Rapport de conversion exploitable par un agent.** Exposer dans le rapport CLI/MCP, en données
-  stables, la cause et le bloc concerné de chaque problème (un avertissement réel fait passer la
-  reprise de 9/12 à 11/12 ; le banc mesurera la suite).
+- [ ] **Rapport de conversion exploitable par un agent.** Le bloc concerné est fait (2026-11-25) : chaque
+  avertissement porte le numéro de son diagramme et la ligne de sa clôture d'ouverture
+  (`diagram 2, line 14: ...`) dans le `.log`, la sortie du CLI et la réponse MCP, et en données dans
+  `convert().diagnostics` (marqueur `md2nativedocx-diagram:` du filtre Lua ; ligne omise si les clôtures
+  du source ne correspondent pas une à une aux blocs vus par Pandoc). Reste la **cause en code stable**
+  (`unsupported-line`, `smartart-fallback`…) : les avertissements de `renderDiagram()` sont des chaînes,
+  en faire des objets change l'API publique de `core` → décision du mainteneur. Le banc mesurera d'abord
+  l'effet du bloc localisé (un avertissement réel fait passer la reprise de 9/12 à 11/12).
 - [ ] **Parcours « Markdown complet → DOCX final » dans les fiches CLI et MCP.** 27 des 30 échecs
   historiques n'appellent pas le CLI, les trois autres convertissent des fragments puis réassemblent le
   DOCX. Montrer l'appel unique et son résultat ; en cas de reprise, corriger le Markdown et reconvertir

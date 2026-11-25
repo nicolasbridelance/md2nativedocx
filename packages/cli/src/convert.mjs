@@ -29,7 +29,8 @@ import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { postProcessDocx, injectSmartArtParts, injectChartParts } from './docxFiles.mjs';
-import { unclosedFenceWarnings } from './unclosedFences.mjs';
+import { unclosedFenceDiagnostics } from './unclosedFences.mjs';
+import { diagramDiagnostics, formatDiagnostic } from './diagramWarnings.mjs';
 import { buildReferenceDoc, resolveMaxDrawingExtentEmu, resolvePageSize, resolveMargins } from './referenceDocBuilder.mjs';
 
 /** A conversion that produced no document. `stage` says where it stopped. */
@@ -132,27 +133,30 @@ function runPandoc(bin, args, { cwd, env, timeoutMs }) {
 }
 
 /**
- * Lines this project wrote to stderr (`md2nativedocx: ...`: parser warnings, SmartArt or chart fallbacks,
- * from each bridge run the Lua filter spawned), without that prefix. Pandoc's own diagnostics share the
- * stream but are not ours to count.
+ * Everything worth reporting about a finished conversion, in document order: unclosed fences found in the
+ * source before Pandoc ran, then the lines this project wrote to stderr (parser warnings, SmartArt or chart
+ * fallbacks, from each bridge run the Lua filter spawned), each tied to its diagram, then the images the
+ * sandbox left out. Pandoc's own diagnostics share the stream but are not ours to count.
+ * @returns {{ diagnostics: Array<import('./convert.d.mts').ConversionDiagnostic>, warnings: string[] }}
  */
-function extractWarnings(stderrText) {
-  return stderrText
-    .split('\n')
-    .filter((line) => line.startsWith('md2nativedocx: ') && line.trim().length > 0)
-    .map((line) => line.slice('md2nativedocx: '.length));
+function conversionDiagnostics(source, pandocStderr, options) {
+  const text = sourceText(source);
+  const diagnostics = [
+    ...(text === undefined ? [] : unclosedFenceDiagnostics(text)),
+    ...diagramDiagnostics(pandocStderr, text),
+    ...sandboxWarnings(pandocStderr, options).map((message) => ({ message })),
+  ];
+  return { diagnostics, warnings: diagnostics.map(formatDiagnostic) };
 }
 
-/** Warnings about the source text itself, found before Pandoc runs (an unclosed ```mermaid fence). */
-function sourceWarnings(source) {
-  let text;
+/** The Markdown text, or `undefined` when the file cannot be read. */
+function sourceText(source) {
   try {
-    text = typeof source === 'string' ? source : readFileSync(source.path, 'utf8');
+    return typeof source === 'string' ? source : readFileSync(source.path, 'utf8');
   } catch {
-    // An unreadable input is Pandoc's error to report with its own message; this check is only advisory.
-    return [];
+    // An unreadable input is Pandoc's error to report with its own message; locating warnings is only advisory.
+    return undefined;
   }
-  return unclosedFenceWarnings(text);
 }
 
 /** Where Pandoc reads from: the given file, or the text written to `work/input.md`. */
@@ -217,7 +221,7 @@ async function convertOdt(source, options) {
       { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: { cx: page.cx, cy: Math.min(page.cy, ODT_MAX_DRAWING_CY) }, landscapeGeometry: null },
     );
     const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env, timeoutMs: options.timeoutMs });
-    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr), ...sandboxWarnings(pandocStderr, options)], pandocStderr };
+    return { document: readFileSync(outputPath), ...conversionDiagnostics(source, pandocStderr, options), pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
@@ -291,7 +295,7 @@ export async function convert(source, options = {}) {
       throw new ConversionError(`post-processing failed: ${errorMessage(err)}`, { stage: 'postprocess', pandocStderr, cause: err });
     }
 
-    return { document: readFileSync(outputPath), warnings: [...sourceWarnings(source), ...extractWarnings(pandocStderr), ...sandboxWarnings(pandocStderr, options)], pandocStderr };
+    return { document: readFileSync(outputPath), ...conversionDiagnostics(source, pandocStderr, options), pandocStderr };
   } finally {
     rmSync(work, { recursive: true, force: true });
     if (generatedReferenceDoc) rmSync(generatedReferenceDoc.dir, { recursive: true, force: true });
