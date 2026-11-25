@@ -148,7 +148,7 @@ export function smartArtFallbackMessage(classification: SmartArtIneligible): str
     case 'merge-after-branch':
       return `Native shapes used (merge detected between ${formatAt(at)} — not supported by SmartArt export).`;
     case 'subgraph':
-      return 'Native shapes used (nested subgraph detected — not supported by SmartArt export).';
+      return 'Native shapes used (subgraph detected — not supported by SmartArt export).';
     case 'self-loop':
       return `Native shapes used (self-loop detected at ${formatAt(at)} — not supported by SmartArt export).`;
     case 'disconnected':
