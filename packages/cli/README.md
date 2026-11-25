@@ -82,9 +82,22 @@ subprocess.run(
 )
 ```
 
-Check the generated document and review any diagram warnings before delivering it. Each warning names
-its diagram and the line of that block's opening fence (`warning: diagram 2, line 14: ...`): fix that block
-in `input.md` and convert the whole document again, rather than converting diagrams one by one.
+Convert the whole Markdown document in that one call: headings, tables, lists and every diagram block
+together. Do not convert diagrams separately and then assemble a `.docx` yourself; the command already
+writes the final document, with its styles, numbering and editable diagrams in place.
+
+A run prints what it did, and the same lines go to `result.log` next to the document:
+
+```text
+Warnings: 1 (see result.log)
+md2nativedocx: warning: diagram 2, line 9: Unsupported line ignored: Order ~~> Foo
+Wrote result.docx
+```
+
+Each warning names its diagram (the second ` ```mermaid ` or ` ```plantuml ` block here) and the line of
+that block's opening fence in `input.md`. Fix that block in `input.md`, then run the same command on the
+whole document again, until the warnings left are ones you accept. Exit code `0` means `result.docx` was
+written, warnings or not.
 
 ### In scripts and CI
 

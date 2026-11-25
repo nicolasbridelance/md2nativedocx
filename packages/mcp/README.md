@@ -11,6 +11,34 @@ MCP server (stdio) over md2nativedocx. Two tools, no document logic of its own:
 { "mcpServers": { "md2nativedocx": { "command": "npx", "args": ["-y", "@md2nativedocx/mcp"] } } }
 ```
 
+## From Markdown to the final `.docx`
+
+Send the whole Markdown document to `convert_document` in one call: it writes the final `.docx`, text,
+tables and editable diagrams together. `render_diagram` is for checking one diagram; its fragment is not
+meant to be assembled into a document by hand.
+
+````json
+{ "markdown": "# Release report\n\n```mermaid\nflowchart LR\n  A --> B\n```\n...", "outputPath": "report.docx" }
+````
+
+The reply names the file and every warning, as lines and as data:
+
+```json
+{
+  "outputPath": "/work/report.docx",
+  "bytes": 13327,
+  "warnings": ["diagram 2, line 9: Unsupported line ignored: Order ~~> Foo"],
+  "diagnostics": [
+    { "message": "Unsupported line ignored: Order ~~> Foo", "diagram": 2, "language": "mermaid", "line": 9 }
+  ]
+}
+```
+
+`diagram` counts the ` ```mermaid ` / ` ```plantuml ` blocks from 1, `line` is that block's opening fence in
+the Markdown (left out when it cannot be found for certain). To fix a warning, correct that block and call
+`convert_document` again with the whole document and a new `outputPath`, since an existing file is never
+overwritten.
+
 ## Guardrails
 
 - **Deadline.** Every call runs in a child process, killed with everything it started (Pandoc, the diagram

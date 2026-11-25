@@ -83,11 +83,6 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   (`unsupported-line`, `smartart-fallback`…) : les avertissements de `renderDiagram()` sont des chaînes,
   en faire des objets change l'API publique de `core` → décision du mainteneur. Le banc mesurera d'abord
   l'effet du bloc localisé (un avertissement réel fait passer la reprise de 9/12 à 11/12).
-- [ ] **Parcours « Markdown complet → DOCX final » dans les fiches CLI et MCP.** 27 des 30 échecs
-  historiques n'appellent pas le CLI, les trois autres convertissent des fragments puis réassemblent le
-  DOCX. Montrer l'appel unique et son résultat ; en cas de reprise, corriger le Markdown et reconvertir
-  le document entier. (La première invocation pour agents est déjà dans `packages/cli/README.md`,
-  « For automation and agents ».)
 
 ## R. Robustesse (incident `flux_arcs`, 2026-11-13) — clos, restes ci-dessous
 
