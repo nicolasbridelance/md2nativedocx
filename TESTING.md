@@ -14,7 +14,7 @@
 | 3 | [Real diagram corpus](#3-real-diagram-corpus) | `test-corpus/corpus/` | yes (regeneration + conformance) + manual Word review | real `.mmd` files from mermaid-js/mermaid go through the whole pipeline |
 | 4 | [Visual regression](#4-visual-regression) | `test-corpus/visual/`, `scripts/test-visual.mjs` | yes, on demand (LibreOffice required) | the actual render doesn't regress, not just the XML |
 | 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs`, `scripts/test-odf-validate.mjs` | yes, on demand (.NET SDK / Java required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML; same for `.odt` against the ODF schema |
-| 6 | [Native Word comparison](#6-native-word-comparison) | `tools/word-reference/` | no, manual, Windows | OOXML structure compared against an authentic Word document |
+| 6 | [Native Word comparison](#6-native-word-comparison) | `tools/word-reference/`, `scripts/test-word-connectors.mjs` | no, manual, Windows with Word | OOXML structure compared against an authentic Word document; connectors kept attached and redrawn by Word itself |
 | 7 | [Manual Word acceptance checklist](#7-manual-word-acceptance-checklist) | `test-corpus/word-verification/` | no, manual, real Word required | spec §9 release gate: known LibreOffice-only-verified defects and a crossing-heavy adversarial case, opened and eyeballed in actual Word |
 | 8 | [Historical spikes](#8-historical-spikes) | `docs/adr/spikes/` | no, archive | evidence that motivated ADR 0001/0002 |
 
@@ -158,6 +158,16 @@ extend `buildFixtures()`.
 and compares its `wpg:wgp` structure to our output. See `tools/word-reference/README.md`. Manual,
 Windows-only: use it when a real Word render diverges from what LibreOffice/our structural tests
 validate, to isolate whether the discrepancy comes from us or from the rendering engine.
+
+`npm run test:word-connectors` (since 2026-11-25) is the Word counterpart of the `.odt` connector check
+of chapter 4: every flowchart of `test-corpus/visual/fixtures/` as one `.docx` (SmartArt off), opened in
+desktop Word through COM (`scripts/word-connector-check.ps1`), which saves three copies: nothing moved,
+the shape each connector starts from moved, and that copy reopened with the shape each connector ends on
+moved. Comparing the XML Word wrote shows every connector still attached after Word's save and redrawn
+by Word when either of its shapes moves, before and after reopening. The XML is the evidence because the
+`Left`/`Top` COM reports for canvas items are not in points. Detours drawn as a free-form path (the
+fallback when no elbow route stays clear, `translator/elbow-connector.ts`) are loaded by Word as plain
+shapes: they are counted on their own line, not failed. Skips when Word is not installed; not in CI.
 
 ## 7. Manual Word acceptance checklist
 

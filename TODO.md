@@ -71,10 +71,13 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   avec l'ancienne géométrie libre (rendus identiques avant et après, baselines `test:visual` inchangées).
   Limite de LibreOffice, notée dans le manuel ; le `.odt` n'est pas concerné. Bug à signaler à LibreOffice (décision du mainteneur).
   Détail dans le banc : `ROUTED_CONNECTOR_RESULTS.md`.
-- [ ] **Persistance des connecteurs dans les régressions Word.** Le banc vérifie 14 connecteurs sur neuf
-  documents après déplacement, sauvegarde et réouverture ; en faire un contrôle Word sur une fixture
-  versionnée ici. Le banc a aussi une fixture de pagination de 30 pages (table sur trois pages, dessins
-  sur des pages distinctes) à reprendre.
+- [ ] **Pagination dans les régressions Word.** La persistance des connecteurs est faite (2026-11-25,
+  `npm run test:word-connectors`, TESTING.md §6) : 219 connecteurs des 32 flowcharts du corpus visuel
+  restent attachés après la sauvegarde de Word et sont retracés quand l'une ou l'autre forme bouge,
+  avant et après réouverture. Les 2 détours de `crossing-stress-bipartite` dessinés en géométrie libre
+  (aucun coude dégagé) sont, eux, chargés par Word comme des formes simples, détachés : limite connue du
+  repli, comptée à part par le contrôle. Reste la fixture de pagination de 30 pages du banc (table sur
+  trois pages, dessins sur des pages distinctes) à reprendre.
 - [ ] **Rapport de conversion exploitable par un agent.** Le bloc concerné est fait (2026-11-25) : chaque
   avertissement porte le numéro de son diagramme et la ligne de sa clôture d'ouverture
   (`diagram 2, line 14: ...`) dans le `.log`, la sortie du CLI et la réponse MCP, et en données dans
