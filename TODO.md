@@ -61,10 +61,11 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
 - [ ] **Connecteurs routés : reste après le passage au `bentConnector5` (2026-11-24).** Un détour de
   flowchart est désormais un connecteur coudé de Word, attaché (`translator/elbow-connector.ts`) ; la
   géométrie libre ne reste que si aucun couloir de Dagre n'est dégagé. Vérifié par rendu dans Word et
-  PowerPoint (LR, TB, BT, RL ; F02, S02, S03). Reste : (1) l'œil du mainteneur sur
-  `test-corpus/word-verification/routed-connectors.docx`, après déplacement d'une forme : Word recalcule
-  alors le chemin lui-même et peut traverser un nœud (mesuré par le banc), comme pour tout connecteur ;
-  (2) F16, le même raccourci dans le rapport multipage du banc ; (3) LibreOffice Writer, à l'ouverture du
+  PowerPoint (LR, TB, BT, RL ; F02, S02, S03 ; F16, le même raccourci dans le rapport multipage du banc,
+  rendu dans Word le 2026-11-25 : détour sous les nœuds, attaché aux deux bouts). Reste : (1) l'œil du
+  mainteneur sur `test-corpus/word-verification/routed-connectors.docx`, après déplacement d'une forme :
+  Word recalcule alors le chemin lui-même et peut traverser un nœud (mesuré par le banc), comme pour tout
+  connecteur ; (2) LibreOffice Writer, à l'ouverture du
   `.docx`, retrace lui-même ces détours en ligne droite à travers le nœud : il ignore les réglages des
   `bentConnector4`/`5` (attachés ou non ; il respecte ceux du `bentConnector3`) et faisait déjà de même
   avec l'ancienne géométrie libre (rendus identiques avant et après, baselines `test:visual` inchangées).
