@@ -58,6 +58,11 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   `'single quotes'` are read as Mermaid reads them, and `icon(none)` no longer warns.
 
 ### Fixed
+- Relationship labels of class and ER diagrams (`Vehicle ..> Inspection : requires`, `CUSTOMER ||--o{ ORDER :
+  places`) sit on a white background, as in Mermaid. The line used to run through the text, which read as
+  struck through.
+- The warning for a flowchart with a subgraph no longer says "nested subgraph": any subgraph keeps it out of
+  SmartArt, nested or not.
 - In real Word, a SmartArt box with a light colour of its own (`classDef`, `style`, a highlighted file) showed
   white text that could hardly be read; its text is now dark, as LibreOffice already showed it.
 - The extension package now carries the license notices of all the third-party code inside it (layout,

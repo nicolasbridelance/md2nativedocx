@@ -51,6 +51,8 @@ const ATTR_FONT_PX = 10;
 const TITLE_SIZE_HALFPT = 22;
 const ATTR_SIZE_HALFPT = 18;
 const LABEL_SIZE_HALFPT = 16;
+/** Height of the white background under a relationship label (8 pt text), as in the requirement diagram. */
+const LABEL_BG_H = 14;
 const TITLE_H = 32;
 const ROW_H = 22;
 const COMPARTMENT_PAD_Y = 6;
@@ -323,6 +325,11 @@ export function translateErDiagramToOoxml(chart: ErDiagram, options: CanvasOptio
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
       const labelWidth = estimateTextWidth(rel.label, 8) + 12;
+      // A white background under the label, as Mermaid gives its relationship labels (`labelBkg`): without
+      // it the line runs through the text, which then reads as struck through.
+      parts.push(
+        rect(nextId(), scalePt(midX + dx - labelWidth / 2, s), scalePt(midY + dy - LABEL_BG_H / 2, s), scalePt(labelWidth, s), scalePt(LABEL_BG_H, s), 'FFFFFF', undefined, `${rel.label} background`),
+      );
       parts.push(
         textBoxLines(
           nextId(),
