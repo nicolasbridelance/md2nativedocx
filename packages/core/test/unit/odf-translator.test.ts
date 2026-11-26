@@ -24,7 +24,7 @@ test('flowchart: one as-char group in one paragraph, a shape per node, a connect
   assert.equal(attr(tags(fragment, 'draw:g')[0]!, 'text:anchor-type'), 'as-char');
   assert.equal(tags(fragment, 'draw:custom-shape').length, 3);
   assert.equal(tags(fragment, 'draw:connector').length, 2);
-  assert.deepEqual(metadata, { diagramType: 'flowchart', label: 'Flowchart', warnings: [] });
+  assert.deepEqual(metadata, { diagramType: 'flowchart', label: 'Flowchart', warnings: [], notes: [] });
 });
 
 test('connectors reference existing shape ids, with glue points and the required viewBox', () => {

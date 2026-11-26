@@ -135,18 +135,20 @@ function runPandoc(bin, args, { cwd, env, timeoutMs }) {
 /**
  * Everything worth reporting about a finished conversion, in document order: unclosed fences found in the
  * source before Pandoc ran, then the lines this project wrote to stderr (parser warnings, SmartArt or chart
- * fallbacks, from each bridge run the Lua filter spawned), each tied to its diagram, then the images the
- * sandbox left out. Pandoc's own diagnostics share the stream but are not ours to count.
- * @returns {{ diagnostics: Array<import('./convert.d.mts').ConversionDiagnostic>, warnings: string[] }}
+ * failures, from each bridge run the Lua filter spawned), each tied to its diagram, then the images the
+ * sandbox left out. The bridge's notes (a correct flowchart drawn as shapes, not SmartArt) come apart, in
+ * `notes`. Pandoc's own diagnostics share the stream but are not ours to count.
+ * @returns {{ diagnostics: Array<import('./convert.d.mts').ConversionDiagnostic>, warnings: string[], notes: Array<import('./convert.d.mts').ConversionDiagnostic> }}
  */
 function conversionDiagnostics(source, pandocStderr, options) {
   const text = sourceText(source);
+  const fromDiagrams = diagramDiagnostics(pandocStderr, text);
   const diagnostics = [
     ...(text === undefined ? [] : unclosedFenceDiagnostics(text)),
-    ...diagramDiagnostics(pandocStderr, text),
+    ...fromDiagrams.warnings,
     ...sandboxWarnings(pandocStderr, options).map((message) => ({ message })),
   ];
-  return { diagnostics, warnings: diagnostics.map(formatDiagnostic) };
+  return { diagnostics, warnings: diagnostics.map(formatDiagnostic), notes: fromDiagrams.notes };
 }
 
 /** The Markdown text, or `undefined` when the file cannot be read. */

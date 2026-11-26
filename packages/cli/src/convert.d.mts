@@ -81,7 +81,7 @@ export interface ConvertOptions {
   nodeBin?: string;
 }
 
-/** One non-fatal problem, with where it is in the Markdown when that is known. */
+/** One non-fatal problem (or one note), with where it is in the Markdown when that is known. */
 export interface ConversionDiagnostic {
   /** What happened, as the engine says it, without its place. */
   message: string;
@@ -101,12 +101,18 @@ export interface ConvertResult {
   /** The `.docx` (or `.odt`) file's bytes. */
   document: Buffer;
   /**
-   * Non-fatal problems in the diagrams (syntax ignored, a SmartArt or chart drawn as shapes instead), one
-   * line each, place first: `warning: diagram 2, line 14: ...`. The same as {@link diagnostics}, as text.
+   * Non-fatal problems in the diagrams (syntax ignored, a SmartArt or chart that failed and was drawn as
+   * shapes instead), one line each, place first: `warning: diagram 2, line 14: ...`. The same as
+   * {@link diagnostics}, as text.
    */
   warnings: string[];
   /** The same problems as data: message, diagram number, language and line, in document order. */
   diagnostics: ConversionDiagnostic[];
+  /**
+   * Rendering choices that ask for no change, placed like the problems: a flowchart SmartArt cannot take (a
+   * loop, a merge, a subgraph) drawn as shapes, with the reason. Not counted among {@link warnings}.
+   */
+  notes: ConversionDiagnostic[];
   /** Everything Pandoc and the filter wrote to stderr, for a log. */
   pandocStderr: string;
 }

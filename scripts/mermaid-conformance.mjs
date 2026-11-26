@@ -7,7 +7,7 @@
  *
  * Per example, one status:
  *   - `clean`      : the type expected for the page was detected and rendered with no warning (rendering
- *                    notices such as "Native shapes used" are not syntax gaps and do not count);
+ *                    notices such as "diagram scaled down" are not syntax gaps and do not count);
  *   - `warned`     : rendered, with warnings (syntax ignored, SmartArt/chart refused, a note…);
  *   - `not-converted`: a Mermaid type this project recognizes but does not draw yet (a note stands in);
  *   - `wrong-type` : detected as another type than the page documents (e.g. an unknown type drawn as a flowchart);
@@ -64,9 +64,10 @@ export const PAGE_TYPES = {
 
 /**
  * Rendering notices, not syntax gaps: the source was understood, the renderer only reports a choice it
- * made (shapes instead of SmartArt, a diagram scaled down to fit the page).
+ * made (a diagram scaled down to fit the page, icons drawn as text). Shapes instead of SmartArt is a note
+ * (`metadata.notes`), not a warning, so it needs no pattern here.
  */
-const NOTICES = [/^Native shapes used \(/, /^Actor icons and /, /^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
+const NOTICES = [/^Actor icons and /, /^diagram scaled down to fit the page/, /^Frontmatter options \(theme, colours, layout\) are not applied/, /^Interactive directives \(`click`, `link`, `callback`\) are not exported/];
 export const isNotice = (warning) => NOTICES.some((re) => re.test(warning));
 
 export function classify(page, source) {

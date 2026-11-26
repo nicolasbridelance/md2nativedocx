@@ -91,7 +91,7 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   if (!(type in FLOWCHART_PARSERS)) {
     const message = `${label} not converted: .odt output draws flowcharts (and the types drawn as flowcharts) only for now.`;
     warnings.push(message);
-    return { ...buildOdfNote(message, idPrefix), metadata: { diagramType: type, label, warnings } };
+    return { ...buildOdfNote(message, idPrefix), metadata: { diagramType: type, label, warnings, notes: [] } };
   }
 
   const prepared = prepareSource(source, type);
@@ -111,7 +111,7 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
   const result = layout(flowchart, canvas);
   warnings.push(...result.warnings);
   const drawing = translateToOdf(flowchart, result, { ...canvas, idPrefix });
-  if (prepared.title === undefined) return { ...drawing, metadata: { diagramType: type, label, warnings } };
+  if (prepared.title === undefined) return { ...drawing, metadata: { diagramType: type, label, warnings, notes: [] } };
   // A frontmatter `title:` is drawn above the diagram, as in the .docx: bold, aligned with the drawing's
   // left edge, kept with it.
   const titleStyle = `${idPrefix}-title`;
@@ -121,7 +121,7 @@ export function renderDiagramOdf(source: string, options: OdfRenderOptions = {})
       `<style:style style:name="${titleStyle}" style:family="paragraph"><style:paragraph-properties fo:text-align="start" fo:keep-with-next="always"/><style:text-properties fo:font-weight="bold" fo:font-size="14pt"/></style:style>`,
       ...drawing.automaticStyles,
     ],
-    metadata: { diagramType: type, label, warnings },
+    metadata: { diagramType: type, label, warnings, notes: [] },
   };
 }
 

@@ -91,13 +91,16 @@ A run prints what it did, and the same lines go to `result.log` next to the docu
 ```text
 Warnings: 1 (see result.log)
 md2nativedocx: warning: diagram 2, line 9: Unsupported line ignored: Order ~~> Foo
+md2nativedocx (info): diagram 3, line 21: Native shapes used (diagram shape not recognized by SmartArt export).
 Wrote result.docx
 ```
 
 Each warning names its diagram (the second ` ```mermaid ` or ` ```plantuml ` block here) and the line of
 that block's opening fence in `input.md`. Fix that block in `input.md`, then run the same command on the
 whole document again, until the warnings left are ones you accept. Exit code `0` means `result.docx` was
-written, warnings or not.
+written, warnings or not. An `(info)` line is not a warning and is not counted: it says why a correct
+diagram (here a flowchart with a loop) was drawn as editable shapes rather than SmartArt. Leave that block
+as it is.
 
 ### In scripts and CI
 
@@ -189,10 +192,11 @@ await writeFile('report.docx', document);
 ```
 
 `convert()` takes Markdown text, or `{ path }` of a file, and resolves to `{ document, warnings,
-diagnostics, pandocStderr }`; `document` is the `.docx` as a `Buffer`. `diagnostics` holds the same
+diagnostics, notes, pandocStderr }`; `document` is the `.docx` as a `Buffer`. `diagnostics` holds the same
 problems as `warnings`, as data: `{ message, diagram, language, line }`, where `diagram` is the block's
 number in the document (1 for the first ```` ```mermaid ```` or ```` ```plantuml ````) and `line` its opening
-fence, left out when it cannot be found for certain. It reads no environment variable: every setting
+fence, left out when it cannot be found for certain. `notes` has the same shape and needs no fix (a
+flowchart SmartArt cannot take, drawn as shapes). It reads no environment variable: every setting
 is an option (types in `src/convert.d.mts`, mirroring the variables above). A failure is a
 `ConversionError` whose `stage` is `setup`, `pandoc` or `postprocess`. To render a single diagram without
 Pandoc, use `renderDiagram()` from `@md2nativedocx/core`.

@@ -17,6 +17,7 @@ const TOOLS = {
       diagramType: result.metadata.diagramType,
       label: result.metadata.label,
       warnings: result.metadata.warnings,
+      notes: result.metadata.notes,
       parts: result.parts.map((p) => p.kind),
       fragment: result.fragment,
     };
@@ -33,7 +34,8 @@ const TOOLS = {
     // 'wx': never overwrite a file the caller did not create; the parent already validated the path.
     await writeFile(outputPath, result.document, { flag: 'wx' });
     // `warnings` as lines to read, `diagnostics` as data: each problem with its diagram number and line.
-    return { outputPath, bytes: result.document.length, warnings: result.warnings, diagnostics: result.diagnostics };
+    // `notes`: placed the same way, but nothing to fix (a correct flowchart drawn as shapes, not SmartArt).
+    return { outputPath, bytes: result.document.length, warnings: result.warnings, diagnostics: result.diagnostics, notes: result.notes };
   },
 };
 

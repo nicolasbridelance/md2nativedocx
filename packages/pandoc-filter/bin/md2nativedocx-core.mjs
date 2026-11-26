@@ -48,7 +48,10 @@
  * inherited by `packages/cli/bin/md2nativedocx.mjs`'s `execFile` call, which
  * counts `md2nativedocx: `-prefixed lines and surfaces them (CLI stdout
  * summary + a `.log` file next to the output; the VS Code extension turns
- * the count into a toast). A source that does not parse prints
+ * the count into a toast). `RenderResult.metadata.notes` (a correct flowchart
+ * drawn as shapes because SmartArt cannot take it) are written as
+ * `md2nativedocx (info): <text>`: reported, never counted as warnings. The ODF
+ * path has no SmartArt, hence no notes. A source that does not parse prints
  * `md2nativedocx: <message>` and exits 1.
  */
 
@@ -62,6 +65,9 @@ import {
   buildOdfDiagramTooLargeNote,
   DiagramTooLargeError,
 } from '@md2nativedocx/core';
+
+/** Prefix of a `metadata.notes` line on stderr: read by the CLI, never counted as a warning. */
+const NOTE_PREFIX = 'md2nativedocx (info): ';
 
 const inputPath = process.argv[2];
 const odfPrefix = process.argv[3] === '--odf' ? process.argv[4] : undefined;
@@ -139,6 +145,7 @@ function renderDocx() {
     for (const warning of result.metadata.warnings) {
       process.stderr.write(`md2nativedocx: warning: ${warning}\n`);
     }
+    for (const note of result.metadata.notes) process.stderr.write(`${NOTE_PREFIX}${note}\n`);
     for (const part of result.parts) writePart(part);
     return result.fragment;
   } catch (err) {

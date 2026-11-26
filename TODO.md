@@ -86,6 +86,12 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   (`unsupported-line`, `smartart-fallback`…) : les avertissements de `renderDiagram()` sont des chaînes,
   en faire des objets change l'API publique de `core` → décision du mainteneur. Le banc mesurera d'abord
   l'effet du bloc localisé (un avertissement réel fait passer la reprise de 9/12 à 11/12).
+  Fait le 2026-11-26 (décision du mainteneur) : « Native shapes used (…) » (un flowchart correct que
+  SmartArt ne prend pas : boucle, fusion, sous-graphe) n'est plus un avertissement mais une note
+  (`RenderMetadata.notes`, `convert().notes`, ligne `md2nativedocx (info):`, section « Notes » du `.log`,
+  `notes` dans la réponse MCP), placée comme un avertissement et hors de `Warnings: N`. À trancher si le
+  banc le demande : d'autres messages sans correction possible du source (« Frontmatter options … are not
+  applied », « Interactive directives … are not exported ») pourraient suivre le même chemin.
 
 ## R. Robustesse (incident `flux_arcs`, 2026-11-13) — clos, restes ci-dessous
 

@@ -202,10 +202,17 @@ export interface RenderMetadata {
   /** Mermaid's own name for the type. */
   label: string;
   /**
-   * Non-fatal problems, in the order they occurred: syntax the parser ignored, a layout retried, or a
-   * SmartArt/chart rendering abandoned for shapes (with the reason). Plain text, no prefix.
+   * Non-fatal problems, in the order they occurred: syntax the parser ignored, a layout retried, a
+   * SmartArt or chart rendering that failed and fell back to shapes. Plain text, no prefix.
    */
   warnings: string[];
+  /**
+   * Rendering choices worth knowing that ask for no change to the source, in the order they were made:
+   * today, why a flowchart could not be a SmartArt and was drawn as shapes. Kept apart from
+   * {@link warnings} so that a caller counting or fixing warnings does not touch a correct diagram.
+   * Plain text, no prefix.
+   */
+  notes: string[];
 }
 
 /** One rendered diagram. */
@@ -237,6 +244,7 @@ interface RenderContext {
   options: RenderOptions;
   canvas: CanvasOptions;
   warnings: string[];
+  notes: string[];
   /** Run a SmartArt generator; `null` when SmartArt is off, not applicable, or failed (warning added). */
   smartArt(generate: (options: SmartArtGenerateOptions) => GeneratedSmartArt | null): Rendered | null;
   /** Build a native chart; `null` when charts are off for `type` or the chart failed (warning added). */
@@ -407,12 +415,13 @@ const renderFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnin
     );
   }
   // Say why only when SmartArt was attempted and rejected for a structural reason (spec §10.3); never
-  // when SmartArt is off, and never for a generation error (already a warning). Since 2026-11-17 the
-  // reason is a warning (export log, VS Code "View warnings"), no longer a paragraph in the document:
-  // it is meant for the author, and in the document it reached every reader, in English.
+  // when SmartArt is off, and never for a generation error (a warning). Since 2026-11-17 the reason is
+  // reported to the author, no longer a paragraph in the document, which reached every reader in
+  // English. Since 2026-11-26 it is a note, not a warning: a loop or a merge is a correct flowchart,
+  // and an agent told to fix the diagram each warning names would change it for nothing.
   if (ctx.options.smartArt) {
     const classification = classifyTopology(ast);
-    if (!classification.eligible) ctx.warnings.push(smartArtFallbackMessage(classification));
+    if (!classification.eligible) ctx.notes.push(smartArtFallbackMessage(classification));
   }
   return shapes(fragment);
 };
@@ -584,6 +593,7 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
   if (source.length > maxSource) throw new DiagramTooLargeError('source', source.length, maxSource);
   const { type, label } = detectDiagramType(source);
   const warnings: string[] = [];
+  const notes: string[] = [];
   const generateId = options.newPartId ?? (() => globalThis.crypto.randomUUID());
   const newPartId = (): string => {
     const id = generateId();
@@ -601,6 +611,7 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
     options,
     canvas,
     warnings,
+    notes,
     smartArt(generate) {
       if (!options.smartArt) return null;
       const id = newPartId();
@@ -648,5 +659,5 @@ export function renderDiagram(source: string, options: RenderOptions = {}): Rend
   warnings.push(...prepared.warnings);
   const rendered = RENDERERS[type].render(prepared.source, ctx);
   const fragment = titleParagraphXml(prepared.title, 'left') + rendered.fragment;
-  return { ...rendered, fragment, metadata: { diagramType: type, label, warnings } };
+  return { ...rendered, fragment, metadata: { diagramType: type, label, warnings, notes } };
 }

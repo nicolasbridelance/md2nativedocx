@@ -13,6 +13,9 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   (user, workspace, folder), it stays on: a repository's `.vscode/settings.json` cannot turn it off.
 
 ### Changed
+- **A flowchart SmartArt cannot take no longer counts as a warning.** A loop, a merge or a subgraph is a
+  correct diagram, drawn as editable shapes: the reason ("Native shapes used …") is now listed under
+  *Notes* in the export log, and the export no longer says "with 1 warning(s)" for it.
 - **C4 diagrams are drawn as Mermaid draws them.** Boundaries (`Boundary`, `Enterprise_Boundary`,
   `System_Boundary`, `Container_Boundary`) are dashed frames and deployment nodes solid ones, nested, around
   what they hold; elements sit on a grid in the order they are written (`UpdateLayoutConfig` sets how many per

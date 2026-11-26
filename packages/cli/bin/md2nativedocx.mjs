@@ -26,6 +26,7 @@ import { basename, extname } from 'node:path';
 import { existsSync } from 'node:fs';
 import { CliError, assertNotSameFile, cliVersion, resolveSafePath } from '../src/cliSupport.mjs';
 import { ConversionError, convert } from '../src/convert.mjs';
+import { placedMessage } from '../src/diagramWarnings.mjs';
 import { writeOutputSafely } from '../src/writeOutputSafely.mjs';
 import { formatWordCompatibility, runWordCompatibilityCheck } from '../src/wordCheck.mjs';
 import { hasLayoutOptions, readConvertOptionsFromEnv } from '../src/envOptions.mjs';
@@ -221,12 +222,15 @@ async function main() {
   // Surface the diagrams' non-fatal notices: never let a successful export silently hide something the
   // author should know about.
   const warnings = [...cliWarnings, ...result.warnings].map((w) => `md2nativedocx: ${w}`);
+  // Notes ask for no change (a correct flowchart drawn as shapes, not SmartArt): shown and logged as info,
+  // never in the `Warnings: N` count, so whoever fixes every warning does not touch a correct diagram.
+  const notes = result.notes.map(placedMessage);
   const wordCompatibility = format === 'docx' ? runWordCompatibilityCheck(output) : null;
   // The document is already written: a log that cannot be written is reported, not turned into a
   // failed export (exit 0, the document is usable; the warning count is then only on the console).
   let logName = null;
   try {
-    logName = basename(writeExportLog({ input, output, warnings, rawStderr: result.pandocStderr, wordCompatibility }));
+    logName = basename(writeExportLog({ input, output, warnings, notes, rawStderr: result.pandocStderr, wordCompatibility }));
   } catch (err) {
     if (!(err instanceof ConversionError)) throw err;
     process.stderr.write(`md2nativedocx: the export log could not be written (${err.message}); ${basename(output)} was written.\n`);
@@ -235,6 +239,7 @@ async function main() {
     process.stdout.write(`Warnings: ${warnings.length}${logName ? ` (see ${logName})` : ''}\n`);
     for (const warning of warnings) process.stderr.write(`${warning}\n`);
   }
+  for (const note of notes) process.stderr.write(`md2nativedocx (info): ${note}\n`);
   process.stdout.write(`Wrote ${basename(output)}\n`);
 }
 
@@ -243,7 +248,7 @@ async function main() {
  * somewhere durable to point to — spec §10, "surface warnings". Written on
  * every successful export, not just when there are warnings, for a
  * consistent, discoverable location. */
-function writeExportLog({ input, output, warnings, rawStderr, wordCompatibility }) {
+function writeExportLog({ input, output, warnings, notes, rawStderr, wordCompatibility }) {
   const logPath = ['.docx', '.odt'].includes(extname(output).toLowerCase())
     ? output.slice(0, -extname(output).length) + '.log'
     : `${output}.log`;
@@ -259,6 +264,9 @@ function writeExportLog({ input, output, warnings, rawStderr, wordCompatibility 
     lines.push(...warnings.map((w) => `- ${w.replace(/^md2nativedocx:\s*(warning:\s*)?/, '')}`), '');
   } else {
     lines.push('No warnings.', '');
+  }
+  if (notes.length > 0) {
+    lines.push('Notes (nothing to fix):', ...notes.map((n) => `- ${n}`), '');
   }
   lines.push('--- Word compatibility check ---', ...formatWordCompatibility(wordCompatibility), '');
   if (rawStderr && rawStderr.trim().length > 0) {

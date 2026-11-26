@@ -61,6 +61,16 @@ test('convert(): each warning names its own diagram and fence line, in a documen
   assert.deepEqual(diagnostics, [{ message: 'Unsupported line ignored: not mermaid at all', diagram: 2, language: 'mermaid', line: 14 }]);
 });
 
+test('convert(): a correct flowchart SmartArt cannot take is a placed note, not a warning', async () => {
+  const md = '# Loop\n\n```mermaid\ngraph TD\n  A --> B\n  B --> C\n  C --> A\n  C --> D\n```\n';
+  const { warnings, diagnostics, notes } = await convert(md);
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(diagnostics, []);
+  assert.deepEqual(notes, [
+    { message: 'Native shapes used (diagram shape not recognized by SmartArt export).', diagram: 1, language: 'mermaid', line: 3 },
+  ]);
+});
+
 test('convert(): an unclosed fence is a diagnostic with its line and no diagram number', async () => {
   const { diagnostics, warnings } = await convert('# T\n\n```mermaid\ngraph TD\n  A --> B\n');
   assert.equal(diagnostics.length, 1);

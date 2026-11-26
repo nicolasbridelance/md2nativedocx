@@ -100,7 +100,7 @@ export function buildSmartArtDrawingXml(relIds: SmartArtRelIds, options: SmartAr
 
 /**
  * @deprecated Since 2026-11-17 the pipeline no longer writes this note into the document; the same
- * reason is reported as a warning ({@link smartArtFallbackMessage}). Kept exported for API stability.
+ * reason is reported to the author ({@link smartArtFallbackMessage}), as a note since 2026-11-26. Kept exported for API stability.
  *
  * Build the fallback-note `<w:p>` placed directly under a diagram that was
  * attempted for SmartArt but rejected by {@link classifyTopology}
@@ -139,8 +139,9 @@ export function buildSmartArtFallbackNoteXml(classification: SmartArtIneligible)
 
 /**
  * Specific, actionable text per {@link SmartArtIneligibleReason} (spec §10.3: never a generic
- * "auto-generated, may contain errors" disclaimer). `renderDiagram()` reports it as a warning
- * (export log, VS Code "View warnings") since 2026-11-17, instead of writing it into the document.
+ * "auto-generated, may contain errors" disclaimer). `renderDiagram()` reports it in
+ * `metadata.notes` (since 2026-11-26; a warning from 2026-11-17, a paragraph in the document before):
+ * the diagram is correct, only drawn as shapes, so it asks for no change to the source.
  */
 export function smartArtFallbackMessage(classification: SmartArtIneligible): string {
   const { reason, at } = classification;

@@ -31,7 +31,7 @@ test('flowchart chain with SmartArt on: one SmartArt part, its placeholders in t
   assert.ok(part.dataXml.includes('SMARTART_PLACEHOLDER:id1:dr'));
   assert.ok(!part.dataXml.includes('SMARTART_DRAWING_REL'), 'the generator token is replaced');
   assert.ok(part.drawingXml?.includes('dsp:drawing'), 'drawing on by default');
-  assert.deepEqual(result.metadata, { diagramType: 'flowchart', label: 'Flowchart', warnings: [] });
+  assert.deepEqual(result.metadata, { diagramType: 'flowchart', label: 'Flowchart', warnings: [], notes: [] });
 });
 
 test('smartArtDrawing: false leaves the drawing part out', () => {
@@ -47,15 +47,23 @@ test('an unknown SmartArt style falls back to the default instead of failing', (
   assert.deepEqual(bogus, colorful);
 });
 
-test('a merge stays shapes with SmartArt on; the reason is a warning, never a note in the document', () => {
+test('a merge stays shapes with SmartArt on; the reason is a note, never a warning nor text in the document', () => {
   const src = 'graph TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D';
   const on = renderDiagram(src, ON);
   assert.equal(on.kind, 'shapes');
   assert.deepEqual(on.parts, []);
   const off = renderDiagram(src);
   assert.equal(on.fragment, off.fragment, 'same shapes as with SmartArt off, nothing appended');
-  assert.ok(on.metadata.warnings.some((w) => w.includes('merge detected between "B" and "C"')));
-  assert.ok(!off.metadata.warnings.some((w) => w.includes('merge detected')), 'no reason when SmartArt is off');
+  assert.deepEqual(on.metadata.notes, ['Native shapes used (merge detected between "B" and "C" — not supported by SmartArt export).']);
+  assert.deepEqual(on.metadata.warnings, [], 'a correct flowchart has nothing to fix');
+  assert.deepEqual(off.metadata.notes, [], 'no reason when SmartArt is off');
+});
+
+test('a flowchart with a loop back is a note, not a warning', () => {
+  const result = renderDiagram('graph TD\n  A --> B\n  B --> C\n  C --> A\n  C --> D', ON);
+  assert.equal(result.kind, 'shapes');
+  assert.deepEqual(result.metadata.warnings, []);
+  assert.deepEqual(result.metadata.notes, ['Native shapes used (diagram shape not recognized by SmartArt export).']);
 });
 
 test('timeline as SmartArt: the title goes in a paragraph above, escaped', () => {

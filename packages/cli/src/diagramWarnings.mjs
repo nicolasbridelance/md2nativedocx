@@ -1,11 +1,13 @@
 // Which diagram each warning is about. The Lua filter writes `md2nativedocx-diagram: <n> <language>` to
-// stderr before it runs the bridge on the n-th diagram block, and the bridge's own warnings follow on the
-// same stream; this module reads that back into one diagnostic per warning, with the diagram's number and,
+// stderr before it runs the bridge on the n-th diagram block, and the bridge's own warnings and notes follow on the
+// same stream; this module reads that back into one diagnostic per warning or note, with the diagram's number and,
 // when it can be found for certain, the line of its fence in the Markdown. An agent repairing a document
 // then knows which block to change (TODO, « Rapport de conversion exploitable par un agent »).
 
 const MARKER = /^md2nativedocx-diagram: (\d+) (\S+)\s*$/;
 const OURS = 'md2nativedocx: ';
+/** A bridge note (`RenderMetadata.notes`): a rendering choice to report, not a warning to count. */
+const NOTE = 'md2nativedocx (info): ';
 const DIAGRAM_LANGUAGES = new Set(['mermaid', 'plantuml', 'puml']);
 const FENCE_OPEN = /^(`{3,}|~{3,})\s*(.*)$/;
 
@@ -48,15 +50,17 @@ function firstClass(info) {
 }
 
 /**
- * One diagnostic per line this project wrote to stderr (`md2nativedocx: ...`), attributed to the diagram
- * whose marker precedes it. `line` is given only when the fences found in `sourceText` match, one for one
- * and language for language, the diagrams the filter saw.
+ * One diagnostic per line this project wrote to stderr, attributed to the diagram whose marker precedes it:
+ * `md2nativedocx: ...` lines are warnings, `md2nativedocx (info): ...` lines are notes (a correct diagram
+ * drawn otherwise than it could have been, nothing to fix). `line` is given only when the fences found in
+ * `sourceText` match, one for one and language for language, the diagrams the filter saw.
  * @param {string} stderrText
  * @param {string | undefined} sourceText the Markdown, when readable
- * @returns {Array<import('./convert.d.mts').ConversionDiagnostic>}
+ * @returns {{ warnings: Array<import('./convert.d.mts').ConversionDiagnostic>, notes: Array<import('./convert.d.mts').ConversionDiagnostic> }}
  */
 export function diagramDiagnostics(stderrText, sourceText) {
-  const entries = [];
+  const warnings = [];
+  const notes = [];
   const seen = [];
   /** @type {{ index: number, language: string } | undefined} */
   let current;
@@ -67,25 +71,36 @@ export function diagramDiagnostics(stderrText, sourceText) {
       seen.push(current);
       continue;
     }
-    if (!raw.startsWith(OURS) || raw.trim().length === 0) continue;
-    const message = raw.slice(OURS.length).replace(/^warning:\s*/, '');
-    entries.push(current ? { message, diagram: current.index, language: current.language } : { message });
+    const isNote = raw.startsWith(NOTE);
+    if ((!isNote && !raw.startsWith(OURS)) || raw.trim().length === 0) continue;
+    const message = isNote ? raw.slice(NOTE.length) : raw.slice(OURS.length).replace(/^warning:\s*/, '');
+    (isNote ? notes : warnings).push(current ? { message, diagram: current.index, language: current.language } : { message });
   }
   const fences = sourceText === undefined ? [] : findDiagramFences(sourceText);
   const linesTrusted = fences.length === seen.length && seen.every((d, k) => fences[k]?.language === d.language);
-  if (!linesTrusted) return entries;
-  return entries.map((e) => (e.diagram === undefined ? e : { ...e, line: fences[e.diagram - 1]?.line }));
+  const located = (entries) =>
+    linesTrusted ? entries.map((e) => (e.diagram === undefined ? e : { ...e, line: fences[e.diagram - 1]?.line })) : entries;
+  return { warnings: located(warnings), notes: located(notes) };
 }
 
 /**
- * A diagnostic as one warning line: its place first (`diagram 2, line 14: ...`), as the export log and the
- * CLI print it.
+ * A diagnostic's message with its place first: `diagram 2, line 14: ...`.
+ * @param {import('./convert.d.mts').ConversionDiagnostic} d
+ * @returns {string}
+ */
+export function placedMessage(d) {
+  const place = [d.diagram !== undefined ? `diagram ${d.diagram}` : undefined, d.line !== undefined ? `line ${d.line}` : undefined]
+    .filter(Boolean)
+    .join(', ');
+  return `${place ? `${place}: ` : ''}${d.message}`;
+}
+
+/**
+ * A warning as one line, place first (`warning: diagram 2, line 14: ...`), as the export log and the CLI
+ * print it.
  * @param {import('./convert.d.mts').ConversionDiagnostic} d
  * @returns {string}
  */
 export function formatDiagnostic(d) {
-  const place = [d.diagram !== undefined ? `diagram ${d.diagram}` : undefined, d.line !== undefined ? `line ${d.line}` : undefined]
-    .filter(Boolean)
-    .join(', ');
-  return `warning: ${place ? `${place}: ` : ''}${d.message}`;
+  return `warning: ${placedMessage(d)}`;
 }

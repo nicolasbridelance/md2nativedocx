@@ -108,6 +108,25 @@ test('cli surfaces parser warnings: stdout summary + stderr + itemized in the .l
   }
 });
 
+test('cli prints a note as an (info) line and logs it apart, never in the warning count', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
+  const md = join(dir, 'doc.md');
+  const docx = join(dir, 'doc.docx');
+  writeFileSync(md, '# T\n\n```mermaid\ngraph TD\n  A --> B\n  B --> C\n  C --> A\n  C --> D\n```\n');
+  try {
+    const { code, out, err } = runCli([md, '-o', docx]);
+    assert.equal(code, 0, out);
+    assert.ok(!out.includes('Warnings:'), out);
+    assert.match(err, /^md2nativedocx \(info\): diagram 1, line 3: Native shapes used \(/m);
+    assert.doesNotMatch(err, /^md2nativedocx: warning: /m);
+    const log = readFileSync(join(dir, 'doc.log'), 'utf8');
+    assert.match(log, /^Warnings: 0$/m);
+    assert.match(log, /^Notes \(nothing to fix\):\n- diagram 1, line 3: Native shapes used \(/m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('cli honours MD2NATIVEDOCX_REFERENCE_DOC when it points to a real file', () => {
   const dir = mkdtempSync(join(tmpdir(), 'md2nativedocx-cli-'));
   const md = join(dir, 'doc.md');
