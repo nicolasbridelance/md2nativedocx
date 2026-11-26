@@ -71,13 +71,15 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   avec l'ancienne géométrie libre (rendus identiques avant et après, baselines `test:visual` inchangées).
   Limite de LibreOffice, notée dans le manuel ; le `.odt` n'est pas concerné. Bug à signaler à LibreOffice (décision du mainteneur).
   Détail dans le banc : `ROUTED_CONNECTOR_RESULTS.md`.
-- [ ] **Pagination dans les régressions Word.** La persistance des connecteurs est faite (2026-11-25,
-  `npm run test:word-connectors`, TESTING.md §6) : 219 connecteurs des 32 flowcharts du corpus visuel
-  restent attachés après la sauvegarde de Word et sont retracés quand l'une ou l'autre forme bouge,
-  avant et après réouverture. Les 2 détours de `crossing-stress-bipartite` dessinés en géométrie libre
-  (aucun coude dégagé) sont, eux, chargés par Word comme des formes simples, détachés : limite connue du
-  repli, comptée à part par le contrôle. Reste la fixture de pagination de 30 pages du banc (table sur
-  trois pages, dessins sur des pages distinctes) à reprendre.
+- [ ] **Diagramme haut et étroit rendu carré dans Word.** Vu le 2026-11-26 par `test:word-pagination` :
+  un flowchart de 30 étapes en `TD` est réduit dans un carré de la largeur utile (468 × 468 pt sur Letter,
+  451 × 451 pt en A4), pas à la hauteur utile (650 et 698 pt). Cause : `MIN_SAFE_ASPECT_RATIO`
+  (`ooxml-translator.ts`) élargit tout cadre haut de plus de 7,5 in à un rapport 1:1, pour contourner un
+  LibreOffice qui n'affichait rien au-delà (environ 25 rendus contrôlés à l'époque, version non notée ;
+  jamais vérifié dans Word). Le lecteur Word perd ainsi 28 % de la hauteur. Effet limité ici
+  (texte à 2 pt au lieu de 2,8 pt, illisible dans les deux cas, et l'avertissement le dit). À faire :
+  vérifier si le LibreOffice épinglé a encore ce défaut ; s'il ne l'a plus, retirer le rembourrage
+  (baselines `test:visual` à revoir une à une).
 - [ ] **Rapport de conversion exploitable par un agent.** Le bloc concerné est fait (2026-11-25) : chaque
   avertissement porte le numéro de son diagramme et la ligne de sa clôture d'ouverture
   (`diagram 2, line 14: ...`) dans le `.log`, la sortie du CLI et la réponse MCP, et en données dans

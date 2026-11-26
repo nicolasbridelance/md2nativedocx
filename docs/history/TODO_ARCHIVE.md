@@ -3646,3 +3646,16 @@ résumé d'un sous-agent, page non relue par le mainteneur). On passe donc à la
       - [x] délai pour le CLI (fait) ; le pont du filtre reste borné par celui de Pandoc (voir « Limites de ressources », §2bis) ;
       - `eslint-plugin-regexp` / `recheck` contre les ReDoS : nouvelle dépendance, **escalade**.
 
+## 2026-11-26 — pagination dans les régressions Word
+
+- [x] **Pagination dans les régressions Word.** Persistance des connecteurs faite le 2026-11-25
+  (`npm run test:word-connectors`) : 219 connecteurs des 32 flowcharts du corpus visuel restent attachés
+  après la sauvegarde de Word et sont retracés quand l'une ou l'autre forme bouge, avant et après
+  réouverture ; les 2 détours en géométrie libre de `crossing-stress-bipartite` sont comptés à part.
+  Pagination faite le 2026-11-26 (`npm run test:word-pagination`, TESTING.md §6), reprise de
+  `word_long_document_smoke.py` du banc : manuel de 32 pages (37 en A4 avec la section paysage), tableau
+  de 81 lignes sur 3 pages (4 en paysage) avec en-tête répété, aucun titre isolé en bas de page, les trois
+  dessins chacun sur une page et dans la zone utile, section paysage entre deux sections portrait,
+  Word 16.0.20625. Le contrôle a fait apparaître deux défauts : le conseil de l'avertissement de
+  lisibilité proposait `TB` à un diagramme déjà vertical (corrigé : il suit l'axe qui déborde,
+  `nodeTextFit`), et le carré imposé aux diagrammes hauts (resté ouvert dans `TODO.md`).

@@ -21,6 +21,7 @@
     "test:odf-validate": "node scripts/test-odf-validate.mjs",
     "test:odf-connectors": "node scripts/test-odf-connectors.mjs",
     "test:word-connectors": "node scripts/test-word-connectors.mjs",
+    "test:word-pagination": "node scripts/test-word-pagination.mjs",
     "verify:npm-packages": "node scripts/verify-npm-packages.mjs",
     "audit:gate": "node scripts/audit-gate.mjs",
     "hooks:install": "node scripts/install-git-hooks.mjs"

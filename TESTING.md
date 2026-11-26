@@ -14,7 +14,7 @@
 | 3 | [Real diagram corpus](#3-real-diagram-corpus) | `test-corpus/corpus/` | yes (regeneration + conformance) + manual Word review | real `.mmd` files from mermaid-js/mermaid go through the whole pipeline |
 | 4 | [Visual regression](#4-visual-regression) | `test-corpus/visual/`, `scripts/test-visual.mjs` | yes, on demand (LibreOffice required) | the actual render doesn't regress, not just the XML |
 | 5 | [Open XML schema validation](#5-open-xml-schema-validation) | `scripts/oxml-validator/`, `scripts/test-oxml-validate.mjs`, `scripts/test-odf-validate.mjs` | yes, on demand (.NET SDK / Java required) | the generated `.docx` conforms to the exact schema real Word enforces strictly — not just well-formed XML; same for `.odt` against the ODF schema |
-| 6 | [Native Word comparison](#6-native-word-comparison) | `tools/word-reference/`, `scripts/test-word-connectors.mjs` | no, manual, Windows with Word | OOXML structure compared against an authentic Word document; connectors kept attached and redrawn by Word itself |
+| 6 | [Native Word comparison](#6-native-word-comparison) | `tools/word-reference/`, `scripts/test-word-connectors.mjs`, `scripts/test-word-pagination.mjs` | no, manual, Windows with Word | OOXML structure compared against an authentic Word document; connectors kept attached and redrawn by Word itself; pagination of a long document by Word |
 | 7 | [Manual Word acceptance checklist](#7-manual-word-acceptance-checklist) | `test-corpus/word-verification/` | no, manual, real Word required | spec §9 release gate: known LibreOffice-only-verified defects and a crossing-heavy adversarial case, opened and eyeballed in actual Word |
 | 8 | [Historical spikes](#8-historical-spikes) | `docs/adr/spikes/` | no, archive | evidence that motivated ADR 0001/0002 |
 
@@ -168,6 +168,19 @@ by Word when either of its shapes moves, before and after reopening. The XML is 
 `Left`/`Top` COM reports for canvas items are not in points. Detours drawn as a free-form path (the
 fallback when no elbow route stays clear, `translator/elbow-connector.ts`) are loaded by Word as plain
 shapes: they are counted on their own line, not failed. Skips when Word is not installed; not in CI.
+
+`npm run test:word-pagination` (since 2026-11-26) checks how Word paginates a long document, which
+LibreOffice (chapter 4) paginates differently. A generated handbook of about thirty pages (24 headed
+sections, a footnote, an 80-row table with its caption under its own heading, a branch-and-merge
+flowchart, a chain drawn as SmartArt, a 30-step flowchart far taller than a page) is converted by the
+real CLI twice: on the default page, and on A4 with the table in its own landscape section
+(`MD2NATIVEDOCX_LANDSCAPE_TABLES`). Word repaginates each one through COM
+(`scripts/word-pagination-check.ps1`) and reports where everything landed. It fails when a heading ends a
+page away from the paragraph after it, when the table does not span pages or its header row does not
+repeat, when a drawing is larger than the usable area of its section or not on one page, when the
+landscape section does not hold the whole table between two portrait ones, or when a heading, the
+footnote or the caption is missing. `--keep <dir>` keeps each `.docx`, Word's PDF export and the
+measurements. Skips when Word is not installed; not in CI.
 
 ## 7. Manual Word acceptance checklist
 
