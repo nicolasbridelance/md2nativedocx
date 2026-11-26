@@ -34,12 +34,18 @@ export class JobFailedError extends Error {
   }
 }
 
-function killTree(child) {
+/** Kill `child` and its descendants; `done` runs once the kill has been carried out. */
+function killTree(child, done = () => {}) {
   const pid = child.pid;
-  if (pid === undefined) return;
+  if (pid === undefined) {
+    done();
+    return;
+  }
   if (process.platform === 'win32') {
+    // taskkill /F returns once the processes are terminated; it takes a few hundred ms to start, cold.
     execFile('taskkill', ['/pid', String(pid), '/T', '/F'], () => {
       // Best effort: the process may already be gone; nothing to report either way.
+      done();
     });
     return;
   }
@@ -48,6 +54,7 @@ function killTree(child) {
   } catch {
     // The group is already gone (the job finished between the deadline and the kill): nothing to kill.
   }
+  done();
 }
 
 /**
@@ -68,6 +75,7 @@ export function runJob(job, { timeoutMs, runnerPath = DEFAULT_RUNNER }) {
       if (stderr.length < MAX_STDERR) stderr += chunk.toString('utf8');
     });
     let settled = false;
+    let timedOut = false;
     const finish = (fn, value) => {
       if (settled) return;
       settled = true;
@@ -75,17 +83,23 @@ export function runJob(job, { timeoutMs, runnerPath = DEFAULT_RUNNER }) {
       fn(value);
     };
     const timer = setTimeout(() => {
-      killTree(child);
-      finish(reject, new JobTimeoutError(timeoutMs));
+      timedOut = true;
+      // Answer once the tree is gone, so "the work was killed" is true when the caller hears it. Until
+      // then, the worker's own exit (caused by the kill) or a late answer must not settle the call.
+      killTree(child, () => finish(reject, new JobTimeoutError(timeoutMs)));
     }, timeoutMs);
     child.on('message', (msg) => {
+      if (timedOut) return;
       // The answer is in; the group is killed so nothing the job left behind outlives it.
       killTree(child);
       if (msg && msg.ok) finish(resolve, msg.result);
       else finish(reject, new JobFailedError(msg?.name ?? 'Error', msg?.message ?? 'job failed', stderr));
     });
-    child.on('error', (err) => finish(reject, new JobFailedError(err.name, err.message, stderr)));
+    child.on('error', (err) => {
+      if (!timedOut) finish(reject, new JobFailedError(err.name, err.message, stderr));
+    });
     child.on('exit', (code, signal) => {
+      if (timedOut) return;
       finish(reject, new JobFailedError('Error', `worker exited without an answer (${signal ?? code})`, stderr));
     });
     child.send(job);
