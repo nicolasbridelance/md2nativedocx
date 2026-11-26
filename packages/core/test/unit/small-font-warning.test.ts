@@ -21,4 +21,17 @@ test('a very wide diagram warns with the effective size and a suggestion', () =>
   assert.ok(w, metadata.warnings.join('|'));
   assert.match(w, /node text is [\d.]+ pt \(below 7 pt/);
   assert.match(w, /TB/);
+  assert.doesNotMatch(w, /LR/);
+});
+
+test('a very tall diagram is told to go horizontal, not vertical again', () => {
+  // A merge keeps it out of SmartArt; the LibreOffice padding squares its frame, which must not flip the advice.
+  let src = 'flowchart TD\n';
+  for (let i = 1; i < 30; i++) src += `  S${i}[Step ${i}] --> S${i + 1}[Step ${i + 1}]\n`;
+  src += '  S1 --> S30\n';
+  const { metadata } = renderDiagram(src, { smartArt: false });
+  const w = metadata.warnings.find((x) => x.includes('hard to read'));
+  assert.ok(w, metadata.warnings.join('|'));
+  assert.match(w, /horizontal direction \(LR\)/);
+  assert.doesNotMatch(w, /TB/);
 });

@@ -16,7 +16,7 @@
 import { detectDiagramType, type DiagramType } from './parser/diagram-type.js';
 import { parseMermaid } from './parser/index.js';
 import { layout } from './layout/layout.js';
-import { effectiveNodeFontPt, translateToOoxml } from './translator/ooxml-translator.js';
+import { nodeTextFit, translateToOoxml } from './translator/ooxml-translator.js';
 import type { CanvasOptions } from './translator/canvas.js';
 import { DiagramTooLargeError } from './layout/graph-limits.js';
 import { escapeXml } from './translator/xml-escape.js';
@@ -407,11 +407,14 @@ const renderFlowchartWith = (parse: (source: string) => { ast: Flowchart; warnin
   const result = layout(ast, ctx.canvas);
   ctx.warnings.push(...result.warnings);
   const fragment = translateToOoxml(ast, result, ctx.canvas);
-  const fontPt = effectiveNodeFontPt(result, ctx.canvas);
+  const { fontPt, tooTall } = nodeTextFit(result, ctx.canvas);
   if (fontPt < MIN_READABLE_FONT_PT) {
+    // The advice follows the axis that overflows: a vertical direction only helps a diagram too wide.
     ctx.warnings.push(
       `diagram scaled down to fit the page: node text is ${fontPt} pt (below ${MIN_READABLE_FONT_PT} pt, hard to read). ` +
-        'Try a vertical direction (TB), split the diagram, or use fewer nodes per level.',
+        (tooTall
+          ? 'Try a horizontal direction (LR), split the diagram, or use fewer levels.'
+          : 'Try a vertical direction (TB), split the diagram, or use fewer nodes per level.'),
     );
   }
   // Say why only when SmartArt was attempted and rejected for a structural reason (spec §10.3); never

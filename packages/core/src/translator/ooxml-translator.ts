@@ -451,12 +451,21 @@ function maxExtentOf(options: TranslateOptions): { cx: number; cy: number } {
 }
 
 /**
- * Size, in points, of the node labels as written in the `.docx`: the base 12 pt scaled down by the factor
- * that fits the diagram on the page. Used to warn when a diagram became too small to read (TODO R2.3).
+ * How the node labels fit the page, for the warning when a diagram became too small to read (TODO R2.3):
+ * `fontPt`, their size in points as written in the `.docx` (the base 12 pt scaled down by the factor that
+ * fits the diagram on the page), and `tooTall`, whether the content overflows the page more in height
+ * than in width. Measured on the content itself, before {@link nativeExtent}'s LibreOffice padding: that
+ * padding makes a tall diagram's frame square, so its width would bind although its height is the
+ * problem the author can act on.
  */
-export function effectiveNodeFontPt(layout: LayoutResult, options: TranslateOptions = {}): number {
-  const { scale } = scaledExtent(computeBoundingBox(layout), maxExtentOf(options));
-  return (scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale)) / 2;
+export function nodeTextFit(layout: LayoutResult, options: TranslateOptions = {}): { fontPt: number; tooTall: boolean } {
+  const bb = computeBoundingBox(layout);
+  const maxExtent = maxExtentOf(options);
+  const { scale } = scaledExtent(bb, maxExtent);
+  return {
+    fontPt: scaledFontSizeHalfPt(NODE_FONT_SIZE_HALFPT, scale) / 2,
+    tooTall: bb.height / maxExtent.cy > bb.width / maxExtent.cx,
+  };
 }
 
 /**
