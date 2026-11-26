@@ -71,10 +71,12 @@ test('with MD2NATIVEDOCX_SMARTART_DIR set, a merge-after-branch diagram still fa
     assert.ok(xml.includes('<wpc:wpc'));
     assert.ok(!xml.includes('dgm:relIds'));
     assert.deepEqual(readdirSync(smartArtDir), [], 'nothing should be written for a diagram that falls back');
-    // spec §10.3, amended 2026-11-17: the reason goes to the author as a warning (export log),
-    // never into the document that every reader sees.
+    // spec §10.3, amended 2026-11-17: the reason goes to the author in the export log, never into
+    // the document that every reader sees. Since 2026-11-26 it is a note (nothing to fix in a
+    // correct flowchart), not a warning: printed with the note prefix, never counted.
     assert.ok(!xml.includes('merge detected between'), 'the reason must not be written into the document');
-    assert.match(result.stderr, /^md2nativedocx: warning: .*merge detected between/m);
+    assert.match(result.stderr, /^md2nativedocx \(info\): .*merge detected between/m);
+    assert.doesNotMatch(result.stderr, /^md2nativedocx: warning: /m);
   } finally {
     rmSync(smartArtDir, { recursive: true, force: true });
     rmSync(dir, { recursive: true, force: true });
