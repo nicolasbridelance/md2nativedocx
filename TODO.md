@@ -77,9 +77,18 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   (`ooxml-translator.ts`) élargit tout cadre haut de plus de 7,5 in à un rapport 1:1, pour contourner un
   LibreOffice qui n'affichait rien au-delà (environ 25 rendus contrôlés à l'époque, version non notée ;
   jamais vérifié dans Word). Le lecteur Word perd ainsi 28 % de la hauteur. Effet limité ici
-  (texte à 2 pt au lieu de 2,8 pt, illisible dans les deux cas, et l'avertissement le dit). À faire :
-  vérifier si le LibreOffice épinglé a encore ce défaut ; s'il ne l'a plus, retirer le rembourrage
-  (baselines `test:visual` à revoir une à une).
+  (texte à 2 pt au lieu de 2,8 pt, illisible dans les deux cas, et l'avertissement le dit).
+  **Le défaut LibreOffice a disparu (vérifié le 2026-11-26)** sur la version épinglée 26.2.7.3 (MSI
+  officiel signé TDF, extrait sans installation) et sur 26.8.3 : rembourrage désactivé, 15 flowcharts
+  `TD` (6 à 30 étapes, 1 à 4 colonnes, rapport largeur/hauteur de 0,78 à 0,03) et 3 diagrammes de
+  séquence (10 à 50 messages) passés en PDF. Toutes les étiquettes y sont et les formes sont dessinées.
+  Le contournement touche aussi plus que prévu : avec lui, un flowchart `TD` de 6 nœuds sort déjà en
+  468 × 468 pt. À régler en le retirant :
+  - un dessin à la hauteur utile pleine ne tient pas sur la page avec son titre, et LibreOffice laisse
+    alors le titre seul sur la page précédente. Il faut plafonner la hauteur pour laisser la place d'un
+    titre ou d'une légende, à vérifier dans Word (`test:word-pagination`) ;
+  - `test:visual` rend en PNG la page 1 seulement, qui ne contiendrait plus que le titre pour les
+    fixtures hautes : le banc doit rendre la page du dessin, puis chaque baseline sera revue une à une.
 - [ ] **Rapport de conversion exploitable par un agent.** Le bloc concerné est fait (2026-11-25) : chaque
   avertissement porte le numéro de son diagramme et la ligne de sa clôture d'ouverture
   (`diagram 2, line 14: ...`) dans le `.log`, la sortie du CLI et la réponse MCP, et en données dans
