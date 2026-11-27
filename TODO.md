@@ -294,9 +294,6 @@ Ensuite, dans l'ordre :
             - ~~**Couleurs nommées (`red`, `white`) ignorées sans avertissement**~~ (fait le 2026-11-21 : les 148 noms de
               CSS Color 4 dans `parser/css-named-colors.ts`, lus par `parseHexColor` pour l'organigramme, les classes, les
               états et le treemap, qui avait sa propre table de 10 noms, remplacée) ;
-            - **Vu dans Word le 2026-11-20 :** un libellé de relation de classes est posé au milieu du trait, sans
-              fond : il peut tomber sur la bordure d'un `namespace` (`classDiagram#20`) ou d'une autre classe. Même
-              remarque que pour l'ER ; à traiter ensemble (fond blanc, ou position évitant les cadres) ;
             - **Vu dans Word le 2026-11-20, pas encore corrigé :** les compartiments de membres d'une classe
               réservent 22 px par ligne (`ROW_H`, `class-diagram/translator.ts`) alors que Word en écrit environ
               18 : un vide grandit sous les membres (5 lignes : ~20 px, `classDiagram#25`). Mesurer la hauteur de
