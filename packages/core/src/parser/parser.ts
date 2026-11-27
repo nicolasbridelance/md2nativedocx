@@ -3,7 +3,8 @@
  *
  * V1 scope (spec §5.1): `graph`/`flowchart` with `TD`/`LR` direction only.
  * Supports node shapes from §6.1, edge types from §6.2, and `subgraph`
- * containers. `classDef`/`style` are intentionally ignored in V1 (§6.3).
+ * containers. `classDef` (including `default`), `class`/`:::` and `style` set a node's fill, stroke
+ * and text colour, layered as Mermaid layers them (see resolveNodeStyles); `linkStyle` an edge's.
  *
  * This module is a pure function from untrusted text to a typed AST. It never
  * emits XML itself — escaping happens in the translator.
@@ -376,33 +377,42 @@ function stripQuotedLabel(text: string): string {
   return text;
 }
 
+/** Record that `className` was assigned to `nodeId` (`class` or `:::`), in source order. */
+function addNodeClass(nodeClasses: Map<string, string[]>, nodeId: string, className: string | null): void {
+  if (!className) return;
+  const list = nodeClasses.get(nodeId);
+  if (list) list.push(className);
+  else nodeClasses.set(nodeId, [className]);
+}
+
 /**
- * Apply a `fill`/`stroke` patch to a node, or — if the node hasn't been
- * declared yet (a class/style referencing a node defined later in the
- * source) — remember it in `pendingStyles` for the end-of-parse sweep. Merges
- * onto whatever patch (if any) is already pending, so `style A stroke:#000`
- * followed later by `A:::crit` (a fill-only class) doesn't clobber the
- * stroke the first statement set.
+ * Give every node its final colours, layered as Mermaid 12.3 layers them (`getCompiledStyles`
+ * in its flowchart database, then the node's inline styles): `classDef default`, `classDef node`,
+ * each class assigned to the node in source order, and last the node's `style` statements. This
+ * runs once the whole source is read, so a `classDef` or a node may come after the statement that
+ * refers to it. Returns the names assigned but never defined, in order of first assignment.
  */
-function applyNodeStyle(
+function resolveNodeStyles(
   nodes: Map<string, FlowNode>,
-  pendingStyles: Map<string, NodeStylePatch>,
-  nodeId: string,
-  patch: NodeStylePatch,
-): void {
-  if (patch.fill === undefined && patch.stroke === undefined && patch.color === undefined) return;
-  const existing = nodes.get(nodeId);
-  if (existing) {
-    if (patch.fill !== undefined) existing.fill = patch.fill;
-    if (patch.stroke !== undefined) existing.stroke = patch.stroke;
-    if (patch.color !== undefined) existing.textColor = patch.color;
-    return;
+  classDefs: Map<string, NodeStylePatch>,
+  nodeClasses: Map<string, string[]>,
+  inlineStyles: Map<string, NodeStylePatch>,
+): string[] {
+  const undefinedNames = new Set<string>();
+  for (const names of nodeClasses.values()) {
+    for (const name of names) if (!classDefs.has(name)) undefinedNames.add(name);
   }
-  const pending = pendingStyles.get(nodeId) ?? {};
-  if (patch.fill !== undefined) pending.fill = patch.fill;
-  if (patch.stroke !== undefined) pending.stroke = patch.stroke;
-  if (patch.color !== undefined) pending.color = patch.color;
-  pendingStyles.set(nodeId, pending);
+  for (const node of nodes.values()) {
+    const patch: NodeStylePatch = {};
+    for (const name of ['default', 'node', ...(nodeClasses.get(node.id) ?? [])]) {
+      Object.assign(patch, classDefs.get(name));
+    }
+    Object.assign(patch, inlineStyles.get(node.id));
+    if (patch.fill !== undefined) node.fill = patch.fill;
+    if (patch.stroke !== undefined) node.stroke = patch.stroke;
+    if (patch.color !== undefined) node.textColor = patch.color;
+  }
+  return [...undefinedNames];
 }
 
 /**
@@ -518,15 +528,10 @@ export function parseMermaid(text: string): ParseResult {
   const claimedBySubgraph = new Set<string>();
   // class name -> style patch, from `classDef` (spec §6.3).
   const classDefs = new Map<string, NodeStylePatch>();
-  // node id -> style patch, for nodes styled (via class/`:::`/`style`) before they are defined.
-  const pendingStyles = new Map<string, NodeStylePatch>();
-  // Deferred `class`/`:::` assignments whose `classDef` hadn't been seen yet
-  // at the point the assignment was parsed — `classDef` conventionally comes
-  // first in a diagram but nothing requires it to; resolved once the whole
-  // document (and therefore every `classDef`) is known, mirroring how
-  // `pendingStyles` above already handles the opposite ordering (a class
-  // applied to a node declared later in the source).
-  const pendingClassAssignments: Array<{ nodeIds: string[]; className: string }> = [];
+  // node id -> classes assigned by `class`/`:::`, and -> merged `style` statements; both resolved
+  // against `classDefs` once the whole source is read (resolveNodeStyles).
+  const nodeClasses = new Map<string, string[]>();
+  const inlineStyles = new Map<string, NodeStylePatch>();
   // Deferred `linkStyle` statements (spec §6.3): applied after the full edge
   // list is known, since an index can refer to an edge declared later in the
   // source (the common case — `linkStyle` conventionally comes last).
@@ -609,21 +614,19 @@ export function parseMermaid(text: string): ParseResult {
         .map((s) => s.trim())
         // A class on an edge id (`class e1 animate`) styles an edge animation, not a node.
         .filter((s) => s.length > 0 && !edgeIds.has(s));
-      if (ids.length === 0) continue;
-      const patch = classDefs.get(className);
-      if (patch) {
-        for (const id of ids) applyNodeStyle(nodes, pendingStyles, id, patch);
-      } else {
-        pendingClassAssignments.push({ nodeIds: ids, className });
-      }
+      for (const id of ids) addNodeClass(nodeClasses, id, className);
       continue;
     }
 
     // style A fill:#XXX,stroke:#XXX,... (spec §6.3) — direct styling, no
-    // classDef indirection. Same property parser as classDef/linkStyle.
+    // classDef indirection, drawn over every class. Same property parser as classDef/linkStyle.
     const styleStmt = line.match(/^style\s+([A-Za-z0-9_-]+)\s+(.+)$/i);
     if (styleStmt) {
-      applyNodeStyle(nodes, pendingStyles, styleStmt[1]!, extractNodeStyle(parseCssStyleProps(styleStmt[2]!)));
+      const id = styleStmt[1]!;
+      inlineStyles.set(id, {
+        ...inlineStyles.get(id),
+        ...extractNodeStyle(parseCssStyleProps(styleStmt[2]!)),
+      });
       continue;
     }
 
@@ -717,8 +720,8 @@ export function parseMermaid(text: string): ParseResult {
           warnings.push(`Node id "${edge.to}" is reserved and was ignored.`);
         }
         // Apply inline class styles (`A:::crit`) to the edge endpoints.
-        applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, edge.from, edge.fromClass);
-        applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, edge.to, edge.toClass);
+        addNodeClass(nodeClasses, edge.from, edge.fromClass);
+        addNodeClass(nodeClasses, edge.to, edge.toClass);
         mentionInCurrentSubgraph(subgraphStack, edge.from);
         mentionInCurrentSubgraph(subgraphStack, edge.to);
       }
@@ -731,7 +734,7 @@ export function parseMermaid(text: string): ParseResult {
       if (!registerNode(nodes, node.id, node.label, node.labelRuns, node.shape)) {
         warnings.push(`Node id "${node.id}" is reserved and was ignored.`);
       }
-      applyClassToNode(nodes, pendingStyles, classDefs, pendingClassAssignments, node.id, node.className);
+      addNodeClass(nodeClasses, node.id, node.className);
       mentionInCurrentSubgraph(subgraphStack, node.id);
       continue;
     }
@@ -741,31 +744,9 @@ export function parseMermaid(text: string): ParseResult {
     warnings.push(reason ? `Unsupported line ignored (${reason}): ${line}` : `Unsupported line ignored: ${line}`);
   }
 
-  // Resolve class/`:::` assignments whose `classDef` appeared later in the
-  // source (or never at all) — a class name still undefined at this point,
-  // once the whole document has been scanned, is a genuine typo/omission and
-  // still warns, just later than before.
-  for (const { nodeIds, className } of pendingClassAssignments) {
-    const patch = classDefs.get(className);
-    if (!patch) {
-      warnings.push(`classDef "${className}" referenced but not defined.`);
-      continue;
-    }
-    for (const id of nodeIds) {
-      applyNodeStyle(nodes, pendingStyles, id, patch);
-    }
-  }
-
-  // Apply any pending class/style patches (including ones just resolved
-  // above) to nodes that were defined after the class/style statement that
-  // targets them.
-  for (const [id, patch] of pendingStyles) {
-    const existing = nodes.get(id);
-    if (existing) {
-      if (patch.fill !== undefined) existing.fill = patch.fill;
-      if (patch.stroke !== undefined) existing.stroke = patch.stroke;
-      if (patch.color !== undefined) existing.textColor = patch.color;
-    }
+  // A class name still undefined once the whole document is read is a typo or an omission.
+  for (const name of resolveNodeStyles(nodes, classDefs, nodeClasses, inlineStyles)) {
+    warnings.push(`classDef "${name}" referenced but not defined.`);
   }
 
   // Apply deferred `linkStyle` statements now that the edge list is final —
@@ -943,31 +924,6 @@ function registerNode(
   }
   nodes.set(id, { id, label, labelRuns, shape });
   return true;
-}
-
-/**
- * Apply a class's style patch to a node (from `:::class` inline or `class`).
- * If the node is not yet defined, the patch is remembered in `pendingStyles`
- * (via {@link applyNodeStyle}). If the class itself isn't defined *yet* (its
- * `classDef` may still come later in the source), the assignment is queued in
- * `pendingClassAssignments` for the end-of-parse sweep instead of warning
- * immediately — see that array's doc comment in {@link parseMermaid}.
- */
-function applyClassToNode(
-  nodes: Map<string, FlowNode>,
-  pendingStyles: Map<string, NodeStylePatch>,
-  classDefs: Map<string, NodeStylePatch>,
-  pendingClassAssignments: Array<{ nodeIds: string[]; className: string }>,
-  nodeId: string,
-  className: string | null,
-): void {
-  if (!className) return;
-  const patch = classDefs.get(className);
-  if (!patch) {
-    pendingClassAssignments.push({ nodeIds: [nodeId], className });
-    return;
-  }
-  applyNodeStyle(nodes, pendingStyles, nodeId, patch);
 }
 
 /**

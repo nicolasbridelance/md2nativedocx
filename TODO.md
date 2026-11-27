@@ -294,8 +294,6 @@ Ensuite, dans l'ordre :
             - ~~**Couleurs nommées (`red`, `white`) ignorées sans avertissement**~~ (fait le 2026-11-21 : les 148 noms de
               CSS Color 4 dans `parser/css-named-colors.ts`, lus par `parseHexColor` pour l'organigramme, les classes, les
               états et le treemap, qui avait sa propre table de 10 noms, remplacée) ;
-            - **`classDef default` de l'organigramme** n'est toujours pas appliqué (manuel, limites) alors que les
-              classes l'appliquent depuis le 2026-11-20 : aligner ;
             - **Vu dans Word le 2026-11-20 :** un libellé de relation de classes est posé au milieu du trait, sans
               fond : il peut tomber sur la bordure d'un `namespace` (`classDiagram#20`) ou d'une autre classe. Même
               remarque que pour l'ER ; à traiter ensemble (fond blanc, ou position évitant les cadres) ;
@@ -436,7 +434,7 @@ Ensuite, dans l'ordre :
             par le mainteneur le 2026-11-19, tests uniquement, jamais au runtime). Outil livré le 2026-11-20 :
             `tools/mermaid-differential/` (hors workspaces, son propre lockfile, `mermaid@12.3.0` épinglé comme le
             corpus), rapport `test-corpus/mermaid-official/DIFFERENTIAL.md`, verrou CI (job *Mermaid differential*,
-            `expected-match.json`). Comparateurs : organigrammes, séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes), exigences (ajouté le 2026-11-21 : boîtes, champs affichés, relations, direction, styles), arborescences, C4 (ajouté le 2026-11-21 : éléments, cadres et leur imbrication, relations, styles, configuration de grille). Premier passage :
+            `expected-match.json`). Comparateurs : organigrammes (couleurs des nœuds ajoutées le 2026-11-27, superposées comme `getCompiledStyles` de Mermaid), séquence, classes, états, ER, Gantt (ajouté le 2026-11-21, dates résolues comparées en UTC), cartes mentales (ajouté le 2026-11-21 : arbre, formes, texte, icônes et classes), exigences (ajouté le 2026-11-21 : boîtes, champs affichés, relations, direction, styles), arborescences, C4 (ajouté le 2026-11-21 : éléments, cadres et leur imbrication, relations, styles, configuration de grille). Premier passage :
             252 exemples comparés, 217 identiques, 35 écarts dont 7 sans avertissement ; **les 7 corrigés le
             2026-11-20** (flèche longue avec libellé, membres de sous-graphe à la règle de Mermaid, titre de
             sous-graphe lu comme un libellé, `participant X@{…} as …` et `"alias"`, entités nommées HTML 4 partagées

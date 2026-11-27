@@ -157,12 +157,27 @@ const COMPARATORS = {
       for (const v of db.getVertices().values()) if (!subgraphIds.has(v.id)) facts.push(`node ${v.id} "${normText(mermaidEntities(v.text ?? v.id), md(v))}"`);
       for (const e of db.getEdges()) facts.push(`link ${e.start} -> ${e.end}${e.text ? ` "${normText(mermaidEntities(e.text), md(e))}"` : ''}`);
       for (const s of db.getSubGraphs()) facts.push(`subgraph ${s.id} "${normText(mermaidEntities(s.title), md(s))}" [${[...s.nodes].sort().join(' ')}]`);
+      // Node colours as `flowDb.getData()` layers them (`getCompiledStyles(['default', 'node', ...classes])`, then
+      // the vertex's own `style` list), read through our own CSS reader so only the layering is compared. Bold
+      // and italic are left out: the flowchart drawing does not apply them yet.
+      const classes = db.getClasses();
+      for (const v of db.getVertices().values()) {
+        if (subgraphIds.has(v.id)) continue;
+        const compiled = ['default', 'node', ...v.classes].flatMap((c) => [...(classes.get(c)?.styles ?? []), ...(classes.get(c)?.textStyles ?? [])]);
+        const { fill, stroke, color } = extractNodeStyle(parseCssStyleProps([...compiled, ...v.styles].join(',')));
+        const fact = styleFact({ fill, stroke, color });
+        if (fact) facts.push(`style ${v.id} ${fact}`);
+      }
       return facts;
     },
     ours(source) {
       const { ast } = parseMermaid(source);
       const facts = [];
       for (const n of ast.nodes) facts.push(`node ${n.id} "${ourText(n.label)}"`);
+      for (const n of ast.nodes) {
+        const fact = styleFact({ fill: n.fill, stroke: n.stroke, color: n.textColor });
+        if (fact) facts.push(`style ${n.id} ${fact}`);
+      }
       for (const e of ast.edges) facts.push(`link ${e.from} -> ${e.to}${e.label ? ` "${ourText(e.label)}"` : ''}`);
       for (const s of ast.subgraphs) facts.push(`subgraph ${s.id} "${ourText(s.title)}" [${[...s.nodeIds, ...s.subgraphIds].sort().join(' ')}]`);
       return facts;

@@ -61,6 +61,9 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   `'single quotes'` are read as Mermaid reads them, and `icon(none)` no longer warns.
 
 ### Fixed
+- **Flowchart colours are layered as in Mermaid.** `classDef default` now colours every node (it was ignored),
+  then each class in the order it is given, and `style` last: a `style` written before a `class` or `:::` no
+  longer loses to it. Use case diagrams follow the same rule.
 - **Each diagram warning says which diagram it is about**: its number in the document and the line of its
   fence (`diagram 2, line 14: ...`), in the export log, the CLI output and the MCP server's reply (also as data,
   `diagnostics`). A long document no longer leaves you guessing which block to fix.

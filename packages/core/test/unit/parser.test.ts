@@ -421,6 +421,36 @@ test('a style statement targeting a node declared later in the source still appl
   assert.equal(ast.nodes.find((n) => n.id === 'A')!.fill, 'ABCDEF');
 });
 
+test('styles are layered as Mermaid layers them: classDef default, then each class in order, then style', () => {
+  const { ast, warnings } = parseMermaid(
+    [
+      'flowchart LR',
+      '  style A stroke:#111111',
+      '  A:::warm --> B',
+      '  B --> C',
+      '  class A cool',
+      '  classDef default fill:#EEEEEE,stroke:#999999,color:#222222',
+      '  classDef warm fill:#FF8800',
+      '  classDef cool fill:#0088FF,stroke:#0000FF',
+    ].join('\n'),
+  );
+  assert.deepEqual(warnings, []);
+  const byId = new Map(ast.nodes.map((n) => [n.id, n]));
+  // Every node gets the default class.
+  assert.deepEqual([byId.get('C')!.fill, byId.get('C')!.stroke, byId.get('C')!.textColor], ['EEEEEE', '999999', '222222']);
+  // A: default, then warm, then cool (assigned later), then `style`, although `style` came first.
+  const a = byId.get('A')!;
+  assert.deepEqual([a.fill, a.stroke, a.textColor], ['0088FF', '111111', '222222']);
+});
+
+test('an undefined class is warned once, however often it is assigned', () => {
+  const { warnings } = parseMermaid('graph TD\n  A:::nope --> B:::nope\n  class C nope');
+  assert.deepEqual(
+    warnings.filter((w) => w.includes('referenced but not defined')),
+    ['classDef "nope" referenced but not defined.'],
+  );
+});
+
 test('expands a 3-digit hex shorthand color to 6 digits', () => {
   const { ast } = parseMermaid('graph TD\n  A --> B\n  style A fill:#f9c');
   assert.equal(ast.nodes.find((n) => n.id === 'A')!.fill, 'FF99CC');
