@@ -71,7 +71,7 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   avec l'ancienne géométrie libre (rendus identiques avant et après, baselines `test:visual` inchangées).
   Limite de LibreOffice, notée dans le manuel ; le `.odt` n'est pas concerné. Bug à signaler à LibreOffice (décision du mainteneur).
   Détail dans le banc : `ROUTED_CONNECTOR_RESULTS.md`.
-- [ ] **Diagramme haut et étroit rendu carré dans Word.** Vu le 2026-11-26 par `test:word-pagination` :
+- [x] **Diagramme haut et étroit rendu carré dans Word.** Vu le 2026-11-26 par `test:word-pagination` :
   un flowchart de 30 étapes en `TD` est réduit dans un carré de la largeur utile (468 × 468 pt sur Letter,
   451 × 451 pt en A4), pas à la hauteur utile (650 et 698 pt). Cause : `MIN_SAFE_ASPECT_RATIO`
   (`ooxml-translator.ts`) élargit tout cadre haut de plus de 7,5 in à un rapport 1:1, pour contourner un
@@ -91,8 +91,11 @@ facultatif ; 18/20 documents inédits passent la grille Word complète.
   plus de 85 % de la hauteur utile ; il passe dans Word (Letter et A4), et échoue avec une marge nulle
   (titre orphelin sur les deux variantes). Avec LibreOffice 26.2.7, les 65 `.docx` et 32 `.odt` du banc
   visuel tiennent sur une page avec leur titre : le rendu de la page 1 par `test:visual` reste valable.
-  - [ ] Reste : revoir une à une les baselines `test:visual` qui bougent (une vingtaine de `.docx` hauts,
-    leurs `.odt`), rendues par le job CI `visual` (artefact `visual-failures`), puis les remplacer.
+  - [x] Baselines `test:visual` revues une à une et remplacées le 2026-11-27 (23 images, rendues par le job
+    CI `visual` de `07244dd`) : 14 `.docx` et 8 `.odt` hauts, même tracé, agrandis jusqu'à la nouvelle
+    hauteur, rien de coupé, dessin toujours en page 1 sous son titre ; le `.pptx` `sequence`, même taille,
+    décalé d'environ 40 px vers la droite car la diapositive centre désormais le cadre réel, plus le cadre
+    élargi.
 - [ ] **Rapport de conversion exploitable par un agent.** Le bloc concerné est fait (2026-11-25) : chaque
   avertissement porte le numéro de son diagramme et la ligne de sa clôture d'ouverture
   (`diagram 2, line 14: ...`) dans le `.log`, la sortie du CLI et la réponse MCP, et en données dans
