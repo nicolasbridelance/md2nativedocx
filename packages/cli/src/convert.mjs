@@ -56,8 +56,6 @@ const DEFAULT_REFERENCE_DOC = fileURLToPath(new URL('../assets/reference.docx', 
 // Pandoc's opendocument template plus the diagram-styles loop. See packages/cli/assets/README.md.
 const DEFAULT_REFERENCE_ODT = fileURLToPath(new URL('../assets/reference.odt', import.meta.url));
 const ODT_TEMPLATE = fileURLToPath(new URL('../assets/md2nativedocx.opendocument', import.meta.url));
-/** 9 in in EMU: the `.docx` output's default drawing height (core's `MAX_DRAWING_CY`). */
-const ODT_MAX_DRAWING_CY = 8229600;
 
 /**
  * Where @md2nativedocx/pandoc-filter lands varies with how the CLI was deployed (npm workspace, nested or
@@ -214,13 +212,11 @@ async function convertOdt(source, options) {
     const outputPath = join(work, 'output.odt');
     const pandocArgs = [inputPath, '-o', outputPath, '--lua-filter', filterPath, '--template', ODT_TEMPLATE, '--reference-doc', referenceDoc];
     pandocArgs.push(...commonPandocArgs(inputPath, options));
-    // Diagrams are scaled to fit the bundled reference.odt's text width (A4, 2.54 cm margins) and at most
-    // 9 in high, the `.docx` default, which leaves room for a heading above a page-tall diagram instead of
-    // pushing it alone onto the next page.
-    const page = resolveMaxDrawingExtentEmu({ pageSize: 'A4' });
+    // Diagrams are scaled to fit the bundled reference.odt's text area (A4, 2.54 cm margins), less the room
+    // a heading needs above a page-tall diagram.
     const env = pandocEnvironment(
       { ...options, smartArtStyle: undefined, smartArtDrawing: undefined },
-      { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: { cx: page.cx, cy: Math.min(page.cy, ODT_MAX_DRAWING_CY) }, landscapeGeometry: null },
+      { smartArtDir: null, chartDir: null, maxDrawingExtentEmu: resolveMaxDrawingExtentEmu({ pageSize: 'A4' }), landscapeGeometry: null },
     );
     const pandocStderr = await runPandoc(options.pandocBin ?? 'pandoc', pandocArgs, { cwd, env, timeoutMs: options.timeoutMs });
     return { document: readFileSync(outputPath), ...conversionDiagnostics(source, pandocStderr, options), pandocStderr };
@@ -278,7 +274,7 @@ export async function convert(source, options = {}) {
     const env = pandocEnvironment(options, {
       smartArtDir,
       chartDir,
-      // Usable page area for the translator, whether or not the reference document needed a patch.
+      // The page's drawing area for the translator, whether or not the reference document needed a patch.
       maxDrawingExtentEmu: customReferenceDoc ? null : resolveMaxDrawingExtentEmu(layout),
       // The filter's "back to portrait" section needs the document's actual page geometry.
       landscapeGeometry: layout.landscapeTables

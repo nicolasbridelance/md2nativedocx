@@ -53,9 +53,10 @@ function handbook() {
   for (let s = 1; s <= SECTIONS; s++) {
     const n = String(s).padStart(2, '0');
     parts.push(`## Section ${n}`);
+    // Right under its heading: the drawing must leave room for the heading on the same page.
+    if (s === 8) parts.push('```mermaid\n' + TALL_DIAGRAM + '```');
     for (let e = 1; e <= 10; e++) parts.push(`Record ${n}.${String(e).padStart(2, '0')}. ${FILLER}`);
     if (s === 3) parts.push('```mermaid\n' + CANVAS_DIAGRAM + '```');
-    if (s === 8) parts.push('```mermaid\n' + TALL_DIAGRAM + '```');
     if (s === 11) {
       const rows = ['| Record | Owner | Status |', '| --- | --- | --- |'];
       for (let r = 1; r <= 80; r++) rows.push(`| Record ${String(r).padStart(2, '0')} | Operations desk | Pending review |`);
@@ -110,7 +111,9 @@ function problemsOf(variant, m) {
     if (d.height > d.usableHeight + SLACK_PT) problems.push(`${where} is ${d.height.toFixed(1)} pt high, usable ${d.usableHeight.toFixed(1)} pt`);
   }
   const tallest = Math.max(...m.canvases.map((c) => c.height / c.usableHeight));
-  if (!(tallest > 0.5)) problems.push('no canvas reaches half the page height: the tall diagram no longer tests the height cap');
+  // The tall chain is scaled to the page height less the 0.75in kept for a heading (about 92 % of it), not
+  // shrunk further, e.g. into a square of the page width (the old LibreOffice padding: 65 to 72 %).
+  if (!(tallest > 0.85)) problems.push(`the tallest canvas fills ${(tallest * 100).toFixed(0)} % of the usable height, expected the page height less the heading room`);
 
   if (variant.env.MD2NATIVEDOCX_LANDSCAPE_TABLES === '1') {
     const landscape = m.sections.filter((s) => s.landscape);

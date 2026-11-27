@@ -328,6 +328,11 @@ test('resolveMaxDrawingExtentEmu: shrinks when margins widen, for the same page 
   assert.ok(wide.cx < narrow.cx, 'wide margins must leave less usable width than narrow margins');
 });
 
+test('resolveMaxDrawingExtentEmu: the height leaves 0.75in for a heading above a page-tall diagram', () => {
+  // A4 (11906 x 16838 twips), normal 1in margins: 9026 x 13958 twips of text area, 635 EMU per twip.
+  assert.deepEqual(resolveMaxDrawingExtentEmu({ pageSize: 'A4' }), { cx: 9026 * 635, cy: 13958 * 635 - 685800 });
+});
+
 // --- buildReferenceDoc (integration: real unzip/zip round-trip) ---
 
 test('buildReferenceDoc: returns null (no-op) when every option is unset', () => {

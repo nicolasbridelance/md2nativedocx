@@ -4,6 +4,7 @@ import { parseMermaid } from '../../src/parser/index.js';
 import { layout } from '../../src/layout/layout.js';
 import { translateToOoxml } from '../../src/translator/ooxml-translator.js';
 import { escapeXml } from '../../src/translator/xml-escape.js';
+import { DEFAULT_MAX_DRAWING_CY, EMU_PER_PX } from '../../src/translator/canvas.js';
 import { drawnElbow } from './drawn-elbow.js';
 
 function translate(text: string): string {
@@ -279,11 +280,8 @@ test('node/subgraph-title/edge-label text overrides the inherited paragraph spac
 
 test('an oversized diagram is scaled down to the usable page area', () => {
   // A wide graph would otherwise emit an extent many times the page width and
-  // be clipped by Word. Height is capped too, on purpose: verified
-  // empirically that LibreOffice fails to render a wpc:wpc/wpg:wgp group at
-  // all past roughly one page's height (not degraded — entirely absent, no
-  // error), so letting a tall diagram flow across pages the way an oversized
-  // picture would is not safe here (see the MAX_DRAWING_CY comment).
+  // be clipped by Word. Height is capped too: Word never splits an inline
+  // drawing across pages.
   const wide = ['graph LR', ...Array.from({ length: 40 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
   const xml = translate(wide);
   const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
@@ -291,7 +289,7 @@ test('an oversized diagram is scaled down to the usable page area', () => {
   const cx = Number(extent[1]);
   const cy = Number(extent[2]);
   assert.ok(cx <= 5943600, `extent cx ${cx} exceeds the usable page width`);
-  assert.ok(cy <= 8229600, `extent cy ${cy} exceeds the usable page height`);
+  assert.ok(cy <= DEFAULT_MAX_DRAWING_CY, `extent cy ${cy} exceeds the default drawing height`);
   // No enclosing group to let Word apply the shrink for us any more (see
   // renderContent's doc comment) — every child must already be pre-scaled to
   // fit inside the declared extent itself. A 41-node LR chain is far wider
@@ -352,46 +350,30 @@ test('an unscaled diagram keeps "med" arrowheads — the floor never kicks in wh
   assert.ok(xml.includes('<a:tailEnd type="triangle" w="med" len="med"/>'));
 });
 
-test('a tall, narrow diagram gets its extent widened to a safe aspect ratio', () => {
-  // Regression: verified empirically (soffice --headless render) that a
-  // wpc:wpc/wpg:wgp group taller than ~7.5in renders NOTHING AT ALL in
-  // LibreOffice once its native width:height ratio drops much below 1:1 —
-  // not degraded, completely absent. A single-column chain long enough to
-  // exceed the risk height is exactly that shape. There is no more separate
-  // native-vs-display coordinate space to check (no enclosing group) — but
-  // scale multiplies both dimensions of the extent equally, so the widening
-  // is still directly observable on `wp:extent`'s own aspect ratio.
-  // N0..N9 (single-digit ids only): every label is the same length, so
-  // every node gets the same text-driven width and stays centered on the
-  // same x — an N10 here would be one character wider than the rest, no
-  // longer landing at x=0 for reasons unrelated to what this test checks.
-  const tall = ['graph TD', ...Array.from({ length: 9 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
-  const xml = translate(tall);
-  const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(xml);
+test('a tall, narrow diagram keeps its proportions and is scaled to the drawing height', () => {
+  // The frame is the content's own box: no padding to a square (the LibreOffice failure it worked around
+  // is gone, TODO.md), so a long TD chain fills the drawing height, which leaves room for a heading.
+  // N0..N29 labels differ in length (N9 vs N10), so the width is read from the layout, not assumed.
+  const text = ['graph TD', ...Array.from({ length: 29 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
+  const { ast } = parseMermaid(text);
+  const l = layout(ast);
+  const xs = Object.values(l.nodes).flatMap((n) => [n.x, n.x + n.width]);
+  const ys = Object.values(l.nodes).flatMap((n) => [n.y, n.y + n.height]);
+  const ratio = (Math.max(...xs) - Math.min(...xs)) / (Math.max(...ys) - Math.min(...ys));
+  const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(translateToOoxml(ast, l));
   assert.ok(extent);
-  const cx = Number(extent![1]);
-  const cy = Number(extent![2]);
-  assert.ok(cx / cy >= 1, `extent aspect ratio ${cx}/${cy} is below the safe 1:1 floor`);
-  // The padding must not move any node — only the frame's own declared width
-  // grows; the content stays exactly where the layout put it (x=0).
-  const firstNode = /<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="\d+" cy="\d+"\/>\s*<\/a:xfrm>\s*<a:prstGeom prst="rect"/.exec(
-    xml,
-  );
-  assert.ok(firstNode);
-  assert.equal(Number(firstNode![1]), 0, 'the first node should still start at x=0');
+  const cx = Number(extent[1]);
+  const cy = Number(extent[2]);
+  assert.equal(cy, DEFAULT_MAX_DRAWING_CY, 'the height binds');
+  assert.ok(Math.abs(cx / cy - ratio) < 0.01, `extent ratio ${cx / cy}, content ratio ${ratio}`);
 });
 
-test('a short diagram is not widened, even if narrow', () => {
+test('a short, narrow diagram keeps its own size', () => {
   const short = translate('graph TD\n  A[A] --> B[B]');
   const extent = /<wp:extent cx="(\d+)" cy="(\d+)"\/>/.exec(short);
   assert.ok(extent);
-  const cy = Number(extent![2]);
-  assert.ok(cy <= 6858000, 'test fixture should be under the 7.5in risk height');
-  // Width matches the actual content width (single-char "A"/"B" labels
-  // bottom out at the 70px MIN_NODE_WIDTH floor), not padded out to match
-  // height, and the diagram is small enough that scale stays 1 — the whole
-  // point is this case needs no help.
-  assert.equal(Number(extent![1]), 70 * 9525);
+  // Single-char "A"/"B" labels bottom out at the 70px MIN_NODE_WIDTH floor; the diagram fits, so scale is 1.
+  assert.equal(Number(extent[1]), 70 * EMU_PER_PX);
 });
 
 test('colours reaching a:srgbClr are validated as hex, not merely escaped', () => {

@@ -26,7 +26,7 @@
 import type { EdgeType, FlowEdge, Flowchart, LabelToken, LayoutPoint, LayoutResult, NodeShape } from '../types.js';
 import { escapeXml, validateHexColor } from './xml-escape.js';
 import { SUBGRAPH_TITLE_HEIGHT } from '../layout/layout.js';
-import { EMU_PER_PX, type CanvasOptions } from './canvas.js';
+import { DEFAULT_MAX_DRAWING_CX, DEFAULT_MAX_DRAWING_CY, EMU_PER_PX, type CanvasOptions } from './canvas.js';
 import { actorFigure } from './actor-figure.js';
 import { textColorFor } from './text-color.js';
 
@@ -76,9 +76,6 @@ const DEFAULT_LINE = '2F5496';
 const SUBGRAPH_FILL = 'E8E8E8';
 const SUBGRAPH_LINE = '999999';
 
-/** Default usable area, same as the `.docx` output (Letter portrait, 1in margins), in EMU. */
-const MAX_DRAWING_CX = 5943600;
-const MAX_DRAWING_CY = 8229600;
 
 /** Base text sizes in points, as in the `.docx` output (12pt nodes and titles, 8pt edge labels). */
 const NODE_FONT_PT = 12;
@@ -292,7 +289,7 @@ export function translateToOdf(flowchart: Flowchart, layout: LayoutResult, optio
   const origin = boundsOf(layout);
   const widthEmu = Math.max(1, (origin.maxX - origin.minX) * EMU_PER_PX);
   const heightEmu = Math.max(1, (origin.maxY - origin.minY) * EMU_PER_PX);
-  const scale = Math.min(1, (options.maxDrawingCx ?? MAX_DRAWING_CX) / widthEmu, (options.maxDrawingCy ?? MAX_DRAWING_CY) / heightEmu);
+  const scale = Math.min(1, (options.maxDrawingCx ?? DEFAULT_MAX_DRAWING_CX) / widthEmu, (options.maxDrawingCy ?? DEFAULT_MAX_DRAWING_CY) / heightEmu);
   const place = (box: Box): Box => ({
     x: (box.x - origin.minX) * scale,
     y: (box.y - origin.minY) * scale,

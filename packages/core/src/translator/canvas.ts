@@ -73,15 +73,28 @@ export function scaledLineWidthEmu(baseEmu: number, scale: number): number {
   return Math.max(MIN_LINE_WIDTH_EMU, Math.round(baseEmu * scale));
 }
 
-/** See `ooxml-translator.ts`'s `MAX_DRAWING_CX`/`MAX_DRAWING_CY` doc comment
- * — usable page area in EMU for Pandoc's default reference document. */
-const MAX_DRAWING_CX = 5943600;
-const MAX_DRAWING_CY = 8229600;
+/**
+ * Height kept free above a page-tall drawing (0.75in), so a heading fits on the same page. Headings keep
+ * with the next paragraph; a drawing as tall as the text area leaves no room for one, and Word and
+ * LibreOffice then leave the heading alone at the bottom of the previous page. Measured on 2026-11-26 with
+ * the bundled reference document: a Heading 1 needs about 46pt in Word (kept at 47pt of room, orphaned at
+ * 45pt) and less in LibreOffice 26.2.7; 0.75in adds a margin for a slightly larger heading style.
+ */
+const HEADING_ROOM_EMU = 685800;
+
+/**
+ * Default drawing area in EMU, shared by every translator (`.docx` flowcharts, the other canvas
+ * diagrams, `.odt`): the text width of a Letter portrait page with 1in margins (6.5in), and its text
+ * height (9in) minus {@link HEADING_ROOM_EMU}. A caller that knows the real page passes
+ * `maxDrawingCx`/`maxDrawingCy` instead, already leaving that room (the CLI does).
+ */
+export const DEFAULT_MAX_DRAWING_CX = 5943600;
+export const DEFAULT_MAX_DRAWING_CY = 8229600 - HEADING_ROOM_EMU;
 
 /**
  * Optional override of the usable area (EMU) a drawing is scaled down to fit.
  * Same meaning as `TranslateOptions.maxDrawingCx`/`maxDrawingCy` for flowcharts;
- * absent fields fall back to the Pandoc-default-page constants above.
+ * absent fields fall back to {@link DEFAULT_MAX_DRAWING_CX}/{@link DEFAULT_MAX_DRAWING_CY}.
  */
 export interface CanvasOptions extends GraphLimits {
   /** Maximum drawing width in EMU. */
@@ -90,19 +103,9 @@ export interface CanvasOptions extends GraphLimits {
   maxDrawingCy?: number;
 }
 
-/** See `ooxml-translator.ts`'s `TALL_RATIO_RISK_HEIGHT`/`MIN_SAFE_ASPECT_RATIO`
- * doc comment — the empirically-found LibreOffice headless-render cliff for a
- * tall, narrow `wpc:wpc`. */
-const TALL_RATIO_RISK_HEIGHT = 6858000; // 7.5in
-const MIN_SAFE_ASPECT_RATIO = 1.0;
-
+/** The native (unscaled) EMU size of the drawing frame, never empty. */
 function nativeExtent(widthPx: number, heightPx: number): { cx: number; cy: number } {
-  const nativeCx = Math.max(1, Math.round(widthPx * EMU_PER_PX));
-  const nativeCy = Math.max(1, Math.round(heightPx * EMU_PER_PX));
-  if (nativeCy > TALL_RATIO_RISK_HEIGHT && nativeCx / nativeCy < MIN_SAFE_ASPECT_RATIO) {
-    return { cx: Math.round(nativeCy * MIN_SAFE_ASPECT_RATIO), cy: nativeCy };
-  }
-  return { cx: nativeCx, cy: nativeCy };
+  return { cx: Math.max(1, Math.round(widthPx * EMU_PER_PX)), cy: Math.max(1, Math.round(heightPx * EMU_PER_PX)) };
 }
 
 /**
@@ -120,8 +123,8 @@ export function scaledExtent(
   const { cx: nativeCx, cy: nativeCy } = nativeExtent(widthPx, heightPx);
   const scale = Math.min(
     1,
-    (options.maxDrawingCx ?? MAX_DRAWING_CX) / nativeCx,
-    (options.maxDrawingCy ?? MAX_DRAWING_CY) / nativeCy,
+    (options.maxDrawingCx ?? DEFAULT_MAX_DRAWING_CX) / nativeCx,
+    (options.maxDrawingCy ?? DEFAULT_MAX_DRAWING_CY) / nativeCy,
   );
   return {
     cx: Math.max(1, Math.round(nativeCx * scale)),

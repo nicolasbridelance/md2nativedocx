@@ -52,6 +52,7 @@ import type {
   Subgraph,
 } from '../types.js';
 import { escapeXml } from './xml-escape.js';
+import { DEFAULT_MAX_DRAWING_CX, DEFAULT_MAX_DRAWING_CY } from './canvas.js';
 import { renderLabelRuns } from './label-runs.js';
 import { HOLLOW_SIZE_PX, hollowMarker } from './graph-shapes.js';
 import { actorConnectBox, actorFigure, type FigurePoint } from './actor-figure.js';
@@ -167,50 +168,6 @@ function arrowMarkerSize(baseWidthEmu: number, scale: number): 'sm' | 'med' {
 }
 
 /**
- * Usable page area in EMU for Pandoc's default reference document (US Letter,
- * 1 inch margins => 6.5in x 9in). A drawing larger than this is scaled down
- * uniformly rather than being clipped by Word: `wp:extent` and the group's
- * `a:ext` shrink while `a:chOff`/`a:chExt` stay in native coordinates, so Word
- * applies the homothety to every child shape for us.
- *
- * These are only the *default* fallback now (`export_customization_SPEC.md`
- * §2.4): a caller whose export uses a different page format/orientation/
- * margins (Lot 1) passes the real usable area via `TranslateOptions.maxDrawingCx`/
- * `maxDrawingCy` instead of relying on this Letter-portrait assumption.
- *
- * Height IS capped, on purpose, even though the drawing is `wp:inline` (flows
- * with the text) and one might expect Word to paginate an over-height inline
- * object the way it does an oversized picture. It does not, for this element
- * — see {@link MIN_SAFE_ASPECT_RATIO} for what's actually going on and why a
- * height cap alone was never the whole story. Not verified against real
- * Word; treat the multi-page case as genuinely unresolved (see TODO.md).
- */
-const MAX_DRAWING_CX = 5943600;
-const MAX_DRAWING_CY = 8229600;
-
-/**
- * Above this native (unscaled) height, a `wpc:wpc`/`wpg:wgp` group renders in
- * LibreOffice ONLY IF its width:height ratio is at least
- * {@link MIN_SAFE_ASPECT_RATIO} — narrower than that, and headless
- * `soffice --convert-to png/pdf` produces nothing at all for it: no shapes,
- * no error, no partial output, just the surrounding document text. Below this
- * height, any ratio renders fine, however narrow (verified down to 0.09).
- *
- * Found empirically with ~25 controlled renders (fixed content, only height
- * and/or width varied): e.g. at a fixed native height of 13.75in, width
- * 10.62in (ratio 0.77) rendered nothing while width 12.5in (ratio 0.91)
- * rendered correctly — same height, only the ratio changed. Bracketed the
- * height cliff itself (at ratio-safe / unscaled shapes) between 7.92in
- * (renders) and 9.38in (does not). Neither boundary was pinned to exact
- * precision, so both constants below carry a safety margin: 7.5in is below
- * the lowest observed safe height, 1.0 is above the highest observed unsafe
- * ratio. Not explained by LibreOffice's source (no access to it), and not
- * verified in real Word.
- */
-const TALL_RATIO_RISK_HEIGHT = 6858000; // 7.5in
-const MIN_SAFE_ASPECT_RATIO = 1.0;
-
-/**
  * Map a node shape to its DrawingML preset geometry (spec §6.1, extended to
  * the v11.3+ `@{ shape: ... }` catalog — see `SHAPE_ALIAS_MAP` in
  * `parser.ts` for which Mermaid shape names route here). The `flowChart*`
@@ -322,14 +279,15 @@ export interface TranslateOptions {
   /** Line color (hex, no `#`) for node shapes and edges. */
   line?: string;
   /**
-   * Usable page width/height in EMU, overriding the {@link MAX_DRAWING_CX}/
-   * {@link MAX_DRAWING_CY} defaults (Letter portrait, 1in margins) a diagram
-   * is scaled to fit. Set this when the export's actual page format/
-   * orientation/margins differ from that default (`export_customization_SPEC.md`
-   * §2.4) — otherwise a diagram stays sized for Letter portrait even though,
-   * say, A4 landscape was chosen, risking an unwanted extra shrink or a
-   * page overflow. Either both or neither should be set; an unset one falls
-   * back to its own default independently.
+   * Maximum drawing width/height in EMU a diagram is scaled to fit, overriding
+   * the {@link DEFAULT_MAX_DRAWING_CX}/{@link DEFAULT_MAX_DRAWING_CY} defaults
+   * (Letter portrait, 1in margins, room left for a heading). Set this when the
+   * export's actual page format/orientation/margins differ from that default
+   * (`export_customization_SPEC.md` §2.4) — otherwise a diagram stays sized for
+   * Letter portrait even though, say, A4 landscape was chosen, risking an
+   * unwanted extra shrink or a page overflow. Taken as is: a caller deriving
+   * the height from a page leaves the room for a heading itself (the CLI
+   * keeps 0.75in). An unset one falls back to its own default independently.
    */
   maxDrawingCx?: number;
   maxDrawingCy?: number;
@@ -447,16 +405,14 @@ export function translateToOoxml(
 }
 
 function maxExtentOf(options: TranslateOptions): { cx: number; cy: number } {
-  return { cx: options.maxDrawingCx ?? MAX_DRAWING_CX, cy: options.maxDrawingCy ?? MAX_DRAWING_CY };
+  return { cx: options.maxDrawingCx ?? DEFAULT_MAX_DRAWING_CX, cy: options.maxDrawingCy ?? DEFAULT_MAX_DRAWING_CY };
 }
 
 /**
  * How the node labels fit the page, for the warning when a diagram became too small to read (TODO R2.3):
  * `fontPt`, their size in points as written in the `.docx` (the base 12 pt scaled down by the factor that
  * fits the diagram on the page), and `tooTall`, whether the content overflows the page more in height
- * than in width. Measured on the content itself, before {@link nativeExtent}'s LibreOffice padding: that
- * padding makes a tall diagram's frame square, so its width would bind although its height is the
- * problem the author can act on.
+ * than in width.
  */
 export function nodeTextFit(layout: LayoutResult, options: TranslateOptions = {}): { fontPt: number; tooTall: boolean } {
   const bb = computeBoundingBox(layout);
@@ -620,7 +576,7 @@ function wrapInParagraph(
   content: string,
   bb: { width: number; height: number },
   docPrId: number,
-  maxExtent: { cx: number; cy: number } = { cx: MAX_DRAWING_CX, cy: MAX_DRAWING_CY },
+  maxExtent: { cx: number; cy: number } = { cx: DEFAULT_MAX_DRAWING_CX, cy: DEFAULT_MAX_DRAWING_CY },
 ): string {
   const { cx, cy } = scaledExtent(bb, maxExtent);
   return [
@@ -648,22 +604,9 @@ function wrapInParagraph(
   ].join('\n');
 }
 
-/**
- * The native (unscaled) EMU size of the drawing frame, widened past the
- * content's actual width when needed to stay clear of the LibreOffice
- * narrow-tall rendering failure (see {@link MIN_SAFE_ASPECT_RATIO}). The
- * padding is inert canvas margin to the right of the content — it does not
- * move or resize any node, subgraph, or edge, it only makes the frame's own
- * declared bounding box wide enough to render at all. `wp:extent`
- * (via {@link scaledExtent}) derives from this same padded value.
- */
+/** The native (unscaled) EMU size of the drawing frame: the content's bounding box, never empty. */
 function nativeExtent(bb: { width: number; height: number }): { cx: number; cy: number } {
-  const nativeCx = Math.max(1, Math.round(bb.width * EMU_PER_PX));
-  const nativeCy = Math.max(1, Math.round(bb.height * EMU_PER_PX));
-  if (nativeCy > TALL_RATIO_RISK_HEIGHT && nativeCx / nativeCy < MIN_SAFE_ASPECT_RATIO) {
-    return { cx: Math.round(nativeCy * MIN_SAFE_ASPECT_RATIO), cy: nativeCy };
-  }
-  return { cx: nativeCx, cy: nativeCy };
+  return { cx: Math.max(1, Math.round(bb.width * EMU_PER_PX)), cy: Math.max(1, Math.round(bb.height * EMU_PER_PX)) };
 }
 
 /**
@@ -674,7 +617,7 @@ function nativeExtent(bb: { width: number; height: number }): { cx: number; cy: 
  */
 function scaledExtent(
   bb: { width: number; height: number },
-  maxExtent: { cx: number; cy: number } = { cx: MAX_DRAWING_CX, cy: MAX_DRAWING_CY },
+  maxExtent: { cx: number; cy: number } = { cx: DEFAULT_MAX_DRAWING_CX, cy: DEFAULT_MAX_DRAWING_CY },
 ): {
   cx: number;
   cy: number;

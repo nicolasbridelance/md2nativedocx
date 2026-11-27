@@ -271,7 +271,7 @@ Le type historique du projet : nœuds et liens avec mise en page automatique (Da
 - Liens `-->`, `---`, `-.->`, `==>`, `<-->`, `~~~`, avec libellé `-- texte -->`, chaînage `A --> B --> C` et groupes `A & B --> C`
 - `subgraph … end` (imbriqués), liens vers un sous-graphe (`A --> S`, `S1 --> S2`) tracés jusqu’au bord de son cadre, sous-graphe replié (`S@{ view: collapsed }`) dessiné en une seule boîte grise (son titre puis « • • • »), son contenu caché et les liens vers ce contenu arrivant sur la boîte, `<br/>` et `**gras**`/`_italique_` dans un libellé entre accents graves
 
-**Pris en charge :** Couleurs : `classDef`, `class`, `:::nom`, `style`, `linkStyle` (couleur, épaisseur) ; Auto-boucles `A --> A`, diagrammes très grands (réduits pour tenir dans la page). Une flèche qui contourne un nœud est un connecteur coudé de Word, attaché à ses deux formes.
+**Pris en charge :** Couleurs : `classDef`, `class`, `:::nom`, `style`, `linkStyle` (couleur, épaisseur) ; Auto-boucles `A --> A`, diagrammes très grands (réduits pour tenir dans la page, en gardant la place d'un titre au-dessus). Une flèche qui contourne un nœud est un connecteur coudé de Word, attaché à ses deux formes.
 
 **Limites**
 

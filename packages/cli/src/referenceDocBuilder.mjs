@@ -481,6 +481,14 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
 }
 
 /**
+ * Height kept free above a page-tall diagram (0.75in), as core's default drawing area does
+ * (`DEFAULT_MAX_DRAWING_CY` in `packages/core/src/translator/canvas.ts`, where the measurement is noted):
+ * a heading keeps with the next paragraph, and with no room left Word and LibreOffice leave it alone at
+ * the bottom of the previous page.
+ */
+const HEADING_ROOM_EMU = 685800;
+
+/**
  * Usable page area in EMU for `TranslateOptions.maxDrawingCx`/`maxDrawingCy`
  * (`export_customization_SPEC.md` §2.4) — the same page size/orientation/
  * margins resolution as {@link buildReferenceDoc}, but expressed as the
@@ -492,6 +500,8 @@ export function buildReferenceDoc(basePath, rawOptions = {}) {
  * all — so this only returns `null` (meaning "keep the translator's own
  * built-in default") when literally none of pageSize/orientation/margins
  * were set, same condition as `needsSectPr` above.
+ *
+ * The height leaves {@link HEADING_ROOM_EMU} free, so a heading fits on the page above a page-tall diagram.
  */
 export function resolveMaxDrawingExtentEmu({ pageSize, orientation, margins, marginsCustomCm } = {}) {
   if (pageSize === undefined && orientation === undefined && margins === undefined) return null;
@@ -499,6 +509,6 @@ export function resolveMaxDrawingExtentEmu({ pageSize, orientation, margins, mar
   const mar = margins !== undefined ? resolveMargins(margins, marginsCustomCm) : MARGIN_PRESETS_TWIPS.normal;
   const TWIP_TO_EMU = 635;
   const cx = (size.w - mar.left - mar.right) * TWIP_TO_EMU;
-  const cy = (size.h - mar.top - mar.bottom) * TWIP_TO_EMU;
+  const cy = (size.h - mar.top - mar.bottom) * TWIP_TO_EMU - HEADING_ROOM_EMU;
   return { cx: Math.max(1, cx), cy: Math.max(1, cy) };
 }

@@ -109,10 +109,11 @@ function assertConformantDocx(docxPath, name) {
     }
   }
 
-  // A drawing wider or taller than the usable page area is clipped by Word.
+  // A drawing wider or taller than the usable page area is clipped by Word, and one taller than the page
+  // less 0.75in leaves a heading above it alone on the previous page (core's DEFAULT_MAX_DRAWING_CY).
   for (const [, cx, cy] of xml.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"\/>/g)) {
     assert.ok(Number(cx) <= 5943600, `${ctx}: extent cx ${cx} exceeds the usable page width`);
-    assert.ok(Number(cy) <= 8229600, `${ctx}: extent cy ${cy} exceeds the usable page height`);
+    assert.ok(Number(cy) <= 8229600 - 685800, `${ctx}: extent cy ${cy} leaves no room for a heading`);
   }
 
   // No external OOXML relationship (rule #3).
