@@ -74,7 +74,12 @@ const CARDINALITY_ALONG = 22;
 const CARDINALITY_ASIDE = 12;
 /** Extra title height for an annotation line (`«interface»`) above the name. */
 const ANNOTATION_H = 16;
-const ROW_H = 22;
+/**
+ * One member line: Word lays out the 9 pt Aptos lines 11.83 pt (15.8 px) apart under the reference
+ * document's 1.08 line spacing (measured in Word 2026-11-27, ten members). The former 22 px left a gap
+ * growing under the members, about 6 px a line.
+ */
+const ROW_H = 16;
 const COMPARTMENT_PAD_Y = 6;
 const PAD_X = 10;
 

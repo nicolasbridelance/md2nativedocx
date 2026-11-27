@@ -54,7 +54,8 @@ const LABEL_SIZE_HALFPT = 16;
 /** Height of the white background under a relationship label (8 pt text), as in the requirement diagram. */
 const LABEL_BG_H = 14;
 const TITLE_H = 32;
-const ROW_H = 22;
+/** One attribute line: 9 pt Aptos lines sit 15.8 px apart in Word, as the class members (`class-diagram/translator.ts`). */
+const ROW_H = 16;
 const COMPARTMENT_PAD_Y = 6;
 const PAD_X = 10;
 /** Group box: a flowchart subgraph's look (light grey fill, grey dashed border), as the class namespaces. */

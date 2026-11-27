@@ -294,10 +294,13 @@ Ensuite, dans l'ordre :
             - ~~**Couleurs nommées (`red`, `white`) ignorées sans avertissement**~~ (fait le 2026-11-21 : les 148 noms de
               CSS Color 4 dans `parser/css-named-colors.ts`, lus par `parseHexColor` pour l'organigramme, les classes, les
               états et le treemap, qui avait sa propre table de 10 noms, remplacée) ;
-            - **Vu dans Word le 2026-11-20, pas encore corrigé :** les compartiments de membres d'une classe
-              réservent 22 px par ligne (`ROW_H`, `class-diagram/translator.ts`) alors que Word en écrit environ
-              18 : un vide grandit sous les membres (5 lignes : ~20 px, `classDiagram#25`). Mesurer la hauteur de
-              ligne réelle (police de membre à 9 pt) avant de changer `ROW_H` : toutes les classes bougent ;
+            - ~~**Vide sous les membres d'une classe**~~ (fait le 2026-11-27 : Word espace les lignes Aptos 9 pt
+              de 11,83 pt, soit 15,8 px, mesuré par COM sur dix membres ; `ROW_H` passe de 22 à 16 px dans les
+              classes et dans l'ER, qui avait le même défaut ; vérifié dans Word et LibreOffice) ;
+            - **Vu dans Word et LibreOffice le 2026-11-27, pas encore corrigé :** dans `test-corpus/visual/fixtures/
+              er-diagram.mmd`, le libellé `reviews` de la relation `CUSTOMER`–`LINE-ITEM` (en pointillé, qui longe
+              `ORDER`) se pose sur la boîte `ORDER` : la ligne droite traverse une boîte que Dagre a placée entre
+              les deux, et le libellé suit la ligne. Antérieur au changement de `ROW_H` ;
             - **états** : ~~états composites en boîtes imbriquées, régions `--`~~ (faits le 2026-11-21 :
               `StateNode.parent` / `direction`, `StateDiagram.regions` ; un `[*]` de début et de fin par bloc comme
               Mermaid (avant : un nœud par occurrence) ; mise en page de l'intérieur vers l'extérieur, un graphe
