@@ -1,6 +1,6 @@
 // Builds the static site into packages/web/dist/: the page, its two bundles (page and worker), the
-// project's reference.docx, the link-preview image, a sitemap, and the pinned Pandoc release
-// (scripts/fetch-pandoc.mjs). Needs packages/core built first (npm run build -w packages/core).
+// project's reference.docx, the link-preview image, a sitemap, the IndexNow key file, and the pinned
+// Pandoc release (scripts/fetch-pandoc.mjs). Needs packages/core built first (npm run build -w packages/core).
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -11,6 +11,8 @@ const here = (path) => fileURLToPath(new URL(path, import.meta.url));
 const dist = here('../dist');
 /** Where GitHub Pages serves the site; also the page's canonical and og:url. */
 const SITE_URL = 'https://nicolasbridelance.github.io/md2nativedocx/';
+/** IndexNow key; .github/workflows/pages.yml sends the same value. */
+const INDEXNOW_KEY = 'e8b16ea04357be7051163c9957036b89'; // gitleaks:allow (public by design, served by the site)
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
@@ -51,6 +53,10 @@ writeFileSync(
     '',
   ].join('\n'),
 );
+// IndexNow (Bing, Yandex, Seznam, Naver…): the site proves it owns its URLs by serving this key, and the
+// Pages workflow announces each deployment with it. Not a secret: anyone can read it from the site.
+// Served under the site's path, so it only vouches for URLs below SITE_URL (keyLocation in pages.yml).
+writeFileSync(`${dist}/${INDEXNOW_KEY}.txt`, INDEXNOW_KEY);
 // GitHub Pages runs Jekyll on the site unless told not to; nothing here needs it.
 writeFileSync(`${dist}/.nojekyll`, '');
 
