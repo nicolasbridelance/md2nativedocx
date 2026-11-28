@@ -41,8 +41,8 @@ copyFileSync(here('../../vscode-extension/icon.svg'), `${dist}/icon.svg`);
 copyFileSync(here('../../cli/assets/reference.docx'), `${dist}/reference.docx`);
 // The link-preview image named by the page's og:image (assets/README.md says how it is made).
 copyFileSync(here('../assets/og-image.png'), `${dist}/og-image.png`);
-// For Google Search Console. No robots.txt: one only counts at the root of the host
-// (nicolasbridelance.github.io), which this site is not.
+// Submitted to Google Search Console and Bing Webmaster Tools. No robots.txt here: one only counts at the
+// root of the host, so it lives in the nicolasbridelance.github.io repository and points to this sitemap.
 writeFileSync(
   `${dist}/sitemap.xml`,
   [
