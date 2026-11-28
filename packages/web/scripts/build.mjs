@@ -1,6 +1,6 @@
 // Builds the static site into packages/web/dist/: the page, its two bundles (page and worker), the
-// project's reference.docx, and the pinned Pandoc release (scripts/fetch-pandoc.mjs). Needs
-// packages/core built first (npm run build -w packages/core).
+// project's reference.docx, the link-preview image, a sitemap, and the pinned Pandoc release
+// (scripts/fetch-pandoc.mjs). Needs packages/core built first (npm run build -w packages/core).
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -9,6 +9,8 @@ import { npmPackagesInBundle, renderNotices } from '../../../scripts/third-party
 
 const here = (path) => fileURLToPath(new URL(path, import.meta.url));
 const dist = here('../dist');
+/** Where GitHub Pages serves the site; also the page's canonical and og:url. */
+const SITE_URL = 'https://nicolasbridelance.github.io/md2nativedocx/';
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
@@ -35,6 +37,20 @@ copyFileSync(here('../src/index.html'), `${dist}/index.html`);
 copyFileSync(here('../src/styles.css'), `${dist}/styles.css`);
 copyFileSync(here('../../vscode-extension/icon.svg'), `${dist}/icon.svg`);
 copyFileSync(here('../../cli/assets/reference.docx'), `${dist}/reference.docx`);
+// The link-preview image named by the page's og:image (assets/README.md says how it is made).
+copyFileSync(here('../assets/og-image.png'), `${dist}/og-image.png`);
+// For Google Search Console. No robots.txt: one only counts at the root of the host
+// (nicolasbridelance.github.io), which this site is not.
+writeFileSync(
+  `${dist}/sitemap.xml`,
+  [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    `  <url><loc>${SITE_URL}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod></url>`,
+    '</urlset>',
+    '',
+  ].join('\n'),
+);
 // GitHub Pages runs Jekyll on the site unless told not to; nothing here needs it.
 writeFileSync(`${dist}/.nojekyll`, '');
 

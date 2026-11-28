@@ -8,25 +8,100 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
-  <title>md2nativedocx: Markdown to Word</title>
+  <title>md2nativedocx: Markdown to Word, diagrams included</title>
   <meta name="description" content="Convert Markdown with Mermaid and PlantUML diagrams to a Word document with editable diagrams, entirely in your browser.">
+  <!-- How the page shows in search results and in link previews (LinkedIn, Slack, Discord…). -->
+  <link rel="canonical" href="https://nicolasbridelance.github.io/md2nativedocx/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="md2nativedocx">
+  <meta property="og:url" content="https://nicolasbridelance.github.io/md2nativedocx/">
+  <meta property="og:title" content="md2nativedocx: Markdown to Word, diagrams included">
+  <meta property="og:description" content="Paste Markdown with Mermaid or PlantUML diagrams, get a Word document where every diagram is real, editable shapes, SmartArt or charts. Free, in your browser, nothing sent anywhere.">
+  <meta property="og:image" content="https://nicolasbridelance.github.io/md2nativedocx/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Mermaid code turned into a Word page whose flowchart boxes are editable shapes">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">
-      <img src="icon.svg" alt="" width="36" height="36">
-      <div>
-        <p class="name">md2nativedocx</p>
-        <h1 data-text="title">Markdown to Word, diagrams included</h1>
-      </div>
-      <button type="button" class="link-button lang-switch" id="lang-switch" data-text="switchLanguage">Français</button>
-    </div>
-    <p class="tagline" data-text="tagline"></p>
-    <p class="privacy"><span class="dot" aria-hidden="true"></span><span data-text="privacy"></span></p>
+  <!-- The English text written here is the page before its script runs, and what search engines read;
+       i18n.mjs holds the same text (and the French) and replaces it on load. -->
+  <header class="topbar">
+    <a class="brand" href="./">
+      <img src="icon.svg" alt="" width="32" height="32">
+      <span class="name">md2nativedocx</span>
+    </a>
+    <nav class="topnav">
+      <a href="https://github.com/nicolasbridelance/md2nativedocx" data-text="navGithub">GitHub</a>
+      <button type="button" class="lang-switch" id="lang-switch" data-text="switchLanguage">Français</button>
+    </nav>
   </header>
+
+  <section class="hero">
+    <div class="hero-text">
+      <p class="eyebrow" data-text="eyebrow">Free and open source · public domain</p>
+      <h1><span data-text="titleLead">Markdown to Word,</span> <span class="accent" data-text="titleAccent">diagrams included</span></h1>
+      <p class="tagline" data-text="tagline">Paste Markdown with Mermaid or PlantUML diagrams, get a Word document where every diagram is real, editable shapes, SmartArt or charts. Not pictures.</p>
+      <ul class="proof">
+        <li data-text="proofShapes">Every box is a Word shape you can retype and move</li>
+        <li data-text="proofSmartArt">SmartArt and Word charts with editable data</li>
+        <li class="privacy" data-text="privacy">Everything happens in your browser: your text is never sent anywhere.</li>
+      </ul>
+    </div>
+
+    <!-- Mermaid source becoming a Word page whose shapes can be selected and edited. Colours come from
+         styles.css (classes only: the CSP allows no inline style). -->
+    <figure class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 460 316" width="460" height="316" focusable="false">
+        <defs>
+          <marker id="art-tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" class="art-tip"/>
+          </marker>
+          <marker id="art-flow-tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" class="art-flow-tip"/>
+          </marker>
+        </defs>
+
+        <rect class="art-page" x="150" y="6" width="300" height="304" rx="10"/>
+        <rect class="art-line strong" x="232" y="30" width="130" height="9" rx="4.5"/>
+        <rect class="art-line" x="232" y="50" width="196" height="5" rx="2.5"/>
+        <rect class="art-line" x="232" y="61" width="168" height="5" rx="2.5"/>
+
+        <rect class="art-node" x="300" y="88" width="90" height="32" rx="6"/>
+        <text class="art-label" x="345" y="104">Draft</text>
+        <path class="art-edge" d="M345 120 V141" marker-end="url(#art-tip)"/>
+        <polygon class="art-node decision" points="345,144 393,166 345,188 297,166"/>
+        <text class="art-label" x="345" y="166">Review</text>
+        <path class="art-edge" d="M345 188 V211" marker-end="url(#art-tip)"/>
+        <rect class="art-node" x="300" y="214" width="90" height="32" rx="6"/>
+        <text class="art-label" x="345" y="230">Publish</text>
+
+        <rect class="art-selection" x="296" y="210" width="98" height="40"/>
+        <g class="art-handle">
+          <circle cx="296" cy="210" r="3.5"/><circle cx="345" cy="210" r="3.5"/><circle cx="394" cy="210" r="3.5"/>
+          <circle cx="296" cy="230" r="3.5"/><circle cx="394" cy="230" r="3.5"/>
+          <circle cx="296" cy="250" r="3.5"/><circle cx="345" cy="250" r="3.5"/><circle cx="394" cy="250" r="3.5"/>
+        </g>
+        <path class="art-cursor" d="M376 238 l0 17 l4.5 -4 l3 7 l2.6 -1.1 l-3 -6.9 l6 0 z"/>
+
+        <rect class="art-line" x="232" y="272" width="196" height="5" rx="2.5"/>
+        <rect class="art-line" x="232" y="283" width="140" height="5" rx="2.5"/>
+
+        <path class="art-flow" d="M150 146 C 150 106, 220 104, 292 104" marker-end="url(#art-flow-tip)"/>
+
+        <rect class="art-code" x="0" y="150" width="214" height="136" rx="12"/>
+        <text class="art-code-name" x="16" y="172">report.md</text>
+        <text class="art-code-text dim" x="16" y="198">```mermaid</text>
+        <text class="art-code-text" x="16" y="215">flowchart TD</text>
+        <text class="art-code-text" x="16" y="232">  A[Draft] --&gt; B{Review}</text>
+        <text class="art-code-text" x="16" y="249">  B --&gt; C[Publish]</text>
+        <text class="art-code-text dim" x="16" y="266">```</text>
+      </svg>
+    </figure>
+  </section>
 
   <main class="layout">
     <section class="editor-panel" aria-labelledby="editor-label">
@@ -41,20 +116,23 @@
       </div>
       <div class="editor-wrap" id="editor-wrap">
         <textarea id="markdown" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
-        <div class="drop-hint" aria-hidden="true"><span data-text="dropHint"></span></div>
+        <div class="drop-hint" aria-hidden="true"><span data-text="dropHint">Drop a Markdown file here</span></div>
       </div>
       <p class="editor-meta"><span id="source-name"></span><span id="char-count"></span></p>
     </section>
 
     <aside class="side">
-      <button type="button" class="primary" id="convert" data-text="convert">Convert to Word (.docx)</button>
+      <div class="convert-box">
+        <button type="button" class="primary" id="convert" data-text="convert">Convert to Word (.docx)</button>
+        <p class="shortcut" data-text="convertShortcut">Shortcut: Ctrl+Enter (⌘+Enter on a Mac)</p>
+      </div>
 
       <section class="card result" id="result" aria-labelledby="result-title" hidden>
         <h2 id="result-title" data-text="stepsTitle">Conversion</h2>
         <ol class="steps" id="steps"></ol>
         <p class="status" id="result-status" role="status" aria-live="polite"></p>
         <a class="primary download" id="download" hidden></a>
-        <p class="hint" id="open-hint" data-text="openInWord" hidden></p>
+        <p class="hint" id="open-hint" data-text="openInWord" hidden>Open it in Word: click a box to retype it, drag it and its arrows follow.</p>
         <details id="warnings" hidden>
           <summary id="warnings-title"></summary>
           <ul id="warnings-list"></ul>
@@ -74,16 +152,34 @@
 
       <section class="card options" aria-labelledby="options-title">
         <h2 id="options-title" data-text="optionsTitle">Options</h2>
-        <label class="option"><input type="checkbox" id="opt-smartart" checked><span><strong data-text="optSmartArt"></strong><small data-text="optSmartArtHint"></small></span></label>
-        <label class="option"><input type="checkbox" id="opt-charts" checked><span><strong data-text="optCharts"></strong><small data-text="optChartsHint"></small></span></label>
-        <label class="option"><input type="checkbox" id="opt-toc"><span><strong data-text="optToc"></strong><small data-text="optTocHint"></small></span></label>
+        <label class="option"><input type="checkbox" id="opt-smartart" checked><span><strong data-text="optSmartArt">SmartArt</strong><small data-text="optSmartArtHint">Processes, cycles, trees, mind maps and timelines become SmartArt you can restyle in Word.</small></span></label>
+        <label class="option"><input type="checkbox" id="opt-charts" checked><span><strong data-text="optCharts">Word charts</strong><small data-text="optChartsHint">Pie, bar, line and radar charts become Word charts with editable data.</small></span></label>
+        <label class="option"><input type="checkbox" id="opt-toc"><span><strong data-text="optToc">Table of contents</strong><small data-text="optTocHint">Word fills it in when the document is opened.</small></span></label>
       </section>
     </aside>
   </main>
 
+  <section class="band how" aria-labelledby="how-title">
+    <h2 id="how-title" data-text="howTitle">How it works</h2>
+    <ol class="how-steps">
+      <li><h3 data-text="how1Title">Write or paste Markdown</h3><p data-text="how1Text">Headings, tables, lists, code, maths, and diagrams in ```mermaid or ```plantuml blocks. Or open a .md file.</p></li>
+      <li><h3 data-text="how2Title">Converted in your browser</h3><p data-text="how2Text">Pandoc, the standard document converter, runs inside this page. The diagrams are drawn as native Word objects, not as pictures.</p></li>
+      <li><h3 data-text="how3Title">Edit everything in Word</h3><p data-text="how3Text">Click a box to retype it, drag it and its arrows follow, restyle a SmartArt, change a chart’s figures with Edit Data.</p></li>
+    </ol>
+  </section>
+
+  <section class="band elsewhere" aria-labelledby="elsewhere-title">
+    <h2 id="elsewhere-title" data-text="elsewhereTitle">Also where you already work</h2>
+    <ul class="tiles">
+      <li><a href="https://marketplace.visualstudio.com/items?itemName=md2nativedocx.md2nativedocx"><strong data-text="vscodeTitle">VS Code extension</strong><span data-text="vscodeText">Export the Markdown you are editing in one click. Also on Open VSX for VSCodium, Cursor and Windsurf.</span></a></li>
+      <li><a href="https://www.npmjs.com/package/@md2nativedocx/cli"><strong data-text="cliTitle">Command line</strong><span data-text="cliText">npx @md2nativedocx/cli report.md, with your Word template, page setup, .pptx and .odt output.</span></a></li>
+      <li><a href="https://www.npmjs.com/package/@md2nativedocx/mcp"><strong data-text="mcpTitle">MCP server</strong><span data-text="mcpText">Let an AI assistant hand you a finished Word document, diagrams editable, from a conversation.</span></a></li>
+    </ul>
+  </section>
+
   <footer class="site-footer">
-    <p><a href="https://github.com/nicolasbridelance/md2nativedocx" data-text="footerProject"></a>. <span data-text="footerMore"></span> <a href="THIRD_PARTY_NOTICES.txt" data-text="footerNotices"></a></p>
-    <p><span id="footer-pandoc"></span> <a href="pandoc/COPYING.md" data-text="footerLicense"></a> · <a href="pandoc/COPYRIGHT">COPYRIGHT</a> · <a id="footer-source" data-text="footerSource"></a></p>
+    <p><a href="https://github.com/nicolasbridelance/md2nativedocx" data-text="footerProject">md2nativedocx on GitHub (public domain, CC0)</a>. <a href="THIRD_PARTY_NOTICES.txt" data-text="footerNotices">Third-party notices</a></p>
+    <p><span id="footer-pandoc"></span> <a href="pandoc/COPYING.md" data-text="footerLicense">License</a> · <a href="pandoc/COPYRIGHT">COPYRIGHT</a> · <a id="footer-source" data-text="footerSource">Source code</a></p>
   </footer>
 </body>
 </html>
