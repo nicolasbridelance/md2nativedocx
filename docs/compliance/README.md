@@ -45,7 +45,7 @@ The badges at the top of the [`README`](../../README.md) show the live state of 
 | Code license | **CC0 1.0 Universal** (public domain), every package |
 | Third-party code shipped | MIT only in the extension, the CLI and the browser page; MIT, ISC and BSD in the MCP server (see [`legal.md`](legal.md)). No copyleft library |
 | External program used | Pandoc (GPL-2.0-or-later): run as a separate program, never linked; the browser page hosts its official `pandoc.wasm` with its source |
-| Automated tests | 1,276 on 2026-11-20 (commit `605b50f`), on Linux, Windows and macOS; property-based tests on the input boundary |
+| Automated tests | 1,497 on 2026-11-27 (commit `cbb06bd`), on Linux, Windows and macOS; property-based tests on the input boundary |
 | Output validation | Every CI run checks generated `.docx` against Microsoft's Open XML schema and `.odt` against the ODF schema |
 | Static analysis (SAST) | CodeQL on every push and PR, and weekly |
 | Secret scanning | gitleaks on every push and PR, and before each commit with the local hook |

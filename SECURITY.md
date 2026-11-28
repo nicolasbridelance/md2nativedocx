@@ -35,7 +35,7 @@ especially welcome on:
 - Path traversal via CLI input/output paths, the VS Code extension, or a file outside the MCP server's
   root.
 - Reading a local file, fetching a URL or reaching a network share through Markdown despite sandbox mode
-  (CLI `--sandbox`, always on in the MCP server).
+  (CLI `--sandbox`, `md2nativedocx.sandbox.enabled` in the extension, always on in the MCP server).
 - Making the browser converter send the visitor's text anywhere, or run a `pandoc.wasm` other than the
   pinned one.
 - A downloaded binary (Pandoc, .NET runtime) run by the extension without its pinned hash matching.

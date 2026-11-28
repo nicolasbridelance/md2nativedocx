@@ -60,6 +60,6 @@ No. The code is in the public domain (CC0 license) and every tool it relies on i
 [`legal.md`](legal.md).
 
 **Who checks it is reliable enough for professional use?**
-Every change is checked automatically: more than 1,200 tests, a check that each Word file follows
+Every change is checked automatically: nearly 1,500 tests, a check that each Word file follows
 Microsoft's own file-format rules, security analysis, on Windows, macOS and Linux. See
 [`it-security.md`](it-security.md).

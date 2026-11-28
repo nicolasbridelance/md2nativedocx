@@ -69,7 +69,7 @@ Source: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml),
 | Published npm packages install and run in a clean folder | `verify:npm-packages` | Every push and PR | Yes |
 | Extension package builds | `vsce package`, with its own smoke tests | Every push and PR, Windows and macOS | Yes |
 | Dependency audit, shipped dependencies | `npm audit --omit=dev --audit-level=high` | Every push and PR | Yes, no exception possible |
-| Dependency audit, whole tree | `npm audit` with dated, justified exceptions (`audit-exceptions.json`, empty on 2026-11-20) | Every push and PR | Yes; an expired exception blocks again |
+| Dependency audit, whole tree | `npm audit` with dated, justified exceptions (`audit-exceptions.json`, empty on 2026-11-28) | Every push and PR | Yes; an expired exception blocks again |
 | Secret scanning | gitleaks | Every push and PR | Yes |
 | Secret scanning before commit | gitleaks pre-commit hook on staged changes (`npm run hooks:install`) | Every commit on a machine where it is installed | Yes, the commit is stopped |
 | Static analysis (SAST) | CodeQL, JavaScript/TypeScript | Every push and PR, and weekly | Alerts in the *Security* tab |

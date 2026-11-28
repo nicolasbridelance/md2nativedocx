@@ -27,7 +27,7 @@ landscape tables, no `.odt` or `.pptx`.
 
 ```bash
 npm run build -w packages/core          # the core first
-npm run build:site -w packages/web      # dist/: page, bundles, reference.docx, pandoc/ (downloads Pandoc once into .cache/)
+npm run build:site -w packages/web      # dist/: page, bundles, reference.docx, og-image.png, sitemap.xml, pandoc/ (downloads Pandoc once into .cache/)
 npm test -w packages/web                # unit tests: ZIP, WASI host, diagram blocks
 npm run smoke -w packages/web           # a real conversion with pandoc.wasm under Node (Node 24+)
 ```
