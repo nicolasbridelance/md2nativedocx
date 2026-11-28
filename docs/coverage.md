@@ -1,6 +1,6 @@
 # What each Mermaid diagram becomes in Word
 
-Status as of 2026-11-20 (release 0.13.0). Every one of the 32 Mermaid diagram types that md2nativedocx recognises exports as
+Status as of 2026-11-28 (release 0.14.0). Every one of the 32 Mermaid diagram types that md2nativedocx recognises exports as
 something you can edit in Word. A diagram becomes one of three things:
 
 - **SmartArt.** A real SmartArt graphic. You add a step or a branch from Word's Text Pane, switch the layout

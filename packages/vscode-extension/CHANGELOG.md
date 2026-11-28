@@ -5,6 +5,8 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-11-28
+
 ### Added
 - **`md2nativedocx.sandbox.enabled`** (default off, also in the settings panel under *Advanced*): for Markdown
   you did not write. Pandoc then reads no image, local file, URL or network share the document names, so a
@@ -59,6 +61,30 @@ All notable changes to `md2nativedocx` are documented here. Format inspired by
   their trailing `/`; with SmartArt off, descriptions line up in a green italic column and a `highlight` row
   sits on an amber band, as in Mermaid. `title` is drawn above the tree, box-drawing trees (`├──`) and
   `'single quotes'` are read as Mermaid reads them, and `icon(none)` no longer warns.
+- **Class diagrams: what Mermaid draws, now drawn too.** Annotations (`<<interface>>`) appear as
+  `«interface»` above the class name, and PlantUML stereotypes with them; `namespace` blocks are dashed boxes
+  around their classes; `note` and `note for Class` are folded-corner notes, the second joined to its class;
+  `Class --() name` draws a lollipop (a provided interface); cardinalities (`"1" --> "*"`) sit at their end of
+  the line. `style`, `classDef` (through `:::` or `cssClass`) and `classDef default` colour the boxes, layered
+  as in Mermaid. Relations are read with Mermaid's own rules: `classM <|.. classN`, `Animal <|--|> Zebra` and
+  names in backticks used to be dropped. All of these used to be ignored, with a warning.
+- **State diagrams: composite states and notes.** A composite state is a box around its inner states, and
+  `--` splits it into concurrent regions; `note left of X : text` (and the `end note` block form, PlantUML's
+  `top`/`bottom` too) is a note beside its state. `classDef`, `class`, `:::` and `style` colour states (fill,
+  border, text, bold, italic). Transitions are routed around the boxes, and their labels sit beside slanted
+  lines instead of on them.
+- **Architecture diagrams drawn as Mermaid draws them**: nodes placed on the grid their ports describe
+  (`db:R -- L:server`), Mermaid's built-in icons (cloud, database, disk, internet, server) as Word shapes,
+  groups as nested dashed frames, `-[label]-` edge labels and `align row|column`. An undeclared id or an
+  edge to a group is left out with a warning instead of guessed.
+- **Flowcharts: links to a subgraph and folded subgraphs.** `A --> S`, where `S` is a subgraph, used to be
+  dropped: the arrow now ends on the subgraph's box, laid out as Mermaid lays it out. `S@{ view: collapsed }`
+  folds a subgraph into one box (its title, then `• • •`) instead of drawing it open.
+- **A frontmatter `title:` is drawn above the diagram**, as Mermaid draws it, on every type that has no title
+  statement of its own (flowchart, class, state, ER…). It used to be ignored, with a warning. The title is
+  kept on the same page as its diagram.
+- **CSS colour names in styles.** `fill:white`, `color:red`, `stroke:DarkOrange`: the 148 CSS colour names are
+  read in flowcharts, class and state diagrams. Only `#hex` values were understood, the names silently ignored.
 
 ### Fixed
 - **Flowchart colours are layered as in Mermaid.** `classDef default` now colours every node (it was ignored),
